@@ -1,0 +1,5 @@
+jobs:
+  gate:
+    steps:
+      - run: pnpm run ci
+      - run: gitleaks detect --source . --redact --no-banner --exit-code 1

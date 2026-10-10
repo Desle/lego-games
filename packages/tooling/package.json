@@ -1,0 +1,38 @@
+{
+  "name": "@lego-games/tooling",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The repository's rules as code: lint, TypeScript and Prettier config, the architecture checks, and the git and Claude Code hooks.",
+  "type": "module",
+  "bin": {
+    "tooling": "./src/cli/main.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./eslint": "./src/eslint/create-eslint-config.ts",
+    "./prettier": "./configs/prettier.json",
+    "./tsconfig/node": "./configs/tsconfig/node.json"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "verify": "node src/cli/main.ts verify",
+    "test": "vitest run",
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run verify && pnpm run test",
+    "format": "eslint --fix . && prettier --write .",
+    "format:check": "prettier --check .",
+    "build": "tsc -p tsconfig.build.json",
+    "audit:high": "pnpm audit --audit-level high",
+    "ci": "pnpm run check && pnpm run format:check && pnpm run build && pnpm run audit:high"
+  },
+  "dependencies": {
+    "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.0"
+  }
+}

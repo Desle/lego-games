@@ -4,3 +4,4 @@ coverage
 pnpm-lock.yaml
 original-files
 reverse-engineering/ghidra
+packages/tooling/tests/fixtures

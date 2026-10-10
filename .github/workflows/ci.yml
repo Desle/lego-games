@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -15,5 +14,25 @@ concurrency:
 
 jobs:
   gate:
-    uses: Desle/typescript-foundation/.github/workflows/gate.yml@v3
-    secrets: inherit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # stale-todos dates TODOs with git blame, which needs the whole history.
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Gate
+        run: pnpm run ci
+      - name: Secret scan
+        # The whole history, exactly like the pre-push hook.
+        env:
+          GITLEAKS_VERSION: 8.24.3
+        run: |
+          release="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          curl -sSfL "$release/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz -C "$RUNNER_TEMP" gitleaks
+          PATH="$RUNNER_TEMP:$PATH" gitleaks detect --source . --redact --no-banner --exit-code 1

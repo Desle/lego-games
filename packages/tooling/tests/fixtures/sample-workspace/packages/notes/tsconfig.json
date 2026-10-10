@@ -1,0 +1,8 @@
+{
+  "extends": "__TOOLING__/configs/tsconfig/node.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "typeRoots": ["__TOOLING__/node_modules/@types"]
+  },
+  "include": ["src"]
+}
