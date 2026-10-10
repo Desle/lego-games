@@ -1,0 +1,27 @@
+// Keywords of TrackMaterials_Load (LEGORacers.exe 0x00444030) and its block reader 0x00443cf0. Each keyword
+// stores its value in the 0x5c-byte entry (reset to zero by 0x00443ca0) and sets one bit of the flags at +8.
+export const TrackMaterialKeyword = Object.freeze({
+  TRACK_MATERIAL: 0x27,
+  FIRST_INTEGER: 0x28, // +0x0c, bit 0x2
+  SECOND_INTEGER: 0x29, // +0x10, bit 0x4
+  THIRD_INTEGER: 0x2a, // +0x14, bit 0x8
+  FOURTH_INTEGER: 0x2b, // +0x18, bit 0x10
+  FIRST_VECTOR: 0x2c, // +0x1c..+0x24, bit 0x20
+  SECOND_VECTOR: 0x2d, // +0x28..+0x30, bit 0x40
+  FIFTH_INTEGER: 0x2e, // +0x34, bit 0x80
+  SIXTH_INTEGER: 0x2f, // +0x38, bit 0x100
+  SEVENTH_INTEGER: 0x30, // +0x3c, bit 0x200
+  LINKED_NAME: 0x31, // +0x40 (8 bytes), bit 0x400
+  FIRST_FLOAT: 0x32, // +0x48, bit 0x800
+  SECOND_FLOAT: 0x33, // +0x4c, bit 0x1000
+  THIRD_FLOAT: 0x34, // +0x50, bit 0x2000
+  FOURTH_FLOAT: 0x35, // +0x54, bit 0x4000
+  FIFTH_FLOAT: 0x36, // +0x58, bit 0x8000
+  FLAG_10000: 0x37, // bit 0x10000
+  FLAG_20000: 0x38, // bit 0x20000
+  FLAG_40000: 0x39, // bit 0x40000
+})
+
+// 0x00443cf0 sets bit 1 once the block is read.
+export const LOADED_FLAG = 0x1
+export const NAME_MAXIMUM_LENGTH = 8
