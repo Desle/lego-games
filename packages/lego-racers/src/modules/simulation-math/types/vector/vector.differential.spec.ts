@@ -1,7 +1,12 @@
 import { defineDifferentialSuite } from '../../../../shared/emulator/differential-suite.ts'
 import type { EmulatorPrecision } from '../../../../shared/emulator/emulator-client.types.ts'
 import { createFloatArithmetic } from '../float-arithmetic/float-arithmetic.ts'
-import { getNormalizedVector2, getNormalizedVector3, getVectorRotatedAroundAxis } from './vector.ts'
+import {
+  getNormalizedVector2,
+  getNormalizedVector3,
+  getStoredCrossProduct,
+  getVectorRotatedAroundAxis,
+} from './vector.ts'
 
 const normalizeVector3 = (precision: EmulatorPrecision, input: readonly number[]) => {
   const { x, y, z } = getNormalizedVector3(createFloatArithmetic(precision), {
@@ -96,4 +101,27 @@ defineDifferentialSuite({
     },
   },
   generateInput: (sampler) => [...sampler.sampleList(6, 4), sampler.sampleAngle(7)],
+})
+
+// Vector cross product 0x00404510 (cdecl: left, right, target)
+defineDifferentialSuite({
+  definition: {
+    name: 'Vector_CrossProduct',
+    address: 0x00404510,
+    convention: 'cdecl',
+    slots: [
+      { kind: 'floats', name: 'left', start: 0, count: 3, isRead: false },
+      { kind: 'floats', name: 'right', start: 3, count: 3, isRead: false },
+      { kind: 'output', name: 'target', floatCount: 3 },
+    ],
+    runPort: (precision, input) => {
+      const { x, y, z } = getStoredCrossProduct(
+        createFloatArithmetic(precision),
+        { x: input[0] ?? 0, y: input[1] ?? 0, z: input[2] ?? 0 },
+        { x: input[3] ?? 0, y: input[4] ?? 0, z: input[5] ?? 0 }
+      )
+      return [x, y, z]
+    },
+  },
+  generateInput: (sampler) => sampler.sampleList(6, 10),
 })
