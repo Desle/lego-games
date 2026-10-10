@@ -15,11 +15,12 @@ Each package has its own `AGENTS.md` with its layout, commands and definition of
 
 ### Commands (at the repository root)
 
-| When                        | Run                                                                  |
-| --------------------------- | -------------------------------------------------------------------- |
-| After every change          | `pnpm run check` (every package's check, plus the repository checks) |
-| One package only            | `pnpm --filter <package> run check`                                  |
-| Before you say you are done | `pnpm run ci`                                                        |
+| When                        | Run                                                                   |
+| --------------------------- | --------------------------------------------------------------------- |
+| After every change          | `pnpm run check` (every package's check, plus the repository checks)  |
+| Duplicate code              | `pnpm run duplicates` (part of `check`; move shared code, don't copy) |
+| One package only            | `pnpm --filter <package> run check`                                   |
+| Before you say you are done | `pnpm run ci`                                                         |
 
 ### Working style
 

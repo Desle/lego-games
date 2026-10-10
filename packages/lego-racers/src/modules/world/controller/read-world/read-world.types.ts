@@ -23,3 +23,13 @@ export type Orientation = {
 }
 
 export type MaterialAnimationReferences = readonly MaterialAnimationReference[]
+
+export type NameOrIndex = {
+  readonly index: number
+  readonly name: string
+}
+
+export type LevelledInstanceKeywords = {
+  readonly keyword36Value: number
+  readonly isKeyword4cSet: boolean
+}
