@@ -1,16 +1,86 @@
-import type { Box3, DataTexture, Group, MaterialParameters } from 'three'
+import type {
+  Scene,
+  SceneInstance,
+  SceneMaterial,
+  SceneInstanceLevel,
+  SceneMesh,
+} from '@lego-games/lego-racers/scene'
+import type {
+  Box3,
+  BufferGeometry,
+  DataTexture,
+  Group,
+  Material,
+  MaterialParameters,
+  Mesh,
+} from 'three'
 
 export type SceneObject = {
   readonly group: Group
   // The instances' world-space bounds, for framing the camera.
   readonly bounds: Box3
+  // Advances every animated instance by this many whole milliseconds.
+  readonly animate: (deltaMilliseconds: number) => void
+  readonly animatedInstanceCount: number
   readonly dispose: () => void
 }
 
+export type SceneObjectOptions = {
+  readonly includeInstance: (instance: SceneInstance) => boolean
+  // The background is drawn before the track without the depth test, in the order the engine draws it, with
+  // each instance at the origin of its group (GolDP.dll sets every background instance to one position).
+  readonly isBackground: boolean
+}
+
 export type TextureCache = Map<string, DataTexture>
+
+// What building the three.js objects of a scene shares: the scene and the caches of textures, materials and geometries.
+export type SceneObjectContext = {
+  readonly scene: Scene
+  readonly isBackground: boolean
+  readonly textureCache: TextureCache
+  readonly materials: Map<string, Material>
+  readonly geometries: Map<string, BufferGeometry>
+  // Counts the meshes created so far, for the background's draw order.
+  readonly nextDrawOrder: () => number
+}
+
+// An instance as three.js objects, with the function that moves it if it is animated.
+export type InstanceObject = {
+  readonly group: Group
+  readonly animate: ((deltaMilliseconds: number) => void) | null
+}
+
+// The level of an instance that is drawn, with its mesh.
+export type InstanceLevelMesh = {
+  readonly level: SceneInstanceLevel
+  readonly mesh: SceneMesh
+  readonly meshIndex: number
+}
 
 // three.js's own parameter names, so the boolean keeps its library name.
 export type BlendingParameters = Pick<
   MaterialParameters,
   'blending' | 'blendSrc' | 'blendDst' | 'transparent'
 >
+
+// The three.js material of a batch, with the scene material it came from.
+export type BatchMaterial = {
+  readonly material: Material
+  readonly materialIndex: number
+  readonly sceneMaterial: SceneMaterial
+}
+
+// A draw batch of a skeleton instance: its own geometry, the vertices before the bones move them and the
+// bone each corner selected.
+export type SkeletonBatch = {
+  readonly geometry: BufferGeometry
+  readonly transformIndices: Uint8Array
+  readonly restPositions: Float32Array
+  readonly restNormals: Float32Array | null
+}
+
+export type SkeletonBatchMesh = {
+  readonly batch: SkeletonBatch
+  readonly mesh: Mesh
+}

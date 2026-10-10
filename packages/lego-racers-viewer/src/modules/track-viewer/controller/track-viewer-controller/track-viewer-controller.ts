@@ -1,5 +1,6 @@
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import { loadScene } from '@lego-games/lego-racers/scene'
+import { parseSky } from '@lego-games/lego-racers/sky'
 import { useCallback, useState } from 'react'
 import { getDevelopmentJam, readJamFile } from '../../services/jam-file/jam-file.ts'
 import { getSceneSummary, getWorldGroups } from '../../services/world-catalog/world-catalog.ts'
@@ -12,8 +13,10 @@ const INITIAL_STATE: TrackViewerState = Object.freeze({
   worldGroups: [],
   selectedEntryId: null,
   scene: null,
+  background: null,
   sceneSummary: null,
   selectedCameraIndex: null,
+  isAnimationPlaying: true,
   errorMessage: null,
 })
 
@@ -58,11 +61,24 @@ export const useTrackViewerController = (): TrackViewerController => {
       // Lets the loading state paint before the synchronous load.
       window.setTimeout(() => {
         try {
-          const scene = loadScene(archive, entry.worldPaths)
+          // The race draws its background world after the worlds of the track (LEGORacers.exe 0x0041c550).
+          const scene = loadScene(
+            archive,
+            entry.backgroundWorldPath === null
+              ? entry.worldPaths
+              : [...entry.worldPaths, entry.backgroundWorldPath]
+          )
           setState((previous) => ({
             ...previous,
             status: ViewerStatus.SHOWING_SCENE,
             scene,
+            background:
+              entry.skyPath === null && entry.backgroundWorldPath === null
+                ? null
+                : Object.freeze({
+                    sky: entry.skyPath === null ? null : parseSky(archive.readFile(entry.skyPath)),
+                    backgroundWorldPath: entry.backgroundWorldPath,
+                  }),
             sceneSummary: getSceneSummary(scene),
             selectedCameraIndex: scene.cameras.length > 0 ? 0 : null,
             errorMessage: null,
@@ -72,6 +88,7 @@ export const useTrackViewerController = (): TrackViewerController => {
             ...previous,
             status: ViewerStatus.FAILED,
             scene: null,
+            background: null,
             sceneSummary: null,
             errorMessage: getErrorMessage(error),
           }))
@@ -92,5 +109,7 @@ export const useTrackViewerController = (): TrackViewerController => {
     onWorldEntrySelected: (entryId) => selectWorldEntry(entryId),
     onCameraSelected: (cameraIndex) =>
       setState((previous) => ({ ...previous, selectedCameraIndex: cameraIndex })),
+    onAnimationPlayingToggled: () =>
+      setState((previous) => ({ ...previous, isAnimationPlaying: !previous.isAnimationPlaying })),
   }
 }

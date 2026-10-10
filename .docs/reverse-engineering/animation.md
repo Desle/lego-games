@@ -57,3 +57,5 @@ The port scales `0x2f` as `fround(value × fround(0.001))`, which equals the x87
 ## Unknown fields
 
 Every list: `keyword28Triples`, `keyword29Quadruples` (unit quaternions in the data), `keyword2aValues`, `keyword2bEntries`, and the `0x2c` entries' `keyword2bValue`, `keyword2dValue`, `keyword2eValue`, `keyword2fValue`, `keyword30Values`, `keyword31Values`. The `0x2c` entry names match the skeleton's bone names in the data.
+
+What the fields mean (rate, velocity, frame counts, tracks, key pools) and how they are sampled: `skeletal-animation.md`.

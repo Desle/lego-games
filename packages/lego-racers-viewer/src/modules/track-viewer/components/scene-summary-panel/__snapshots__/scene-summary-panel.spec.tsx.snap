@@ -123,7 +123,7 @@ exports[`SceneSummaryPanel > renders the overview and the missing textures 1`] =
         class="font-mono text-slate-400"
       >
         <li>
-          GAMEDATA\\COMMON\\LITFLASH.TGA (targa_not_ported)
+          GAMEDATA\\COMMON\\FONT_HLP.BMP (file_not_found)
         </li>
       </ul>
     </details>

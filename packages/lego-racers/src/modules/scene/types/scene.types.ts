@@ -1,4 +1,6 @@
 import type { EnumValues } from '../../../shared/types/enum.types.ts'
+import type { Skeleton } from '../../skeleton/index.ts'
+import type { SkeletalAnimation } from '../../skeletal-animation/index.ts'
 import type {
   BlendFactor as BlendFactorValues,
   CompareFunction as CompareFunctionValues,
@@ -117,8 +119,27 @@ export type SceneMaterialAssignment = {
   readonly materialIndices: readonly number[]
 }
 
+// A skeleton the world lists (`.SDB`): the bones a skeleton instance's mesh vertices select through the draw
+// commands' transforms.
+export type SceneSkeleton = {
+  readonly name: string
+  readonly path: string
+  readonly skeleton: Skeleton
+}
+
+// An animation the world lists (`.ADB`), named as the pose sampling reads it.
+export type SceneAnimation = {
+  readonly name: string
+  readonly path: string
+  readonly animation: SkeletalAnimation
+}
+
 export type SceneInstanceLevel = {
+  // -1 for a skeleton instance level without a mesh (a camera's skeleton).
   readonly meshIndex: number
+  // Skeleton instance levels only: indices into the scene's skeleton and animation lists.
+  readonly skeletonIndex: number | null
+  readonly animationIndex: number | null
   readonly materialAssignmentIndex: number | null
   // Squared distance, or the largest float for "always".
   readonly squaredDistance: number
@@ -127,6 +148,11 @@ export type SceneInstanceLevel = {
 export type SceneInstance = {
   readonly name: string
   readonly kind: SceneInstanceKind
+  // The world that defined the instance.
+  readonly worldPath: string
+  // The animation clip a skeleton instance starts playing (world keyword 0x35, resolved by 0x1002e640);
+  // null when it plays none.
+  readonly startClipIndex: number | null
   readonly levels: readonly SceneInstanceLevel[]
   readonly position: SceneVector
   readonly rotation: SceneRotation
@@ -155,6 +181,8 @@ export type Scene = {
   readonly materials: readonly SceneMaterial[]
   readonly meshes: readonly SceneMesh[]
   readonly materialAssignments: readonly SceneMaterialAssignment[]
+  readonly skeletons: readonly SceneSkeleton[]
+  readonly animations: readonly SceneAnimation[]
   readonly instances: readonly SceneInstance[]
   readonly cameras: readonly SceneCamera[]
   readonly ambientLights: readonly SceneAmbientLight[]

@@ -6,3 +6,9 @@ export type RaceWorldNames = {
   readonly blendedWorld: string | null
   readonly localWorld: string | null
 }
+
+// The sky and background world names a race description gives.
+export type RaceSkyNames = {
+  readonly sky: string | null
+  readonly backgroundWorld: string | null
+}

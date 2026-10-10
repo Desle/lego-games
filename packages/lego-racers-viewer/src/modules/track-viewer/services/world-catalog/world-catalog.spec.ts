@@ -35,7 +35,22 @@ describe.runIf(isOriginalPresent)('getWorldGroups on the original LEGO.JAM', () 
         id: 'MENUDATA\\GARAGE\\GARAGE.WDB',
         label: 'GARAGE.WDB',
         worldPaths: ['MENUDATA\\GARAGE\\GARAGE.WDB'],
+        skyPath: null,
+        backgroundWorldPath: null,
       },
     ])
+  })
+
+  it('gives the whole race its sky and background world', () => {
+    // Arrange
+    const archive = readArchive()
+
+    // Act
+    const groups = getWorldGroups(archive)
+
+    // Assert
+    const wholeRace = groups.find((group) => group.directory === 'GAMEDATA\\RACEC0R0')?.entries[0]
+    expect(wholeRace?.skyPath).toBe('GAMEDATA\\RACEC0R0\\BACKGRND.SKB')
+    expect(wholeRace?.backgroundWorldPath).toBe('GAMEDATA\\RACEC0R0\\BACKGRD.WDB')
   })
 })
