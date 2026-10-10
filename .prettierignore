@@ -2,3 +2,5 @@ node_modules
 dist
 coverage
 pnpm-lock.yaml
+original-files
+reverse-engineering/ghidra

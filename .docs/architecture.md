@@ -8,9 +8,9 @@ _Why the system is shaped this way. Record non-obvious decisions in `.docs/adr/`
 
 ## Modules
 
-### `notes`
+### `jam-archive`
 
-- Layers: `controller`, `services`, `types`
-- Public API (`index.ts`): `Note`, `NoteId`, `NoteRepository`, `NoteTitle`, `createInMemoryNoteRepository`, `createNote`
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `JamArchive`, `JamArchiveReadError`, `JamDirectory`, `JamDirectoryEntry`, `JamFileEntry`, `JamFileLocation`, `JamLookupError`, `JamLookupFailure`, `openJamArchive`
 
 <!-- foundation:architecture:end -->

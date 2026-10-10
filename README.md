@@ -1,4 +1,4 @@
-# typescript-starter
+# lego-games
 
 Template for any TypeScript project (service, library, CLI or frontend) built on
 [`@desle/typescript-foundation`](https://github.com/Desle/typescript-foundation). The rules,
