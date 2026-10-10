@@ -1,3 +1,4 @@
+import { readFloatTriple } from '../../../token-reader/index.ts'
 import { UnportableFileError } from '../../../../shared/errors/gol-file-errors.ts'
 import {
   BinaryToken,
@@ -26,13 +27,6 @@ import type {
 } from '../../types/hazard.types.ts'
 
 const readName = (reader: TokenReader) => reader.readStringWithMaximumLength(NAME_MAXIMUM_LENGTH)
-
-const readVector = (reader: TokenReader): Vector3 => {
-  const x = reader.readFloat()
-  const y = reader.readFloat()
-  const z = reader.readFloat()
-  return Object.freeze([x, y, z] as const)
-}
 
 const negateY = (vector: Vector3 | null): Vector3 | null =>
   vector === null ? null : Object.freeze([vector[0], -vector[1], vector[2]] as const)
@@ -63,11 +57,11 @@ const readCannonBlock = (reader: TokenReader, isMirrored: boolean): CannonBlock 
     (keyword, value) => {
       switch (keyword) {
         case HazardBlockKeyword.FIRST_VECTOR:
-          return { ...value, firstVector: readVector(reader) }
+          return { ...value, firstVector: readFloatTriple(reader) }
         case HazardBlockKeyword.SECOND_VECTOR:
-          return { ...value, secondVector: readVector(reader) }
+          return { ...value, secondVector: readFloatTriple(reader) }
         case HazardBlockKeyword.THIRD_VECTOR:
-          return { ...value, thirdVector: readVector(reader) }
+          return { ...value, thirdVector: readFloatTriple(reader) }
         case HazardBlockKeyword.SQUARED_FLOAT: {
           const float = reader.readFloat()
           return { ...value, squaredFloat: Math.fround(float * float) }
@@ -124,7 +118,7 @@ const readPoints = (reader: TokenReader, isMirrored: boolean): readonly HazardPo
   reader.expectRightBracket()
   reader.expectLeftCurly()
   const points = Array.from({ length: count }, () => {
-    const position = readVector(reader)
+    const position = readFloatTriple(reader)
     const integer = reader.readInteger()
     return Object.freeze({
       position: isMirrored ? (negateY(position) ?? position) : position,
@@ -176,7 +170,7 @@ const readHazard40 = (reader: TokenReader, isMirrored: boolean): Hazard40 =>
       (keyword, value) => {
         switch (keyword) {
           case HazardBlockKeyword.FIRST_VECTOR: {
-            const vector = readVector(reader)
+            const vector = readFloatTriple(reader)
             return { ...value, vector: isMirrored ? negateY(vector) : vector }
           }
           case HazardBlockKeyword.INTEGER:
@@ -186,7 +180,7 @@ const readHazard40 = (reader: TokenReader, isMirrored: boolean): Hazard40 =>
           case HazardBlockKeyword.SECOND_INTEGER_46:
             return { ...value, secondInteger: reader.readInteger() }
           case HazardBlockKeyword.SECOND_VECTOR_47:
-            return { ...value, secondVector: readVector(reader) }
+            return { ...value, secondVector: readFloatTriple(reader) }
           default:
             return null
         }
@@ -228,7 +222,7 @@ const readHazard48 = (reader: TokenReader): Hazard48 =>
             return { ...value, integer: reader.readInteger() }
           case HazardBlockKeyword.NAME: {
             const name = readName(reader)
-            return { ...value, name, vector: readVector(reader) }
+            return { ...value, name, vector: readFloatTriple(reader) }
           }
           default:
             return null
@@ -258,7 +252,7 @@ const readHazard = (reader: TokenReader, isMirrored: boolean): Hazard => {
       const name = readName(reader)
       const integer = reader.readInteger()
       const float = reader.readFloat()
-      const vector = readVector(reader)
+      const vector = readFloatTriple(reader)
       reader.expectRightCurly()
       return Object.freeze({ keyword: 0x3e, name, integer, float, vector })
     }
