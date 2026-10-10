@@ -20,6 +20,7 @@ import type {
   ProjectileStep,
   ProjectileWorld,
 } from '../../types/projectile-world/projectile-world.types.ts'
+import { updateGrapple } from '../grapple-effect/grapple-effect.ts'
 import { getIsSpeedNearZero } from '../../types/turbo-early-end/turbo-early-end.ts'
 import {
   createMagnetMotion,
@@ -224,7 +225,9 @@ export const updateProjectileEffect = (
       ? updateCannon(step, world, context, before, stepMilliseconds)
       : before.kind === PowerUpEffectKind.BARREL
         ? updateBarrel(step, world, context, before, stepMilliseconds)
-        : before.kind === PowerUpEffectKind.MAGNET
+        : before.kind === PowerUpEffectKind.GRAPPLE
+          ? updateGrapple(step, world, context, before, stepMilliseconds)
+          : before.kind === PowerUpEffectKind.MAGNET
           ? updateMagnet(step, world, context, before, stepMilliseconds)
           : before.kind === PowerUpEffectKind.TURBO
             ? updateTurbo(step, world, context, before, stepMilliseconds)

@@ -21,6 +21,7 @@ import type {
   BallisticFlightState as BallisticFlightStateValue,
   BallisticLaunchParameters,
 } from '../../types/ballistic-flight/ballistic-flight.types.ts'
+import type { AheadPoint, OwnerFlightRequest } from './ballistic-effects.types.ts'
 import type { FlightRacer } from '../../types/projectiles.types.ts'
 import { getMotion, getWorldWithMotion } from '../../types/projectile-world/projectile-world.ts'
 import type {
@@ -46,8 +47,7 @@ const CANNON_PARAMETERS: BallisticLaunchParameters = Object.freeze({
   heightOffset: 5,
 })
 // 0x004b139c and 0x004b1370: without a target the cannon fires 500 units ahead and 5 up.
-const CANNON_AHEAD_DISTANCE = 500
-const CANNON_AHEAD_HEIGHT = 5
+const CANNON_AHEAD: AheadPoint = Object.freeze({ distance: 500, height: 5, isProductStored: false })
 
 // 0x00453240 case 2: the barrel's parameter block.
 const BARREL_PARAMETERS: BallisticLaunchParameters = Object.freeze({
@@ -59,8 +59,18 @@ const BARREL_PARAMETERS: BallisticLaunchParameters = Object.freeze({
   heightOffset: 5,
 })
 // 0x004b147c and 0x004b1424: without a target the barrel is thrown 90 units behind and 5 up.
-const BARREL_BEHIND_DISTANCE = -90
-const BARREL_BEHIND_HEIGHT = 5
+const BARREL_BEHIND: AheadPoint = Object.freeze({ distance: -90, height: 5, isProductStored: false })
+
+// 0x00454360: the grapple's parameter block (0x004b14f0, 0x004b14f4, 0x004b150c) and its point 500 ahead (0x004b14f8,
+// 0x004b14cc).
+const GRAPPLE_PARAMETERS: BallisticLaunchParameters = Object.freeze({
+  gravity: Math.fround(-90.176),
+  speed: 320,
+  targetOffset: ZERO_VECTOR3,
+  maximumDurationMilliseconds: MAXIMUM_FLIGHT_MILLISECONDS,
+  heightOffset: 5,
+})
+const GRAPPLE_AHEAD: AheadPoint = Object.freeze({ distance: 500, height: 5, isProductStored: true })
 
 export class UnknownProjectileRacerError extends Error {
   constructor(racer: number) {
@@ -87,83 +97,92 @@ const getOwner = (effect: PowerUpEffect): number => {
   return effect.ownerRacer
 }
 
-// The point 0x00451f50 and 0x00453240 aim at when there is no racer: the owner's frame position moved along its
-// forward axis (frame +0x28..+0x30) by the distance, and raised by the height on z.
+// The point 0x00451f50, 0x00453240 and 0x00454360 aim at when there is no racer: the owner's frame position moved
+// along its forward axis (frame +0x28..+0x30) by the distance, and raised by the height on z. The cannon and the
+// barrel keep the product on the FPU stack; the grapple adds it with 0x00404550 after storing it.
 const getPointAlongForward = (
   context: ProjectileContext,
   owner: number,
-  distance: number,
-  height: number
+  ahead: AheadPoint
 ): Vector3 => {
   const { add, multiply, storeFloat } = context.powerUps.arithmetic
   const status = context.powerUps.racers[owner]
   if (status === undefined) throw new UnknownProjectileRacerError(owner)
+  const getComponent = (forward: number, position: number): number =>
+    ahead.isProductStored
+      ? storeFloat(add(position, storeFloat(multiply(ahead.distance, forward))))
+      : add(multiply(ahead.distance, forward), position)
   return Object.freeze({
-    x: storeFloat(add(multiply(distance, status.forward.x), status.position.x)),
-    y: storeFloat(add(multiply(distance, status.forward.y), status.position.y)),
-    z: storeFloat(add(add(multiply(distance, status.forward.z), status.position.z), height)),
+    x: storeFloat(getComponent(status.forward.x, status.position.x)),
+    y: storeFloat(getComponent(status.forward.y, status.position.y)),
+    z: storeFloat(add(getComponent(status.forward.z, status.position.z), ahead.height)),
   })
 }
 
-// 0x00451f50 case 2 (the cannon leaves state 2): a flight from the owner at the target racer, the track point or
-// the point ahead.
-export const getCannonFlight = (
+// A flight from the owner at the target racer, the track point or the point ahead (0x00451f50, 0x00453240 and
+// 0x00454360 when they leave state 2).
+export const getOwnerFlight = (
   context: ProjectileContext,
-  effect: PowerUpEffect
+  effect: PowerUpEffect,
+  request: OwnerFlightRequest
 ): BallisticFlight => {
   const owner = getOwner(effect)
   const flight = createBallisticFlight()
   if (effect.targetRacer !== null) {
-    return launchFlightAtRacer(context.powerUps.arithmetic, flight, CANNON_PARAMETERS, {
+    return launchFlightAtRacer(context.powerUps.arithmetic, flight, request.parameters, {
       shooter: owner,
       shooterRacer: getFlightRacer(context, owner),
       target: effect.targetRacer,
       targetRacer: getFlightRacer(context, effect.targetRacer),
       isFromShooter: true,
-      isLeadLimited: false,
+      isLeadLimited: request.isLeadLimited,
     })
   }
   const trackPoint =
     effect.targetTrackPoint === null
       ? undefined
       : context.powerUps.trackTargets[effect.targetTrackPoint]
-  return launchFlightAtPoint(context.powerUps.arithmetic, flight, CANNON_PARAMETERS, {
+  return launchFlightAtPoint(context.powerUps.arithmetic, flight, request.parameters, {
     shooter: owner,
     shooterRacer: getFlightRacer(context, owner),
     point:
       trackPoint === undefined
-        ? getPointAlongForward(context, owner, CANNON_AHEAD_DISTANCE, CANNON_AHEAD_HEIGHT)
+        ? getPointAlongForward(context, owner, request.ahead)
         : trackPoint.position,
     pointVelocity: ZERO_VECTOR3,
     isFromShooter: true,
   })
 }
 
-// 0x00453240 case 2 (the barrel leaves state 2): thrown at the target racer (limited lead) or behind the owner.
+export const getCannonFlight = (
+  context: ProjectileContext,
+  effect: PowerUpEffect
+): BallisticFlight =>
+  getOwnerFlight(context, effect, {
+    parameters: CANNON_PARAMETERS,
+    ahead: CANNON_AHEAD,
+    isLeadLimited: false,
+  })
+
 export const getBarrelFlight = (
   context: ProjectileContext,
   effect: PowerUpEffect
-): BallisticFlight => {
-  const owner = getOwner(effect)
-  const flight = createBallisticFlight()
-  if (effect.targetRacer !== null) {
-    return launchFlightAtRacer(context.powerUps.arithmetic, flight, BARREL_PARAMETERS, {
-      shooter: owner,
-      shooterRacer: getFlightRacer(context, owner),
-      target: effect.targetRacer,
-      targetRacer: getFlightRacer(context, effect.targetRacer),
-      isFromShooter: true,
-      isLeadLimited: true,
-    })
-  }
-  return launchFlightAtPoint(context.powerUps.arithmetic, flight, BARREL_PARAMETERS, {
-    shooter: owner,
-    shooterRacer: getFlightRacer(context, owner),
-    point: getPointAlongForward(context, owner, BARREL_BEHIND_DISTANCE, BARREL_BEHIND_HEIGHT),
-    pointVelocity: ZERO_VECTOR3,
-    isFromShooter: true,
+): BallisticFlight =>
+  getOwnerFlight(context, effect, {
+    parameters: BARREL_PARAMETERS,
+    ahead: BARREL_BEHIND,
+    isLeadLimited: true,
   })
-}
+
+export const getGrappleFlight = (
+  context: ProjectileContext,
+  effect: PowerUpEffect
+): BallisticFlight =>
+  getOwnerFlight(context, effect, {
+    parameters: GRAPPLE_PARAMETERS,
+    ahead: GRAPPLE_AHEAD,
+    isLeadLimited: false,
+  })
 
 const getWithFlight = (
   step: PowerUpStep,

@@ -19,15 +19,31 @@ export const touchProjectileFlights = (
   contacts.reduce((current, contact) => {
     const motion = getMotion(current, contact.effect)
     const racer = context.racers[contact.racer]
-    if (motion === null || motion.kind !== 'ballistic' || racer === undefined) return current
-    return getWorldWithMotion(
-      current,
-      contact.effect,
-      Object.freeze({
-        kind: 'ballistic',
-        flight: touchBallisticFlight(motion.flight, contact.racer, racer.position),
-      })
-    )
+    if (motion === null || racer === undefined) return current
+    if (motion.kind === 'ballistic') {
+      return getWorldWithMotion(
+        current,
+        contact.effect,
+        Object.freeze({
+          kind: 'ballistic',
+          flight: touchBallisticFlight(motion.flight, contact.racer, racer.position),
+        })
+      )
+    }
+    if (motion.kind === 'grapple') {
+      return getWorldWithMotion(
+        current,
+        contact.effect,
+        Object.freeze({
+          kind: 'grapple',
+          hook: Object.freeze({
+            ...motion.hook,
+            flight: touchBallisticFlight(motion.hook.flight, contact.racer, racer.position),
+          }),
+        })
+      )
+    }
+    return current
   }, world)
 
 // 0x00456320 for each racer touching a hazard, with the magnet's capture range and its candidate racer (0x00455fb0):

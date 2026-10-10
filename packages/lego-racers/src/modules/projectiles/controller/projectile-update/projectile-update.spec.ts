@@ -368,3 +368,79 @@ describe('updatePowerUpsWithProjectiles: the turbo', () => {
     expect(getEffect(updated.step, effectId).timerMilliseconds).toBe(3984)
   })
 })
+
+describe('updatePowerUpsWithProjectiles: the grapple', () => {
+  const getLatched = (
+    statusOverrides: Partial<RacerPowerUpStatus> = {},
+    probe: LineProbe = MISS
+  ) => {
+    const contexts = getContexts(probe, statusOverrides)
+    const used = getWorldAfterUse({ category: BrickKind.PROJECTILE, level: 1 }, contexts.powerUps)
+    const effectId = getHeadId(used.step)
+    const flying = updatePowerUpsWithProjectiles(used.step, used.world, contexts.projectiles, 16)
+    const touched = touchProjectileFlights(flying.world, contexts.projectiles, [
+      { effect: effectId, racer: 1 },
+    ])
+    const hit = updatePowerUpsWithProjectiles(flying.step, touched, contexts.projectiles, 16)
+    return { contexts, effectId, flying, hit }
+  }
+
+  it('launches at the racer, latches on it and tows both racers together (0x00454360, 0x00453ef0)', () => {
+    // Arrange / Act
+    const { effectId, flying, hit } = getLatched()
+
+    // Assert
+    const launched = getMotion(flying.world, effectId)
+    expect(launched?.kind === 'grapple' ? launched.hook.flight.state : '').toBe(
+      BallisticFlightState.FLYING
+    )
+    expect(getEffect(hit.step, effectId)).toMatchObject({
+      state: EffectState.ENDING,
+      timerMilliseconds: 4000,
+      targetRacer: 1,
+    })
+    expect(hit.world.events).toMatchObject([
+      { type: 'projectiles.racer_towed', racer: 0, vector: { x: 180 }, isOwner: true },
+      { type: 'projectiles.racer_towed', racer: 1, vector: { x: -180 }, isOwner: false },
+    ])
+  })
+
+  it('brings the hook back when the victim is shielded (0x004545d0)', () => {
+    // Arrange / Act
+    const { effectId, hit } = getLatched({ isShielded: true, shieldLevel: 1 })
+
+    // Assert
+    expect(getEffect(hit.step, effectId)).toMatchObject({
+      state: EffectState.FINAL_STAGE,
+      timerMilliseconds: 500,
+    })
+    const motion = getMotion(hit.world, effectId)
+    expect(motion?.kind === 'grapple' ? motion.hook.isRetracting : false).toBe(true)
+    expect(hit.world.events).toEqual([])
+  })
+
+  it('lets go when the rope meets the track after a second (0x00444938)', () => {
+    // Arrange: the track blocks the rope between the owner and the hook.
+    const blocked: LineProbe = (start) =>
+      start.x === 0 && start.y === 0 && start.z === 0
+        ? { point: { x: 1, y: 2, z: 3 }, normal: { x: 0, y: 0, z: 1 } }
+        : null
+    const contexts = getContexts(blocked)
+    const used = getWorldAfterUse({ category: BrickKind.PROJECTILE, level: 1 }, contexts.powerUps)
+    const effectId = getHeadId(used.step)
+    const flying = updatePowerUpsWithProjectiles(used.step, used.world, getContexts(MISS).projectiles, 16)
+    const touched = touchProjectileFlights(flying.world, contexts.projectiles, [
+      { effect: effectId, racer: 1 },
+    ])
+    const hit = updatePowerUpsWithProjectiles(flying.step, touched, getContexts(MISS).projectiles, 16)
+
+    // Act
+    const later = updatePowerUpsWithProjectiles(hit.step, hit.world, contexts.projectiles, 1000)
+
+    // Assert: the 1 second step reached full tension, the probe hit, the effect retracts.
+    expect(getEffect(later.step, effectId).state).toBe(EffectState.FINAL_STAGE)
+    expect(later.step.events.some((event) => event.type === 'power_ups.grapple_released')).toBe(
+      true
+    )
+  })
+})

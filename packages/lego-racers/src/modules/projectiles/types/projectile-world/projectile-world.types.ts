@@ -2,6 +2,7 @@ import type { PowerUpContext, PowerUpStep } from '../../../power-ups/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
 import type { ProjectileEvent } from '../../events/projectile.events.types.ts'
 import type { BallisticFlight } from '../ballistic-flight/ballistic-flight.types.ts'
+import type { GrappleHook } from '../grapple-hook/grapple-hook.types.ts'
 import type { FlightRacer, LineProbe } from '../projectiles.types.ts'
 
 // The movement state of one pooled effect: the body the original keeps inside the effect object.
@@ -24,7 +25,13 @@ export type MagnetMotion = {
   readonly isRacerArrived: boolean
 }
 
-export type EffectMotion = BallisticMotion | MagnetMotion
+// The grapple (0x00453ef0): the hook is a ballistic flight with a rope.
+export type GrappleMotion = {
+  readonly kind: 'grapple'
+  readonly hook: GrappleHook
+}
+
+export type EffectMotion = BallisticMotion | GrappleMotion | MagnetMotion
 
 // Everything the projectiles keep between frames, beside the power-ups' own state.
 export type ProjectileWorld = {
