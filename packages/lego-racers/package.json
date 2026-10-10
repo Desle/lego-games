@@ -26,6 +26,7 @@
     "./power-up": "./src/modules/power-up/index.ts",
     "./power-ups": "./src/modules/power-ups/index.ts",
     "./projectiles": "./src/modules/projectiles/index.ts",
+    "./race": "./src/modules/race/index.ts",
     "./race-description": "./src/modules/race-description/index.ts",
     "./racer": "./src/modules/racer/index.ts",
     "./racer-ai": "./src/modules/racer-ai/index.ts",

@@ -60,6 +60,8 @@ export {
 export { ATTACHMENT_SLOT_COUNT } from './types/attachment-slots/attachment-slots.ts'
 export {
   BrickKind,
+  getBrickKindCode,
+  getBrickKindFromCode,
   getRaceModeBrickKind,
   RaceModeFlag,
   UnknownBrickKindError,

@@ -1,0 +1,187 @@
+import {
+  createComputerTimers,
+  createRubberBand,
+  getComputerPersonality,
+} from '../../../racer-ai/index.ts'
+import { createPowerUpWorld, setBrickSoundsEnabled } from '../../../power-ups/index.ts'
+import {
+  createCarBody,
+  createPlayerController,
+  createRacer,
+  createRacerSet,
+} from '../../../racer/index.ts'
+import type { Racer, RacerSet } from '../../../racer/index.ts'
+import { drawRandomValue } from '../../../random-table/index.ts'
+import type { RandomTablePosition } from '../../../random-table/index.ts'
+import { resolveTimerSecondValue } from '../../../timer/index.ts'
+import { RacePhase } from '../../types/race-phase/race-phase.ts'
+import type {
+  RaceDefinition,
+  RaceRacerDefinition,
+  RaceRacerPowerUpSetup,
+  RaceState,
+} from '../../types/race.types.ts'
+import {
+  convertRacerToComputer,
+  PLAYER_CONTROLLER,
+  resetRacerForRace,
+} from '../../types/racer-transitions/racer-transitions.ts'
+import { placeCarBodyOnRoute } from '../../types/scripted-car-body/scripted-car-body.ts'
+import type { RacerSetup } from './create-race.types.ts'
+
+// The laps of a race with one local player (0x004327f0).
+const SINGLE_PLAYER_LAP_COUNT = 3
+// 0x00436df0: description byte 0xf bit 0x40, 0x80 and 0x2 become racer flags.
+const ALWAYS_GRAPPLE_FLAG = 0x1000000
+const ALWAYS_LEVEL_THREE_FLAG = 0x2000000
+const PERMANENT_TURBO_FLAG = 0x8000000
+// Race_LoadTrackContent sets it on the demonstration's racer (0x00433a2d).
+const DEMONSTRATION_FLAG = 0x800000
+// float32 0.05 at 0x004b07f0, the rubber band's bias on a mirrored track (0x00433773).
+const MIRRORED_RUBBER_BAND_BIAS = Math.fround(0.05)
+
+const getRacerFlags = (definition: RaceRacerDefinition): number =>
+  (definition.abilities.isAlwaysGrapple ? ALWAYS_GRAPPLE_FLAG : 0) |
+  (definition.abilities.isAlwaysLevelThree ? ALWAYS_LEVEL_THREE_FLAG : 0) |
+  (definition.abilities.isPermanentTurbo ? PERMANENT_TURBO_FLAG : 0)
+
+// 0x00436df0 and 0x004371c0 for one racer, then 0x004374c0: the computer racer's chances and its two timers
+// (two random table draws, even for a player), the route placement and the reset.
+const createRacerFromDefinition = (
+  definition: RaceDefinition,
+  racerDefinition: RaceRacerDefinition,
+  lapCount: number,
+  position: RandomTablePosition
+): RacerSetup => {
+  const { arithmetic, tables } = definition
+  const personality = getComputerPersonality(arithmetic, racerDefinition.personalityBytes)
+  const timers = createComputerTimers(tables.randomTable, position)
+  const carBody = createCarBody(racerDefinition.carBody)
+  const base = createRacer(
+    racerDefinition.route === null
+      ? carBody
+      : placeCarBodyOnRoute(arithmetic, carBody, racerDefinition.route)
+  )
+  const racer: Racer = Object.freeze({
+    ...base,
+    lapCount,
+    powerUpChances: personality.chances,
+    proximityCheckMilliseconds: timers.tauntMilliseconds,
+    voiceMilliseconds: timers.voiceMilliseconds,
+    flags: getRacerFlags(racerDefinition),
+    controllerKind: racerDefinition.controllerKind,
+  })
+  const setup: RaceRacerPowerUpSetup = Object.freeze({
+    personality: Object.freeze({ chances: personality, preferredKind: null, preferredLevel: 0 }),
+    abilities: racerDefinition.abilities,
+  })
+  return Object.freeze({
+    racer: resetRacerForRace(racer),
+    setup,
+    position: timers.position,
+  })
+}
+
+// Timers_Load 0x00464aa0 → 0x00464750: a randomised second value draws once while the timer is set up.
+const getPositionAfterTimers = (
+  definition: RaceDefinition,
+  position: RandomTablePosition
+): RandomTablePosition =>
+  (definition.timers?.timers ?? []).reduce((current, timer) => {
+    let drawn = current
+    resolveTimerSecondValue(timer, () => {
+      const draw = drawRandomValue(definition.tables.randomTable, drawn)
+      drawn = draw.position
+      return draw.value
+    })
+    return drawn
+  }, position)
+
+// Race_LoadRaceDescription 0x00431e00 and Race_LoadTrackContent 0x00433480, as far as the simulation is
+// concerned: the lap count (0x004327f0), the racers (RacerSet_Setup 0x0043b190), the timers' draws and the
+// power-ups (PowerUps_Initialize 0x00457c20), ending in the state Race_RunLoop starts from.
+export const createRace = (definition: RaceDefinition): RaceState => {
+  const isMultiplayer = definition.localPlayerCount >= 2
+  const isDemonstration = definition.localPlayerCount === 0
+  const lapCount = isMultiplayer ? definition.multiplayerLapCount : SINGLE_PLAYER_LAP_COUNT
+  const racerDefinitions = definition.racers.map((racerDefinition, index) =>
+    isDemonstration && index === 0
+      ? Object.freeze({ ...racerDefinition, controllerKind: PLAYER_CONTROLLER })
+      : racerDefinition
+  )
+  const setups = racerDefinitions.reduce<readonly RacerSetup[]>((made, racerDefinition) => {
+    const previous = made.at(-1)
+    return [
+      ...made,
+      createRacerFromDefinition(
+        definition,
+        racerDefinition,
+        lapCount,
+        previous === undefined ? definition.randomPosition : previous.position
+      ),
+    ]
+  }, [])
+  const racers = setups.map((made, index) =>
+    isDemonstration && index === 0
+      ? Object.freeze({
+          ...convertRacerToComputer(made.racer),
+          flags: (made.racer.flags | DEMONSTRATION_FLAG) >>> 0,
+        })
+      : made.racer
+  )
+  const afterRacers = setups.at(-1)?.position ?? definition.randomPosition
+  const racerSet: RacerSet = createRacerSet(
+    racers,
+    getPositionAfterTimers(definition, afterRacers),
+    definition.isMirrored ? MIRRORED_RUBBER_BAND_BIAS : 0
+  )
+  const powerUps = createPowerUpWorld({
+    bricks: definition.powerUps.bricks,
+    enhancementBricks: definition.powerUps.enhancementBricks,
+    raceModeFlags: definition.raceModeFlags,
+    isSplitScreen: isMultiplayer,
+    racers: racers.map((racer) => ({
+      voiceSoundBase: racer.voiceBase,
+      voiceCooldownMilliseconds: racer.voiceMilliseconds,
+    })),
+    random: { table: definition.tables.randomTable, position: racerSet.randomPosition },
+  })
+  const playerRacerIndices = racerDefinitions.flatMap((racerDefinition, index) =>
+    racerDefinition.controllerKind === PLAYER_CONTROLLER ? [index] : []
+  )
+  return Object.freeze({
+    phase: RacePhase.INTRODUCTION,
+    phaseMilliseconds: 0,
+    isRunning: true,
+    finishedRacerCount: 0,
+    lapCount,
+    isMultiplayer,
+    isDemonstration,
+    isCountdownSkipped: definition.isCountdownSkipped,
+    unidentifiedCountdownMilliseconds: 0,
+    raceModeFlags: definition.raceModeFlags,
+    placements: Object.freeze(racers.map(() => 0)),
+    context: Object.freeze({
+      arithmetic: definition.arithmetic,
+      tables: definition.tables,
+      checkpoints: definition.checkpoints,
+      collisionObjects: definition.collisionObjects,
+    }),
+    racerSet: Object.freeze({
+      ...racerSet,
+      randomPosition: powerUps.world.random.position,
+      rubberBand: createRubberBand(racerSet.rubberBand.bias),
+    }),
+    playerRacerIndices: Object.freeze(playerRacerIndices),
+    playerControllers: Object.freeze(playerRacerIndices.map(() => createPlayerController(false))),
+    powerUpStep: setBrickSoundsEnabled(powerUps, false),
+    powerUpSetups: Object.freeze(setups.map((made) => made.setup)),
+    getGroundPoint: definition.getGroundPoint,
+    trackTargets: definition.trackTargets,
+    timers: definition.timers,
+    mainTriggers: definition.mainTriggers,
+    environmentTriggers: definition.environmentTriggers,
+    hazards: definition.hazards,
+    startPositions: definition.startPositions,
+  })
+}
