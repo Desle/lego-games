@@ -91,10 +91,7 @@ const getText = (
   })
 
 // The countdown numerals and GO, then the finish text (0x004263a0, 0x004263e0..0x00426740).
-const getCountdown = (
-  state: HudState,
-  input: HudInput
-): HudCountdown => {
+const getCountdown = (state: HudState, input: HudInput): HudCountdown => {
   const { layout, frameMilliseconds } = input
   const drawCentered = (text: string, scale: HudScale, color: number | null) => {
     const size = input.measureText(HudFont.DIGITS, text)
@@ -363,4 +360,3 @@ export const getHudFrame = (state: HudState, input: HudInput): HudFrame => {
     soundIds: Object.freeze(countdown.soundIds),
   })
 }
-

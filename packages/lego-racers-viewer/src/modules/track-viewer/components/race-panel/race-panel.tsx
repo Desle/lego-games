@@ -1,0 +1,74 @@
+import { DEFAULT_KEYBOARD_BINDINGS } from '@lego-games/lego-racers/race-input'
+import type { ChangeEvent } from 'react'
+import { RaceStatus } from '../../types/race-status/race-status.ts'
+import type { RacePanelProps } from './race-panel.types.ts'
+
+// Starts and stops the race and lists the original's default controls.
+const RacePanel = ({
+  status,
+  errorMessage,
+  isDevelopmentFilesAvailable,
+  onDevelopmentRaceRequested,
+  onGameFilesChosen,
+  onRaceStopped,
+}: RacePanelProps) => {
+  const isBusy = status === RaceStatus.LOADING
+  const onInputChange = (event: ChangeEvent<HTMLInputElement>) =>
+    onGameFilesChosen([...(event.target.files ?? [])])
+  return (
+    <section className="flex flex-col gap-3 text-sm">
+      {isDevelopmentFilesAvailable && (
+        <button
+          type="button"
+          className="rounded bg-amber-500 px-3 py-2 font-semibold text-slate-900 hover:bg-amber-400 disabled:opacity-50"
+          disabled={isBusy}
+          onClick={onDevelopmentRaceRequested}
+        >
+          Race Royal Knights Raceway (development files)
+        </button>
+      )}
+      <label className="flex cursor-pointer flex-col gap-1 rounded-lg border-2 border-dashed border-slate-500 p-3 text-center hover:border-amber-400">
+        <span className="font-semibold">Choose the game files</span>
+        <span className="text-slate-400">
+          LEGO.JAM, LEGORacers.exe and the .tun music; they never leave your browser.
+        </span>
+        <input
+          className="sr-only"
+          type="file"
+          multiple
+          disabled={isBusy}
+          onChange={onInputChange}
+        />
+      </label>
+      {status === RaceStatus.RUNNING && (
+        <button
+          type="button"
+          className="rounded bg-slate-700 px-2 py-1 hover:bg-slate-600"
+          onClick={onRaceStopped}
+        >
+          Stop the race
+        </button>
+      )}
+      {status === RaceStatus.LOADING && <p className="text-slate-300">Loading the race...</p>}
+      {status === RaceStatus.FAILED && (
+        <p role="alert" className="text-red-400">
+          {errorMessage}
+        </p>
+      )}
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+        {DEFAULT_KEYBOARD_BINDINGS.map((binding) => (
+          <div key={binding.binding} className="contents">
+            <dt className="font-mono text-amber-300">{binding.keyLabel}</dt>
+            <dd className="text-slate-300">{binding.binding.replaceAll('_', ' ')}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="text-xs text-slate-400">
+        A gamepad steers with its first axis; buttons 1 to 7 accelerate, brake, use the power-up,
+        change camera, change HUD, power slide and look behind.
+      </p>
+    </section>
+  )
+}
+
+export default RacePanel

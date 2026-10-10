@@ -3,7 +3,13 @@ import {
   createFloatArithmetic,
   RACE_FPU_PRECISION,
 } from '../../../simulation-math/index.ts'
-import type { HudCommand, HudHeldKindIcon, HudImageCommand, HudInput, HudPoint } from '../../types/race-hud.types.ts'
+import type {
+  HudCommand,
+  HudHeldKindIcon,
+  HudImageCommand,
+  HudInput,
+  HudPoint,
+} from '../../types/race-hud.types.ts'
 
 const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
 

@@ -1,10 +1,13 @@
 import { createReadStream, existsSync, statSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
-import { DEVELOPMENT_JAM_ROUTE } from './src/shared/development-jam/development-jam-route.ts'
+import {
+  DEVELOPMENT_GAME_FILE_ROUTE,
+  DEVELOPMENT_JAM_ROUTE,
+} from './src/shared/development-jam/development-jam-route.ts'
 
 const DEFAULT_JAM_PATH = resolve(
   import.meta.dirname,
@@ -30,6 +33,30 @@ const developmentJamPlugin = (): Plugin => ({
   },
 })
 
+// Only the executable and the music are served, by plain file name.
+const GAME_FILE_NAME = /^(LEGORacers\.exe|[A-Za-z0-9_-]+\.tun)$/
+
+// Serves `LEGORacers.exe` and the `.tun` files next to the local LEGO.JAM to the dev server only.
+const developmentGameFilesPlugin = (): Plugin => ({
+  name: 'lego-racers-development-game-files',
+  apply: 'serve',
+  configureServer: (server) => {
+    const directory = dirname(process.env['LEGO_JAM_PATH'] ?? DEFAULT_JAM_PATH)
+    server.middlewares.use(DEVELOPMENT_GAME_FILE_ROUTE, (request, response) => {
+      const name = decodeURIComponent((request.url ?? '').replace(/^\//, '').split('?')[0] ?? '')
+      const path = resolve(directory, name)
+      if (!GAME_FILE_NAME.test(name) || !existsSync(path)) {
+        response.writeHead(404)
+        response.end(`No game file ${name}`)
+        return
+      }
+      response.setHeader('Content-Type', 'application/octet-stream')
+      response.setHeader('Content-Length', String(statSync(path).size))
+      createReadStream(path).pipe(response)
+    })
+  },
+})
+
 export default defineConfig({
-  plugins: [react(), tailwindcss(), developmentJamPlugin()],
+  plugins: [react(), tailwindcss(), developmentJamPlugin(), developmentGameFilesPlugin()],
 })

@@ -1,0 +1,85 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`RaceHudOverlay > renders default snapshot 1`] = `
+<div>
+  <div
+    class="pointer-events-none absolute inset-0"
+    data-testid="race-hud"
+  />
+</div>
+`;
+
+exports[`RaceHudOverlay > renders the countdown numeral in cyan at its position and scale 1`] = `
+<div>
+  <div
+    class="pointer-events-none absolute inset-0"
+    data-testid="race-hud"
+  >
+    <span
+      class="absolute whitespace-pre leading-none"
+      style="left: 380px; top: 250px; transform: scale(1.8, 1.8); transform-origin: 0 0; font-family: Impact, "Arial Black", sans-serif; font-size: 80px; color: rgb(0, 255, 255); text-shadow: 2px 2px 0 #000;"
+    >
+      3
+    </span>
+    <span
+      class="absolute right-2 bottom-2 rounded bg-black/60 px-2 py-1 text-xs text-slate-200"
+    >
+      countdown
+    </span>
+  </div>
+</div>
+`;
+
+exports[`RaceHudOverlay > renders the held power-up holder and icon from the image database urls 1`] = `
+<div>
+  <div
+    class="pointer-events-none absolute inset-0"
+    data-testid="race-hud"
+  >
+    <img
+      alt="HOLDER"
+      class="absolute max-w-none"
+      src="data:image/png;base64,AA=="
+      style="left: 20px; top: 500px; width: 64px; height: 64px;"
+    />
+    <img
+      alt="CANNON"
+      class="absolute max-w-none"
+      src="data:image/png;base64,BB=="
+      style="left: 36px; top: 520px; width: 32px; height: 32px;"
+    />
+    <span
+      class="absolute right-2 bottom-2 rounded bg-black/60 px-2 py-1 text-xs text-slate-200"
+    >
+      racing
+    </span>
+  </div>
+</div>
+`;
+
+exports[`RaceHudOverlay > renders the lap row texts with the font colour white 1`] = `
+<div>
+  <div
+    class="pointer-events-none absolute inset-0"
+    data-testid="race-hud"
+  >
+    <span
+      class="absolute whitespace-pre leading-none"
+      style="left: 400px; top: 7px; transform: scale(1, 1); transform-origin: 0 0; font-family: Impact, "Arial Black", sans-serif; font-size: 16px; color: rgb(255, 255, 255); text-shadow: 2px 2px 0 #000;"
+    >
+      LAP
+    </span>
+    <span
+      class="absolute whitespace-pre leading-none"
+      style="left: 450px; top: 7px; transform: scale(1, 1); transform-origin: 0 0; font-family: Impact, "Arial Black", sans-serif; font-size: 16px; color: rgb(255, 255, 255); text-shadow: 2px 2px 0 #000;"
+    >
+      1
+    </span>
+    <span
+      class="absolute right-2 bottom-2 rounded bg-black/60 px-2 py-1 text-xs text-slate-200"
+    >
+      racing
+    </span>
+  </div>
+</div>
+`;

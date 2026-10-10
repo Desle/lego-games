@@ -106,3 +106,13 @@ The game resolves those paths against its current directory with `0x0044d190`; i
 Without `ALP `/`ADPC` the data starts at 0 and is treated as mono. The stream buffer is always 16-bit stereo at 22050 Hz (`0x0041a180`, `0x0041a360`); there is no rate field. `0x004197a0` refills the buffer in multiples of 0x1000 bytes and keeps the decoder state across chunks, so the played samples equal one continuous decode of the data; when the stream loops it seeks back to the data and resets the state.
 
 All 50 `.tun` files in the English game folder are stereo with `headerSize` 8.
+
+## The race's music and sounds (port: `race-audio`)
+
+Race music (`Race_LoadVoicesAndSounds` `0x004328f0` loads the list `LEGOMSC`: start, royal, lose, win, knight, moat, armor; the volume float at `0x004b07ec` is 1.2, kept at race `+0x3324`):
+
+- `Race_StartIntroductionMusic` (`0x00434930`, from load): entry 0 (`start.tun`) plays once.
+- `Race_UpdateState2` (`0x00434b00`, the countdown ends): the track stops; with more than four entries and no points record one random table draw `r` picks `r % (count - 3)`: 1 → entry 4, 2 → entry 5, 3 → entry 6, otherwise entry 1; played looped. The draw advances the shared position; the port's race does not do it.
+- `Race_UpdateState3` (`0x00434c80`, a human finishes): entry 3 (`win`) for place 1 (`+0xd00`), else entry 2 (`lose`).
+
+Sound ids go through `RaceSounds_GetBank` (`0x00443c30`): below 1000 the general bank (`GENERAL.SBK`, 80 entries counted from 0), 1000..1099 driver voices, 1100..2999 the voice folder, 3000 and up the track bank (`LEVC0R0.SBK`). `RaceSounds_PlayAt` (`0x00443b80`) call sites and their ids: countdown tick 0 (`321`) and GO `0xf` (`0x00426540`, `0x00426668`); start `0x3e` (`0x00439404`); power slide start `0x39`, stop `0x41` (`0x0043985b`, `0x004398d5`); turbo `0x24 + level` and `0x41` (`0x0045cde0`, `0x0045ce06`); shield hit 1, `0x46` or `0x47` (`0x0043a2df`); cannon launch 6 and hit 5 (`0x00452362`, `0x00452415`); grapple launch `0x15`, hit `0x12`, snap `0x16`, release `0x49`; wand `0x42`, hit `0x43`; magnet `0x4a`, hit `0x23`, place `0x21`; rocket `0x33`, hit `0x32`; oil drop `0x2e`, hit `0x2f`; brick collect `0x48`; shield end `0x3b`; contact `0x19` or `0x38`; skid `0x3a`.

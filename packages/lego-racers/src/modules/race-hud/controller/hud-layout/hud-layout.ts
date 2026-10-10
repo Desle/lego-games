@@ -62,8 +62,6 @@ export const getHudLayout = (parameters: HudLayoutParameters): HudLayout => {
     wrongWayY: Math.trunc(screenHeight / 5),
     holderY:
       screenHeight -
-      getTruncatedInteger(
-        multiply(add(holderSize.height, HOLDER_MARGIN), verticalScale)
-      ),
+      getTruncatedInteger(multiply(add(holderSize.height, HOLDER_MARGIN), verticalScale)),
   })
 }
