@@ -13,13 +13,13 @@ const toVector = ([x, y, z]: readonly [number, number, number]): Vector3 =>
   Object.freeze({ x, y, z })
 
 // Where a racer's car starts. A racer with a route starts at the route's first position and rotation (0x0042a670).
-// Otherwise it takes its slot of the start grid: RacerSet_Setup 0x0043b190 puts the slot's position on the car's
-// frame (frame slot +0x08) and builds the rotation from the two axes (slot +0x40, getRotationFromFrameAxes). The
-// slot is the racer's index (race +0x26c); the car attach 0x00429210 may add an offset that is not traced.
+// Otherwise it takes its slot of the start grid: 0x0043b480 puts the slot's position on the car's frame (frame
+// slot +0x08) and builds the rotation from the two axes (slot +0x40, getRotationFromFrameAxes). The slot is
+// racer-setup's getStartSlot (racer set +0x26c); the car attach 0x00429210 copies the frame and adds no offset.
 export const getStartFrame = (
   arithmetic: FloatArithmetic,
   startPositions: readonly StartPosition[],
-  racerIndex: number,
+  startSlot: number,
   route: ComputerRacerRoute | null
 ): RigidBodyFrame => {
   if (route !== null) {
@@ -29,7 +29,7 @@ export const getStartFrame = (
       position: toVector(route.firstVector),
     })
   }
-  const slot = startPositions.find((candidate) => candidate.slot === racerIndex)
+  const slot = startPositions.find((candidate) => candidate.slot === startSlot)
   if (slot === undefined || slot.position === null) {
     return Object.freeze({ rotation: IDENTITY_MATRIX3, position: ZERO_VECTOR3 })
   }

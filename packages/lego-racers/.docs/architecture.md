@@ -244,6 +244,48 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 - Public API (`index.ts`): `loadScene`, `getWorldPaths`, `getRaceWorldPaths`, `getRaceSkyPath`, `getRaceBackgroundWorldPath`, `COMMON_DIRECTORY`, `SceneLinkError`, `ScenePathError`, the render-state enums (`ShadeMode`, `TextureOperation`, `CompareFunction`, `BlendFactor`, `TextureFilter`, `TextureAddressing`), `SceneInstanceKind`, `MissingBitmapReason`, and the `Scene` types
 - Links worlds into a renderable scene (`0x10017ac0`, `0x1002e640`) and derives each material's Direct3D state (`0x1000a2c0`). Depends on `jam-archive`, `world`, `texture-database`, `material`, `model`, `bitmap`, `targa`, `skeleton`, `animation` and `skeletal-animation`; free of DOM and rendering libraries.
 
+### `named-record`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `readNamedRecords`, `readKeywordBlock`, `findNamedRecord`, `NAMED_RECORD_KEYWORD`, `RECORD_NAME_MAXIMUM_LENGTH`, and the `NamedRecordList` type
+- The frame of the five exe database files (`0x00411870`, `0x004119a0`).
+
+### `driver-database`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseDriverDatabase`, `DriverKeyword`, and the `Driver` types
+- DDB drivers (`0x004208f0`).
+
+### `champion-database`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseChampionDatabase`, `ChampionKeyword`, and the `Champion` types
+- CCB champions (`0x0041d370`).
+
+### `chassis-database`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseChassisDatabase`, `ChassisKeyword`, `ChassisVariantKeyword`, and the `Chassis` types
+- CMB chassis (`0x0041db10`).
+
+### `circuit-database`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseCircuitDatabase`, `CircuitKeyword`, `CIRCUIT_RACER_CODE_CAPACITY`, and the `Circuit` types
+- CRB circuits (`0x0041f1d0`).
+
+### `race-catalog`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseRaceCatalog`, `RaceCatalogKeyword`, `UnknownCircuitError`, and the `RaceCatalog` types
+- RCB races (`0x004366f0`).
+
+### `racer-setup`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `describeChampionRacer`, `describeBuiltRacer`, `createCarBodySetup`, `getSteeringScale`, `getRatingScale`, `setTopSpeedRating`, `BASE_TOP_SPEED`, `getStartSlot`, `getRaceModeRacerFlags`, `getIsCarBodyFlagged`, `getRacerPowerUpAbilities`, `UnknownRacerRecordError`, and the `RacerDescription`, `CarDescription`, `BuiltCar` types
+- Cars and drivers of a race (`0x0043b480`, `0x004371c0`); wires `driver-database`, `champion-database`, `chassis-database`, `racer` and `racer-physics`.
+
 ### `race`
 
 - Layers: `controller`, `services`, `types`

@@ -12,12 +12,6 @@ import type { RaceRacerDefinition } from '../race.types.ts'
 // Test fixtures: racers with the placeholder car at the origin.
 export const FIXTURE_ARITHMETIC = createFloatArithmetic(FpuPrecision.SINGLE)
 
-const NO_ABILITIES = Object.freeze({
-  isAlwaysGrapple: false,
-  isAlwaysLevelThree: false,
-  isPermanentTurbo: false,
-})
-
 export const createFixtureRacerDefinition = (controllerKind: number): RaceRacerDefinition => ({
   controllerKind,
   carBody: getPlaceholderCarBodyDefinition(
@@ -26,7 +20,9 @@ export const createFixtureRacerDefinition = (controllerKind: number): RaceRacerD
   ),
   route: null,
   personalityBytes: [100, 100, 100, 100, 100, 100],
-  abilities: NO_ABILITIES,
+  preferredPowerUpKind: null,
+  preferredPowerUpLevel: 0,
+  voiceBase: 1000,
 })
 
 export const createFixtureRacer = (): Racer =>

@@ -18,3 +18,5 @@ Source: `LEGORacers.exe`. Port: `packages/lego-racers/src/modules/start-position
 Any other keyword is error 0. The slot is not range-checked (six slots fit each array). Port names: `position`, `firstAxis`, `secondAxis` (role of the two vectors not confirmed; in the data they are unit vectors).
 
 Verified: all 14 `.SPB` files parse to their last byte.
+
+The slot a racer takes is racer set `+0x26c + 4·i`: `i`, except racer 0 takes slot 2 with two or more local players (racer-setup.md).

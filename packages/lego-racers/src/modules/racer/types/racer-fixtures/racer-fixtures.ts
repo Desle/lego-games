@@ -40,6 +40,7 @@ export const createTestCarBody = (): CarBody =>
     }),
     steeringScale: 1,
     throttleScale: 1,
+    topSpeedScale: 1,
   })
 
 // The test car body with some car rigid body fields changed.
