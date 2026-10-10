@@ -1,6 +1,5 @@
 import { createEnum } from '../../../../shared/types/enum.types.ts'
-import { getFloatToInteger } from '../../../racer-ai/index.ts'
-import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
+import { getDotProduct, getTruncatedInteger, ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 import type { FlightRacer, LineProbe } from '../projectiles.types.ts'
 import type {
@@ -179,12 +178,14 @@ export const launchFlightAtRacer = (
     storeFloat(add(aimedAt.y, leadY)),
     storeFloat(add(aimedAt.z, leadZ))
   )
-  const ledAlignment = add(
-    add(
-      multiply(shooterRacer.sideAxis.z, subtract(ledPoint.z, start.z)),
-      multiply(shooterRacer.sideAxis.y, subtract(ledPoint.y, start.y))
-    ),
-    multiply(shooterRacer.sideAxis.x, subtract(ledPoint.x, start.x))
+  const ledAlignment = getDotProduct(
+    arithmetic,
+    shooterRacer.sideAxis,
+    getVector(
+      subtract(ledPoint.x, start.x),
+      subtract(ledPoint.y, start.y),
+      subtract(ledPoint.z, start.z)
+    )
   )
   const led =
     request.isLeadLimited && !arithmetic.getIsBelow(ledAlignment, 0) ? aimedAt : ledPoint
@@ -202,7 +203,7 @@ export const launchFlightAtRacer = (
       targetPosition: target,
       shooterRacer: request.shooter,
       targetRacer: request.target,
-      durationMilliseconds: getFloatToInteger(milliseconds),
+      durationMilliseconds: getTruncatedInteger(milliseconds),
     }),
     seconds
   )
@@ -268,7 +269,7 @@ export const launchFlightAtPoint = (
       targetPosition: target,
       shooterRacer: request.shooter,
       targetRacer: null,
-      durationMilliseconds: getFloatToInteger(multiply(seconds, MILLISECONDS_PER_SECOND)),
+      durationMilliseconds: getTruncatedInteger(multiply(seconds, MILLISECONDS_PER_SECOND)),
     }),
     seconds
   )
@@ -311,7 +312,7 @@ export const launchFlightWithOffset = (
     shooterRacer: null,
     targetRacer: null,
     horizontalSpeed: parameters.speed,
-    durationMilliseconds: getFloatToInteger(multiply(seconds, MILLISECONDS_PER_SECOND)),
+    durationMilliseconds: getTruncatedInteger(multiply(seconds, MILLISECONDS_PER_SECOND)),
     velocityX: storeFloat(multiply(inverseSeconds, differenceX)),
     velocityY: storeFloat(multiply(inverseSeconds, differenceY)),
     launchVelocityZ: storeFloat(subtract(climb, drop)),
@@ -448,7 +449,7 @@ export const reflectBallisticFlight = (
         storeFloat(add(leadY, aimedAt.y)),
         storeFloat(add(leadZ, aimedAt.z))
       ),
-      durationMilliseconds: getFloatToInteger(milliseconds),
+      durationMilliseconds: getTruncatedInteger(milliseconds),
     }),
     seconds
   )
