@@ -225,3 +225,9 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 - Layers: `controller`, `types`
 - Public API (`index.ts`): `loadScene`, `getWorldPaths`, `getRaceWorldPaths`, `COMMON_DIRECTORY`, `SceneLinkError`, `ScenePathError`, the render-state enums (`ShadeMode`, `TextureOperation`, `CompareFunction`, `BlendFactor`, `TextureFilter`, `TextureAddressing`), `SceneInstanceKind`, `MissingBitmapReason`, and the `Scene` types
 - Links worlds into a renderable scene (`0x10017ac0`, `0x1002e640`) and derives each material's Direct3D state (`0x1000a2c0`). Depends on `jam-archive`, `world`, `texture-database`, `material`, `model` and `bitmap`; free of DOM and rendering libraries.
+
+### `race`
+
+- Layers: `controller`, `services`, `types`
+- Public API (`index.ts`): `stepRace`, `createRace`, `updateRace`, `loadRaceDefinition`, `runHeadlessRace`, `RACE_STEP_DEPENDENCIES`, `IDLE_RACER_CONTROLS`, `NO_RACE_CONTACTS`, `RacePhase`, the phase timings, the racer transitions (`resetRacerForRace`, `releaseRacerAtStart`, `enterZoneZero`, `enterZoneOne`, `enterZoneTwo`, `getRacerAfterCheckpointTouch`, `convertRacerToComputer`), `getRacerAfterWrongWayCheck`, `getRacerAfterTargetGuidance`, `getLapGapMilliseconds`, `placeCarBodyOnRoute`, `stepScriptedCarBody`, `getStartFrame`, `getPlaceholderCarBodyDefinition`, and the `RaceState`, `RaceDefinition`, `RaceInputs`, `RaceEvent`, `RaceContacts` types
+- The race itself: `Race_RunLoop` (`0x00432540`) with its five timed states and `Race_Update` (`0x00435220`), wiring `racer`, `racer-ai`, `power-ups`, `random-table`, `racer-physics` and `collision` into one deterministic `stepRace(raceState, inputs, frameMilliseconds) → { raceState, events }`. Free of DOM, clocks and rendering. The `services/` layer loads a race from the player's own `LEGO.JAM` and `LEGORacers.exe` and runs it headless.

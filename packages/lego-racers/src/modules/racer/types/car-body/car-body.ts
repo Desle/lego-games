@@ -36,9 +36,16 @@ export const createCarBody = (definition: CarBodyDefinition): CarBody =>
     steeringScale: definition.steeringScale,
     throttleScale: definition.throttleScale,
     isScripted: false,
-    speedFactor: 0,
+    // The route follower's constructor 0x004a5190 sets +0x2c (car body +0x778) to 1.0.
+    speedFactor: 1,
     defaultTargetSpeedFactor: 1,
     targetSpeedFactor: 1,
+    routeFollower: null,
+    isRouteHeld: false,
+    rampMilliseconds: 0,
+    lateralOffset: 0,
+    bounceHeight: 0,
+    bounceVerticalSpeed: 0,
   })
 
 const setRigidBody = (body: CarBody, rigidBody: CarRigidBody): CarBody =>
