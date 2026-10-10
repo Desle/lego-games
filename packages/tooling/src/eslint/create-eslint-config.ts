@@ -21,6 +21,8 @@ export const createEslintConfig = (options: EslintConfigOptions): Linter.Config[
         'build/**',
         'coverage/**',
         'node_modules/**',
+        // Vitest snapshots match the test-file globs below but are not code.
+        '**/__snapshots__/**',
         ...(options.ignores ?? []),
       ],
     },

@@ -1,0 +1,54 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`StatusMessage > renders default snapshot 1`] = `
+<div>
+  <p
+    class="text-slate-300"
+    role="status"
+  >
+    Open your LEGO.JAM to list its worlds.
+  </p>
+</div>
+`;
+
+exports[`StatusMessage > renders every status 1`] = `
+<div>
+  <p
+    class="text-slate-300"
+    role="status"
+  >
+    Open your LEGO.JAM to list its worlds.
+  </p>
+  <p
+    class="text-slate-300"
+    role="status"
+  >
+    Reading LEGO.JAM…
+  </p>
+  <p
+    class="text-slate-300"
+    role="status"
+  >
+    Choose a world.
+  </p>
+  <p
+    class="text-slate-300"
+    role="status"
+  >
+    Loading the scene…
+  </p>
+  <p
+    class="text-slate-300"
+    role="status"
+  >
+    Drag to orbit, scroll to zoom, WASD to fly, Q/E down and up.
+  </p>
+  <p
+    class="text-red-400"
+    role="status"
+  >
+    Failed
+    : Illegal mesh reference
+  </p>
+</div>
+`;

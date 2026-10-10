@@ -3,8 +3,9 @@
 ## How this package works
 
 This package is the repository's rules as code. Every other package uses its ESLint config
-(`@lego-games/tooling/eslint`), TypeScript config (`@lego-games/tooling/tsconfig/node`) and Prettier
-config, and runs its `tooling verify` checks. The git `pre-push` hook and the Claude Code hooks
+(`@lego-games/tooling/eslint`, with `environment: 'browser'` in browser packages), TypeScript config
+(`@lego-games/tooling/tsconfig/node`, or `@lego-games/tooling/tsconfig/bundler` for Vite packages) and
+Prettier config, and runs its `tooling verify` checks. The git `pre-push` hook and the Claude Code hooks
 run `tooling hook …`. `.docs/rules.md` at the repository root lists every rule and what enforces it.
 
 ### Commands
