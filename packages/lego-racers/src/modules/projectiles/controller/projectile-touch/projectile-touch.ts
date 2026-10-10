@@ -43,6 +43,19 @@ export const touchProjectileFlights = (
         })
       )
     }
+    if (motion.kind === 'rocket' && motion.homing !== null) {
+      return getWorldWithMotion(
+        current,
+        contact.effect,
+        Object.freeze({
+          ...motion,
+          homing: Object.freeze({
+            ...motion.homing,
+            flight: touchBallisticFlight(motion.homing.flight, contact.racer, racer.position),
+          }),
+        })
+      )
+    }
     return current
   }, world)
 

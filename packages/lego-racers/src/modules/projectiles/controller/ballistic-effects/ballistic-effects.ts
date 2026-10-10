@@ -195,31 +195,30 @@ const getWithFlight = (
     world: getWorldWithMotion(world, effectId, Object.freeze({ kind: 'ballistic', flight })),
   })
 
-// The direction the debris leaves a hit racer in: against the horizontal flight direction (0x00451b50 calls
-// 0x004316a0 for the velocity, negates x and y, clears z and normalizes with 0x004492d0).
-const getDebrisDirection = (context: ProjectileContext, flight: BallisticFlight): Vector3 => {
-  const velocity = getFlightVelocity(context.powerUps.arithmetic, flight)
-  return getNormalizedVector3(
+// The direction the debris leaves a hit racer in: against the horizontal flight direction (0x00451b50 calls the
+// body's velocity slot, negates x and y, clears z and normalizes with 0x004492d0).
+const getDebrisDirection = (context: ProjectileContext, velocity: Vector3): Vector3 =>
+  getNormalizedVector3(
     context.powerUps.arithmetic,
     Object.freeze({ x: -velocity.x, y: -velocity.y, z: 0 })
   )
-}
 
 const getIsReflecting = (context: ProjectileContext, racer: number): boolean => {
   const status = context.powerUps.racers[racer]
   return status !== undefined && status.isShielded && status.shieldLevel > 1
 }
 
-// The cannonball (0x00451b50) after its flight advanced: a racer hit, a ground hit or the end of its time.
-export const getStepAfterCannonAdvance = (
+// What a cannonball (0x00451b50) or rocket (0x004568f0) does once its flight advanced: a racer hit (a shield above
+// level 1 turns it round), a ground hit or the end of its time. getVelocity is the body's velocity slot.
+export const resolveExplodingProjectile = (
   step: PowerUpStep,
-  world: ProjectileWorld,
   context: ProjectileContext,
   effectId: number,
   flight: BallisticFlight,
-  result: BallisticFlightStateValue
-): ProjectileStep => {
-  if (result === BallisticFlightState.FLYING) return getWithFlight(step, world, effectId, flight)
+  result: BallisticFlightStateValue,
+  getVelocity: () => Vector3
+): { readonly step: PowerUpStep; readonly flight: BallisticFlight } => {
+  if (result === BallisticFlightState.FLYING) return { step, flight }
   if (result === BallisticFlightState.TOUCHED_RACER && flight.touchedRacer !== null) {
     const victim = flight.touchedRacer
     const effect = getEffect(step, effectId)
@@ -228,7 +227,7 @@ export const getStepAfterCannonAdvance = (
       context.powerUps,
       effectId,
       victim,
-      getDebrisDirection(context, flight)
+      getDebrisDirection(context, getVelocity())
     )
     const reflected = getIsReflecting(context, victim)
       ? reflectBallisticFlight(
@@ -238,16 +237,26 @@ export const getStepAfterCannonAdvance = (
           effect.ownerRacer === null ? null : getFlightRacer(context, effect.ownerRacer)
         )
       : flight
-    return getWithFlight(hitStep, world, effectId, reflected)
+    return { step: hitStep, flight: reflected }
   }
   const isGroundBurst =
     result === BallisticFlightState.HIT_GROUND && flight.hitNormal.z > GROUND_BURST_MINIMUM_NORMAL_Z
-  return getWithFlight(
-    endProjectileFlight(step, context.powerUps, effectId, isGroundBurst),
-    world,
-    effectId,
-    flight
+  return { step: endProjectileFlight(step, context.powerUps, effectId, isGroundBurst), flight }
+}
+
+// The cannonball (0x00451b50) after its flight advanced.
+export const getStepAfterCannonAdvance = (
+  step: PowerUpStep,
+  world: ProjectileWorld,
+  context: ProjectileContext,
+  effectId: number,
+  flight: BallisticFlight,
+  result: BallisticFlightStateValue
+): ProjectileStep => {
+  const resolved = resolveExplodingProjectile(step, context, effectId, flight, result, () =>
+    getFlightVelocity(context.powerUps.arithmetic, flight)
   )
+  return getWithFlight(resolved.step, world, effectId, resolved.flight)
 }
 
 // The barrel (0x00452ff0) after its flight advanced: any end is a ground-type detonation with a 500 ms last stage.

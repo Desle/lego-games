@@ -2,6 +2,7 @@ import type { PowerUpContext, PowerUpStep } from '../../../power-ups/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
 import type { ProjectileEvent } from '../../events/projectile.events.types.ts'
 import type { BallisticFlight } from '../ballistic-flight/ballistic-flight.types.ts'
+import type { HomingFlight } from '../homing-flight/homing-flight.types.ts'
 import type { GrappleHook } from '../grapple-hook/grapple-hook.types.ts'
 import type { RouteNode } from '../route-movement/route-movement.types.ts'
 import type { WandBeam } from '../wand-beam/wand-beam.types.ts'
@@ -39,7 +40,17 @@ export type WandMotion = {
   readonly beam: WandBeam
 }
 
-export type EffectMotion = BallisticMotion | GrappleMotion | MagnetMotion | WandMotion
+// The rocket (0x004568f0): its launch animation, then its homing body.
+export type RocketMotion = {
+  readonly kind: 'rocket'
+  // Milliseconds of the launch animation played so far (state 2).
+  readonly launchElapsedMilliseconds: number
+  // The missile model's position: the owner's, until the rocket launches.
+  readonly framePosition: Vector3
+  readonly homing: HomingFlight | null
+}
+
+export type EffectMotion = BallisticMotion | GrappleMotion | MagnetMotion | RocketMotion | WandMotion
 
 // Everything the projectiles keep between frames, beside the power-ups' own state.
 export type ProjectileWorld = {
@@ -55,6 +66,8 @@ export type ProjectileContext = {
   readonly racers: readonly FlightRacer[]
   // The race's route (racer set +0x10), the nodes a warping racer follows.
   readonly route: readonly RouteNode[]
+  // How long each rocket's launch animation lasts (model data the port does not read): rocket 0, 1 and 2.
+  readonly rocketLaunchMilliseconds: readonly number[]
   readonly probe: LineProbe
 }
 

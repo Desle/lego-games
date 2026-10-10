@@ -37,4 +37,7 @@ export type FlightRacer = {
   readonly beamRadius: number
   // Racer +0xcc4: the route node the racer is at (an index into the route), or null.
   readonly routeNodeIndex: number | null
+  // The first axis of a rocket's frame once it has left the car (0x00456db0 state 2 builds it from the owner's
+  // rotation and the missile's skeleton; model data the port does not read).
+  readonly rocketHeading: Vector3
 }

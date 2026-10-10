@@ -62,6 +62,7 @@ const getFlightRacer = (x: number, overrides: Partial<FlightRacer> = {}): Flight
   boundingRadius: 2,
   beamRadius: 2,
   routeNodeIndex: null,
+  rocketHeading: { x: 1, y: 0, z: 0 },
   ...overrides,
 })
 
@@ -85,6 +86,7 @@ const getContexts = (
       powerUps,
       racers: [getFlightRacer(0), getFlightRacer(360, flightOverrides)],
       route: [],
+      rocketLaunchMilliseconds: [100, 100, 100],
       probe,
     },
   }
@@ -493,5 +495,71 @@ describe('updatePowerUpsWithProjectiles: the wand', () => {
 
     // Assert
     expect(getEffect(updated.step, effectId).targetRacer).toBeNull()
+  })
+})
+
+describe('updatePowerUpsWithProjectiles: the rockets', () => {
+  const getRockets = (
+    statusOverrides: Partial<RacerPowerUpStatus> = {},
+    probe: LineProbe = MISS
+  ) => {
+    const contexts = getContexts(probe, statusOverrides)
+    const used = getWorldAfterUse({ category: BrickKind.PROJECTILE, level: 3 }, contexts.powerUps)
+    return { contexts, used, ids: used.step.world.effects.activeEffectIds }
+  }
+
+  it('follow the owner during the launch animation, and do not count down (0x004568f0 state 2)', () => {
+    // Arrange
+    const { contexts, used, ids } = getRockets()
+
+    // Act
+    const updated = updatePowerUpsWithProjectiles(used.step, used.world, contexts.projectiles, 60)
+
+    // Assert
+    expect(ids).toHaveLength(3)
+    expect(getEffect(updated.step, ids[0] ?? -1)).toMatchObject({
+      state: EffectState.STARTING,
+      timerMilliseconds: 3000,
+    })
+    const motion = getMotion(updated.world, ids[0] ?? -1)
+    expect(motion?.kind === 'rocket' ? motion.launchElapsedMilliseconds : -1).toBe(60)
+  })
+
+  it('launch when the animation is over and fly in the same update, choosing racer 1 (0x00456db0, 0x00423640)', () => {
+    // Arrange: only racer 1 is in the cone; rockets 1 and 2 launch at a point but choose racer 1 on their first step.
+    const { contexts, used, ids } = getRockets()
+
+    // Act
+    const updated = updatePowerUpsWithProjectiles(used.step, used.world, contexts.projectiles, 100)
+
+    // Assert
+    const targets = ids.map((id) => {
+      const motion = getMotion(updated.world, id)
+      return motion?.kind === 'rocket' && motion.homing !== null ? motion.homing.flight.targetRacer : -1
+    })
+    expect(targets).toEqual([1, 1, 1])
+    ids.forEach((id) => {
+      const effect = getEffect(updated.step, id)
+      expect(effect.state).toBe(EffectState.ACTIVE)
+      expect(effect.timerMilliseconds).toBe(0x157c)
+      const motion = getMotion(updated.world, id)
+      expect(motion?.kind === 'rocket' && motion.homing?.flight.elapsedMilliseconds).toBe(100)
+    })
+  })
+
+  it('explode on the racer they touch (0x00431660, 0x00456fa0)', () => {
+    // Arrange
+    const { contexts, used, ids } = getRockets()
+    const flying = updatePowerUpsWithProjectiles(used.step, used.world, contexts.projectiles, 100)
+    const touched = touchProjectileFlights(flying.world, contexts.projectiles, [
+      { effect: ids[0] ?? -1, racer: 1 },
+    ])
+
+    // Act
+    const updated = updatePowerUpsWithProjectiles(flying.step, touched, contexts.projectiles, 16)
+
+    // Assert
+    expect(updated.step.events.some((event) => event.type === 'power_ups.explosion')).toBe(true)
+    expect(updated.step.events.some((event) => event.type === 'power_ups.racer_spun_out')).toBe(true)
   })
 })
