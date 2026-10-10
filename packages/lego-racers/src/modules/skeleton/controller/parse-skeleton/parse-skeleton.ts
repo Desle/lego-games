@@ -1,3 +1,4 @@
+import { readFloatQuadruple, readFloatTriple } from '../../../token-reader/index.ts'
 import { BinaryToken, createTokenReader, TokenReaderFailure } from '../../../token-reader/index.ts'
 import type { TokenReader } from '../../../token-reader/index.ts'
 import { UnportableFileError } from '../../../../shared/errors/gol-file-errors.ts'
@@ -10,21 +11,6 @@ import type {
   SkeletonQuaternion,
   SkeletonVector,
 } from '../../types/skeleton.types.ts'
-
-const readVector = (reader: TokenReader): SkeletonVector => {
-  const x = reader.readFloat()
-  const y = reader.readFloat()
-  const z = reader.readFloat()
-  return Object.freeze([x, y, z] as const)
-}
-
-const readQuaternion = (reader: TokenReader): SkeletonQuaternion => {
-  const x = reader.readFloat()
-  const y = reader.readFloat()
-  const z = reader.readFloat()
-  const w = reader.readFloat()
-  return Object.freeze([x, y, z, w] as const)
-}
 
 // 0x10029cb0..0x10029e2a: `0x27 "name" { keyword... }`; any other token inside is skipped.
 const readBone = (reader: TokenReader, names: NameTable, index: number): Bone => {
@@ -42,9 +28,9 @@ const readBone = (reader: TokenReader, names: NameTable, index: number): Bone =>
     keyword = reader.getNextToken()
   ) {
     if (keyword === SkeletonKeyword.POSITION) {
-      position = readVector(reader)
+      position = readFloatTriple(reader)
     } else if (keyword === SkeletonKeyword.QUATERNION) {
-      quaternion = readQuaternion(reader)
+      quaternion = readFloatQuadruple(reader)
     } else if (keyword === SkeletonKeyword.PARENT) {
       // 0x100283e0 searches the names added so far, this bone's own included.
       const parentName = reader.readStringWithMaximumLength(BONE_NAME_LENGTH)
