@@ -1,7 +1,12 @@
 import { createFloatArithmetic } from '../float-arithmetic/float-arithmetic.ts'
 import { FpuPrecision } from '../fpu-precision/fpu-precision.ts'
 import type { Matrix3 } from '../simulation-math.types.ts'
-import { getFrameAxes, getRotationFromFrameAxes } from './frame-axes.ts'
+import {
+  getFrameAxes,
+  getRotationFromFirstAndSecondAxes,
+  getRotationFromFrameAxes,
+  getRotationFromThirdAndFirstAxes,
+} from './frame-axes.ts'
 
 const SINGLE = createFloatArithmetic(FpuPrecision.SINGLE)
 
@@ -39,5 +44,33 @@ describe('getRotationFromFrameAxes', () => {
 
     // Assert
     expect(rotation).toEqual([0, 1, 0, 0, 0, 1, 1, 0, 0])
+  })
+})
+
+describe('getRotationFromFirstAndSecondAxes', () => {
+  it('keeps the first axis as row 0, the second made orthogonal as row 1, and crosses them for row 2', () => {
+    // Arrange
+    const first = { x: 0, y: 2, z: 0 }
+    const second = { x: 3, y: 1, z: 0 }
+
+    // Act
+    const rotation = getRotationFromFirstAndSecondAxes(SINGLE, first, second)
+
+    // Assert
+    expect(rotation).toEqual([0, 1, 0, 1, 0, 0, 0, 0, -1])
+  })
+})
+
+describe('getRotationFromThirdAndFirstAxes', () => {
+  it('keeps the third axis as row 2, the first made orthogonal as row 0, and crosses them for row 1', () => {
+    // Arrange
+    const third = { x: 0, y: 0, z: 5 }
+    const first = { x: 1, y: 0, z: 1 }
+
+    // Act
+    const rotation = getRotationFromThirdAndFirstAxes(SINGLE, third, first)
+
+    // Assert
+    expect(rotation).toEqual([1, 0, 0, 0, 1, 0, 0, 0, 1])
   })
 })

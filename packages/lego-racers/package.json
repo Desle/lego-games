@@ -11,6 +11,7 @@
     "./bsp-tree": "./src/modules/bsp-tree/index.ts",
     "./bsp-volume": "./src/modules/bsp-volume/index.ts",
     "./checkpoint": "./src/modules/checkpoint/index.ts",
+    "./collision": "./src/modules/collision/index.ts",
     "./computer-racer-route": "./src/modules/computer-racer-route/index.ts",
     "./emitter": "./src/modules/emitter/index.ts",
     "./font-database": "./src/modules/font-database/index.ts",

@@ -187,8 +187,14 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 ### `racer-physics`
 
 - Layers: `controller`, `types`
-- Public API (`index.ts`): `createBoxRigidBody`, `getBoxInertia`, `getWorldInverseInertia`, `getAngularVelocity`, `addForce`, `addTorqueOfForceAtPoint`, `removeAngularMomentumAlongAxis`, `integrateRigidBody`, `getRaceTimeStep`, `getPhysicsSubSteps`, `MAXIMUM_PHYSICS_SUB_STEP_MILLISECONDS`, `updateRacePhysics`, `stepRaceSubStepNotYetPorted`, and the `RigidBody` types
-- Pure state transitions: each function takes frozen plain data and returns new frozen data. Depends on `simulation-math`.
+- Public API (`index.ts`): `stepCarRigidBody` (`RigidBody_Step`), `CAR_RIGID_BODY_HOOKS`, `createCarRigidBody`, `setWheelGeometry`, `setHullPoint`, `setLocalCentreOfMass`, the car commands (`setThrottle`, `setTopSpeed`, `addImpulse`, `addScaledImpulse`, `setExtraForce`, `setFlaggedTimer`, `setLeaning`), the pass functions (`applyCarForces`, `probeGround`, `updateHeading`, `advanceToContact`, `respondToContact`, …), `CarRigidBodyFlag`, `TwoPointModeNotPortedError`, `createBoxRigidBody`, the rigid body force helpers, `integrateRigidBody`, `getRaceTimeStep`, `getPhysicsSubSteps`, `updateRacePhysics`, and the `RigidBody` and `CarRigidBody` types
+- Pure state transitions: each function takes frozen plain data and returns new frozen data. Depends on `simulation-math` and `collision`.
+
+### `collision`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `loadCollisionObject`, `createCollisionVolume`, `getMirroredCollisionVolume`, `getSegmentQueryResult`, `getIsPointInTriangle`, `getTriangleSegmentResult`, `getCollisionMaterialName`, and the `CollisionVolume`, `CollisionObject` and query types
+- The race's queries against the world's BSP volumes (`0x00403fa0`, `0x004497f0`, `0x00448b80`) as pure functions over parsed `.BVB` data. Depends on `bsp-volume` and `simulation-math`.
 
 ### `random-table`
 
@@ -205,7 +211,7 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 ### `racer`
 
 - Layers: `controller`, `services`, `types`
-- Public API (`index.ts`): `stepRacerSet`, `RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED`, `applyRacerControls`, `updatePlayerController`, `createPlayerController`, `startRacerPowerSlide`, `stopRacerPowerSlide`, `readRacerTables`, `createCarBody`, `createRacer`, `createRacerSet`, the car body and driver functions, `rankRacers`, `playRacerVoice`, `getTableCosine`, and the `Racer`, `CarBody`, `RacerDriver`, `RacerControls`, `RacerSet` types
+- Public API (`index.ts`): `stepRacerSet`, `RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED`, `applyRacerControls`, `updatePlayerController`, `createPlayerController`, `startRacerPowerSlide`, `stopRacerPowerSlide`, `readRacerTables`, `createCarBody`, `stepRacerRigidBody`, `createRacer`, `createRacerSet`, the car body and driver functions, `rankRacers`, `playRacerVoice`, `getTableCosine`, and the `Racer`, `CarBody`, `RacerDriver`, `RacerControls`, `RacerSet` types
 - `RacerSet_Step` (`0x0043c030`) and the player controls. Calls into code not ported yet (rigid body step, AI, power-ups, audio, vehicle effects) are typed dependencies that receive and return the whole racer set. Reuses `racer-ai` (rubber band, progress, taunt), `random-table` and `checkpoint`; depends on `simulation-math` and `racer-physics`.
 
 ### `scene`

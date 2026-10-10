@@ -8,7 +8,17 @@ import type {
   RacerSetBoundary,
   RacerSetStepDependencies,
 } from '../../types/racer.types.ts'
-import { RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED, stepRacerSet } from './step-racer-set.ts'
+import {
+  keepRacerSetNotYetPorted,
+  RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED,
+  stepRacerSet,
+} from './step-racer-set.ts'
+
+// The stand-ins with the rigid body left alone, so the car body's own logic can be checked.
+const WITHOUT_RIGID_BODY_STEP: RacerSetStepDependencies = {
+  ...RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED,
+  stepRigidBody: keepRacerSetNotYetPorted,
+}
 
 const changeRacer = (racerSet: RacerSet, racerIndex: number, change: Partial<Racer>): RacerSet =>
   setRacer(racerSet, racerIndex, { ...getRacer(racerSet, racerIndex), ...change })
@@ -90,7 +100,7 @@ describe('stepRacerSet (0x0043c030)', () => {
       context: createTestContext(),
       racerSet: fallen,
       stepMilliseconds: 40,
-      dependencies: RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED,
+      dependencies: WITHOUT_RIGID_BODY_STEP,
     })
 
     // Assert
@@ -106,9 +116,9 @@ describe('stepRacerSet (0x0043c030)', () => {
     const grounded = changeRacer(racerSet, 0, {
       carBody: {
         ...racer.carBody,
-        groundedWheelCount: 4,
         rigidBody: {
           ...racer.carBody.rigidBody,
+          groundedWheelCount: 4,
           frame: { rotation: IDENTITY_MATRIX3, position: { x: 4, y: 5, z: 6 } },
         },
       },
@@ -119,7 +129,7 @@ describe('stepRacerSet (0x0043c030)', () => {
       context: createTestContext(),
       racerSet: grounded,
       stepMilliseconds: 40,
-      dependencies: RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED,
+      dependencies: WITHOUT_RIGID_BODY_STEP,
     })
 
     // Assert
@@ -142,7 +152,7 @@ describe('stepRacerSet (0x0043c030)', () => {
       context: createTestContext(),
       racerSet,
       stepMilliseconds: 40,
-      dependencies: RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED,
+      dependencies: WITHOUT_RIGID_BODY_STEP,
     })
 
     // Assert: fade (660 - 500) · 0.004; no wheel down, so airborne.
@@ -169,7 +179,7 @@ describe('stepRacerSet (0x0043c030)', () => {
       context: createTestContext(),
       racerSet,
       stepMilliseconds: 40,
-      dependencies: RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED,
+      dependencies: WITHOUT_RIGID_BODY_STEP,
     })
 
     // Assert
@@ -183,7 +193,10 @@ describe('stepRacerSet (0x0043c030)', () => {
     const sliding = changeRacer(racerSet, 0, {
       flags: 0x80,
       driver: { ...racer.driver, flags: 0x4 },
-      carBody: { ...racer.carBody, restingForward: { x: 0, y: 1, z: 0 }, steering: -40 },
+      carBody: {
+        ...racer.carBody,
+        rigidBody: { ...racer.carBody.rigidBody, heading: { x: 0, y: 1, z: 0 }, turnRadius: -40 },
+      },
     })
 
     // Act
@@ -191,10 +204,35 @@ describe('stepRacerSet (0x0043c030)', () => {
       context: createTestContext(),
       racerSet: sliding,
       stepMilliseconds: 40,
-      dependencies: RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED,
+      dependencies: WITHOUT_RIGID_BODY_STEP,
     })
 
     // Assert
     expect(getRacer(result, 0).vehicleSlideAngle).toBe(-Math.fround(0.06))
+  })
+
+  it('steps each car rigid body with RigidBody_Step by default (stepRacerRigidBody)', () => {
+    // Arrange: a car of mass 2 (the fixture's scaled mass of 3 would fall out of range at once).
+    const racerSet = createTestRacerSet(1)
+    const racer = getRacer(racerSet, 0)
+    const light = changeRacer(racerSet, 0, {
+      carBody: {
+        ...racer.carBody,
+        rigidBody: { ...racer.carBody.rigidBody, scaledMass: Math.fround(0.000002) },
+      },
+    })
+
+    // Act
+    const result = stepRacerSet({
+      context: createTestContext(),
+      racerSet: light,
+      stepMilliseconds: 40,
+      dependencies: RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED,
+    })
+
+    // Assert: with no collision objects the body falls with four times its weight.
+    const { rigidBody } = getRacer(result, 0).carBody
+    expect(rigidBody.linearVelocity.z).toBeLessThan(0)
+    expect(rigidBody.airborneTime).toBe(40)
   })
 })

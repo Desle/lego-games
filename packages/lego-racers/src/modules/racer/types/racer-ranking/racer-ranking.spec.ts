@@ -35,7 +35,10 @@ const placeRacer = (
     racePosition: racerIndex + 1,
     carBody: {
       ...racer.carBody,
-      displayFrame: { ...racer.carBody.displayFrame, position: { x, y: 0, z: 0 } },
+      rigidBody: {
+        ...racer.carBody.rigidBody,
+        displayFrame: { ...racer.carBody.rigidBody.displayFrame, position: { x, y: 0, z: 0 } },
+      },
     },
   })
 }
