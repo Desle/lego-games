@@ -6,6 +6,11 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 
 ## Modules
 
+### `bitmap`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `decodeBitmap`, `getBitmapColors`, `InvalidBitmapError`, `Bitmap`
+
 ### `jam-archive`
 
 - Layers: `controller`, `types`

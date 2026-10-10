@@ -15,3 +15,6 @@ original-files/
 reverse-engineering/ghidra/
 reverse-engineering/*.log
 reverse-engineering/*.c
+
+# Agent worktrees
+.claude/worktrees/
