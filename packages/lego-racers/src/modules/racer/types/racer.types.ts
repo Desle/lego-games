@@ -1,5 +1,5 @@
 import type { Checkpoint } from '../../checkpoint/index.ts'
-import type { RubberBand } from '../../racer-ai/index.ts'
+import type { RouteFollower, RubberBand } from '../../racer-ai/index.ts'
 import type { RigidBody, RigidBodyFrame } from '../../racer-physics/index.ts'
 import type { RandomTable, RandomTablePosition } from '../../random-table/index.ts'
 import type { FloatArithmetic, Quaternion, Vector3 } from '../../simulation-math/index.ts'
@@ -192,6 +192,17 @@ export type CarBody = {
   // +0x7e8, +0x7ec: float32 default and current target speed factors, set by the rubber band (pass 9).
   readonly defaultTargetSpeedFactor: number
   readonly targetSpeedFactor: number
+  // +0x74c: the route follower of a scripted body (0x78 bytes); null while the body has no route.
+  readonly routeFollower: RouteFollower | null
+  // +0x748: non-zero holds a scripted body still (0x004374c0 sets it, 0x00439340 clears it at the start).
+  readonly isRouteHeld: boolean
+  // +0x77c: float32 time of the ramped target (flag 0x10000); nothing in the ported code writes it.
+  readonly rampMilliseconds: number
+  // +0x7cc: float32 sideways offset from the route, returning to 0.
+  readonly lateralOffset: number
+  // +0x7c8, +0x7d0: float32 bounce height above the route and its vertical speed.
+  readonly bounceHeight: number
+  readonly bounceVerticalSpeed: number
 }
 
 // What the car body's attach (0x00429210 → 0x00444d90) and the car rigid body set up; the rest starts as 0x00429120 leaves it.
@@ -214,6 +225,16 @@ export type Racer = {
   readonly vehicleSlideAngle: number
   // +0xcc4: index of the current checkpoint in RacerSetContext.checkpoints, or -1 (a null pointer).
   readonly checkpointIndex: number
+  // +0xcc8: 1 when the racer was on the positive side of the checkpoint's direction when it last touched it.
+  readonly checkpointSide: number
+  // +0xce8: int32 count of start line crossings, -1 before the first.
+  readonly lapCrossings: number
+  // +0xd0c, +0xd10, +0xd14: the trigger zone entered last, the one before and the one before that (0, 1 or 2).
+  readonly zoneCurrent: number
+  readonly zonePrevious: number
+  readonly zoneBeforePrevious: number
+  // +0xd6c: shield level while flag 0x1 is set (power-ups' racer_shield_raised).
+  readonly shieldLevel: number
   // +0xccc: kind of the held power-up (0 = none).
   readonly heldPowerUp: number
   // +0xcd8, +0xcdc: uint32 milliseconds since the computer last considered its power-up, and the interval (150).
