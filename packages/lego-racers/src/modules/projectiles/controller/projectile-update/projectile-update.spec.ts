@@ -56,6 +56,11 @@ const getFlightRacer = (x: number, overrides: Partial<FlightRacer> = {}): Flight
   sideAxis: ZERO,
   hasVehicle: false,
   speed: 0,
+  muzzlePosition: { x, y: 0, z: 0 },
+  muzzleDirection: { x: 1, y: 0, z: 0 },
+  boundingCenter: { x, y: 0, z: 0 },
+  boundingRadius: 2,
+  beamRadius: 2,
   ...overrides,
 })
 
@@ -442,5 +447,49 @@ describe('updatePowerUpsWithProjectiles: the grapple', () => {
     expect(later.step.events.some((event) => event.type === 'power_ups.grapple_released')).toBe(
       true
     )
+  })
+})
+
+describe('updatePowerUpsWithProjectiles: the wand', () => {
+  const getActiveWand = (flightOverrides: Partial<FlightRacer> = {}) => {
+    const contexts = getContexts(MISS, {}, flightOverrides)
+    const used = getWorldAfterUse({ category: BrickKind.PROJECTILE, level: 2 }, contexts.powerUps)
+    const effectId = getHeadId(used.step)
+    const active = getStepWithEffect(used.step, {
+      ...getEffect(used.step, effectId),
+      state: EffectState.ACTIVE,
+      timerMilliseconds: 7000,
+    })
+    return { contexts, effectId, used, active }
+  }
+
+  it('strikes a racer whose sphere the beam passes through (0x00455350, 0x00455440)', () => {
+    // Arrange: racer 1 is 360 away, so the beam (200 long) is moved to meet it by a closer racer.
+    const { contexts, effectId, used, active } = getActiveWand({
+      position: { x: 100, y: 0, z: 0 },
+      boundingCenter: { x: 100, y: 0, z: 3 },
+    })
+
+    // Act
+    const updated = updatePowerUpsWithProjectiles(active, used.world, contexts.projectiles, 16)
+
+    // Assert
+    expect(updated.step.events.some((event) => event.type === 'power_ups.racer_struck_by_lightning')).toBe(true)
+    expect(getEffect(updated.step, effectId).targetRacer).toBe(1)
+    const motion = getMotion(updated.world, effectId)
+    expect(motion?.kind === 'wand' ? motion.beam.points.length : 0).toBe(4)
+  })
+
+  it('does not test the beam against a racer outside the cone or out of reach', () => {
+    // Arrange: the sphere is on the line but 360 units away, beyond the 200 unit window.
+    const { contexts, effectId, used, active } = getActiveWand({
+      boundingCenter: { x: 100, y: 0, z: 3 },
+    })
+
+    // Act
+    const updated = updatePowerUpsWithProjectiles(active, used.world, contexts.projectiles, 16)
+
+    // Assert
+    expect(getEffect(updated.step, effectId).targetRacer).toBeNull()
   })
 })

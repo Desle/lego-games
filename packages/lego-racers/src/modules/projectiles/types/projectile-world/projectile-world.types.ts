@@ -3,6 +3,7 @@ import type { Vector3 } from '../../../simulation-math/index.ts'
 import type { ProjectileEvent } from '../../events/projectile.events.types.ts'
 import type { BallisticFlight } from '../ballistic-flight/ballistic-flight.types.ts'
 import type { GrappleHook } from '../grapple-hook/grapple-hook.types.ts'
+import type { WandBeam } from '../wand-beam/wand-beam.types.ts'
 import type { FlightRacer, LineProbe } from '../projectiles.types.ts'
 
 // The movement state of one pooled effect: the body the original keeps inside the effect object.
@@ -31,7 +32,13 @@ export type GrappleMotion = {
   readonly hook: GrappleHook
 }
 
-export type EffectMotion = BallisticMotion | GrappleMotion | MagnetMotion
+// The wand (0x00454d70): the beam it drew on the last update.
+export type WandMotion = {
+  readonly kind: 'wand'
+  readonly beam: WandBeam
+}
+
+export type EffectMotion = BallisticMotion | GrappleMotion | MagnetMotion | WandMotion
 
 // Everything the projectiles keep between frames, beside the power-ups' own state.
 export type ProjectileWorld = {

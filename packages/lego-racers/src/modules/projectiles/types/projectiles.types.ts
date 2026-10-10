@@ -27,4 +27,12 @@ export type FlightRacer = {
   readonly hasVehicle: boolean
   // Car body +0x604, the speed 0x0042a7f0 tests.
   readonly speed: number
+  // Racer +0xe08 (position at +0x00..+0x08, direction at +0x18..+0x20): where the wand's beam leaves the racer.
+  readonly muzzlePosition: Vector3
+  readonly muzzleDirection: Vector3
+  // The racer's frame +0x3c: position and radius (+0x10), the sphere the wand's beam is tested against.
+  readonly boundingCenter: Vector3
+  readonly boundingRadius: number
+  // Racer +0x2c (the radius of the object at +0x1c): how far from the racer the wand's beam bends to it.
+  readonly beamRadius: number
 }
