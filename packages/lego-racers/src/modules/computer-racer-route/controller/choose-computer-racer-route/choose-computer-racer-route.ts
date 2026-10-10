@@ -25,7 +25,7 @@ export const getComputerRacerRouteFileName = (
   isJamArchive: boolean
 ): string => `r${toDigit(racerIndex)}_${letter}_${toDigit(variant)}.rr${isJamArchive ? 'b' : 'f'}`
 
-// Per letter, the variants present from 0 upwards, at most ten (0x0043320b..0x0043325f).
+// Per letter, the variants present from 0 upwards, at most ten (0x00433227..0x00433293).
 export const countComputerRacerRouteVariants = (
   racerIndex: number,
   isJamArchive: boolean,
@@ -48,7 +48,7 @@ export const countComputerRacerRouteVariants = (
   })
 }
 
-// 0x0043329d: one random-table draw modulo the total picks a letter and variant; no variants, no draw.
+// 0x0043329d..0x00433314: one random-table draw modulo the total picks a letter and variant; no variants, no draw.
 export const chooseComputerRacerRoute = (
   counts: ComputerRacerRouteVariantCounts,
   drawRandomValue: () => number

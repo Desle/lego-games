@@ -1,4 +1,4 @@
-// 0x0041e7f9 shows "Too many CheckPoints" and exits.
+// 0x0041e856 shows "Too many CheckPoints" and exits.
 export class TooManyCheckpointsError extends Error {
   constructor(count: number) {
     super(`Too many CheckPoints (${String(count)})`)
