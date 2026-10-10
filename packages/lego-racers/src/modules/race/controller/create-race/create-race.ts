@@ -4,6 +4,7 @@ import {
   getComputerPersonality,
 } from '../../../racer-ai/index.ts'
 import { createPowerUpWorld, setBrickSoundsEnabled } from '../../../power-ups/index.ts'
+import { getRaceModeRacerFlags, getRacerPowerUpAbilities } from '../../../racer-setup/index.ts'
 import {
   createCarBody,
   createPlayerController,
@@ -31,31 +32,25 @@ import type { RacerSetup } from './create-race.types.ts'
 
 // The laps of a race with one local player (0x004327f0).
 const SINGLE_PLAYER_LAP_COUNT = 3
-// 0x00436df0: description byte 0xf bit 0x40, 0x80 and 0x2 become racer flags.
-const ALWAYS_GRAPPLE_FLAG = 0x1000000
-const ALWAYS_LEVEL_THREE_FLAG = 0x2000000
-const PERMANENT_TURBO_FLAG = 0x8000000
 // Race_LoadTrackContent sets it on the demonstration's racer (0x00433a2d).
 const DEMONSTRATION_FLAG = 0x800000
 // float32 0.05 at 0x004b07f0, the rubber band's bias on a mirrored track (0x00433773).
 const MIRRORED_RUBBER_BAND_BIAS = Math.fround(0.05)
 
-const getRacerFlags = (definition: RaceRacerDefinition): number =>
-  (definition.abilities.isAlwaysGrapple ? ALWAYS_GRAPPLE_FLAG : 0) |
-  (definition.abilities.isAlwaysLevelThree ? ALWAYS_LEVEL_THREE_FLAG : 0) |
-  (definition.abilities.isPermanentTurbo ? PERMANENT_TURBO_FLAG : 0)
-
 // 0x00436df0 and 0x004371c0 for one racer, then 0x004374c0: the computer racer's chances and its two timers
-// (two random table draws, even for a player), the route placement and the reset.
+// (two random table draws, even for a player), the vehicle's animation timer (0x0043d7a0, a third draw), the
+// place on the grid, the route placement and the reset.
 const createRacerFromDefinition = (
   definition: RaceDefinition,
   racerDefinition: RaceRacerDefinition,
+  racerIndex: number,
   lapCount: number,
   position: RandomTablePosition
 ): RacerSetup => {
   const { arithmetic, tables } = definition
   const personality = getComputerPersonality(arithmetic, racerDefinition.personalityBytes)
   const timers = createComputerTimers(tables.randomTable, position)
+  const vehicleDraw = drawRandomValue(tables.randomTable, timers.position)
   const carBody = createCarBody(racerDefinition.carBody)
   const base = createRacer(
     racerDefinition.route === null
@@ -68,17 +63,23 @@ const createRacerFromDefinition = (
     powerUpChances: personality.chances,
     proximityCheckMilliseconds: timers.tauntMilliseconds,
     voiceMilliseconds: timers.voiceMilliseconds,
-    flags: getRacerFlags(racerDefinition),
+    flags: getRaceModeRacerFlags(definition.raceModeFlags),
     controllerKind: racerDefinition.controllerKind,
+    racePosition: racerIndex + 1,
+    voiceBase: racerDefinition.voiceBase,
   })
   const setup: RaceRacerPowerUpSetup = Object.freeze({
-    personality: Object.freeze({ chances: personality, preferredKind: null, preferredLevel: 0 }),
-    abilities: racerDefinition.abilities,
+    personality: Object.freeze({
+      chances: personality,
+      preferredKind: racerDefinition.preferredPowerUpKind,
+      preferredLevel: racerDefinition.preferredPowerUpLevel,
+    }),
+    abilities: getRacerPowerUpAbilities(definition.raceModeFlags),
   })
   return Object.freeze({
     racer: resetRacerForRace(racer),
     setup,
-    position: timers.position,
+    position: vehicleDraw.position,
   })
 }
 
@@ -116,6 +117,7 @@ export const createRace = (definition: RaceDefinition): RaceState => {
       createRacerFromDefinition(
         definition,
         racerDefinition,
+        made.length,
         lapCount,
         previous === undefined ? definition.randomPosition : previous.position
       ),

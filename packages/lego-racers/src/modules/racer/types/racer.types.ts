@@ -140,9 +140,11 @@ export type CarBody = {
   // +0x700..+0x708: float32 last safe position; +0x70c..+0x718: its rotation as a quaternion (x, y, z, w).
   readonly safePosition: Vector3
   readonly safeOrientation: Quaternion
-  // +0x728: float32 steering scale (0x0041fe60); +0x72c: float32 throttle scale (0x0042ad30).
+  // +0x728: float32 steering scale (0x0041fe60); +0x72c: float32 throttle scale (0x0042ad30); +0x730: float32 top
+  // speed scale (slot 6, 0x0042ad50, which the turbo events reset through 0x00429330).
   readonly steeringScale: number
   readonly throttleScale: number
+  readonly topSpeedScale: number
   // +0x744: non-zero when the body follows a script (0x00429d40) instead of RigidBody_Step.
   readonly isScripted: boolean
   // +0x778: float32 route speed factor (racer-ai's ComputerSpeedState.speedFactor).
@@ -174,6 +176,7 @@ export type CarBodyDefinition = {
   readonly rigidBody: CarRigidBody
   readonly steeringScale: number
   readonly throttleScale: number
+  readonly topSpeedScale: number
 }
 
 // The force-feedback effect of a racer (racer +0x14, 0x00421f30): an output to the player's device that only
