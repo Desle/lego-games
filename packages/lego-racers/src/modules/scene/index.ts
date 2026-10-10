@@ -1,3 +1,8 @@
+export { loadModelScene } from './controller/load-model-scene/load-model-scene.ts'
+export type {
+  ModelFiles,
+  ModelScene,
+} from './controller/load-model-scene/load-model-scene.types.ts'
 export { getWorldPaths, loadScene } from './controller/load-scene/load-scene.ts'
 export {
   COMMON_DIRECTORY,
