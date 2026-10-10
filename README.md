@@ -23,6 +23,14 @@ Ghidra 12 (`brew install ghidra`) analyses `LEGORacers.exe` and `GolDP.dll` into
   -postScript DecompileAddressRange.java 0044d700 0044e400
 ```
 
+For quick lookups, start the query servers once and ask them directly:
+
+```sh
+reverse-engineering/ghidra-server.sh start
+reverse-engineering/ghidra-query.sh exe decompile 0044d900
+reverse-engineering/ghidra-query.sh dll disassemble 10032840 100328b1
+```
+
 Findings are written up in `.docs/reverse-engineering/`.
 
 ## Daily use
