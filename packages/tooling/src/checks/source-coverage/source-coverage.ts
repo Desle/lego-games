@@ -33,6 +33,7 @@ export const DEFAULT_NON_SOURCE_EXTENSIONS: readonly string[] = [
   '.webm',
   '.pdf',
   '.wasm',
+  '.snap',
 ]
 
 export const findCoverageGaps = (input: CoverageInput): readonly Violation[] =>

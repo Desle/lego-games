@@ -1,0 +1,89 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`WorldList > renders default snapshot 1`] = `
+<div>
+  <nav
+    aria-label="Worlds"
+    class="flex flex-col gap-3 text-sm"
+  >
+    <section>
+      <h3
+        class="mb-1 font-mono text-xs text-slate-400"
+      >
+        GAMEDATA\\RACEC0R0
+      </h3>
+      <ul
+        class="flex flex-col"
+      >
+        <li>
+          <button
+            aria-current="false"
+            class="w-full rounded px-2 py-0.5 text-left hover:bg-slate-700 disabled:opacity-50 aria-[current=true]:bg-amber-500 aria-[current=true]:text-slate-950"
+            title="GAMEDATA\\COMMON\\GLOBAL.WDB
+GAMEDATA\\RACEC0R0\\RRTRK.WDB"
+            type="button"
+          >
+            Whole race
+          </button>
+        </li>
+        <li>
+          <button
+            aria-current="false"
+            class="w-full rounded px-2 py-0.5 text-left hover:bg-slate-700 disabled:opacity-50 aria-[current=true]:bg-amber-500 aria-[current=true]:text-slate-950"
+            title="GAMEDATA\\COMMON\\GLOBAL.WDB
+GAMEDATA\\RACEC0R0\\RRTRK.WDB"
+            type="button"
+          >
+            RRTRK.WDB (after 1 race world)
+          </button>
+        </li>
+      </ul>
+    </section>
+  </nav>
+</div>
+`;
+
+exports[`WorldList > renders the selected and disabled states 1`] = `
+<div>
+  <nav
+    aria-label="Worlds"
+    class="flex flex-col gap-3 text-sm"
+  >
+    <section>
+      <h3
+        class="mb-1 font-mono text-xs text-slate-400"
+      >
+        GAMEDATA\\RACEC0R0
+      </h3>
+      <ul
+        class="flex flex-col"
+      >
+        <li>
+          <button
+            aria-current="false"
+            class="w-full rounded px-2 py-0.5 text-left hover:bg-slate-700 disabled:opacity-50 aria-[current=true]:bg-amber-500 aria-[current=true]:text-slate-950"
+            disabled=""
+            title="GAMEDATA\\COMMON\\GLOBAL.WDB
+GAMEDATA\\RACEC0R0\\RRTRK.WDB"
+            type="button"
+          >
+            Whole race
+          </button>
+        </li>
+        <li>
+          <button
+            aria-current="true"
+            class="w-full rounded px-2 py-0.5 text-left hover:bg-slate-700 disabled:opacity-50 aria-[current=true]:bg-amber-500 aria-[current=true]:text-slate-950"
+            disabled=""
+            title="GAMEDATA\\COMMON\\GLOBAL.WDB
+GAMEDATA\\RACEC0R0\\RRTRK.WDB"
+            type="button"
+          >
+            RRTRK.WDB (after 1 race world)
+          </button>
+        </li>
+      </ul>
+    </section>
+  </nav>
+</div>
+`;

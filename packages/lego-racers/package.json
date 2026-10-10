@@ -27,6 +27,7 @@
     "./racer-ai": "./src/modules/racer-ai/index.ts",
     "./racer-physics": "./src/modules/racer-physics/index.ts",
     "./random-table": "./src/modules/random-table/index.ts",
+    "./scene": "./src/modules/scene/index.ts",
     "./simulation-math": "./src/modules/simulation-math/index.ts",
     "./skeleton": "./src/modules/skeleton/index.ts",
     "./sky": "./src/modules/sky/index.ts",

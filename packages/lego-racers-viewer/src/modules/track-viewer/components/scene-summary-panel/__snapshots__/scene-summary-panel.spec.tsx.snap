@@ -1,0 +1,132 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SceneSummaryPanel > renders default snapshot 1`] = `
+<div>
+  <section
+    class="flex flex-col gap-2 text-xs"
+  >
+    <ul
+      class="font-mono text-slate-400"
+    >
+      <li>
+        GAMEDATA\\COMMON\\GLOBAL.WDB
+      </li>
+      <li>
+        GAMEDATA\\RACEC0R0\\RRTRK.WDB
+      </li>
+    </ul>
+    <p>
+      12
+       instances · 
+      5
+       models · 
+      5020
+       
+      triangles · 
+      122
+       materials · 
+      48
+       textures ·
+       
+      0
+       lights
+    </p>
+    <label
+      class="flex items-center gap-2"
+    >
+      Camera
+      <select
+        class="rounded bg-slate-800 px-1"
+      >
+        <option
+          value="overview"
+        >
+          Overview
+        </option>
+        <option
+          value="0"
+        >
+          camDUM
+        </option>
+        <option
+          value="1"
+        >
+          Camera 2
+        </option>
+      </select>
+    </label>
+  </section>
+</div>
+`;
+
+exports[`SceneSummaryPanel > renders the overview and the missing textures 1`] = `
+<div>
+  <section
+    class="flex flex-col gap-2 text-xs"
+  >
+    <ul
+      class="font-mono text-slate-400"
+    >
+      <li>
+        GAMEDATA\\COMMON\\GLOBAL.WDB
+      </li>
+      <li>
+        GAMEDATA\\RACEC0R0\\RRTRK.WDB
+      </li>
+    </ul>
+    <p>
+      12
+       instances · 
+      5
+       models · 
+      5020
+       
+      triangles · 
+      122
+       materials · 
+      48
+       textures ·
+       
+      0
+       lights
+    </p>
+    <label
+      class="flex items-center gap-2"
+    >
+      Camera
+      <select
+        class="rounded bg-slate-800 px-1"
+      >
+        <option
+          value="overview"
+        >
+          Overview
+        </option>
+        <option
+          value="0"
+        >
+          camDUM
+        </option>
+        <option
+          value="1"
+        >
+          Camera 2
+        </option>
+      </select>
+    </label>
+    <details>
+      <summary>
+        1
+         textures without an image
+      </summary>
+      <ul
+        class="font-mono text-slate-400"
+      >
+        <li>
+          GAMEDATA\\COMMON\\LITFLASH.TGA (targa_not_ported)
+        </li>
+      </ul>
+    </details>
+  </section>
+</div>
+`;
