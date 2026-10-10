@@ -1,5 +1,6 @@
 import {
   createTestCarBody,
+  createTestCarBodyWith,
   IDENTITY_TABLES,
   SINGLE_ARITHMETIC,
 } from '../racer-fixtures/racer-fixtures.ts'
@@ -52,7 +53,7 @@ describe('setDriverThrottle', () => {
     'throttle %f at forward speed %d gives %d (doubled when braking, 0x00420130)',
     (throttle, speed, force) => {
       // Arrange
-      const body = { ...createTestCarBody(), forwardSpeed: speed }
+      const body = createTestCarBodyWith({ forwardSpeed: speed })
 
       // Act
       const result = setDriverThrottle(SINGLE_ARITHMETIC, createRacerDriver(), body, throttle)
@@ -79,22 +80,22 @@ describe('applyDriverSteering', () => {
     // Arrange
     const driven = {
       driver: createRacerDriver(),
-      carBody: { ...createTestCarBody(), steering: 50, flags: 0x1 },
+      carBody: createTestCarBodyWith({ turnRadius: 50, flags: 0x1 }),
     }
 
     // Act
     const result = applyDriverSteering(SINGLE_ARITHMETIC, IDENTITY_TABLES, driven)
 
     // Assert
-    expect(result.carBody.steering).toBe(0)
-    expect(result.carBody.flags).toBe(0)
+    expect(result.carBody.rigidBody.turnRadius).toBe(0)
+    expect(result.carBody.rigidBody.flags).toBe(0)
   })
 
   it('scales the curvature by 0.2 below speed 0.04 and keeps it under the limit', () => {
     // Arrange: maximum curvature without grip on the ground is 4096.
     const driven = {
       driver: { ...createRacerDriver(), curvature: 500 },
-      carBody: { ...createTestCarBody(), groundedWheelCount: 4 },
+      carBody: createTestCarBodyWith({ groundedWheelCount: 4 }),
     }
 
     // Act
@@ -102,7 +103,7 @@ describe('applyDriverSteering', () => {
 
     // Assert: (4096 + 100) · 0.5.
     expect(result.driver.curvature).toBe(2098)
-    expect(result.carBody.steering).toBe(2098)
+    expect(result.carBody.rigidBody.turnRadius).toBe(2098)
   })
 })
 
@@ -120,8 +121,8 @@ describe('applyDriverThrottle', () => {
     })
 
     // Assert
-    expect(full.carBody.throttle).toBe(432)
-    expect(touching.carBody.throttle).toBe(216)
+    expect(full.carBody.rigidBody.throttle).toBe(432)
+    expect(touching.carBody.rigidBody.throttle).toBe(216)
   })
 
   it('multiplies a positive throttle by 8 during a slide boost (flag 0x8)', () => {
@@ -133,19 +134,18 @@ describe('applyDriverThrottle', () => {
 
     // Assert
     expect(result.driver.throttle).toBe(432)
-    expect(result.carBody.throttle).toBe(432)
+    expect(result.carBody.rigidBody.throttle).toBe(432)
   })
 })
 
 describe('startDriverPowerSlide and stopDriverPowerSlide', () => {
   it('starts with factor 0.4 when braking and stops back to 0.2', () => {
     // Arrange
-    const carBody = {
-      ...createTestCarBody(),
-      travelDirection: { x: 1, y: 0, z: 0 },
+    const carBody = createTestCarBodyWith({
+      velocityDirection: { x: 1, y: 0, z: 0 },
       groundedWheelCount: 4,
       forwardSpeed: 1,
-    }
+    })
 
     // Act
     const started = startDriverPowerSlide(
@@ -157,9 +157,9 @@ describe('startDriverPowerSlide and stopDriverPowerSlide', () => {
 
     // Assert
     expect(started.driver).toMatchObject({ flags: 0x4, slideDirection: 1 })
-    expect(started.carBody).toMatchObject({ flags: 0x400, powerSlideFactor: Math.fround(0.4) })
+    expect(started.carBody.rigidBody).toMatchObject({ flags: 0x400, leanFactor: Math.fround(0.4) })
     expect(stopped.driver.flags).toBe(0)
-    expect(stopped.carBody).toMatchObject({ flags: 0, powerSlideFactor: Math.fround(0.2) })
+    expect(stopped.carBody.rigidBody).toMatchObject({ flags: 0, leanFactor: Math.fround(0.2) })
   })
 })
 
@@ -221,7 +221,7 @@ describe('updateDriverWithoutRoute', () => {
     // Arrange
     const driven = {
       driver: createRacerDriver(),
-      carBody: { ...createTestCarBody(), forwardSpeed: 1 },
+      carBody: createTestCarBodyWith({ forwardSpeed: 1 }),
     }
 
     // Act
@@ -229,6 +229,6 @@ describe('updateDriverWithoutRoute', () => {
 
     // Assert
     expect(result.driver.throttle).toBe(-108)
-    expect(result.carBody.throttle).toBe(-108)
+    expect(result.carBody.rigidBody.throttle).toBe(-108)
   })
 })

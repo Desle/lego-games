@@ -32,6 +32,8 @@ export type { PowerUpEvent } from './events/power-up.events.types.ts'
 export { ATTACHMENT_SLOT_COUNT } from './types/attachment-slots/attachment-slots.ts'
 export {
   BrickKind,
+  getBrickKindCode,
+  getBrickKindFromCode,
   getRaceModeBrickKind,
   RaceModeFlag,
   UnknownBrickKindError,

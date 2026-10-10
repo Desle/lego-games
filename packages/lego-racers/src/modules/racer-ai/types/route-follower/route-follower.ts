@@ -4,7 +4,12 @@ import type {
   Quaternion as RouteQuaternion,
   Vector3 as RouteVector,
 } from '../../../computer-racer-route/index.ts'
-import { getBlendedQuaternion, ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
+import {
+  getBlendedQuaternion,
+  getStoredDifference,
+  getStoredSum,
+  ZERO_VECTOR3,
+} from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Quaternion, Vector3 } from '../../../simulation-math/index.ts'
 import { getFloatToInteger } from '../float-to-integer/float-to-integer.ts'
 import { UnportableRouteError } from '../racer-ai-errors/racer-ai-errors.ts'
@@ -31,20 +36,7 @@ const getSample = (route: ComputerRacerRoute, index: number): ComputerRacerRoute
   return sample
 }
 
-// FLD a; FADD b (or FSUB b); FSTP float, per component.
-const getStoredSum = (arithmetic: FloatArithmetic, left: Vector3, right: Vector3): Vector3 =>
-  Object.freeze({
-    x: arithmetic.storeFloat(arithmetic.add(left.x, right.x)),
-    y: arithmetic.storeFloat(arithmetic.add(left.y, right.y)),
-    z: arithmetic.storeFloat(arithmetic.add(left.z, right.z)),
-  })
-
-const getStoredDifference = (arithmetic: FloatArithmetic, left: Vector3, right: Vector3): Vector3 =>
-  Object.freeze({
-    x: arithmetic.storeFloat(arithmetic.subtract(left.x, right.x)),
-    y: arithmetic.storeFloat(arithmetic.subtract(left.y, right.y)),
-    z: arithmetic.storeFloat(arithmetic.subtract(left.z, right.z)),
-  })
+// getStoredSum and getStoredDifference (simulation-math): FLD a; FADD b (or FSUB b); FSTP float, per component.
 
 // The fields the reset leaves alone are written by the first advance before anything reads them.
 export const createRouteFollower = (

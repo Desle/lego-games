@@ -1,6 +1,7 @@
 import type { Checkpoint } from '../../checkpoint/index.ts'
-import type { RubberBand } from '../../racer-ai/index.ts'
-import type { RigidBody, RigidBodyFrame } from '../../racer-physics/index.ts'
+import type { CollisionObject } from '../../collision/index.ts'
+import type { RouteFollower, RubberBand } from '../../racer-ai/index.ts'
+import type { CarRigidBody } from '../../racer-physics/index.ts'
 import type { RandomTable, RandomTablePosition } from '../../random-table/index.ts'
 import type { FloatArithmetic, Quaternion, Vector3 } from '../../simulation-math/index.ts'
 
@@ -120,64 +121,13 @@ export type DriverWobble = {
   readonly randomPosition: RandomTablePosition
 }
 
-// One of the four wheels (car body +0x198, stride 0x70); only the two fields the ported code reads.
-export type CarWheel = {
-  // Wheel +0x48: bit 0 set while the wheel touches the ground.
-  readonly flags: number
-  // Wheel +0x5c: float32 grip.
-  readonly grip: number
-}
-
-// The car body (racer +0x3e8, 0x888 bytes; constructor 0x00429020, vtable 0x004b04e4) on top of its rigid body.
-// Fields marked "RigidBody_Step" are written by RigidBody_Step 0x00444ef0, which this module does not port.
+// The car body (racer +0x3e8, 0x888 bytes; constructor 0x00429020, vtable 0x004b04e4).
+// Everything up to +0x6e0 is the car rigid body (racer-physics' CarRigidBody), which RigidBody_Step 0x00444ef0 steps.
 export type CarBody = {
-  // +0x00..+0xe0 and the embedded frame +0xe4 (rotation +0x10c, position +0x130).
-  readonly rigidBody: RigidBody
+  // +0x00..+0x6e0: the car rigid body, its embedded frame (+0xe4) and its display frame (+0x13c).
+  readonly rigidBody: CarRigidBody
   // +0xdc: float32, 1.0 after 0x00441210; set by pass 7 from the fade timer (hypothesis: a fade or blink factor).
   readonly fadeFactor: number
-  // +0x13c: the racer's display frame (racer +0x5c), copied from the physics frame by 0x004452b0 (RigidBody_Step).
-  readonly displayFrame: RigidBodyFrame
-  // +0x15c: float32 mass · 0.001 · 0.001 (0x00444d90).
-  readonly scaledMass: number
-  // +0x160: float32 (hypothesis: gravity).
-  readonly gravity: number
-  // +0x168..+0x170: row 0 of the rotation at attach time, used by 0x004203b0 (RigidBody_Step updates it).
-  readonly restingForward: Vector3
-  // +0x198: the four wheels (RigidBody_Step).
-  readonly wheels: readonly CarWheel[]
-  // +0x36c: uint32 count of wheels on the ground (RigidBody_Step).
-  readonly groundedWheelCount: number
-  // +0x3ec: non-zero while in contact with the world (RigidBody_Step, RigidBody_AdvanceToContact).
-  readonly contact: number
-  // +0x5e0, +0x5e4, +0x5e8: uint32 timers of RigidBody_Step (0x00448290 folds +0x5e4 into +0x5e0).
-  readonly spinTimerMilliseconds: number
-  readonly pendingSpinMilliseconds: number
-  readonly spinPeriodMilliseconds: number
-  // +0x5ec: float32 drive factor = |throttle| · mass / wheelRadius² (0x004483b0).
-  readonly driveFactor: number
-  // +0x5f4: float32 grip scale (RigidBody_Step).
-  readonly gripScale: number
-  // +0x5f8..+0x600: float32 direction compared with the display frame's row 0 (RigidBody_Step).
-  readonly travelDirection: Vector3
-  // +0x604: float32 speed (RigidBody_Step).
-  readonly speed: number
-  // +0x608: float32 (hypothesis: wheel radius).
-  readonly wheelRadius: number
-  // +0x618: float32 forward speed (RigidBody_Step).
-  readonly forwardSpeed: number
-  // +0x628: float32 throttle (0x00448370).
-  readonly throttle: number
-  // +0x64c: float32 steering curvature (0x00446ef0).
-  readonly steering: number
-  // +0x6c0: flags. 0x1 sliding, 0x2, 0x8, 0x200, 0x400 power slide, 0x40000, …
-  readonly flags: number
-  // +0x6c4, +0x6c8, +0x6cc, +0x6d0: float32 slide strength, cosine of the slide phase, slide rate, slide damping (0x00447f30).
-  readonly slideStrength: number
-  readonly slideCosine: number
-  readonly slideRate: number
-  readonly slideDamping: number
-  // +0x6d8: float32 power slide factor (0x00449070, reset to 0.2 by 0x00449090).
-  readonly powerSlideFactor: number
   // +0x6f0: the racer; its flags (+0xd04) are read through the racer, see CarBody_Update.
   // +0x700..+0x708: float32 last safe position; +0x70c..+0x718: its rotation as a quaternion (x, y, z, w).
   readonly safePosition: Vector3
@@ -192,16 +142,22 @@ export type CarBody = {
   // +0x7e8, +0x7ec: float32 default and current target speed factors, set by the rubber band (pass 9).
   readonly defaultTargetSpeedFactor: number
   readonly targetSpeedFactor: number
+  // +0x74c: the route follower of a scripted body (0x78 bytes); null while the body has no route.
+  readonly routeFollower: RouteFollower | null
+  // +0x748: non-zero holds a scripted body still (0x004374c0 sets it, 0x00439340 clears it at the start).
+  readonly isRouteHeld: boolean
+  // +0x77c: float32 time of the ramped target (flag 0x10000); nothing in the ported code writes it.
+  readonly rampMilliseconds: number
+  // +0x7cc: float32 sideways offset from the route, returning to 0.
+  readonly lateralOffset: number
+  // +0x7c8, +0x7d0: float32 bounce height above the route and its vertical speed.
+  readonly bounceHeight: number
+  readonly bounceVerticalSpeed: number
 }
 
-// What the car body's attach (0x00429210 → 0x00444d90) and the car rigid body set up; the rest starts as 0x00429120 leaves it.
+// What the car body's attach (0x00429210 → 0x00444d90) sets up; the rest starts as 0x00429120 leaves it.
 export type CarBodyDefinition = {
-  readonly rigidBody: RigidBody
-  readonly displayFrame: RigidBodyFrame
-  readonly scaledMass: number
-  readonly gravity: number
-  readonly gripScale: number
-  readonly wheelRadius: number
+  readonly rigidBody: CarRigidBody
   readonly steeringScale: number
   readonly throttleScale: number
 }
@@ -214,6 +170,16 @@ export type Racer = {
   readonly vehicleSlideAngle: number
   // +0xcc4: index of the current checkpoint in RacerSetContext.checkpoints, or -1 (a null pointer).
   readonly checkpointIndex: number
+  // +0xcc8: 1 when the racer was on the positive side of the checkpoint's direction when it last touched it.
+  readonly checkpointSide: number
+  // +0xce8: int32 count of start line crossings, -1 before the first.
+  readonly lapCrossings: number
+  // +0xd0c, +0xd10, +0xd14: the trigger zone entered last, the one before and the one before that (0, 1 or 2).
+  readonly zoneCurrent: number
+  readonly zonePrevious: number
+  readonly zoneBeforePrevious: number
+  // +0xd6c: shield level while flag 0x1 is set (power-ups' racer_shield_raised).
+  readonly shieldLevel: number
   // +0xccc: kind of the held power-up (0 = none).
   readonly heldPowerUp: number
   // +0xcd8, +0xcdc: uint32 milliseconds since the computer last considered its power-up, and the interval (150).
@@ -280,6 +246,8 @@ export type RacerSetContext = {
   readonly tables: RacerTables
   // Racer set +0x148, the race's checkpoints (the checkpoint module's CPB list).
   readonly checkpoints: readonly Checkpoint[]
+  // Every car rigid body's collision list (+0x140): the track's BVB instance, then the moving objects.
+  readonly collisionObjects: readonly CollisionObject[]
 }
 
 // A call into code this module does not port. It receives and returns the whole set so it can move the random cursor.
