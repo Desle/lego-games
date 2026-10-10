@@ -18,6 +18,46 @@ describe('createFloatArithmetic', () => {
     expect(quotient).toBe(Math.fround(1 / 3))
   })
 
+  it('keeps the x87 exponent range under 24-bit precision until a value is stored', () => {
+    // Arrange
+    const large = 2 ** 100
+    const small = 2 ** -100
+
+    // Act
+    const product = SINGLE.multiply(large, large)
+    const tinyProduct = SINGLE.multiply(small, small)
+
+    // Assert
+    expect(product).toBe(2 ** 200)
+    expect(SINGLE.storeFloat(product)).toBe(Number.POSITIVE_INFINITY)
+    expect(tinyProduct).toBe(2 ** -200)
+    expect(SINGLE.storeFloat(tinyProduct)).toBe(0)
+  })
+
+  it('rounds to a 24-bit significand outside the float32 exponent range', () => {
+    // Arrange: (1 + 2^-11 + 2^-24) needs 25 bits, and the tie rounds to even.
+    const factor = 2 ** 100 * (1 + 2 ** -12)
+
+    // Act
+    const product = SINGLE.multiply(factor, factor)
+
+    // Assert
+    expect(product).toBe(2 ** 200 * (1 + 2 ** -11))
+  })
+
+  it('leaves zero, infinity and NaN alone', () => {
+    // Arrange
+    const values = [0, Number.POSITIVE_INFINITY, Number.NaN]
+
+    // Act
+    const results = values.map((value) => SINGLE.add(value, 0))
+
+    // Assert
+    expect(results[0]).toBe(0)
+    expect(results[1]).toBe(Number.POSITIVE_INFINITY)
+    expect(results[2]).toBeNaN()
+  })
+
   it('keeps double results under 53-bit precision until a value is stored', () => {
     // Arrange
     const smallerThanHalfAnUnit = 2 ** -30
