@@ -8,4 +8,5 @@ export {
   TokenReaderError,
   TokenReaderOverflowError,
 } from './types/token-reader-errors/token-reader-errors.ts'
-export type { TokenReader } from './types/token-reader/token-reader.types.ts'
+export { readByteTriple } from './types/byte-triple/byte-triple.ts'
+export type { ByteTriple, TokenReader } from './types/token-reader/token-reader.types.ts'

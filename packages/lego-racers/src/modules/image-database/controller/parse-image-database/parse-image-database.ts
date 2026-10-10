@@ -1,6 +1,6 @@
 import { BinaryToken, createTokenReader, TokenReaderFailure } from '../../../token-reader/index.ts'
-import type { TokenReader } from '../../../token-reader/index.ts'
-import { getUnsignedByte } from '../../../../shared/binary-values/binary-values.ts'
+import { readByteTriple } from '../../../token-reader/index.ts'
+import type { ByteTriple, TokenReader } from '../../../token-reader/index.ts'
 import { createNameTable } from '../../../../shared/name-table/name-table.ts'
 import type { NameTable } from '../../../../shared/name-table/name-table.types.ts'
 import {
@@ -9,18 +9,7 @@ import {
   IMAGE_NAME_LENGTH,
   ImageDatabaseKeyword,
 } from '../../types/image-database-keyword/image-database-keyword.ts'
-import type {
-  ImageByteTriple,
-  ImageDatabase,
-  ImageDefinition,
-} from '../../types/image-database.types.ts'
-
-const readByteTriple = (reader: TokenReader): ImageByteTriple => {
-  const first = getUnsignedByte(reader.readInteger())
-  const second = getUnsignedByte(reader.readInteger())
-  const third = getUnsignedByte(reader.readInteger())
-  return Object.freeze([first, second, third] as const)
-}
+import type { ImageDatabase, ImageDefinition } from '../../types/image-database.types.ts'
 
 // 0x100231bb..0x1002331a: `0x27 "name" { keyword... }`.
 const readImage = (reader: TokenReader, names: NameTable, index: number): ImageDefinition => {
@@ -30,8 +19,8 @@ const readImage = (reader: TokenReader, names: NameTable, index: number): ImageD
   reader.expectLeftCurly()
 
   let flags = 0
-  let keyword2bBytes: ImageByteTriple = Object.freeze([0, 0, 0] as const)
-  let keyword2cBytes: ImageByteTriple = Object.freeze([0xff, 0xff, 0xff] as const)
+  let keyword2bBytes: ByteTriple = Object.freeze([0, 0, 0] as const)
+  let keyword2cBytes: ByteTriple = Object.freeze([0xff, 0xff, 0xff] as const)
   for (
     let keyword = reader.getNextToken();
     keyword !== BinaryToken.RIGHT_CURLY;
