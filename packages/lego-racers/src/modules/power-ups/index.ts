@@ -11,14 +11,27 @@ export {
 } from './controller/power-up-effect-hits/power-up-effect-hits.ts'
 export {
   advancePowerUpEffect,
+  updatePowerUpEffect,
   updatePowerUpEffects,
 } from './controller/power-up-effect-timeline/power-up-effect-timeline.ts'
 export {
   createPowerUpEffects,
   NoPowerUpEffectToTakeError,
 } from './controller/power-up-effects/power-up-effects.ts'
-export { UnknownIndexError } from './controller/power-up-step/power-up-step.ts'
-export type { PowerUpContext, PowerUpStep } from './controller/power-up-step/power-up-step.types.ts'
+export {
+  getEffect,
+  getStepDraws,
+  getStepWithEffect,
+  getStepWithEvents,
+  getStepWithShieldStruck,
+  getStepWithVoice,
+  UnknownIndexError,
+} from './controller/power-up-step/power-up-step.ts'
+export type {
+  PowerUpContext,
+  PowerUpStep,
+  StepDraws,
+} from './controller/power-up-step/power-up-step.types.ts'
 export {
   createPowerUpWorld,
   setBrickSoundsEnabled,
@@ -26,7 +39,10 @@ export {
   touchPowerUpBricks,
   updatePowerUps,
 } from './controller/power-up-world/power-up-world.ts'
-export type { PowerUpWorldDefinition } from './controller/power-up-world/power-up-world.types.ts'
+export type {
+  EffectsUpdater,
+  PowerUpWorldDefinition,
+} from './controller/power-up-world/power-up-world.types.ts'
 export { usePowerUp } from './controller/use-power-up/use-power-up.ts'
 export type { PowerUpEvent } from './events/power-up.events.types.ts'
 export { ATTACHMENT_SLOT_COUNT } from './types/attachment-slots/attachment-slots.ts'
