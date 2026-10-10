@@ -1,10 +1,12 @@
+import {
+  BinaryToken,
+  TokenReaderError,
+  TokenReaderFailure,
+  createTokenReader,
+} from '../../../token-reader/index.ts'
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { openJamArchive } from '../../../jam-archive/index.ts'
-import { BinaryToken } from '../../types/binary-token/binary-token.ts'
-import { TokenReaderError } from '../../types/token-reader-errors/token-reader-errors.ts'
-import { TokenReaderFailure } from '../../types/token-reader-failure/token-reader-failure.ts'
-import { createTokenReader } from '../../types/token-reader/token-reader.ts'
 import { WorldOverflowError } from '../../types/world-errors/world-errors.ts'
 import { WorldKeyword } from '../../types/world-keyword/world-keyword.ts'
 import { readWorld, readWorldFromReader } from './read-world.ts'

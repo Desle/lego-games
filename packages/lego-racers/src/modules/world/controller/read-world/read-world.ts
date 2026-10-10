@@ -1,7 +1,5 @@
-import { BinaryToken } from '../../types/binary-token/binary-token.ts'
-import { TokenReaderFailure } from '../../types/token-reader-failure/token-reader-failure.ts'
-import { createTokenReader } from '../../types/token-reader/token-reader.ts'
-import type { TokenReader } from '../../types/token-reader/token-reader.types.ts'
+import { BinaryToken, TokenReaderFailure, createTokenReader } from '../../../token-reader/index.ts'
+import type { TokenReader } from '../../../token-reader/index.ts'
 import { WorldKeyword } from '../../types/world-keyword/world-keyword.ts'
 import type {
   AmbientLight,

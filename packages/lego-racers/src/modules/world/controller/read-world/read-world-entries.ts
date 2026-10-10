@@ -1,6 +1,5 @@
-import { BinaryToken } from '../../types/binary-token/binary-token.ts'
-import { TokenReaderFailure } from '../../types/token-reader-failure/token-reader-failure.ts'
-import type { TokenReader } from '../../types/token-reader/token-reader.types.ts'
+import { BinaryToken, TokenReaderFailure } from '../../../token-reader/index.ts'
+import type { TokenReader } from '../../../token-reader/index.ts'
 import { WorldOverflowError } from '../../types/world-errors/world-errors.ts'
 import { WorldKeyword } from '../../types/world-keyword/world-keyword.ts'
 import type {
