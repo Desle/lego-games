@@ -377,3 +377,11 @@
 0044cb30 File_Open
 004328f0 Race_LoadVoicesAndSounds
 00432e20 Race_LoadWorlds
+0041ccb0 Sky_Update
+0041cfc0 Sky_SetRingColors
+0041ce60 Sky_GetSettingColors
+0041cf20 Sky_BlendColorBytes
+0041d040 Sky_SetPosition
+0041d0f0 Sky_Draw
+0041d150 Sky_SwitchSetting
+004907f0 SphereBuilder_Build

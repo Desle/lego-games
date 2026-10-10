@@ -1,43 +1,16 @@
 import type { Scene, SceneInstance } from '@lego-games/lego-racers/scene'
-import {
-  AmbientLight,
-  Box3,
-  Color,
-  DirectionalLight,
-  Group,
-  Matrix4,
-  Mesh,
-  type BufferGeometry,
-  type Material,
-} from 'three'
-import { createBatchGeometry } from './batch-geometry.ts'
-import { createSceneMaterial } from './scene-material.ts'
-import type { SceneObject, TextureCache } from './scene-object.types.ts'
-
-// Rows of the instance rotation are the images of the model's x, y and z axes (GolDP.dll 0x10026b50 and the
-// row-vector transform of 0x1000c630); three.js takes them as columns.
-const getInstanceMatrix = (instance: SceneInstance): Matrix4 => {
-  const [forwardX, forwardY, forwardZ, sideX, sideY, sideZ, upX, upY, upZ] = instance.rotation
-  const { x, y, z } = instance.position
-  return new Matrix4().set(
-    forwardX,
-    sideX,
-    upX,
-    x,
-    forwardY,
-    sideY,
-    upY,
-    y,
-    forwardZ,
-    sideZ,
-    upZ,
-    z,
-    0,
-    0,
-    0,
-    1
-  )
-}
+import { SceneInstanceKind } from '@lego-games/lego-racers/scene'
+import { AmbientLight, Box3, Color, DirectionalLight, Group } from 'three'
+import type { BufferGeometry, Material } from 'three'
+import { createSkeletonInstanceObject } from './skeleton-instance-object.ts'
+import { createStaticInstanceObject } from './static-instance-object.ts'
+import type {
+  InstanceLevelMesh,
+  InstanceObject,
+  SceneObject,
+  SceneObjectContext,
+  SceneObjectOptions,
+} from './scene-object.types.ts'
 
 const createLights = (scene: Scene): readonly (AmbientLight | DirectionalLight)[] => [
   ...scene.ambientLights.map(
@@ -51,50 +24,68 @@ const createLights = (scene: Scene): readonly (AmbientLight | DirectionalLight)[
   }),
 ]
 
+// The nearest level of an instance and its mesh; a skeleton instance without a mesh (a camera's skeleton) has none.
+const getInstanceLevelMesh = (scene: Scene, instance: SceneInstance): InstanceLevelMesh | null => {
+  const level = instance.levels[0]
+  const mesh = level === undefined ? undefined : scene.meshes[level.meshIndex]
+  return level === undefined || mesh === undefined
+    ? null
+    : { level, mesh, meshIndex: level.meshIndex }
+}
+
+const createInstanceObject = (
+  context: SceneObjectContext,
+  instance: SceneInstance,
+  levelMesh: InstanceLevelMesh
+): InstanceObject | null =>
+  instance.kind === SceneInstanceKind.SKELETON
+    ? createSkeletonInstanceObject(context, instance, levelMesh)
+    : createStaticInstanceObject(context, instance, levelMesh)
+
 // Builds the three.js objects for a scene: one mesh per draw batch of each instance's nearest level, using
-// that level's material assignment in place of the model's materials when it has one (0x10006c50).
-export const createSceneObject = (scene: Scene): SceneObject => {
+// that level's material assignment in place of the model's materials when it has one (0x10006c50). Skeleton
+// instances follow the bone matrices of their animation.
+export const createSceneObject = (scene: Scene, options: SceneObjectOptions): SceneObject => {
+  let drawOrder = 0
+  const context: SceneObjectContext = {
+    scene,
+    isBackground: options.isBackground,
+    textureCache: new Map(),
+    materials: new Map<string, Material>(),
+    geometries: new Map<string, BufferGeometry>(),
+    nextDrawOrder: () => {
+      drawOrder += 1
+      return drawOrder
+    },
+  }
   const group = new Group()
-  const textureCache: TextureCache = new Map()
-  const materials = new Map<string, Material>()
-  const geometries = new Map<string, BufferGeometry>()
-  for (const instance of scene.instances) {
-    const level = instance.levels[0]
-    const mesh = level === undefined ? undefined : scene.meshes[level.meshIndex]
-    if (level === undefined || mesh === undefined) continue
-    const assignment =
-      level.materialAssignmentIndex === null
-        ? null
-        : scene.materialAssignments[level.materialAssignmentIndex]
-    const materialIndices = assignment?.materialIndices ?? mesh.materialIndices
-    const instanceGroup = new Group()
-    instanceGroup.name = instance.name
-    instanceGroup.matrixAutoUpdate = false
-    instanceGroup.matrix.copy(getInstanceMatrix(instance))
-    for (const [batchIndex, batch] of mesh.drawBatches.entries()) {
-      const materialIndex = materialIndices[batch.materialSlot]
-      const sceneMaterial = materialIndex === undefined ? undefined : scene.materials[materialIndex]
-      if (materialIndex === undefined || sceneMaterial === undefined) continue
-      const materialKey = `${String(materialIndex)}/${String(mesh.colors === null)}`
-      const material =
-        materials.get(materialKey) ??
-        createSceneMaterial(sceneMaterial, mesh, scene.textures, textureCache)
-      materials.set(materialKey, material)
-      const geometryKey = `${String(level.meshIndex)}/${String(batchIndex)}/${String(materialIndex)}`
-      const geometry =
-        geometries.get(geometryKey) ?? createBatchGeometry(mesh, batch, sceneMaterial.renderState)
-      geometries.set(geometryKey, geometry)
-      instanceGroup.add(new Mesh(geometry, material))
-    }
-    group.add(instanceGroup)
+  const animators: ((deltaMilliseconds: number) => void)[] = []
+  for (const instance of scene.instances.filter(options.includeInstance)) {
+    const levelMesh = getInstanceLevelMesh(scene, instance)
+    const instanceObject =
+      levelMesh === null ? null : createInstanceObject(context, instance, levelMesh)
+    if (instanceObject === null) continue
+    group.add(instanceObject.group)
+    if (instanceObject.animate !== null) animators.push(instanceObject.animate)
   }
   group.updateMatrixWorld(true)
   const bounds = new Box3().setFromObject(group)
   for (const light of createLights(scene)) group.add(light)
   const dispose = () => {
-    for (const geometry of geometries.values()) geometry.dispose()
-    for (const material of materials.values()) material.dispose()
-    for (const texture of textureCache.values()) texture.dispose()
+    for (const geometry of context.geometries.values()) geometry.dispose()
+    for (const material of context.materials.values()) material.dispose()
+    for (const texture of context.textureCache.values()) texture.dispose()
+    group.traverse((object) => {
+      if ('geometry' in object) (object.geometry as BufferGeometry).dispose()
+    })
   }
-  return Object.freeze({ group, bounds, dispose })
+  return Object.freeze({
+    group,
+    bounds,
+    animate: (deltaMilliseconds: number) => {
+      for (const animator of animators) animator(deltaMilliseconds)
+    },
+    animatedInstanceCount: animators.length,
+    dispose,
+  })
 }

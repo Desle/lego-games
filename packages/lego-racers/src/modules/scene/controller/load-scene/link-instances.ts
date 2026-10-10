@@ -16,6 +16,7 @@ import type {
 import type {
   DistanceLevel,
   InstanceLevelInput,
+  MaterialAssignedInstance,
   SceneCounts,
   SortedLevel,
   SortedSkeletonLevel,
@@ -45,9 +46,7 @@ const getInsertedLevels = <Level extends DistanceLevel>(
     : [...levels.slice(0, insertAt), level, ...levels.slice(insertAt)]
 }
 
-const getSortedLevels = <Level extends DistanceLevel>(
-  levels: readonly Level[]
-): readonly Level[] =>
+const getSortedLevels = <Level extends DistanceLevel>(levels: readonly Level[]): readonly Level[] =>
   levels.reduce<readonly Level[]>(
     (sorted, level, index) => (index === 0 ? [level] : getInsertedLevels(sorted, level)),
     []
@@ -61,6 +60,25 @@ const getMaterialAssignmentIndex = (index: number | undefined, counts: SceneCoun
   return counts.materialAssignmentOffset + index
 }
 
+// At most three levels, ending before the first one the loop's break test finds absent.
+const getUsedLevels = <Level>(
+  levels: readonly Level[],
+  getIsAbsent: (level: Level) => boolean
+): readonly Level[] => {
+  const present = levels.slice(0, MAXIMUM_LEVELS)
+  const firstAbsent = present.findIndex(getIsAbsent)
+  return firstAbsent < 0 ? present : present.slice(0, firstAbsent)
+}
+
+const getMaterialAssignmentIndices = (
+  usedLevels: readonly unknown[],
+  instance: MaterialAssignedInstance,
+  counts: SceneCounts
+): readonly (number | null)[] =>
+  usedLevels.map((_level, index) =>
+    getMaterialAssignmentIndex(instance.materialAssignmentIndices[index], counts)
+  )
+
 // GolDP.dll 0x1002e640 for one mesh or BSP tree instance. Levels stop at the first negative mesh index; the
 // material assignment of slot i stays with slot i when the levels are reordered (only the models and
 // distances move).
@@ -71,12 +89,8 @@ const getLinkedInstance = <Level extends InstanceLevelInput>(
 ): SceneInstance => {
   const firstMeshIndex = instance.levels[0]?.meshIndex ?? -1
   if (counts.meshCount <= firstMeshIndex >>> 0) throw new SceneLinkError('Illegal mesh reference')
-  const presentLevels = instance.levels.slice(0, MAXIMUM_LEVELS)
-  const firstMissing = presentLevels.findIndex((level) => level.meshIndex < 0)
-  const usedLevels = firstMissing < 0 ? presentLevels : presentLevels.slice(0, firstMissing)
-  const materialAssignmentIndices = usedLevels.map((_level, index) =>
-    getMaterialAssignmentIndex(instance.materialAssignmentIndices[index], counts)
-  )
+  const usedLevels = getUsedLevels(instance.levels, (level) => level.meshIndex < 0)
+  const materialAssignmentIndices = getMaterialAssignmentIndices(usedLevels, instance, counts)
   const sortedLevels = getSortedLevels<SortedLevel>(
     usedLevels.map((level) =>
       Object.freeze({
@@ -162,12 +176,8 @@ export const linkSkeletonInstances = (
     if (counts.skeletonCount <= (firstLevel?.skeletonIndex ?? -1) >>> 0) {
       throw new SceneLinkError('Illegal skeleton reference')
     }
-    const presentLevels = instance.levels.slice(0, MAXIMUM_LEVELS)
-    const firstMissing = presentLevels.findIndex((level) => level.skeletonIndex < 0)
-    const usedLevels = firstMissing < 0 ? presentLevels : presentLevels.slice(0, firstMissing)
-    const materialAssignmentIndices = usedLevels.map((_level, index) =>
-      getMaterialAssignmentIndex(instance.materialAssignmentIndices[index], counts)
-    )
+    const usedLevels = getUsedLevels(instance.levels, (level) => level.skeletonIndex < 0)
+    const materialAssignmentIndices = getMaterialAssignmentIndices(usedLevels, instance, counts)
     const sortedLevels = getSortedLevels<SortedSkeletonLevel>(
       usedLevels.map((level) =>
         Object.freeze({

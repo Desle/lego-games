@@ -34,3 +34,8 @@ export type SceneCounts = {
   readonly skeletonCount: number
   readonly bspTreeCount: number
 }
+
+// What reading the material assignment slots of an instance needs.
+export type MaterialAssignedInstance = {
+  readonly materialAssignmentIndices: readonly number[]
+}

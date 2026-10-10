@@ -8,11 +8,7 @@ import type {
   SceneCamera,
   SceneDirectionalLight,
 } from '../../types/scene.types.ts'
-import {
-  linkBspTreeInstances,
-  linkMeshInstances,
-  linkSkeletonInstances,
-} from './link-instances.ts'
+import { linkBspTreeInstances, linkMeshInstances, linkSkeletonInstances } from './link-instances.ts'
 import { linkMaterials } from './link-materials.ts'
 import { linkMaterialAssignments, linkMeshes } from './link-meshes.ts'
 import { linkAnimations, linkSkeletons } from './link-skeletons.ts'

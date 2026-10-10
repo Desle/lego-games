@@ -43,4 +43,7 @@ export const getRaceBackgroundWorldPath = (
 ): string | null =>
   names.backgroundWorld === null
     ? null
-    : getArchivePath(raceDirectory, getNameWithDefaultExtension(names.backgroundWorld, WORLD_EXTENSION))
+    : getArchivePath(
+        raceDirectory,
+        getNameWithDefaultExtension(names.backgroundWorld, WORLD_EXTENSION)
+      )

@@ -5,6 +5,10 @@ export {
 } from './controller/get-bone-rotation/get-bone-rotation.ts'
 export { getInstancePosition } from './controller/get-instance-position/get-instance-position.ts'
 export { getSkeletalAnimation } from './controller/get-skeletal-animation/get-skeletal-animation.ts'
+export {
+  getTransformedNormals,
+  getTransformedPositions,
+} from './controller/get-transformed-vertices/get-transformed-vertices.ts'
 export { getSkeletonPose } from './controller/get-skeleton-pose/get-skeleton-pose.ts'
 export {
   getBlendedQuaternion,
