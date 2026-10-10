@@ -20,3 +20,7 @@ reverse-engineering/*.c
 .claude/worktrees/
 reverse-engineering/ghidra-server/
 reverse-engineering/ghidra-server-logs/
+
+# Emulator virtualenv and Python caches
+reverse-engineering/emulator/.venv/
+__pycache__/
