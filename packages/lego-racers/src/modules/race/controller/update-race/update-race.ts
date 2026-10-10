@@ -1,4 +1,5 @@
-import { updatePowerUps } from '../../../power-ups/index.ts'
+import { updatePowerUpsWithProjectiles } from '../../../projectiles/index.ts'
+import type { ProjectileWorld } from '../../../projectiles/index.ts'
 import { getRaceTimeStep, updateRacePhysics } from '../../../racer-physics/index.ts'
 import { applyRacerControls, stepRacerSet, updatePlayerController } from '../../../racer/index.ts'
 import type { RaceInputs, RaceRacerSet, RaceState } from '../../types/race.types.ts'
@@ -8,6 +9,8 @@ import {
 } from '../race-dependencies/race-dependencies.ts'
 import {
   changePowerUps,
+  getProjectileContext,
+  getRacerSetAfterProjectileEvents,
   getRaceRacerSet,
   getRaceRacerSetOf,
   getRacerSetOf,
@@ -94,11 +97,19 @@ export const updateRace = (
         ? COUNTDOWN_RESET_MILLISECONDS
         : state.unidentifiedCountdownMilliseconds - stepMilliseconds,
   })
-  const powered = changePowerUps(
-    counted.context,
-    getRaceRacerSet(counted, inputs.contacts),
-    (step, powerUpContext) => updatePowerUps(step, powerUpContext, stepMilliseconds)
-  )
+  const poweredSet = getRaceRacerSet(counted, inputs.contacts)
+  let projectileWorld: ProjectileWorld = counted.projectileWorld
+  const changed = changePowerUps(counted.context, poweredSet, (step, powerUpContext) => {
+    const projected = updatePowerUpsWithProjectiles(
+      step,
+      counted.projectileWorld,
+      getProjectileContext(counted, poweredSet, powerUpContext),
+      stepMilliseconds
+    )
+    projectileWorld = projected.world
+    return projected.step
+  })
+  const powered = getRacerSetAfterProjectileEvents(changed, projectileWorld.events)
   const controlled = counted.isDemonstration
     ? { controllers: counted.playerControllers, racerSet: powered }
     : runPlayerControllers(counted, powered, (input, playerIndex) =>
@@ -122,5 +133,8 @@ export const updateRace = (
         })
       )
   )
-  return getStateWithProgress(counted, { controllers: controlled.controllers, racerSet: stepped })
+  return getStateWithProgress(Object.freeze({ ...counted, projectileWorld }), {
+    controllers: controlled.controllers,
+    racerSet: stepped,
+  })
 }

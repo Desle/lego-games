@@ -4,6 +4,7 @@ import {
   getComputerPersonality,
 } from '../../../racer-ai/index.ts'
 import { createPowerUpWorld, setBrickSoundsEnabled } from '../../../power-ups/index.ts'
+import { createProjectileWorld } from '../../../projectiles/index.ts'
 import {
   createCarBody,
   createPlayerController,
@@ -149,6 +150,7 @@ export const createRace = (definition: RaceDefinition): RaceState => {
   const playerRacerIndices = racerDefinitions.flatMap((racerDefinition, index) =>
     racerDefinition.controllerKind === PLAYER_CONTROLLER ? [index] : []
   )
+  const powerUpStep = setBrickSoundsEnabled(powerUps, false)
   return Object.freeze({
     phase: RacePhase.INTRODUCTION,
     phaseMilliseconds: 0,
@@ -174,10 +176,12 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     }),
     playerRacerIndices: Object.freeze(playerRacerIndices),
     playerControllers: Object.freeze(playerRacerIndices.map(() => createPlayerController(false))),
-    powerUpStep: setBrickSoundsEnabled(powerUps, false),
+    powerUpStep,
     powerUpSetups: Object.freeze(setups.map((made) => made.setup)),
     getGroundPoint: definition.getGroundPoint,
     trackTargets: definition.trackTargets,
+    projectileWorld: createProjectileWorld(powerUpStep),
+    projectileModelData: definition.projectileModelData,
     timers: definition.timers,
     mainTriggers: definition.mainTriggers,
     environmentTriggers: definition.environmentTriggers,

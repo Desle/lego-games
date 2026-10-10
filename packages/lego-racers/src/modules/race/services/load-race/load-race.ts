@@ -166,5 +166,10 @@ export const loadRaceDefinition = (
     randomPosition: routeDraws.position,
     getGroundPoint: null,
     trackTargets: [],
+    projectileModelData: {
+      routeNodes: [],
+      rocketLaunchMilliseconds: [0, 0, 0],
+      debrisAnimations: [[0], [0], [0], [0]],
+    },
   })
 }

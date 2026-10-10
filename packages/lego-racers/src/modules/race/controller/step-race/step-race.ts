@@ -9,12 +9,18 @@ const getFlushedStep = (step: RaceStepResult): RaceStepResult => {
     type: 'race.power_up',
     event,
   }))
+  const { projectileWorld } = step.raceState
+  const projectileEvents: readonly RaceEvent[] = projectileWorld.events.map((event) => ({
+    type: 'race.projectile',
+    event,
+  }))
   return Object.freeze({
     raceState: Object.freeze({
       ...step.raceState,
       powerUpStep: Object.freeze({ ...powerUpStep, events: Object.freeze([]) }),
+      projectileWorld: Object.freeze({ ...projectileWorld, events: Object.freeze([]) }),
     }),
-    events: Object.freeze([...step.events, ...powerUpEvents]),
+    events: Object.freeze([...step.events, ...powerUpEvents, ...projectileEvents]),
   })
 }
 

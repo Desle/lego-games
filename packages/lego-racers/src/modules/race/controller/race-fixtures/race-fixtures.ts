@@ -30,6 +30,11 @@ export const createFixtureDefinition = (): RaceDefinition => ({
   randomPosition: 0,
   getGroundPoint: null,
   trackTargets: [],
+  projectileModelData: {
+    routeNodes: [],
+    rocketLaunchMilliseconds: [0, 0, 0],
+    debrisAnimations: [[0], [0], [0], [0]],
+  },
 })
 
 export const createFixtureRace = (): RaceState => createRace(createFixtureDefinition())
