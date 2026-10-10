@@ -20,7 +20,9 @@ import type {
 } from '../../types/world.types.ts'
 import type {
   InstanceState,
+  LevelledInstanceKeywords,
   MaterialAnimationReferences,
+  NameOrIndex,
   Orientation,
   WorldCounts,
 } from './read-world.types.ts'
@@ -191,6 +193,36 @@ const createInstanceState = (
   return Object.freeze({ handleCommonKeyword, getCommonFields })
 }
 
+// Keyword 0x35 takes either a name (index -1) or an index (empty name).
+const readNameOrIndex = (reader: TokenReader): NameOrIndex => {
+  if (reader.getNextToken() === BinaryToken.STRING) {
+    return Object.freeze({ index: -1, name: truncateName(reader.getStringValue()) })
+  }
+  reader.pushBackToken()
+  return Object.freeze({ index: reader.readInteger(), name: '' })
+}
+
+// Mesh and skeleton instances share the common keywords, 0x36 and 0x4c; anything else unhandled is a syntax error.
+const readLevelledInstanceKeywords = (
+  reader: TokenReader,
+  state: InstanceState,
+  readOtherKeyword: (keyword: number) => boolean
+): LevelledInstanceKeywords => {
+  let keyword36Value = DEFAULT_KEYWORD_36_VALUE
+  let isKeyword4cSet = false
+  for (
+    let keyword = reader.getNextToken();
+    keyword !== BinaryToken.RIGHT_CURLY;
+    keyword = reader.getNextToken()
+  ) {
+    if (state.handleCommonKeyword(keyword)) continue
+    if (keyword === WorldKeyword.KEYWORD_36) keyword36Value = reader.readFloat()
+    else if (keyword === WorldKeyword.KEYWORD_4C) isKeyword4cSet = true
+    else if (!readOtherKeyword(keyword)) reader.fail(TokenReaderFailure.SYNTAX_ERROR)
+  }
+  return Object.freeze({ keyword36Value, isKeyword4cSet })
+}
+
 // 0x1002cc30
 export const readMeshInstances = (
   reader: TokenReader,
@@ -203,37 +235,18 @@ export const readMeshInstances = (
       counts
     )
     const levels: MeshLevel[] = []
-    let keyword36Value = DEFAULT_KEYWORD_36_VALUE
-    let isKeyword4cSet = false
-    for (
-      let keyword = reader.getNextToken();
-      keyword !== BinaryToken.RIGHT_CURLY;
-      keyword = reader.getNextToken()
-    ) {
-      if (state.handleCommonKeyword(keyword)) continue
-      switch (keyword) {
-        case WorldKeyword.MESH: {
-          const meshIndex = readCheckedIndex(reader, counts.meshes)
-          assertLevelSlotAvailable(reader, levels.length)
-          const distance = getDistance(reader.readFloat())
-          levels.push(Object.freeze({ meshIndex, distance }))
-          break
-        }
-        case WorldKeyword.KEYWORD_36:
-          keyword36Value = reader.readFloat()
-          break
-        case WorldKeyword.KEYWORD_4C:
-          isKeyword4cSet = true
-          break
-        default:
-          reader.fail(TokenReaderFailure.SYNTAX_ERROR)
-      }
-    }
+    const keywords = readLevelledInstanceKeywords(reader, state, (keyword) => {
+      if (keyword !== WorldKeyword.MESH) return false
+      const meshIndex = readCheckedIndex(reader, counts.meshes)
+      assertLevelSlotAvailable(reader, levels.length)
+      const distance = getDistance(reader.readFloat())
+      levels.push(Object.freeze({ meshIndex, distance }))
+      return true
+    })
     return Object.freeze({
       ...state.getCommonFields(),
       levels: Object.freeze(levels),
-      keyword36Value,
-      isKeyword4cSet,
+      ...keywords,
     })
   })
 
@@ -249,10 +262,7 @@ export const readSkeletonInstances = (
       counts
     )
     const levels: SkeletonLevel[] = []
-    let keyword35Index = -1
-    let keyword35Name = ''
-    let keyword36Value = DEFAULT_KEYWORD_36_VALUE
-    let isKeyword4cSet = false
+    let keyword35: NameOrIndex = Object.freeze({ index: -1, name: '' })
 
     const readLevel = (meshIndex: number): void => {
       const skeletonIndex = readCheckedIndex(reader, counts.skeletons)
@@ -262,46 +272,27 @@ export const readSkeletonInstances = (
       levels.push(Object.freeze({ meshIndex, skeletonIndex, animationIndex, distance }))
     }
 
-    for (
-      let keyword = reader.getNextToken();
-      keyword !== BinaryToken.RIGHT_CURLY;
-      keyword = reader.getNextToken()
-    ) {
-      if (state.handleCommonKeyword(keyword)) continue
+    const keywords = readLevelledInstanceKeywords(reader, state, (keyword) => {
       switch (keyword) {
         case WorldKeyword.SKELETON:
           readLevel(-1)
-          break
+          return true
         case WorldKeyword.MESH_SKELETON:
           readLevel(readCheckedIndex(reader, counts.meshes))
-          break
+          return true
         case WorldKeyword.KEYWORD_35:
-          if (reader.getNextToken() === BinaryToken.STRING) {
-            keyword35Index = -1
-            keyword35Name = truncateName(reader.getStringValue())
-          } else {
-            reader.pushBackToken()
-            keyword35Index = reader.readInteger()
-            keyword35Name = ''
-          }
-          break
-        case WorldKeyword.KEYWORD_36:
-          keyword36Value = reader.readFloat()
-          break
-        case WorldKeyword.KEYWORD_4C:
-          isKeyword4cSet = true
-          break
+          keyword35 = readNameOrIndex(reader)
+          return true
         default:
-          reader.fail(TokenReaderFailure.SYNTAX_ERROR)
+          return false
       }
-    }
+    })
     return Object.freeze({
       ...state.getCommonFields(),
       levels: Object.freeze(levels),
-      keyword35Index,
-      keyword35Name,
-      keyword36Value,
-      isKeyword4cSet,
+      keyword35Index: keyword35.index,
+      keyword35Name: keyword35.name,
+      ...keywords,
     })
   })
 
@@ -477,16 +468,12 @@ export const readCameras = (reader: TokenReader, counts: WorldCounts): readonly 
           forward = readVector3(reader)
           negatedUp = negateVector(readVector3(reader))
           break
-        case WorldKeyword.KEYWORD_35:
-          if (reader.getNextToken() === BinaryToken.STRING) {
-            keyword35Index = -1
-            keyword35Name = truncateName(reader.getStringValue())
-          } else {
-            reader.pushBackToken()
-            keyword35Index = reader.readInteger()
-            keyword35Name = ''
-          }
+        case WorldKeyword.KEYWORD_35: {
+          const nameOrIndex = readNameOrIndex(reader)
+          keyword35Index = nameOrIndex.index
+          keyword35Name = nameOrIndex.name
           break
+        }
         case WorldKeyword.TARGET:
           target = readVector3(reader)
           break

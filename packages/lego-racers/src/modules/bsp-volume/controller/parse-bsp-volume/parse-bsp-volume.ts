@@ -86,6 +86,18 @@ const readShortValues = (reader: TokenReader): BspVolumeNode['shortValues'] => {
   return Object.freeze([first, second] as const)
 }
 
+// Both node readers end with the two int16 values, read after the vector.
+const createNode = (
+  reader: TokenReader,
+  childIndices: readonly [number, number],
+  vector: readonly [number, number, number]
+): BspVolumeNode =>
+  Object.freeze({
+    childIndices: Object.freeze(childIndices),
+    vector: Object.freeze(vector),
+    shortValues: readShortValues(reader),
+  })
+
 // 0x1001bbb0: two children, four floats (the fourth is read and dropped), two int16.
 const readFloatNode = (reader: TokenReader): BspVolumeNode => {
   const firstChild = readKeywordChild(reader)
@@ -94,11 +106,7 @@ const readFloatNode = (reader: TokenReader): BspVolumeNode => {
   const y = reader.readFloat()
   const z = reader.readFloat()
   reader.readFloat()
-  return Object.freeze({
-    childIndices: Object.freeze([firstChild, secondChild] as const),
-    vector: Object.freeze([x, y, z] as const),
-    shortValues: readShortValues(reader),
-  })
+  return createNode(reader, [firstChild, secondChild], [x, y, z])
 }
 
 // 0x1001bd00: two children, three ints scaled by 2^-30 (0x10056c38), two int16.
@@ -108,11 +116,7 @@ const readFixedPointNode = (reader: TokenReader): BspVolumeNode => {
   const x = getFixedPointValue(reader.readInteger())
   const y = getFixedPointValue(reader.readInteger())
   const z = getFixedPointValue(reader.readInteger())
-  return Object.freeze({
-    childIndices: Object.freeze([firstChild, secondChild] as const),
-    vector: Object.freeze([x, y, z] as const),
-    shortValues: readShortValues(reader),
-  })
+  return createNode(reader, [firstChild, secondChild], [x, y, z])
 }
 
 const readNodes = (reader: TokenReader, isFixedPoint: boolean): readonly BspVolumeNode[] => {

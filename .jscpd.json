@@ -1,0 +1,18 @@
+{
+  "minTokens": 50,
+  "threshold": 0,
+  "format": ["typescript", "tsx"],
+  "pattern": "**/*.{ts,tsx}",
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/tests/fixtures/**",
+    "original-files/**",
+    "reverse-engineering/**",
+    ".claude/**"
+  ],
+  "reporters": ["console"],
+  "exitCode": 1
+}

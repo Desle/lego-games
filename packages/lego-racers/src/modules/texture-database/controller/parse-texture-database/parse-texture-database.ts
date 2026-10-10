@@ -1,23 +1,13 @@
 import { BinaryToken, createTokenReader, TokenReaderFailure } from '../../../token-reader/index.ts'
-import type { TokenReader } from '../../../token-reader/index.ts'
-import { getSignedShort, getUnsignedByte } from '../../../../shared/binary-values/binary-values.ts'
+import { readByteTriple } from '../../../token-reader/index.ts'
+import type { ByteTriple, TokenReader } from '../../../token-reader/index.ts'
+import { getSignedShort } from '../../../../shared/binary-values/binary-values.ts'
 import {
   TEXTURE_LOADED_FLAG,
   TEXTURE_NAME_LENGTH,
   TextureDatabaseKeyword,
 } from '../../types/texture-database-keyword/texture-database-keyword.ts'
-import type {
-  ByteTriple,
-  TextureDatabase,
-  TextureDefinition,
-} from '../../types/texture-database.types.ts'
-
-const readByteTriple = (reader: TokenReader): ByteTriple => {
-  const first = getUnsignedByte(reader.readInteger())
-  const second = getUnsignedByte(reader.readInteger())
-  const third = getUnsignedByte(reader.readInteger())
-  return Object.freeze([first, second, third] as const)
-}
+import type { TextureDatabase, TextureDefinition } from '../../types/texture-database.types.ts'
 
 // 0x1002b6e0..0x1002b81d: `0x27 "name" { keyword... }`.
 const readTexture = (reader: TokenReader, knownNames: Set<string>): TextureDefinition => {

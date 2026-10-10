@@ -48,6 +48,13 @@ Mechanically decidable; a green check is a proof.
 - **Why**: The spec is what agents code against; a spec that drifts from the code misleads them.
 - **Enforced by**: `tooling verify` → `feature-specs`
 
+### No duplicated code
+
+- **Rule**: No block of 50 or more tokens appears twice in non-test TypeScript, anywhere in `packages/`. When two places need the same code, it moves to the module that owns the concept (shared through its `index.ts`) or to `src/shared/`.
+- **Why**: Agents working in parallel port similar original routines independently; without a check, the same reader or helper ends up in several modules and drifts apart.
+- **Enforced by**: `pnpm run duplicates` (jscpd, `.jscpd.json`, threshold 0) in the root `check` and `ci`
+- **Exception**: when the original binary itself contains two copies that must stay separately traceable, wrap one in `// jscpd:ignore-start` … `// jscpd:ignore-end` with a comment naming both addresses.
+
 ### Uniform formatting
 
 - **Rule**: Prettier formats every file.

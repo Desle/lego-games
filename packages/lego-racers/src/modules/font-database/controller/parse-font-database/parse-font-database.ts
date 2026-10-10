@@ -1,6 +1,6 @@
 import { BinaryToken, createTokenReader, TokenReaderFailure } from '../../../token-reader/index.ts'
-import type { TokenReader } from '../../../token-reader/index.ts'
-import { getUnsignedByte } from '../../../../shared/binary-values/binary-values.ts'
+import { readByteTriple } from '../../../token-reader/index.ts'
+import type { ByteTriple, TokenReader } from '../../../token-reader/index.ts'
 import { UnportableFileError } from '../../../../shared/errors/gol-file-errors.ts'
 import { createNameTable } from '../../../../shared/name-table/name-table.ts'
 import type { NameTable } from '../../../../shared/name-table/name-table.types.ts'
@@ -11,18 +11,7 @@ import {
   FONT_NAME_LENGTH,
   FontDatabaseKeyword,
 } from '../../types/font-database-keyword/font-database-keyword.ts'
-import type {
-  FontByteTriple,
-  FontDatabase,
-  FontDefinition,
-} from '../../types/font-database.types.ts'
-
-const readByteTriple = (reader: TokenReader): FontByteTriple => {
-  const first = getUnsignedByte(reader.readInteger())
-  const second = getUnsignedByte(reader.readInteger())
-  const third = getUnsignedByte(reader.readInteger())
-  return Object.freeze([first, second, third] as const)
-}
+import type { FontDatabase, FontDefinition } from '../../types/font-database.types.ts'
 
 const readCharacter = (reader: TokenReader, token: number): number => {
   if (token === BinaryToken.STRING) {
@@ -69,10 +58,10 @@ const readFont = (reader: TokenReader, names: NameTable, index: number): FontDef
   reader.expectLeftCurly()
 
   let flags = 0
-  let keyword2aBytes: FontByteTriple = Object.freeze([0, 0, 0] as const)
+  let keyword2aBytes: ByteTriple = Object.freeze([0, 0, 0] as const)
   let characters: readonly number[] | null = null
   let keyword2cValue: number | null = null
-  let keyword2dBytes: FontByteTriple = Object.freeze([0xff, 0xff, 0xff] as const)
+  let keyword2dBytes: ByteTriple = Object.freeze([0xff, 0xff, 0xff] as const)
   for (
     let keyword = reader.getNextToken();
     keyword !== BinaryToken.RIGHT_CURLY;

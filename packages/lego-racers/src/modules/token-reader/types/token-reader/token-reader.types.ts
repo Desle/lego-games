@@ -22,3 +22,5 @@ export type TokenReader = {
   readonly expectRightBracket: () => void
   readonly readArrayCount: () => number
 }
+
+export type ByteTriple = readonly [number, number, number]
