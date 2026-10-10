@@ -18,6 +18,7 @@ import {
 } from '../../types/ballistic-flight/ballistic-flight.ts'
 import type {
   BallisticFlight,
+  BallisticFlightState as BallisticFlightStateValue,
   BallisticLaunchParameters,
 } from '../../types/ballistic-flight/ballistic-flight.types.ts'
 import type { FlightRacer } from '../../types/projectiles.types.ts'
@@ -197,7 +198,7 @@ export const getStepAfterCannonAdvance = (
   context: ProjectileContext,
   effectId: number,
   flight: BallisticFlight,
-  result: string
+  result: BallisticFlightStateValue
 ): ProjectileStep => {
   if (result === BallisticFlightState.FLYING) return getWithFlight(step, world, effectId, flight)
   if (result === BallisticFlightState.TOUCHED_RACER && flight.touchedRacer !== null) {
@@ -237,7 +238,7 @@ export const getStepAfterBarrelAdvance = (
   context: ProjectileContext,
   effectId: number,
   flight: BallisticFlight,
-  result: string
+  result: BallisticFlightStateValue
 ): ProjectileStep => {
   if (result === BallisticFlightState.FLYING) return getWithFlight(step, world, effectId, flight)
   return getWithFlight(
@@ -254,9 +255,9 @@ export const advanceEffectFlight = (
   world: ProjectileWorld,
   effectId: number,
   stepMilliseconds: number
-): { readonly flight: BallisticFlight; readonly result: string } | null => {
+): { readonly flight: BallisticFlight; readonly result: BallisticFlightStateValue } | null => {
   const motion = getMotion(world, effectId)
-  if (motion === null) return null
+  if (motion === null || motion.kind !== 'ballistic') return null
   const advance = advanceBallisticFlight(
     context.powerUps.arithmetic,
     context.probe,

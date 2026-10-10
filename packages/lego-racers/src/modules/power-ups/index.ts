@@ -1,4 +1,7 @@
-export { activatePowerUp } from './controller/activate-power-up/activate-power-up.ts'
+export {
+  activatePowerUp,
+  getStepWithRacerTurbosEnded,
+} from './controller/activate-power-up/activate-power-up.ts'
 export {
   advanceComputerPowerUpUse,
   keepPermanentTurbo,
@@ -16,6 +19,7 @@ export {
 } from './controller/power-up-effect-timeline/power-up-effect-timeline.ts'
 export {
   createPowerUpEffects,
+  getStepWithRacerEffectsFinished,
   NoPowerUpEffectToTakeError,
 } from './controller/power-up-effects/power-up-effects.ts'
 export {
@@ -44,7 +48,13 @@ export type {
   PowerUpWorldDefinition,
 } from './controller/power-up-world/power-up-world.types.ts'
 export { usePowerUp } from './controller/use-power-up/use-power-up.ts'
+export type { WandBeamStep } from './controller/power-up-effect-timeline/power-up-effect-timeline.types.ts'
 export type { PowerUpEvent } from './events/power-up.events.types.ts'
+export {
+  getFarthestInCone,
+  getNearestInCone,
+  getNextInCone,
+} from './types/cone-query/cone-query.ts'
 export { ATTACHMENT_SLOT_COUNT } from './types/attachment-slots/attachment-slots.ts'
 export {
   BrickKind,
@@ -66,7 +76,9 @@ export type {
   ActivationRequest,
   BrickContact,
   ComputerPowerUpPersonality,
+  ConeQuery,
   ConeQueryTarget,
+  ConeQueryWindow,
   EnhancementBrick,
   EnhancementBrickPlacement,
   PowerUpBrick,

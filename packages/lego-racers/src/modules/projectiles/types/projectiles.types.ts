@@ -23,4 +23,8 @@ export type FlightRacer = {
   readonly headingSpeed: number
   // Racer +0x550..+0x558.
   readonly sideAxis: Vector3
+  // Racer +0xb2c is non-null (hypothesis: the vehicle object exists; the magnet only tows racers without one).
+  readonly hasVehicle: boolean
+  // Car body +0x604, the speed 0x0042a7f0 tests.
+  readonly speed: number
 }

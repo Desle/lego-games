@@ -31,6 +31,8 @@ const getRacer = (position: Vector3, velocity: Vector3 = ZERO): FlightRacer => (
   heading: ZERO,
   headingSpeed: 0,
   sideAxis: ZERO,
+  hasVehicle: true,
+  speed: 0,
 })
 
 describe('launchFlightWithOffset (0x00431220)', () => {

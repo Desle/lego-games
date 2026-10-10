@@ -1,18 +1,32 @@
 import {
+  advancePowerUpEffect,
   EffectState,
   getEffect,
+  getStepWithEffect,
+  getStepWithRacerTurbosEnded,
   PowerUpEffectKind,
   updatePowerUpEffect,
   updatePowerUps,
 } from '../../../power-ups/index.ts'
 import type { PowerUpContext, PowerUpEffect, PowerUpStep } from '../../../power-ups/index.ts'
 import { BallisticFlightState } from '../../types/ballistic-flight/ballistic-flight.ts'
-import { getMotion, getWorldWithMotion } from '../../types/projectile-world/projectile-world.ts'
+import {
+  getMotion,
+  getWorldWithEvents,
+  getWorldWithMotion,
+} from '../../types/projectile-world/projectile-world.ts'
 import type {
   ProjectileContext,
   ProjectileStep,
   ProjectileWorld,
 } from '../../types/projectile-world/projectile-world.types.ts'
+import { getIsSpeedNearZero } from '../../types/turbo-early-end/turbo-early-end.ts'
+import {
+  createMagnetMotion,
+  getMagnetLandingBoost,
+  getMagnetPull,
+} from '../../types/magnet-pull/magnet-pull.ts'
+import type { MagnetPullRacer } from '../../types/magnet-pull/magnet-pull.types.ts'
 import {
   advanceEffectFlight,
   getBarrelFlight,
@@ -20,6 +34,11 @@ import {
   getStepAfterBarrelAdvance,
   getStepAfterCannonAdvance,
 } from '../ballistic-effects/ballistic-effects.ts'
+
+// 0x00455b40: the magnet is placed while its timer still holds the 20,000 ms of its start.
+const MAGNET_PLACEMENT_TIMER = 20000
+// 0x0045ce20: the early end only applies while less than 4500 ms (0x1194) are left.
+const TURBO_EARLY_END_TIMER_LIMIT = 4500
 
 const getWithBallisticMotion = (
   world: ProjectileWorld,
@@ -72,7 +91,7 @@ const updateBarrel = (
 ): ProjectileStep => {
   const motion = getMotion(world, before.id)
   const flown =
-    motion !== null && motion.flight.state === BallisticFlightState.FLYING
+    motion !== null && motion.kind === 'ballistic' && motion.flight.state === BallisticFlightState.FLYING
       ? advanceEffectFlight(context, world, before.id, stepMilliseconds)
       : null
   const afterFlight =
@@ -93,6 +112,93 @@ const updateBarrel = (
         ? getWithBallisticMotion(afterFlight.world, before.id, getBarrelFlight(context, after))
         : afterFlight.world,
   })
+}
+
+const getMagnetRacers = (context: ProjectileContext): readonly MagnetPullRacer[] =>
+  context.racers.map((flight, index) => ({
+    flight,
+    isTumbling: context.powerUps.racers[index]?.isTumbling ?? false,
+    isInTurbo: context.powerUps.racers[index]?.isInTurbo ?? false,
+  }))
+
+// 0x00455b40 (magnet vtable slot 2): placed under its owner on the first update (before the countdown), then the
+// countdown, then the pull.
+const updateMagnet = (
+  step: PowerUpStep,
+  world: ProjectileWorld,
+  context: ProjectileContext,
+  before: PowerUpEffect,
+  stepMilliseconds: number
+): ProjectileStep => {
+  if (before.state === EffectState.FINISHED) return Object.freeze({ step, world })
+  const ownerStatus =
+    before.ownerRacer === null ? undefined : context.powerUps.racers[before.ownerRacer]
+  const placed =
+    before.state === EffectState.STARTING &&
+    before.timerMilliseconds === MAGNET_PLACEMENT_TIMER &&
+    before.ownerRacer !== null &&
+    ownerStatus !== undefined
+      ? getWorldWithEvents(
+          getWorldWithMotion(
+            world,
+            before.id,
+            createMagnetMotion(
+              context.powerUps.arithmetic,
+              ownerStatus.position,
+              context.powerUps.getGroundPoint
+            )
+          ),
+          [getMagnetLandingBoost(before.ownerRacer)]
+        )
+      : world
+  const counted = updatePowerUpEffect(step, context.powerUps, before.id, stepMilliseconds)
+  const motion = getMotion(placed, before.id)
+  const after = getEffect(counted, before.id)
+  if (motion === null || motion.kind !== 'magnet') {
+    return Object.freeze({ step: counted, world: placed })
+  }
+  const pull = getMagnetPull(
+    context.powerUps.arithmetic,
+    motion,
+    after.targetRacer,
+    after.timerMilliseconds,
+    getMagnetRacers(context),
+    stepMilliseconds
+  )
+  const timed = getStepWithEffect(counted, { ...after, timerMilliseconds: pull.timerMilliseconds })
+  return Object.freeze({
+    step:
+      pull.turboEndedRacer === null
+        ? timed
+        : getStepWithRacerTurbosEnded(timed, pull.turboEndedRacer),
+    world: getWorldWithEvents(getWorldWithMotion(placed, before.id, pull.motion), pull.events),
+  })
+}
+
+// 0x0045ce20 (turbo vtable slot 2): after the countdown, a tumbling racer who has stopped ends the turbo early.
+const updateTurbo = (
+  step: PowerUpStep,
+  world: ProjectileWorld,
+  context: ProjectileContext,
+  before: PowerUpEffect,
+  stepMilliseconds: number
+): ProjectileStep => {
+  const counted = updatePowerUpEffect(step, context.powerUps, before.id, stepMilliseconds)
+  const after = getEffect(counted, before.id)
+  const owner = after.ownerRacer === null ? undefined : context.racers[after.ownerRacer]
+  const status = after.ownerRacer === null ? undefined : context.powerUps.racers[after.ownerRacer]
+  if (
+    before.state === EffectState.FINISHED ||
+    owner === undefined ||
+    status === undefined ||
+    !status.isTumbling ||
+    after.state !== EffectState.ACTIVE ||
+    after.timerMilliseconds >= TURBO_EARLY_END_TIMER_LIMIT ||
+    !getIsSpeedNearZero(context.powerUps.arithmetic, owner.speed)
+  ) {
+    return Object.freeze({ step: counted, world })
+  }
+  return Object.freeze({ step: advancePowerUpEffect(counted, context.powerUps, after.id), world })
 }
 
 const getWorldWithFinishedMotionCleared = (
@@ -118,10 +224,14 @@ export const updateProjectileEffect = (
       ? updateCannon(step, world, context, before, stepMilliseconds)
       : before.kind === PowerUpEffectKind.BARREL
         ? updateBarrel(step, world, context, before, stepMilliseconds)
-        : Object.freeze({
-            step: updatePowerUpEffect(step, context.powerUps, effectId, stepMilliseconds),
-            world,
-          })
+        : before.kind === PowerUpEffectKind.MAGNET
+          ? updateMagnet(step, world, context, before, stepMilliseconds)
+          : before.kind === PowerUpEffectKind.TURBO
+            ? updateTurbo(step, world, context, before, stepMilliseconds)
+            : Object.freeze({
+                step: updatePowerUpEffect(step, context.powerUps, effectId, stepMilliseconds),
+                world,
+              })
   return Object.freeze({
     step: updated.step,
     world: getWorldWithFinishedMotionCleared(updated.world, updated.step, effectId),

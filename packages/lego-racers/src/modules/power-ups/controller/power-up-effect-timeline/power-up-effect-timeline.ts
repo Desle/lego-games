@@ -12,7 +12,13 @@ import {
   getStepWithVoice,
 } from '../power-up-step/power-up-step.ts'
 import type { PowerUpContext, PowerUpStep } from '../power-up-step/power-up-step.types.ts'
-import type { OwnerEvent, OwnerEventType } from './power-up-effect-timeline.types.ts'
+import type {
+  OwnerEvent,
+  OwnerEventType,
+  WandBeamStep,
+} from './power-up-effect-timeline.types.ts'
+
+const keepStep: WandBeamStep = (step) => step
 
 // 0x0045d200: turbo levels 0..2.
 const TURBO_MILLISECONDS: readonly number[] = Object.freeze([1000, 1500, 5000])
@@ -242,7 +248,12 @@ const getStepWithDraws = (step: PowerUpStep, count: number): PowerUpStep =>
   getStepDraws(step, count).step
 
 // 0x00454d70 after the countdown: jitter draws, the hold on a struck racer, and sparks (0x00454e50).
-const updateWand = (step: PowerUpStep, effectId: number, stepMilliseconds: number): PowerUpStep => {
+const updateWand = (
+  step: PowerUpStep,
+  effectId: number,
+  stepMilliseconds: number,
+  duringBeam: WandBeamStep
+): PowerUpStep => {
   const effect = getEffect(step, effectId)
   let jitterMilliseconds = (effect.jitterMilliseconds + stepMilliseconds) >>> 0
   let draws = 0
@@ -271,15 +282,17 @@ const updateWand = (step: PowerUpStep, effectId: number, stepMilliseconds: numbe
       ? []
       : [{ type: 'power_ups.racer_released_by_lightning', racer: releasedRacer }]
   )
-  const current = getEffect(held, effectId)
-  if (current.state !== EffectState.ACTIVE) return held
+  // 0x00455100..0x00455350 (the beam and its hit test) run between the hold and the sparks.
+  const beamed = duringBeam(held)
+  const current = getEffect(beamed, effectId)
+  if (current.state !== EffectState.ACTIVE) return beamed
   if (stepMilliseconds <= current.sparkMilliseconds) {
-    return getStepWithEffect(held, {
+    return getStepWithEffect(beamed, {
       ...current,
       sparkMilliseconds: current.sparkMilliseconds - stepMilliseconds,
     })
   }
-  const sparkDraws = getStepDraws(held, 2)
+  const sparkDraws = getStepDraws(beamed, 2)
   return getStepWithEffect(sparkDraws.step, {
     ...current,
     sparkMilliseconds: ((sparkDraws.values[1] ?? 0) % 300) + 200,
@@ -291,12 +304,15 @@ export const updatePowerUpEffect = (
   step: PowerUpStep,
   context: PowerUpContext,
   effectId: number,
-  stepMilliseconds: number
+  stepMilliseconds: number,
+  duringWandBeam: WandBeamStep = keepStep
 ): PowerUpStep => {
   const effect = getEffect(step, effectId)
   if (effect.state === EffectState.FINISHED || effect.kind === PowerUpEffectKind.ROCKET) return step
   const counted = countDown(step, context, effectId, stepMilliseconds)
-  if (effect.kind === PowerUpEffectKind.WAND) return updateWand(counted, effectId, stepMilliseconds)
+  if (effect.kind === PowerUpEffectKind.WAND) {
+    return updateWand(counted, effectId, stepMilliseconds, duringWandBeam)
+  }
   // 0x004572a0: two draws per frame while the bubble emitter exists.
   if (
     effect.kind === PowerUpEffectKind.OIL_SLICK &&
