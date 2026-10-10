@@ -208,6 +208,12 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 - Public API (`index.ts`): the route follower (`createRouteFollower`, `resetRouteFollower`, `startRouteFollowerAtLoop`, `advanceRouteFollower`, `setRouteFollowerSpeedFactor`), the sample decoders (`decodeRouteSample`, `getRouteSample*`), the speed code (`stepComputerSpeedFactor`, `getRampedTargetSpeedFactor`, `getReturnedLateralOffset`, `stepComputerBounce`, `getPushedSpeedState`, `getRestoredSpeedState`, `getReleasedSpeedState`, `CAR_BODY_*_FLAG`), rubber-banding (`createRubberBand`, `stepRubberBand`, `getRacerProgress`), personality (`getComputerPersonality`, `getComputerChance`, `PERSONALITY_SCALE`), power-up use (`updatePowerUpUse`, `decidePowerUpUse`, `PowerUpUseDecision`), taunts (`updateComputerTaunt`, `createComputerTimers`), `findNearestRacerInCone`, `getFloatToInteger`, `UnportableRouteError`, and their types
 - Computer racers play recorded routes back kinematically; they produce no control input. Depends on `simulation-math`, `random-table` and `computer-racer-route`.
 
+### `racer-collision`
+
+- Layers: `types`
+- Public API (`index.ts`): `getBoxOverlap`, `getBoxContact`, `getBoundingSphere`, `getBoundingInterval`, `getSpheresOverlap`, and the `OrientedBox`, `BoxOverlap`, `BoxContact`, `BoundingSphere` and `BoundingInterval` types
+- The geometry of car-against-car collisions (`0x00441790`, `0x00441330`, `0x004113d0`, `0x00411b90`): a separating-axis test of two oriented boxes, the contact point, and the bounding spheres of the broad phase. `racer` runs the sweep and the response on top. Depends on `simulation-math`.
+
 ### `power-ups`
 
 - Layers: `controller`, `events`, `types`

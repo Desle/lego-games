@@ -39,6 +39,8 @@ export const createCarBody = (definition: CarBodyDefinition): CarBody =>
     speedFactor: 0,
     defaultTargetSpeedFactor: 1,
     targetSpeedFactor: 1,
+    scriptedSpinPeriod: 0,
+    scriptedSpinTime: 0,
   })
 
 const setRigidBody = (body: CarBody, rigidBody: CarRigidBody): CarBody =>

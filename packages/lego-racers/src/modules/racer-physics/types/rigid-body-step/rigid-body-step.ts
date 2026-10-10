@@ -55,7 +55,7 @@ export const CAR_RIGID_BODY_HOOKS: CarRigidBodyHooks = Object.freeze({
 })
 
 // 0x00447880
-const clearContacts = (body: CarRigidBody): CarRigidBody =>
+export const clearContacts = (body: CarRigidBody): CarRigidBody =>
   Object.freeze({
     ...body,
     hullContacts: Object.freeze(body.hullContacts.map(() => false)),

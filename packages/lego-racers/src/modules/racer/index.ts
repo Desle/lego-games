@@ -1,4 +1,12 @@
 export {
+  collideRacers,
+  createCollideRacers,
+  RACER_COLLISION_DEPENDENCIES_NOT_YET_PORTED,
+} from './controller/collide-racers/collide-racers.ts'
+export { endRacerKick, respondToRacerContact } from './controller/racer-contact/racer-contact.ts'
+export { notifyRacerContact } from './controller/notify-racer-contact/notify-racer-contact.ts'
+export { updatePlayerGuidance } from './controller/update-player-guidance/update-player-guidance.ts'
+export {
   startRacerPowerSlide,
   stopRacerPowerSlide,
 } from './controller/racer-power-slide/racer-power-slide.ts'
@@ -14,6 +22,11 @@ export {
   updatePlayerController,
 } from './controller/update-player-controller/update-player-controller.ts'
 export { readRacerTables } from './services/read-racer-tables/read-racer-tables.ts'
+export {
+  addCarBodyImpulse,
+  setCarBodyPush,
+  startCarBodySpin,
+} from './types/car-body-commands/car-body-commands.ts'
 export {
   createCarBody,
   foldCarBodySpinTimer,
@@ -55,12 +68,14 @@ export type {
   CarBodyDefinition,
   DrivenCarBody,
   DriverUpdate,
+  ForceFeedbackEffect,
   PlayerController,
   PlayerControllerDependencies,
   PlayerControllerInput,
   PlayerControllerState,
   Racer,
   RacerBoundary,
+  RacerCollisionDependencies,
   RacerControls,
   RacerDriver,
   RacerSet,

@@ -40,9 +40,23 @@ export const createRacer = (carBody: CarBody): Racer =>
     savedPosition: ZERO_VECTOR3,
     savedVelocity: ZERO_VECTOR3,
     savedForward: ZERO_VECTOR3,
+    forceFeedback: Object.freeze({
+      isPresent: false,
+      strength: 0,
+      duration: 0,
+      phase: 0,
+      state: 0,
+      elapsed: 0,
+    }),
+    attackKind: 0,
+    reactionKind: 0,
+    timedEffectCharge: 0,
+    guidanceTarget: ZERO_VECTOR3,
+    contactTimerMilliseconds: null,
   })
 
-// RacerSet_Setup 0x0043b190 ends with 0x0043a450 (the rubber band; its bias is race +0x64c).
+// RacerSet_Setup 0x0043b190 ends with 0x0043a450 (the rubber band; its bias is race +0x64c). 0x0043b480 adds each
+// racer's collision node to the head of list +0x2c (0x0043aa40), so the list starts in reverse order.
 export const createRacerSet = (
   racers: readonly Racer[],
   randomPosition: RandomTablePosition,
@@ -52,6 +66,7 @@ export const createRacerSet = (
     racers: Object.freeze([...racers]),
     rubberBand: createRubberBand(rubberBandBias),
     randomPosition,
+    collisionOrder: Object.freeze(racers.map((_, index) => racers.length - 1 - index)),
   })
 
 export const getRacer = (racerSet: RacerSet, racerIndex: number): Racer => {

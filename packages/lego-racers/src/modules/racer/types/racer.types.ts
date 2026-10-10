@@ -142,13 +142,34 @@ export type CarBody = {
   // +0x7e8, +0x7ec: float32 default and current target speed factors, set by the rubber band (pass 9).
   readonly defaultTargetSpeedFactor: number
   readonly targetSpeedFactor: number
+  // +0x7d4, +0x7d8: float32 length and elapsed time of a scripted body's spin (0x00429c40).
+  readonly scriptedSpinPeriod: number
+  readonly scriptedSpinTime: number
 }
+
+// The two forces a car body can carry (car rigid body +0x630 and +0x63c).
+export type CarBodyPushSlot = 'extraForceA' | 'extraForceB'
 
 // What the car body's attach (0x00429210 → 0x00444d90) sets up; the rest starts as 0x00429120 leaves it.
 export type CarBodyDefinition = {
   readonly rigidBody: CarRigidBody
   readonly steeringScale: number
   readonly throttleScale: number
+}
+
+// The force-feedback effect of a racer (racer +0x14, 0x00421f30): an output to the player's device that only
+// 0x00422100 and its siblings write in this module.
+export type ForceFeedbackEffect = {
+  // +0x00: non-zero when the player has a force-feedback device.
+  readonly isPresent: boolean
+  // +0x04 and +0x0c: the strength and the duration asked for (100 for 0x00422100, 150 for 0x004220e0).
+  readonly strength: number
+  readonly duration: number
+  // +0x10
+  readonly phase: number
+  // +0x18: 0 idle, 2 restart requested by 0x00421f30; +0x1c cleared by it.
+  readonly state: number
+  readonly elapsed: number
 }
 
 // The racer (0xe34 bytes; constructor 0x00436990, field reset 0x00436bd0). Only the fields the ported passes touch.
@@ -200,6 +221,18 @@ export type Racer = {
   readonly savedPosition: Vector3
   readonly savedVelocity: Vector3
   readonly savedForward: Vector3
+  // +0x14: the force-feedback effect.
+  readonly forceFeedback: ForceFeedbackEffect
+  // +0xd6c: what a racer with flag 0x1 does to the one it hits: 1 kicks it sideways, 2 and 3 spin it.
+  readonly attackKind: number
+  // +0xd70: 1 or 2 while the kick of 0x00438e60 runs (which car body command to undo), 0 otherwise.
+  readonly reactionKind: number
+  // +0xd80: non-zero while the racer carries a timed effect it can pass on (set to 1000 by 0x00439900).
+  readonly timedEffectCharge: number
+  // +0xdf8: the point a player is guided to (0x00439e60 sets it with flag 0x8000, 0x00439e90 clears the flag).
+  readonly guidanceTarget: Vector3
+  // The 750 ms timer 0x00438e60 adds to the collision manager (milliseconds counted so far), or null when none runs.
+  readonly contactTimerMilliseconds: number | null
 }
 
 // One entry of the ranking array (0x004c67b0, stride 12: racer, distance, progress).
@@ -217,6 +250,9 @@ export type RacerSet = {
   readonly rubberBand: RubberBand
   // Global 0x004c6ee4: the random table position, shared by every user of the table.
   readonly randomPosition: RandomTablePosition
+  // Racer set +0xf0 (the collision manager, vtable 0x004b0aa8): the racers' nodes in list order (list +0x2c), as indexes.
+  // The list is sorted by the display bounding sphere's lowest x on every step, so the order is state.
+  readonly collisionOrder: readonly number[]
 }
 
 // Constant inputs of a race step.
@@ -277,6 +313,26 @@ export type RacerSetStepDependencies = {
   readonly triggerPowerUpEffect: RacerBoundary
   // Pass 8: the sound of the racer nearest to racer set +0x170 (racer set +0x16c). Audio only.
   readonly updateNearestRacerSound: RacerSetBoundary
+}
+
+// What the collision response of two racers (0x00438560) calls that this module does not port.
+export type RacerCollisionDependencies = {
+  // 0x00429680 on a scripted car body: the route follower is moved by the displacement (0x004a5750, 0x0042a290, 0x0042a570).
+  readonly separateScriptedCarBody: (
+    context: RacerSetContext,
+    racerSet: RacerSet,
+    racerIndex: number,
+    displacement: Vector3
+  ) => RacerSet
+  // 0x00439900 (thiscall on the receiver: the giver's figure and +0xd7c): passes a timed effect on.
+  readonly transferTimedEffect: (
+    context: RacerSetContext,
+    racerSet: RacerSet,
+    receiverIndex: number,
+    giverIndex: number
+  ) => RacerSet
+  // 0x00439b00, the end of the giver's timed effect.
+  readonly endTimedEffect: RacerBoundary
 }
 
 // Racer set step input.

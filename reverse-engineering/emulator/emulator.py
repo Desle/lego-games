@@ -116,8 +116,12 @@ class Emulator:
         self.uc.reg_write(UC_X86_REG_FPSW, 0)
         self.uc.reg_write(UC_X86_REG_FPTAG, 0xFFFF)
 
-    def call(self, address: int, convention: str, arguments: list, precision: str, buffers: list, reads: list) -> dict:
+    def call(
+        self, address: int, convention: str, arguments: list, precision: str, buffers: list, reads: list, patches: list = ()
+    ) -> dict:
         self.scratch_cursor = SCRATCH_BASE
+        for patch in patches:
+            self.uc.mem_write(patch["address"], bytes(patch["bytes"]))
         buffer_addresses = {}
         for buffer in buffers:
             words = buffer.get("words")

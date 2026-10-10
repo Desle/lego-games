@@ -124,6 +124,8 @@ export type CarRigidBody = RigidBody & {
   // +0x13c: the car model's frame; 0x004452b0 leans it, 0x00445dc0 reads its bounding radius (+0x10).
   readonly displayFrame: RigidBodyFrame
   readonly displayBoundingRadius: number
+  // The centre of the display frame's bounding sphere in model space (the model frame's +0x28..+0x30, read by 0x004113d0).
+  readonly displayBoundingCentre: Vector3
   // +0x15c: mass × 0.001 × 0.001 (0x00444d90).
   readonly scaledMass: number
   // +0x160 (39 after 0x00444b40) and +0x164 = -(gravity × scaled mass), set by every force pass.
@@ -214,6 +216,8 @@ export type CarRigidBodyDefinition = {
   // The car model's frame; the body starts with its rotation and position (0x00444d90).
   readonly displayFrame: RigidBodyFrame
   readonly displayBoundingRadius: number
+  // Model space; (0, 0, 0) when not given.
+  readonly displayBoundingCentre?: Vector3
   readonly mass: number
   readonly dimensions: Vector3
 }
