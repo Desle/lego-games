@@ -134,6 +134,12 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 - Public API (`index.ts`): `parseTimers`, `resolveTimerSecondValue`, `TimerDivideByZeroError`, `TimerKeyword`, and the `Timer` types
 - TIB timers (`0x00464aa0`, `0x00464750`).
 
+### `event`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseEvents`, `EventBlockKeyword`, `EventSectionKeyword`, `NO_SIGNAL`, and the `Event` types
+- EVB track events (`0x0045efa0` and its thirteen section readers).
+
 ### `emitter`
 
 - Layers: `controller`, `types`

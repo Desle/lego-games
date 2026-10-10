@@ -1,3 +1,4 @@
+import { EMPTY_PROJECTILE_MODEL_DATA } from '../../types/projectile-model-data/projectile-model-data.ts'
 import { parseCheckpoints } from '../../../checkpoint/index.ts'
 import { loadCollisionObject } from '../../../collision/index.ts'
 import {
@@ -166,10 +167,6 @@ export const loadRaceDefinition = (
     randomPosition: routeDraws.position,
     getGroundPoint: null,
     trackTargets: [],
-    projectileModelData: {
-      routeNodes: [],
-      rocketLaunchMilliseconds: [0, 0, 0],
-      debrisAnimations: [[0], [0], [0], [0]],
-    },
+    projectileModelData: EMPTY_PROJECTILE_MODEL_DATA,
   })
 }
