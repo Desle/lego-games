@@ -74,9 +74,9 @@ describe('getBoxContact', () => {
     const contact = getBoxContact(arithmetic, first, second)
 
     // Assert
-    expect(contact?.depth).toBe(0.31421375274658203)
+    expect(contact?.depth).toBe(Math.fround(0.3142137527))
     expect(contact?.normal).toEqual({ x: -1, y: -0, z: -0 })
-    expect(contact?.point.x).toBe(0.5047378540039062)
+    expect(contact?.point.x).toBe(Math.fround(0.504737854))
   })
 
   it('shrinks both half extents by the scale of the car body', () => {

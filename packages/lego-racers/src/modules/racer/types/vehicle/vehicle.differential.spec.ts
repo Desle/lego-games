@@ -16,6 +16,7 @@ import {
 import type { FloatSampler } from '../../../../shared/emulator/seeded-random.types.ts'
 import { readOriginalExecutable } from '../../../../shared/testing/original-files.ts'
 import { createFloatArithmetic } from '../../../simulation-math/index.ts'
+// @check-allow layer-boundaries: the differential test reads the real tables like the other racer specs
 import { readRacerTables } from '../../services/read-racer-tables/read-racer-tables.ts'
 import { createFigure } from '../figure/figure.ts'
 import { createTestCarBodyWith } from '../racer-fixtures/racer-fixtures.ts'
@@ -173,8 +174,6 @@ const getRecordWords = (animations: readonly FigureAnimation[]): readonly Emulat
   )
 
 const getRacerWords = (item: DriverCase, index: number): readonly EmulatorArgument[] => {
-  const base = RACERS_BASE + index * 0xe34
-  base
   const at = (offset: number): number => offset / 4
   const own = (offset: number): EmulatorArgument => ({
     buffer: 'racers',

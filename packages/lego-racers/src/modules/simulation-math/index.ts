@@ -34,6 +34,7 @@ export {
   getStoredDifference,
   getStoredScaledVector,
   getStoredSum,
+  getUnstoredDifference,
   getNormalizedVector2,
   getNormalizedVector3,
   getVectorRotatedAroundAxis,

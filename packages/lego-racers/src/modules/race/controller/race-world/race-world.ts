@@ -73,6 +73,8 @@ export const getRacerSetOf = (racerSet: RaceRacerSet): RacerSet =>
     rubberBand: racerSet.rubberBand,
     randomPosition: racerSet.randomPosition,
     collisionOrder: racerSet.collisionOrder,
+    registryEntries: racerSet.registryEntries,
+    registryContacts: racerSet.registryContacts,
   })
 
 // What a racer tells the power-ups about itself (the flags at racer +0xd04, car body +0x6c0 and driver +0x14).

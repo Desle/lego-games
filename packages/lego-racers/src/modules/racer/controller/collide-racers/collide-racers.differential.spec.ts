@@ -427,6 +427,7 @@ const expectMatchesOriginal = async (precision: EmulatorPrecision): Promise<void
       },
       item.step,
       {
+        getIsTouchingRegistryEntry: () => false,
         separateScriptedCarBody: (_context, racerSet) => racerSet,
         transferTimedEffect: (_context, racerSet) => racerSet,
         endTimedEffect: (_context, racerSet) => racerSet,

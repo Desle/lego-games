@@ -154,10 +154,10 @@ Car rigid body helpers (port: `car-body.ts`):
 
 | Pass | Code                                                                                                                                                             | Port                                                                      |
 | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| 1    | Driver: `+0x14 & 0x80` → `0x0041fd60`; else `+0xd08 == 2` → `0x004203b0` if `+0x14 & 0x40`; else `0x0041fc00`                                                    | Ported; route following is `followDriverRoute`                            |
+| 1    | Driver: `+0x14 & 0x80` → `0x0041fd60`; else `+0xd08 == 2` → `0x004203b0` if `+0x14 & 0x40`; else `0x0041fc00`                                                    | Ported, incl. `followDriverRoute` (`0x004203b0`)                          |
 | 2    | `CarBody_Update`                                                                                                                                                 | Ported around `stepRigidBody`, `stepScriptedCarBody`, `updateEngineSound` |
 | 3    | Racers with `+0xd04 & 0x80`: `0x00437b50`                                                                                                                        | Ported; `endPowerSlideEffects`                                            |
-| 4    | Racer set `+0xf0` (constructor `0x0043d150`, vtable `0x004b0aa8`) slot 4 = `0x0043d180`: sorts bodies along an axis and tests pairs (`0x0043aa10`, `0x00441330`) | `collideRacers`                                                           |
+| 4    | Racer set `+0xf0` (constructor `0x0043d150`, vtable `0x004b0aa8`) slot 4 = `0x0043d180`: sorts bodies along an axis and tests pairs (`0x0043aa10`, `0x00441330`) | `collideRacers` (racer list, registry stage); `racer-collision`           |
 | 5    | `0x00437740`                                                                                                                                                     | `updateVehicle`                                                           |
 | 6    | `0x00437d40`, `0x00437be0`                                                                                                                                       | `updateRacerSounds`                                                       |
 | 7    | `0x004377f0`                                                                                                                                                     | Ported with seven dependencies                                            |
@@ -168,9 +168,31 @@ Car rigid body helpers (port: `car-body.ts`):
 
 Without driver flag `0x4` → `Racer_StopPowerSlide`. Otherwise `racer+0x3b4 (vehicle +0x39c) = float32(±(1 − ((f.z·r.z + f.y·r.y) + f.x·r.x)) · 0.06 + +0x3b4)` with `f` = body `+0x168`, `r` = display row 0, negated when the steering `+0x64c` < 0 (`0x004b09cc` = 0.06).
 
-### Pass 5: `0x00437740` (not ported)
+### Pass 4: `0x0043d180` (collision manager, racer set `+0xf0`, vtable `0x004b0aa8`)
 
-Forward speed `+0x618` within ±0.0001 (`0x004b09c4`) counts as 0; < 0 selects the vehicle's reverse state (`0x004401e0`) and negates, else `0x004401b0`; `float32(|v| · 1.8)` (`0x004b01a4`) goes to display frame `+0xb8` and, if present, `+0x58` frame `+0xb8` (**hypothesis**: wheel spin); then `Vehicle_Update` (`0x0043e070`), which draws from the random table (smoke). Presentation, but it moves the random cursor.
+Body: `0x0043d200`, `0x0043aa10` (timers `0x0042fc10`, sort `0x0043aca0`, sweep `0x0043ab90`), `0x0043d3f0`, `0x0043d270`, `0x0043d200`. Node (0x2c bytes): `+0` listener, `+4` type, `+8` flags, `+0xc` max count, `+0x10` interval, `+0x14` shape, `+0x18` previous, `+0x1c` count, `+0x20` ticks, `+0x24` active, `+0x28` next. Manager: free list `+8`, timers `+0xc`, racer nodes `+0x2c` (prepended on add, so the list starts in reverse racer order: `collisionOrder`), registry nodes `+0x48`.
+
+- **Timers** (`0x00438e60` period 750 ms): a running kick timer counts up by the step; at 750 ms or more `endRacerKick` clears it.
+- **Sort** (`0x0043aca0`): insertion sort of list `+0x2c` by the sphere's lowest x (`centre.x - r`, stored), recomputed with x87 compares at every comparison (`getIsBelow` to move, `getIsBelowOrEqual` to place; equal keys stay in order). The sphere is the display figure's bounds (`0x0040e0b0` through `0x004113c0`) moved by the display frame; a figure without a model part has radius 0 at the origin.
+- **Sweep** (`0x0043ab90`/`0x0043ab10`): for each node, the following nodes whose lowest x is at most its highest x; sphere test `0x00411b90` (`D = (dz² + dy²) + dx²`; `FLT_MAX` or NaN is no overlap; `D < (r1 + r2)²`); box test `0x00441790` (SAT over 15 axes, edge axes epsilon ±0.001, scale `+0xdc`) and contact `0x00441330` (mean of the corners that pass); a contact with depth ≠ 0 calls the first node's listener `0x00438560` (node flags 5: no reciprocal call).
+- **Response** `0x00438560` (types 1 and 3): impulse along the normal from the relative velocity, inertia and `+0xcc` inverse masses; the car body commands slot 8 `0x00429770`/`0x00448110`, slot 9 `0x00429c40`/`0x00448160`, slots 16 to 19 `0x004298a0`, `0x004298d0`, `0x004298f0`, `0x00429920` (scripted bodies move the route speed factor through racer-ai's `getPushedSpeedState`/`getRestoredSpeedState`); kick `0x00438e60`, attack, spark emitter (presentation); draws from the random table as in the code; `moveOutOfContact` is `0x004490b0`.
+- **Registry** (`0x0043d270`): racers in list order against the entries of list `+0x48` along x, by projectiles' `getRegistryContacts`/`getSortedRegistryEntries` (one copy, in `projectiles`). `RacerSet.registryEntries` holds the entries and `registryContacts` the contacts of the last pass; whoever registers an entry answers them. The precise volume test (slot 6, `+0x18`) is the dependency `getIsTouchingRegistryEntry` (default: no touch). Every racer node is taken as active; whether racer `+0xe0` can be 0 is not checked.
+
+Differential tests against the emulator: `0x00441790`/`0x00441330`, `0x00411b90`, `0x00438560` (400 cases per precision, with cursor and timers), the car body commands, `0x004490b0`, `0x0040e0b0`/`0x0040dd60`, the manager (300 cases), `0x00439cf0`/`0x00439ea0`, `0x00422100`.
+
+### Figure (`0x0040d530` class, vtable `0x004af5ec`; racer `+0x5c`, car body `+0x13c`)
+
+Flags `+0x5c`: `0x10000` plays, `0x20000` blends, `0x40000` loops, `0x80000` ended, `0x100000` chains, `0x400000` target loops, `0x2000000` wrapped. Child (model part) `+0x78`, animation set `+0xa8` (records of 0x28 bytes: rate, vector, bounds), ids `+0xbc`/`+0xd8`. Ported: `play` `0x0040dad0`, `blend` `0x0040db80` (300 ms), `update` `0x0040dd60`, wrap `0x00401150`, bounds `0x0040e0b0`.
+
+### Pass 5: `0x00437740` and `Vehicle_Update` `0x0043e070`
+
+Forward speed `+0x618` within ±0.0001 (`0x004b09c4`) counts as 0; reversing selects animation 1 (`0x004401e0`), else animation 0 (`0x004401b0`); the rate is `float32(|v| · 1.8)` (`0x004b01a4`), on the display figure and the vehicle's second figure; the display figure updates (`0x0043e740`'s sway of the model frame is presentation and not ported). Then the driver figure's choice `0x0043ec10` (differential tested against the emulator, 800 cases per precision): finished race celebrates (winner: one draw, odd plays `0xe` then `0xf`; others `0xb` then `0xc`), start boost animation 1, hit animation `0xa` with force feedback 500 then 9, braking from above 0.05 to below 0.01 stops with a voice (`0x00439240`) and animation 0, reversing 2, steering by the curvature 5/6, rest 9, and looking at the nearest racer within 200 (`0x0043cbb0`) after a draw. The effect emitters draw once for each live emitter; their particles are presentation and not ported.
+
+### Route following: `0x004203b0` (pass 1, computer racer with driver flag `0x40`)
+
+Driver fields: `+4` the route, `+0x24` route step (1000 after `0x004202f0`, +250 each retarget), `+0x28` stuck time, `+0x34..+0x3c` target position and `+0x40..+0x4c` target quaternion (copied from the follower), `+0x50` the follower. Within 3 units of the target (`0x004b0088`, the unrounded square root): `0x0042a730` (the car body follows the route: follower to the loop point, display frame = loop pose, centre of mass and hull points moved), `0x0042b0c0` (speed factor, targets 1; follower settled by `0x004a5750` with no displacement; offset and bounce 0), advance the car body's follower by the route step, `0x00420380` (the driver lets go: route, flag `0x40`, step, curvature, throttle 0; steering and throttle 0). Otherwise: `+8 = +0xc`, `0x0041fdb0` (below 0.009 speed for 1000 ms sets flag `0x20` for 2000 ms; a spinning body clears it), curvature `dist / (2 · proj)` with `proj` the target direction's component on the car's second axis (4096 below 0.0005, negated for a target on the far side), throttle 18 (`-54` with flag `0x20`, curvature negated); when the car is within 30 of the target or its heading is below 0.5 along the target's first axis, and within 80: retarget (`+0x24 += 250`, follower to the loop point and 250 ms ahead). Then `0x0041fee0` and `0x004201e0`.
+
+`0x004a5750` (move the follower by a displacement) is ported for moves that end inside the current segment (always so for a zero displacement; differential tested, 1500 cases per precision); moves past either end of the segment (`0x004a5bc6`, `0x004a59ab`) throw `UnportableRouteError`. The route search `0x0043d070` is not ported: nothing sets driver flag `0x40` in a race yet; `assignDriverRoute` (`0x004202f0`) is exported for it and creates the follower, which the original has from the racer's creation. Unit tests only for `followDriverRoute` (the car body and display frame objects it calls through vtables are not built in the emulator).
 
 ### Pass 6: `0x00437d40`, `0x00437be0` (audio)
 
@@ -210,6 +232,7 @@ Object: `+0x00` racers, `+0x04` count, `+0x08` delay (15,000 after `0x0043a450`)
 
 - `RacerControls` and the nine binding handlers (`0x00430570`–`0x004306d0`); `PlayerController_Update`, `PlayerController_UpdateSteering`, `0x00430390`, `0x00430790`.
 - `Racer_StartPowerSlide`, `Racer_StopPowerSlide` (state only).
+- Pass 4, pass 5 and route following as described above, with `0x0041fdb0`, `0x00420380`, `0x004202f0`, `0x0042a730`, `0x0042b0c0`, `0x004a5750`, `0x00429770`, `0x00429c40`, `0x004298a0`..`0x00429920`, `0x00448160`, `0x004490b0`, `0x00441790`, `0x00441330`, `0x00411b90`, `0x00438560`, `0x00438e60`, `0x0040e0b0`, `0x0040dd60`, `0x0043ec10`, `0x0043cbb0`, `0x00439cf0`, `0x00439ea0`, `0x00422100`.
 - The driver: `0x0041fb80`, `0x0041fc00`, `0x0041fd60`, `0x0041fe60`, `0x0041fee0`, `0x00420130`, `0x004201e0`, `0x00420260`, `0x004202c0`.
 - Car body: `0x00429120` (as `createCarBody`), `CarBody_Update` without the engine sound, `0x0042ad30`, `0x0042ae20`, `0x0042aea0`, `0x00446ef0`, `0x00447f30` (no sound), `0x00448070`, `0x00449070`, `0x00449090`, `0x00445cb0`, `0x004489f0`, `0x00448370`, `0x004483b0`, `0x00448290`.
 - Racer: `0x00436bd0` (as `createRacer`), passes 1, 2, 3, 7, 8 (ranking, positions, voice timers), `0x0043a210`, `0x00439240` (state only).
@@ -220,9 +243,9 @@ Object: `+0x00` racers, `+0x04` count, `+0x08` delay (15,000 after `0x0043a450`)
 ## Not ported (typed dependencies in `RacerSetStepDependencies` / `PlayerControllerDependencies`)
 
 - `RigidBody_Step` (`0x00444ef0`) and `CarBody_StepOnRoute` (`0x00429d40`), the kinematic route playback of computer racers (car body `+0x744`), built from `racer-ai`'s route follower and speed code; the dependency `stepScriptedCarBody` is where it plugs in. `RacerControls` only drive player racers.
-- Route following `0x004203b0` (with `0x0041fdb0`, `0x00420380`, `0x004a5220`, `0x004a5320`).
-- Pass 4 collisions (`0x0043d180`), pass 5 (`0x00437740`, `Vehicle_Update`), pass 6 (audio).
-- Pass 7 calls: `0x00438f20` (racer-ai's `updatePowerUpUse` implements it once the racer carries the personality and power-up fields), `0x004397b0`, `0x00439b00`, `0x00439c90` (`tauntNearestRacer`), `0x00439cf0`, `0x00439ea0`, `0x00422100`, `0x0045b1e0`.
+- Pass 6 (audio).
+- The slide of a scripted body by `0x00429680` (`separateScriptedCarBody`), the timed-effect transfer `0x00439900` and end `0x00439b00` (`transferTimedEffect`, `endTimedEffect`), the registry volume test (`getIsTouchingRegistryEntry`), the route search `0x0043d070`, the emitters' particles of `Vehicle_Update`, `0x0043e740`'s model sway.
+- Pass 7 calls: `0x00438f20` (racer-ai's `updatePowerUpUse` implements it once the racer carries the personality and power-up fields), `0x004397b0`, `0x00439b00`, `0x00439c90` (`tauntNearestRacer`), `0x0045b1e0`. `0x00439cf0`, `0x00439ea0` (`updatePlayerGuidance`) and `0x00422100` (`notifyRacerContact`) are ported.
 - Player controller calls: `0x00439100` (use power-up), `0x0043a390`, `0x0043a0c0`, `0x0043a3f0`/`0x0043a400`, `0x0045b1e0` + `0x0043df90` (start boost), vehicle effects of the power slide; `0x00430710` and `0x00430760` (race state changes).
 - Every sound, the engine sound block of `CarBody_Update` and the nearest-racer sound of pass 8.
 - The car rigid body's reset (`0x00444b40`) and attach (`0x00444d90`); `createCarBody` takes their results as input.

@@ -28,6 +28,17 @@ export const getStoredDifference = (
     z: arithmetic.storeFloat(arithmetic.subtract(left.z, right.z)),
   })
 
+// left - right per component, kept unrounded (FSUB results consumed by further FPU operations).
+export const getUnstoredDifference = (
+  arithmetic: FloatArithmetic,
+  left: Vector3,
+  right: Vector3
+): Vector3 => ({
+  x: arithmetic.subtract(left.x, right.x),
+  y: arithmetic.subtract(left.y, right.y),
+  z: arithmetic.subtract(left.z, right.z),
+})
+
 // left + right per component, each sum stored.
 export const getStoredSum = (arithmetic: FloatArithmetic, left: Vector3, right: Vector3): Vector3 =>
   Object.freeze({

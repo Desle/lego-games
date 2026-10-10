@@ -93,6 +93,7 @@ export type {
   Racer,
   RacerBoundary,
   RacerCollisionDependencies,
+  RacerPassDependencies,
   RacerControls,
   RacerDriver,
   RacerSet,

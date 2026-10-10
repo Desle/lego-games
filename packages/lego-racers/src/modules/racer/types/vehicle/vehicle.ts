@@ -1,5 +1,9 @@
 import { drawRandomValue } from '../../../random-table/index.ts'
-import { getFloatFromBits, getNormalizedVector3 } from '../../../simulation-math/index.ts'
+import {
+  getFloatFromBits,
+  getNormalizedVector3,
+  getStoredDifference,
+} from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 import { getRestartedForceFeedback } from '../force-feedback/force-feedback.ts'
 import {
@@ -85,7 +89,6 @@ const findNearestRacerInRing = (
   origin: Vector3
 ): number => {
   const { add, subtract, multiply, storeFloat, getIsBelow, getIsBelowOrEqual } = arithmetic
-  const nearest = Number.MAX_VALUE
   let found = -1
   let best = getFloatFromBits(0x7f7fffff)
   for (const [index, racer] of racerSet.racers.entries()) {
@@ -100,7 +103,6 @@ const findNearestRacerInRing = (
     best = squared
     found = index
   }
-  nearest
   return found
 }
 
@@ -127,7 +129,7 @@ const chooseDriverAnimation = (
   reactionFlags: number
 ): RacerSet => {
   const { arithmetic, tables } = context
-  const { getIsBelow, getIsBelowOrEqual, storeFloat, multiply, add, subtract } = arithmetic
+  const { getIsBelow, getIsBelowOrEqual, multiply, add } = arithmetic
   const racer = getRacer(racerSet, racerIndex)
   const { vehicle } = racer
   const { forwardSpeed } = racer.carBody.rigidBody
@@ -245,11 +247,7 @@ const chooseDriverAnimation = (
   const target = getRacer(racerSet, watchedIndex).carBody.rigidBody.displayFrame.position
   const direction = getNormalizedVector3(
     arithmetic,
-    Object.freeze({
-      x: storeFloat(subtract(target.x, position.x)),
-      y: storeFloat(subtract(target.y, position.y)),
-      z: storeFloat(subtract(target.z, position.z)),
-    })
+    getStoredDifference(arithmetic, target, position)
   )
   const getAlong = (row: number): number =>
     add(

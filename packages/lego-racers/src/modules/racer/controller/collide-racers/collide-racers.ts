@@ -1,3 +1,4 @@
+import { getRegistryContacts, getSortedRegistryEntries } from '../../../projectiles/index.ts'
 import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import {
   getBoundingInterval,
@@ -15,6 +16,7 @@ import { getRacer, setRacer } from '../../types/racer-state/racer-state.ts'
 import type {
   Racer,
   RacerCollisionDependencies,
+  RacerPassDependencies,
   RacerSet,
   RacerSetBoundary,
   RacerSetContext,
@@ -133,34 +135,68 @@ const sweepRacerPairs = (
   return current
 }
 
+const COMPUTER_CONTROLLER = 2
+
+// 0x0043d270 with 0x0043d200: the entries registered with the manager are sorted, each racer in list order is
+// matched against the entries along its sphere's x extent (projectiles' registry), and the entries sort again.
+// Every racer node is active.
+const touchRegistryEntries = (
+  context: RacerSetContext,
+  racerSet: RacerSet,
+  dependencies: RacerPassDependencies
+): RacerSet => {
+  const racers = racerSet.collisionOrder.map((racerIndex) => {
+    const racer = getRacer(racerSet, racerIndex)
+    const interval = getInterval(context, racer)
+    return {
+      racer: racerIndex,
+      isComputer: racer.controllerKind === COMPUTER_CONTROLLER,
+      isActive: true,
+      minimumExtent: interval.minimum,
+      maximumExtent: interval.maximum,
+    }
+  })
+  const result = getRegistryContacts(
+    getSortedRegistryEntries(racerSet.registryEntries),
+    racers,
+    (racerIndex, entry) =>
+      dependencies.getIsTouchingRegistryEntry(context, racerSet, racerIndex, entry)
+  )
+  return Object.freeze({
+    ...racerSet,
+    registryEntries: getSortedRegistryEntries(result.entries),
+    registryContacts: result.contacts,
+  })
+}
+
 // Pass 4 of RacerSet_Step: the collision manager at racer set +0xf0 (0x0043d180, vtable 0x004b0aa8 slot 4):
-// timers (0x0042fc10), the sort (0x0043aca0), the sweep (0x0043ab90). Lists +0x28 (events between two
-// shapes) and +0x48 (racers against other objects) hold nothing from racers and are not modelled.
+// timers (0x0042fc10), the sort (0x0043aca0), the sweep (0x0043ab90). List +0x28 (events between two
+// shapes) holds nothing from racers and is not modelled.
 export const collideRacers = (
   context: RacerSetContext,
   racerSet: RacerSet,
   stepMilliseconds: number,
-  dependencies: RacerCollisionDependencies
+  dependencies: RacerPassDependencies
 ): RacerSet => {
   const timed = stepContactTimers(context, racerSet, stepMilliseconds)
   const sorted: RacerSet = Object.freeze({
     ...timed,
     collisionOrder: sortByIntervalMinimum(context, timed),
   })
-  return sweepRacerPairs(context, sorted, dependencies)
+  return touchRegistryEntries(context, sweepRacerPairs(context, sorted, dependencies), dependencies)
 }
 
 const keepRacerSet = (_context: RacerSetContext, racerSet: RacerSet): RacerSet => racerSet
 
 // Stand-ins for the calls the collision response makes into code this module does not port.
-export const RACER_COLLISION_DEPENDENCIES_NOT_YET_PORTED: RacerCollisionDependencies =
-  Object.freeze({
-    separateScriptedCarBody: keepRacerSet,
-    transferTimedEffect: keepRacerSet,
-    endTimedEffect: keepRacerSet,
-  })
+export const RACER_COLLISION_DEPENDENCIES_NOT_YET_PORTED: RacerPassDependencies = Object.freeze({
+  getIsTouchingRegistryEntry: () => false,
+  separateScriptedCarBody: keepRacerSet,
+  transferTimedEffect: keepRacerSet,
+  endTimedEffect: keepRacerSet,
+})
 
 export const createCollideRacers =
-  (dependencies: RacerCollisionDependencies): RacerSetBoundary =>
+  (dependencies: RacerPassDependencies): RacerSetBoundary =>
   (context, racerSet, stepMilliseconds) =>
     collideRacers(context, racerSet, stepMilliseconds, dependencies)

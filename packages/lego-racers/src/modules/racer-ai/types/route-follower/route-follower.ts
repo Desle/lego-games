@@ -10,6 +10,7 @@ import {
   getSquaredLength,
   getStoredDifference,
   getStoredSum,
+  getUnstoredDifference,
   ZERO_VECTOR3,
 } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Quaternion, Vector3 } from '../../../simulation-math/index.ts'
@@ -260,16 +261,6 @@ export const advanceRouteFollower = (
     rotation: getBlendedQuaternion(arithmetic, previousRotation, nextRotation, fraction),
   })
 }
-
-const getUnstoredDifference = (
-  arithmetic: FloatArithmetic,
-  left: Vector3,
-  right: Vector3
-): Vector3 => ({
-  x: arithmetic.subtract(left.x, right.x),
-  y: arithmetic.subtract(left.y, right.y),
-  z: arithmetic.subtract(left.z, right.z),
-})
 
 // 0x004a5750, the first loop: samples whose segment is shorter than 0.001 are skipped. Null when the route ends.
 const getFirstUsableSegment = (

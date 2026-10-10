@@ -1,6 +1,7 @@
 import type { Checkpoint } from '../../checkpoint/index.ts'
 import type { CollisionObject } from '../../collision/index.ts'
 import type { ComputerRacerRoute } from '../../computer-racer-route/index.ts'
+import type { RegistryContact, RegistryEntry } from '../../projectiles/index.ts'
 import type { RouteFollower, RubberBand } from '../../racer-ai/index.ts'
 import type { CarRigidBody } from '../../racer-physics/index.ts'
 import type { RandomTable, RandomTablePosition } from '../../random-table/index.ts'
@@ -371,6 +372,10 @@ export type RacerSet = {
   // Racer set +0xf0 (the collision manager, vtable 0x004b0aa8): the racers' nodes in list order (list +0x2c), as indexes.
   // The list is sorted by the display bounding sphere's lowest x on every step, so the order is state.
   readonly collisionOrder: readonly number[]
+  // The same manager's list +0x48 (objects the racers touch, registered by effects, projectiles and bricks) and the
+  // contacts the last pass 4 found in it (0x0043d270); whoever registers an entry answers its contacts.
+  readonly registryEntries: readonly RegistryEntry[]
+  readonly registryContacts: readonly RegistryContact[]
 }
 
 // Constant inputs of a race step.
@@ -501,4 +506,15 @@ export type PlayerControllerInput = {
   readonly state: PlayerControllerState
   readonly racerIndex: number
   readonly dependencies: PlayerControllerDependencies
+}
+
+// What pass 4 calls besides the collision response.
+export type RacerPassDependencies = RacerCollisionDependencies & {
+  // Slot 6 (+0x18) of a racer's bounding volume against an entry's volume: the precise test of 0x0043d270.
+  readonly getIsTouchingRegistryEntry: (
+    context: RacerSetContext,
+    racerSet: RacerSet,
+    racerIndex: number,
+    entry: RegistryEntry
+  ) => boolean
 }

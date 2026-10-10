@@ -10,6 +10,7 @@ import {
   getSquaredLength,
   getStoredScaledVector,
   getTruncatedInteger,
+  getUnstoredDifference,
 } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 import {
@@ -39,16 +40,6 @@ const WALL_PUSH = getFloatFromBits(0x3b83126f) // 0x004b0404, 0.004
 const MAXIMUM_RISE_SPEED = getFloatFromBits(0x3e99999a) // 0x004b0d84, 0.3
 // 0x00447cb6: a contact closer than 5 ms is answered at once.
 const CONTACT_MARGIN_MILLISECONDS = 5
-
-const getUnstoredDifference = (
-  arithmetic: FloatArithmetic,
-  left: Vector3,
-  right: Vector3
-): Vector3 => ({
-  x: arithmetic.subtract(left.x, right.x),
-  y: arithmetic.subtract(left.y, right.y),
-  z: arithmetic.subtract(left.z, right.z),
-})
 
 // The track's squared distance (0x00447bf7): (y² + x²) + z², unlike the moving objects' (z² + y²) + x².
 const getTrackSquaredDistance = (arithmetic: FloatArithmetic, difference: Vector3): number => {

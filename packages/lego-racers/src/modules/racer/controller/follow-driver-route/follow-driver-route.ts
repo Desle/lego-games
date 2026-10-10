@@ -18,6 +18,7 @@ import {
   stepDriverStuckTimer,
 } from '../../types/racer-driver/racer-driver.ts'
 import { getDriven, getRacer, setDriven, setRacer } from '../../types/racer-state/racer-state.ts'
+import type { TargetOffset } from './follow-driver-route.types.ts'
 import type {
   CarBody,
   DrivenCarBody,
@@ -37,12 +38,6 @@ const MINIMUM_ALIGNMENT = 0.5 // 0x004af58c
 const ONE = 1
 const REVERSING_FLAG = 0x20
 const GROUNDED_WHEEL_MINIMUM = 3
-
-type TargetOffset = {
-  readonly offset: Vector3
-  readonly distanceRaw: number
-  readonly distance: number
-}
 
 // The vector from the car to the target: float32 differences, the length a stored square root. The z term
 // multiplies the unstored difference by its stored copy (FST, FMUL float ptr).

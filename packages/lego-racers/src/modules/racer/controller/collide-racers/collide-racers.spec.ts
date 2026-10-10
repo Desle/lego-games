@@ -131,3 +131,58 @@ describe('collideRacers, the 750 ms timers', () => {
     expect(getRacer(racerSet, 0).reactionKind).toBe(0)
   })
 })
+
+describe('collideRacers, the registry 0x0043d270', () => {
+  const entry = {
+    id: 7,
+    flags: 0,
+    maximumCalls: 1,
+    interval: 0,
+    calls: 0,
+    ticks: 0,
+    isActive: true,
+    minimumExtent: -0.5,
+    maximumExtent: 0.5,
+  }
+
+  it('gives a touched entry its contact and retires it after its last call', () => {
+    // Arrange
+    const racerSet = {
+      ...createRacerSet([createCarAt(0), createCarAt(10)], 0, 0),
+      registryEntries: [entry],
+    }
+    const dependencies = {
+      ...RACER_COLLISION_DEPENDENCIES_NOT_YET_PORTED,
+      getIsTouchingRegistryEntry: () => true,
+    }
+
+    // Act
+    const result = collideRacers(createTestContext(), racerSet, 16, dependencies)
+
+    // Assert
+    expect(result.registryContacts).toEqual([{ id: 7, racer: 0, flags: 0, calls: 1, ticks: 1 }])
+    expect(result.registryEntries).toEqual([])
+  })
+
+  it('finds no contact when the volume test says the racer is clear', () => {
+    // Arrange
+    const racerSet = {
+      ...createRacerSet([createCarAt(0)], 0, 0),
+      registryEntries: [entry],
+    }
+
+    // Act
+    const result = collide(racerSet.racers, 16)
+    const untouched = collideRacers(
+      createTestContext(),
+      racerSet,
+      16,
+      RACER_COLLISION_DEPENDENCIES_NOT_YET_PORTED
+    )
+
+    // Assert
+    expect(result.registryContacts).toEqual([])
+    expect(untouched.registryContacts).toEqual([])
+    expect(untouched.registryEntries).toEqual([entry])
+  })
+})
