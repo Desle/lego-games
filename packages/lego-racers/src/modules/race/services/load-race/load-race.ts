@@ -12,6 +12,12 @@ import { parsePowerUps } from '../../../power-up/index.ts'
 import { createRandomTablePosition, drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
 import { readRacerTables } from '../../../racer/index.ts'
+import {
+  createCarBodySetup,
+  getIsCarBodyFlagged,
+  getStartSlot,
+} from '../../../racer-setup/index.ts'
+import type { BuiltCar } from '../../../racer-setup/index.ts'
 import { parseRaceDescription } from '../../../race-description/index.ts'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
 import { parseStartPositions } from '../../../start-position/index.ts'
@@ -22,22 +28,25 @@ import {
   PLAYER_CONTROLLER,
 } from '../../types/racer-transitions/racer-transitions.ts'
 import type { RaceDefinition, RaceRacerDefinition } from '../../types/race.types.ts'
-import { getPlaceholderCarBodyDefinition } from '../../types/placeholder-car/placeholder-car.ts'
 import { getStartFrame } from '../../types/start-frame/start-frame.ts'
 import type { LoadRaceOptions, RouteDraws, RouteDrawer, RouteFiles } from './load-race.types.ts'
+import { describeRacers, getCircuitRacerCodes, readRacerDatabases } from './load-racers.ts'
 
 const JAM_SEPARATOR = '\\'
 const DEFAULT_RACE_FOLDER = 'RACEC0R0'
 const DEFAULT_RACER_COUNT = 6
-const DRIVER_BYTE_COUNT = 6
-// 0x0043b480: a custom driver's six personality bytes are all 100.
-const CUSTOM_DRIVER_BYTE = 100
 const DEFAULT_LAP_COUNT = 3
-const NO_ABILITIES = Object.freeze({
-  isAlwaysGrapple: false,
-  isAlwaysLevelThree: false,
-  isPermanentTurbo: false,
+// The first chassis of CMB and the first racer of DEFAULT.LRS: a car without bricks. The car builder
+// (0x0049c6a0, not ported) would compute the weight and its centre offsets from the design.
+const DEFAULT_PLAYER_CAR: BuiltCar = Object.freeze({
+  chassisName: 'dachas0',
+  weight: 0,
+  centreOffsetX: 0,
+  centreOffsetY: 0,
 })
+// The car model frame's bounding radius (frame +0x10, 0x0040e0b0) comes from the model's bounding sphere, which
+// the model module does not compute yet; this is the rigid body specs' stand-in.
+const PROVISIONAL_DISPLAY_BOUNDING_RADIUS = 5
 
 // The RAB names the text files (.cpf, .sps); the loaders read the binary twin, whose extension ends in b.
 const getJamFileName = (name: string): string => `${name.slice(0, -1)}b`.toUpperCase()
@@ -73,16 +82,20 @@ const loadRoutes = (
 
 // Race_LoadRaceDescription 0x00431e00 and Race_LoadTrackContent 0x00433480 for a race in the player's own game
 // files: LEGO.JAM and LEGORacers.exe. The first race is Royal Knights Raceway, GAMEDATA\RACEC0R0. Racer 0 is
-// the player, the others are computer racers with a custom driver's personality; the chassis data is not ported,
-// so every car is the placeholder of getPlaceholderCarBodyDefinition.
+// the player, drives a car built from bricks; the others are the computer racers of the race's circuit, each a
+// driver of the driver database with its champion's car on its chassis (RacerSet_Setup 0x0043b190, 0x0043b480).
 export const loadRaceDefinition = (
   jam: Uint8Array,
   executable: Uint8Array,
   options: LoadRaceOptions = {}
 ): RaceDefinition => {
   const folder = options.raceFolder ?? DEFAULT_RACE_FOLDER
-  const racerCount = options.racerCount ?? DEFAULT_RACER_COUNT
+  const localPlayerCount = options.localPlayerCount ?? 1
+  const raceModeFlags = options.raceModeFlags ?? 0
   const archive = openJamArchive(jam)
+  const racerCodes = options.racerCodes ?? getCircuitRacerCodes(archive.readFile, folder)
+  // 0x0042d730: the settings hold the smaller of the six slots and the circuit's racer count.
+  const racerCount = Math.min(options.racerCount ?? DEFAULT_RACER_COUNT, racerCodes.length)
   const readFile = (name: string): Uint8Array =>
     archive.readFile(
       folder.length > 0 ? `GAMEDATA${JAM_SEPARATOR}${folder}${JAM_SEPARATOR}${name}` : name
@@ -93,7 +106,7 @@ export const loadRaceDefinition = (
   const tables = readRacerTables(executable)
   const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
   const kinds = Array.from({ length: racerCount }, (_, index) =>
-    index === 0 ? PLAYER_CONTROLLER : COMPUTER_CONTROLLER
+    index < Math.max(1, localPlayerCount) ? PLAYER_CONTROLLER : COMPUTER_CONTROLLER
   )
   const routeDraws = loadRoutes(
     {
@@ -120,24 +133,44 @@ export const loadRaceDefinition = (
       : readFile(`${description.firstCollisionObject.toUpperCase()}.BVB`)
   const startPositions =
     startPositionBytes === null ? [] : parseStartPositions(startPositionBytes, false).startPositions
+  const descriptions = describeRacers({
+    arithmetic,
+    databases: readRacerDatabases(archive.readFile),
+    racerCount,
+    localPlayerCount,
+    playerCars: options.playerCars ?? [],
+    defaultPlayerCar: DEFAULT_PLAYER_CAR,
+    racerCodes,
+  })
+  const isMultiplayer = localPlayerCount >= 2
   const racers: readonly RaceRacerDefinition[] = kinds.map((controllerKind, index) => {
     const route = routeDraws.routes[index] ?? null
+    const description = descriptions[index]
+    if (description === undefined) throw new RangeError(`No description for racer ${String(index)}`)
     return {
       controllerKind,
-      carBody: getPlaceholderCarBodyDefinition(
-        arithmetic,
-        getStartFrame(arithmetic, startPositions, index, route)
-      ),
+      carBody: createCarBodySetup(arithmetic, description.car, {
+        displayFrame: getStartFrame(
+          arithmetic,
+          startPositions,
+          getStartSlot(index, isMultiplayer),
+          route
+        ),
+        displayBoundingRadius: PROVISIONAL_DISPLAY_BOUNDING_RADIUS,
+        isRaceModeFlagged: getIsCarBodyFlagged(raceModeFlags),
+      }),
       route,
-      personalityBytes: Array.from({ length: DRIVER_BYTE_COUNT }, () => CUSTOM_DRIVER_BYTE),
-      abilities: NO_ABILITIES,
+      personalityBytes: description.personalityBytes,
+      preferredPowerUpKind: description.preferredPowerUpKind,
+      preferredPowerUpLevel: description.preferredPowerUpLevel,
+      voiceBase: description.voiceBase,
     }
   })
   return Object.freeze({
     arithmetic,
     tables,
-    raceModeFlags: options.raceModeFlags ?? 0,
-    localPlayerCount: options.localPlayerCount ?? 1,
+    raceModeFlags,
+    localPlayerCount,
     multiplayerLapCount: DEFAULT_LAP_COUNT,
     isCountdownSkipped: false,
     isMirrored: false,

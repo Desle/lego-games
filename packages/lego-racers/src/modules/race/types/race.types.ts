@@ -31,18 +31,21 @@ import type { RacePhase as RacePhaseValues } from './race-phase/race-phase.ts'
 export type RacePhase = EnumValues<typeof RacePhaseValues>
 
 // One racer of the race: what Race_LoadTrackContent 0x00433480 and RacerSet_Setup 0x0043b190 take from the
-// game settings (+0x100 count, +0x114 + 0x5c·i kind) and the driver and chassis databases (not ported).
+// game settings (+0x100 count, +0x114 + 0x5c·i kind) and the driver, champion and chassis databases (0x0043b480).
 export type RaceRacerDefinition = {
   // Settings +0x114 + 0x5c·i: 0 is a player, 2 a computer racer.
   readonly controllerKind: number
-  // The chassis data 0x00429210 reads; no module parses it yet, so the caller supplies it.
+  // What 0x004371c0 builds from the chassis and the champion (racer-setup's createCarBodySetup).
   readonly carBody: CarBodyDefinition
   // Race +0x3104 + 0x48·i (racer +0xe2c), chosen by computer-racer-route; null for a racer without a route.
   readonly route: ComputerRacerRoute | null
-  // Driver description +0x6c..+0x71 (100 each for a custom driver, 0x0043b480).
+  // Description +0x6c..+0x71: the driver's personality bytes (100 each for a car built from bricks).
   readonly personalityBytes: readonly number[]
-  // Driver description byte +0xf, as power-ups reads it.
-  readonly abilities: RacerPowerUpAbilities
+  // Description +0x7c and +0x80 → racer +0xcd0 and +0xcd4: the power-up the driver holds out for.
+  readonly preferredPowerUpKind: ComputerPowerUpPersonality['preferredKind']
+  readonly preferredPowerUpLevel: number
+  // Description +0x74 → racer +0xd40.
+  readonly voiceBase: number
 }
 
 // Everything the race is built from; the parsed files and the settings Race_LoadRaceDescription reads.

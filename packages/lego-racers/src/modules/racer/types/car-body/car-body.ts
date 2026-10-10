@@ -35,6 +35,7 @@ export const createCarBody = (definition: CarBodyDefinition): CarBody =>
     safeOrientation: UNIT_QUATERNION_ZERO,
     steeringScale: definition.steeringScale,
     throttleScale: definition.throttleScale,
+    topSpeedScale: definition.topSpeedScale,
     isScripted: false,
     // The route follower's constructor 0x004a5190 sets +0x2c (car body +0x778) to 1.0.
     speedFactor: 1,
