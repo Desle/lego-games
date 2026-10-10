@@ -153,7 +153,7 @@ The world inverse inertia is not refreshed here; `RigidBody_Step` calls `0x00440
 
 The x87 precision while a race runs is unknown (game-map.md, Numerics). Every ported function takes a `FloatArithmetic` from `createFloatArithmetic(precision)`, and `RACE_FPU_PRECISION` chooses the precision in one place:
 
-- `FpuPrecision.SINGLE` (24-bit, `DDSCL_FPUSETUP`): every `add`, `subtract`, `multiply`, `divide` and `getSquareRoot` result is rounded with `Math.fround`. Because a double holds the exact product of two float32 values and has more than 2·24 + 2 bits, one `Math.fround` of the double result equals the x87's single rounding for these operations.
+- `FpuPrecision.SINGLE` (24-bit, `DDSCL_FPUSETUP`): every `add`, `subtract`, `multiply`, `divide` and `getSquareRoot` result is rounded to a 24-bit significand. Because a double holds the exact product of two float32 values and has more than 2·24 + 2 bits, one rounding of the double result equals the x87's single rounding for these operations. Precision control narrows the significand only: the x87 keeps its 15-bit exponent, so an intermediate beyond float32's range neither overflows nor turns denormal until it is stored. Outside the float32 range the rounding scales by a power of two first (`roundToSignificand24`). Found by the emulator differential tests: before this, the port overflowed or flushed such intermediates and differed from the original (see [emulator.md](emulator.md)).
 - `FpuPrecision.DOUBLE` (53-bit, the CRT default `0x004a87f8`): operations stay in doubles, which match x87 53-bit results.
 - In both, `storeFloat` (`Math.fround`) is applied exactly where the code stores to a float32, and nowhere else.
 - `getSine`/`getCosine` are never rounded: precision control does not apply to `FSIN`, `FCOS` and `FSINCOS`.
@@ -163,7 +163,7 @@ The default is `SINGLE`. Tests pin both precisions where they agree and show one
 ## Open questions
 
 1. **FPU precision during a race.** Read the control word in a debugger or emulator during a race; then fix `RACE_FPU_PRECISION`. Everything below depends on it only when rounding lands on a float32 boundary.
-2. **Exponent range.** The x87 keeps a 15-bit exponent in both precision modes, so an intermediate above 3.4·10³⁸ or below 1.2·10⁻³⁸ does not overflow or become denormal until it is stored; `Math.fround` per operation (single) and doubles (double) do not model this. Only extreme values are affected.
+2. ~~**Exponent range.**~~ Resolved: single precision now keeps the 15-bit exponent (see the precision policy above); the emulator differential tests confirm it bit for bit.
 3. **Transcendentals.** `FSIN`/`FCOS` return 64-bit-mantissa results with the x87's own argument reduction; `Math.sin`/`Math.cos` are double-accurate. A stored float32 result can differ when the true value lies within a double ulp of a float32 rounding boundary. In single precision, an unstored sine (`0x004496a0`) multiplied by a float32 is rounded twice in the port (53 then 24 bits) but once on the x87.
 4. **`RigidBody_Step` details**: the timer branch flagged above, the `_ftol` argument in `RigidBody_AdvanceToContact`, and the meaning of `+0x36c` (four means grounded?) need the disassembly.
 5. **Which frame the car body moves**: rigid body `+0x04` is set by `RigidBody_Attach`'s caller, not yet traced; the car code reads the rotation at `+0x10c`, which is the embedded frame's.
