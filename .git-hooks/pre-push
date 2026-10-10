@@ -1,0 +1,3 @@
+#!/bin/sh
+# Blocks pushes to protected branches, then runs the full gate and the secret scan.
+exec node_modules/.bin/foundation hook pre-push

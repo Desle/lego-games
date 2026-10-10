@@ -1,0 +1,38 @@
+{
+  "name": "typescript-starter",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Template for TypeScript projects built on @desle/typescript-foundation.",
+  "type": "module",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "node --watch --env-file-if-exists=.env src/main.ts",
+    "start": "node --env-file-if-exists=.env dist/main.js",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "verify": "foundation verify",
+    "test": "vitest run",
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run verify && pnpm run test",
+    "format": "eslint --fix . && prettier --write .",
+    "format:check": "prettier --check .",
+    "audit:high": "pnpm audit --audit-level high",
+    "ci": "pnpm run check && pnpm run format:check && pnpm run build && pnpm run audit:high",
+    "sync": "foundation sync",
+    "new:module": "foundation new-module",
+    "setup": "foundation setup",
+    "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .git-hooks || true"
+  },
+  "prettier": "@desle/typescript-foundation/prettier",
+  "devDependencies": {
+    "@desle/typescript-foundation": "github:Desle/typescript-foundation#semver:^3.0.0",
+    "@types/node": "^24.19.1",
+    "eslint": "^10.12.0",
+    "prettier": "^3.9.9",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.3"
+  }
+}

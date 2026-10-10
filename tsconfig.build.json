@@ -1,0 +1,9 @@
+{
+  "extends": "@desle/typescript-foundation/tsconfig/node",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.spec.ts"]
+}

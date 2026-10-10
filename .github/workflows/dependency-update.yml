@@ -1,0 +1,14 @@
+name: dependency-update
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  update:
+    uses: Desle/typescript-foundation/.github/workflows/dependency-update.yml@v3
+    secrets: inherit
+    permissions:
+      contents: write
+      pull-requests: write
