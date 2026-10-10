@@ -13,20 +13,34 @@ describe('SceneViewport', () => {
     const scene = null
 
     // Act
-    const { container } = render(<SceneViewport scene={scene} selectedCameraIndex={null} />)
+    const { container } = render(
+      <SceneViewport
+        scene={scene}
+        background={null}
+        selectedCameraIndex={null}
+        isAnimationPlaying
+      />
+    )
 
     // Assert
     expect(container).toMatchSnapshot()
   })
 
-  it('hands the scene and camera to its controller', () => {
+  it('hands the scene, background, camera and playback to its controller', () => {
     // Arrange
     const selectedCameraIndex = 2
 
     // Act
-    render(<SceneViewport scene={null} selectedCameraIndex={selectedCameraIndex} />)
+    render(
+      <SceneViewport
+        scene={null}
+        background={null}
+        selectedCameraIndex={selectedCameraIndex}
+        isAnimationPlaying={false}
+      />
+    )
 
     // Assert
-    expect(useSceneViewportController).toHaveBeenLastCalledWith(null, 2)
+    expect(useSceneViewportController).toHaveBeenLastCalledWith(null, null, 2, false)
   })
 })

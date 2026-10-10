@@ -1,5 +1,6 @@
-import { decodeBitmap, getBitmapColors } from '../../../bitmap/index.ts'
+import { decodeBitmap, getBitmapColors, type Bitmap } from '../../../bitmap/index.ts'
 import { JamLookupError } from '../../../jam-archive/index.ts'
+import { decodeTarga } from '../../../targa/index.ts'
 import { parseTextureDatabase } from '../../../texture-database/index.ts'
 import type { TextureDefinition } from '../../../texture-database/index.ts'
 import { MissingBitmapReason } from '../../types/scene-enums/scene-enums.ts'
@@ -18,6 +19,8 @@ const TEXTURE_DATABASE_EXTENSION = '.tdb'
 // Texture flag 8 (TDB keyword 0x2a) loads a bitmap (0x10064280, ".bmp" at 0x1005cbe4); flag 0x10
 // (keyword 0x2b) a Targa (0x10063ca0, ".tga" at 0x1005cf00). 0x1001f330 and 0x1002b890 choose this way.
 const TARGA_FLAG = 0x10
+// Texture flag 4 (keyword 0x28) keeps a Targa's first row on top (0x1002ae50).
+const FIRST_ROW_ON_TOP_FLAG = 0x4
 const COLOR_KEY_FLAG = 0x20
 const BITMAP_EXTENSION = '.bmp'
 const TARGA_EXTENSION = '.tga'
@@ -33,10 +36,9 @@ const getIsFilePresent = (source: SceneFileSource, path: string): boolean => {
 }
 
 const getDecodedBitmap = (
-  bytes: Uint8Array,
+  bitmap: Bitmap,
   colorKey: readonly [number, number, number] | null
 ): SceneBitmap => {
-  const bitmap = decodeBitmap(bytes)
   if (colorKey === null) {
     return Object.freeze({
       width: bitmap.width,
@@ -60,17 +62,19 @@ const getLinkedTexture = (source: SceneFileSource, definition: TextureDefinition
     source.directory,
     getNameWithImageExtension(definition.name, isTarga ? TARGA_EXTENSION : BITMAP_EXTENSION)
   )
-  const getMissingBitmapReason = () => {
-    if (isTarga) return MissingBitmapReason.TARGA_NOT_PORTED
-    return getIsFilePresent(source, bitmapPath) ? null : MissingBitmapReason.FILE_NOT_FOUND
-  }
-  const missingBitmapReason = getMissingBitmapReason()
+  const missingBitmapReason = getIsFilePresent(source, bitmapPath)
+    ? null
+    : MissingBitmapReason.FILE_NOT_FOUND
+  const getImage = (bytes: Uint8Array): Bitmap =>
+    isTarga
+      ? decodeTarga(bytes, { isFirstRowOnTop: (definition.flags & FIRST_ROW_ON_TOP_FLAG) !== 0 })
+      : decodeBitmap(bytes)
   return Object.freeze({
     name: definition.name,
     bitmapPath,
     bitmap:
       missingBitmapReason === null
-        ? getDecodedBitmap(source.archive.readFile(bitmapPath), colorKey)
+        ? getDecodedBitmap(getImage(source.archive.readFile(bitmapPath)), colorKey)
         : null,
     missingBitmapReason,
     colorKey: colorKey === null ? null : (Object.freeze([...colorKey]) as SceneTexture['colorKey']),

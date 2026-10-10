@@ -1,3 +1,4 @@
+import AnimationControl from '../../components/animation-control/animation-control.tsx'
 import JamFilePicker from '../../components/jam-file-picker/jam-file-picker.tsx'
 import SceneSummaryPanel from '../../components/scene-summary-panel/scene-summary-panel.tsx'
 import SceneViewport from '../../components/scene-viewport/scene-viewport.tsx'
@@ -37,9 +38,22 @@ const TrackViewerView = () => {
               onCameraSelected={viewer.onCameraSelected}
             />
           )}
+          {viewer.sceneSummary !== null && (
+            <AnimationControl
+              isPlaying={viewer.isAnimationPlaying}
+              animatedInstanceCount={viewer.sceneSummary.animatedInstanceCount}
+              isSkyShown={viewer.background?.sky != null}
+              onPlayingToggled={viewer.onAnimationPlayingToggled}
+            />
+          )}
         </header>
         <div className="min-h-0 flex-1">
-          <SceneViewport scene={viewer.scene} selectedCameraIndex={viewer.selectedCameraIndex} />
+          <SceneViewport
+            scene={viewer.scene}
+            background={viewer.background}
+            selectedCameraIndex={viewer.selectedCameraIndex}
+            isAnimationPlaying={viewer.isAnimationPlaying}
+          />
         </div>
       </main>
     </div>

@@ -31,3 +31,5 @@ Keywords inside a bone, until `}`:
 | other  |            | ignored (no error); end of file here makes the original loop forever — the port refuses it |
 
 A second block replaces the bones and the name table; the port keeps the last block. A repeated `0x2a` relinks the bone without unlinking it from the earlier parent; the port keeps the last parent index.
+
+Bone matrices, posing and animation sampling: `skeletal-animation.md`.

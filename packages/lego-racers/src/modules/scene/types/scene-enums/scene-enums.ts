@@ -52,14 +52,15 @@ export const TextureAddressing = createEnum({
   CLAMP: 'clamp',
 })
 
-// Which world section an instance comes from (0x2e mesh instances, 0x30 BSP tree instances).
+// Which world section an instance comes from (0x2e mesh instances, 0x2f skeleton instances, 0x30 BSP tree
+// instances).
 export const SceneInstanceKind = createEnum({
   MESH: 'mesh',
+  SKELETON: 'skeleton',
   BSP_TREE: 'bsp_tree',
 })
 
 // Why a texture has no decoded bitmap.
 export const MissingBitmapReason = createEnum({
   FILE_NOT_FOUND: 'file_not_found',
-  TARGA_NOT_PORTED: 'targa_not_ported',
 })
