@@ -43,11 +43,11 @@ The racer set is at race `+0x3bc`; its racers are an array at `+0x140` with the 
 8. Once: `0x0043c1b0` (racer set).
 9. Once: `0x0043a480` (racer set `+0x284`, step).
 
-**Not ported**: all of it. `stepRaceSubStepNotYetPorted` stands in for one sub-step.
+Ported in the `racer` module; see [racer.md](racer.md) for the passes, what is ported and the dependencies that stand in for the rest.
 
 ### `CarBody_Update` (`0x004293f0`, car body vtable `0x004b04e4` slot 1)
 
-If car body `+0x744` is 0 it runs `RigidBody_Step` (`0x00444ef0`), otherwise `0x00429d40`. After the step it saves the frame position (`+0x700`) and the rotation as a quaternion (`Math_MatrixToQuaternion` into `+0x70c`) when `+0x36c` == 4 and `+0x3ec` == 0 (**hypothesis**: all four wheels down and no contact); when the position's third component leaves the range in `0x004b04dc`/`0x004b04d8`, or the racer flags `+0xd04` have both `0x400` and `0x2`, it restores them (`Math_QuaternionToMatrix`) and zeroes the linear velocity and angular momentum (**hypothesis**: respawn). **Not ported.**
+If car body `+0x744` is 0 it runs `RigidBody_Step` (`0x00444ef0`), otherwise `0x00429d40`. After the step it saves the frame position (`+0x700`) and the rotation as a quaternion (`Math_MatrixToQuaternion` into `+0x70c`) when `+0x36c` == 4 and `+0x3ec` == 0 (**hypothesis**: all four wheels down and no contact); when the position's third component leaves the range in `0x004b04dc`/`0x004b04d8`, or the racer flags `+0xd04` have both `0x400` and `0x2`, it restores them (`Math_QuaternionToMatrix`) and zeroes the linear velocity and angular momentum (**hypothesis**: respawn). Ported in the `racer` module ([racer.md](racer.md)) around `RigidBody_Step`.
 
 ### `RigidBody_Step` (`0x00444ef0`, rigid body vtable `0x004b0d8c` slot 1)
 

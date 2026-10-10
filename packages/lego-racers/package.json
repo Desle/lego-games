@@ -24,6 +24,7 @@
     "./model": "./src/modules/model/index.ts",
     "./power-up": "./src/modules/power-up/index.ts",
     "./race-description": "./src/modules/race-description/index.ts",
+    "./racer": "./src/modules/racer/index.ts",
     "./racer-ai": "./src/modules/racer-ai/index.ts",
     "./racer-physics": "./src/modules/racer-physics/index.ts",
     "./random-table": "./src/modules/random-table/index.ts",
