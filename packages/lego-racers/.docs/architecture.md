@@ -80,12 +80,103 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 - Public API (`index.ts`): `parseMaterialAnimation`, `MaterialAnimationKeyword`, the entry defaults, and the `MaterialAnimation` types
 - `.MAB` material animations (`GolDP.dll` `0x100258f0`).
 
+### `string-table`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseStringTable`, `getString`, `TruncatedStringTableError`, `StringTableOverreadError`, and the `StringTable` type
+- SRF string tables (`0x0044e2c0`).
+
+### `race-description`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseRaceDescription`, `RaceDescriptionKeyword`, and the `RaceDescription` types
+- RAB race descriptions (`0x00431e00`): every file a race names.
+
+### `computer-racer-route`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseComputerRacerRoute`, `countComputerRacerRouteVariants`, `chooseComputerRacerRoute`, `getComputerRacerRouteFileName`, `getFallbackComputerRacerRouteFileNames`, `ComputerRacerRouteKeyword`, `ComputerRacerRouteLetter`, and the route types
+- RRB computer racer routes (`0x004a4e30`) and the route choice (`0x00433190`).
+
+### `checkpoint`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseCheckpoints`, `assignCheckpointProgress`, `TooManyCheckpointsError`, `UnportableCheckpointsError`, `CheckpointKeyword`, and the `Checkpoint` types
+- CPB checkpoints (`0x0041e770`) and their progress (`0x0041e950`).
+
+### `start-position`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseStartPositions`, `StartPositionKeyword`, and the `StartPosition` types
+- SPB start grid (`0x0043bc10`).
+
+### `tagged-position`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseTaggedPositions`, `TaggedPositionKeyword`, and the `TaggedPosition` types
+- TGB positions with an identifier (`0x0045c3d0`).
+
+### `power-up`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parsePowerUps`, `PowerUpKeyword`, and the power-up types
+- PWB power-up brick placements (`0x00458810`).
+
+### `trigger`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseTriggers`, `TriggerFileKind`, `TriggerKeyword`, and the `Trigger` types
+- TRB main and environment triggers (`0x00465210`, `0x00463dc0`, `0x00464ff0`).
+
+### `timer`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseTimers`, `resolveTimerSecondValue`, `TimerDivideByZeroError`, `TimerKeyword`, and the `Timer` types
+- TIB timers (`0x00464aa0`, `0x00464750`).
+
+### `emitter`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseEmitters`, `EmitterKeyword`, and the `Emitter` types
+- EMB particle emitter definitions (`0x00489af0`).
+
+### `sky`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseSky`, `SkyKeyword`, and the `Sky` types
+- SKB sky settings (`0x0041c550`).
+
+### `load-screen`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseLoadScreen`, `getLoadScreenPixelPoints`, `LoadScreenKeyword`, and the `LoadScreen` types
+- LSB loading screens (`0x0042f480`).
+
+### `track-material`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseTrackMaterials`, `TrackMaterialKeyword`, and the `TrackMaterial` types
+- TMB track surface materials (`0x00444030`).
+
+### `ghost`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseGhost`, `TooManyGhostSamplesError`, `GhostKeyword`, and the `Ghost` types
+- GHB recorded ghosts (`0x00423160`).
+
+### `hazard`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseHazards`, `HazardKeyword`, `HazardBlockKeyword`, and the `Hazard` types
+- HZB hazards (`0x0048a4d0` and twenty class loaders).
+
 ## Shared code (`src/shared`)
 
 - `name-table`: the eight-character name table of `GolDP.dll` (`0x10028250`, `0x100282c0`, `0x100283e0`), used by the skeleton, image, font and animation parsers.
 - `errors/gol-file-errors.ts`: `DuplicateNameError` and `UnportableFileError`.
 - `binary-values`: the 16-bit and 8-bit truncations and the float32 scalings the loaders apply.
 - `token-encoding`: builds binary token streams for tests.
+- `testing/original-files.ts`: the path to the original `LEGO.JAM` the format specs read (they skip without it); `testing/token-bytes.ts`: float and integer lists and curly bytes on top of `token-encoding`.
 
 ### `simulation-math`
 
@@ -98,3 +189,15 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 - Layers: `controller`, `types`
 - Public API (`index.ts`): `createBoxRigidBody`, `getBoxInertia`, `getWorldInverseInertia`, `getAngularVelocity`, `addForce`, `addTorqueOfForceAtPoint`, `removeAngularMomentumAlongAxis`, `integrateRigidBody`, `getRaceTimeStep`, `getPhysicsSubSteps`, `MAXIMUM_PHYSICS_SUB_STEP_MILLISECONDS`, `updateRacePhysics`, `stepRaceSubStepNotYetPorted`, and the `RigidBody` types
 - Pure state transitions: each function takes frozen plain data and returns new frozen data. Depends on `simulation-math`.
+
+### `random-table`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `loadRandomTable`, `getPortableExecutableLayout`, `readPortableExecutableBytes`, `createRandomTable`, `decodeRandomTable`, `createRandomTablePosition`, `getNextRandomTablePosition`, `drawRandomValue`, `drawRandomRemainder`, `drawRandomLowByte`, `drawRandomScaledRange`, the `RANDOM_TABLE_*` constants, `PortableExecutableError`, `InvalidRandomTableError`, `RandomDivisorError`, and the `RandomTable`, `RandomTablePosition`, `RandomDraw`, `PortableExecutable*` types
+- The game's only randomness: 1,024 values at `0x004befec`, read from the player's `LEGORacers.exe`, and the global position `0x004c6ee4` as explicit state a server can synchronise.
+
+### `racer-ai`
+
+- Layers: `types`
+- Public API (`index.ts`): the route follower (`createRouteFollower`, `resetRouteFollower`, `startRouteFollowerAtLoop`, `advanceRouteFollower`, `setRouteFollowerSpeedFactor`), the sample decoders (`decodeRouteSample`, `getRouteSample*`), the speed code (`stepComputerSpeedFactor`, `getRampedTargetSpeedFactor`, `getReturnedLateralOffset`, `stepComputerBounce`, `getPushedSpeedState`, `getRestoredSpeedState`, `getReleasedSpeedState`, `CAR_BODY_*_FLAG`), rubber-banding (`createRubberBand`, `stepRubberBand`, `getRacerProgress`), personality (`getComputerPersonality`, `getComputerChance`, `PERSONALITY_SCALE`), power-up use (`updatePowerUpUse`, `decidePowerUpUse`, `PowerUpUseDecision`), taunts (`updateComputerTaunt`, `createComputerTimers`), `findNearestRacerInCone`, `getFloatToInteger`, `UnportableRouteError`, and their types
+- Computer racers play recorded routes back kinematically; they produce no control input. Depends on `simulation-math`, `random-table` and `computer-racer-route`.

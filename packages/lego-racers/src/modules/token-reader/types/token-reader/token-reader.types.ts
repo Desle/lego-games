@@ -24,3 +24,7 @@ export type TokenReader = {
 }
 
 export type ByteTriple = readonly [number, number, number]
+
+export type FloatTriple = readonly [number, number, number]
+
+export type FloatQuadruple = readonly [number, number, number, number]
