@@ -207,6 +207,7 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 - Layers: `controller`, `services`, `types`
 - Public API (`index.ts`): `stepRacerSet`, `RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED`, `applyRacerControls`, `updatePlayerController`, `createPlayerController`, `startRacerPowerSlide`, `stopRacerPowerSlide`, `readRacerTables`, `createCarBody`, `createRacer`, `createRacerSet`, the car body and driver functions, `rankRacers`, `playRacerVoice`, `getTableCosine`, and the `Racer`, `CarBody`, `RacerDriver`, `RacerControls`, `RacerSet` types
 - `RacerSet_Step` (`0x0043c030`) and the player controls. Calls into code not ported yet (rigid body step, AI, power-ups, audio, vehicle effects) are typed dependencies that receive and return the whole racer set. Reuses `racer-ai` (rubber band, progress, taunt), `random-table` and `checkpoint`; depends on `simulation-math` and `racer-physics`.
+
 ### `scene`
 
 - Layers: `controller`, `types`
