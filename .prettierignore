@@ -6,3 +6,4 @@ original-files
 reverse-engineering/ghidra
 packages/tooling/tests/fixtures
 .claude/worktrees
+reverse-engineering/ghidra-server
