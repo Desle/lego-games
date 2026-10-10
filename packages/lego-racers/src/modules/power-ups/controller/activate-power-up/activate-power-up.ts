@@ -152,10 +152,10 @@ const startAttachedEffect = (
   if (effect.state === EffectState.FINISHED) {
     return getStepWithEffect(allocated, { ...effect, level: start.level })
   }
-  return onStarted(
+  // The owner is set while the new effect is still idle, so the racer's earlier effects can be finished first.
+  const started = onStarted(
     getStepWithEffect(allocated, {
       ...effect,
-      state: start.state,
       timerMilliseconds: start.timerMilliseconds,
       level: start.level,
       ownerRacer: start.ownerRacer,
@@ -163,6 +163,7 @@ const startAttachedEffect = (
     }),
     taken.effectId
   )
+  return getStepWithEffect(started, { ...getEffect(started, taken.effectId), state: start.state })
 }
 
 // 0x0045b030 → 0x0045bd30.

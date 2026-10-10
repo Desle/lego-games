@@ -3,14 +3,9 @@ import {
   type FloatArithmetic,
   type Vector3,
 } from '../../../simulation-math/index.ts'
+import { findNearestRacerInCone } from '../../../racer-ai/index.ts'
 import type { ConeQuery, ConeQueryWindow } from '../power-ups.types.ts'
 
-// 0x004b0974..0x004b097c: the computer's projectile check (0x00438f20).
-export const COMPUTER_PROJECTILE_WINDOW: ConeQueryWindow = Object.freeze({
-  minimumDistanceSquared: 100,
-  maximumDistanceSquared: 62500,
-  minimumCosine: Math.fround(0.96),
-})
 // 0x004b1840, 0x004b1844, 0x004b1848: the cannon's racer target (0x0045aa30).
 export const CANNON_RACER_WINDOW: ConeQueryWindow = Object.freeze({
   minimumDistanceSquared: 100,
@@ -78,38 +73,32 @@ const getDistanceSquaredInCone = (
   return distanceSquared
 }
 
-// 0x7f7fffff, the largest float32: the starting best of 0x0043ca60.
-const FLOAT32_MAXIMUM = 3.4028234663852886e38
+// 0x0043ca60 (racers) and 0x0045c6a0 (track targets) run the same x87 sequence: racer-ai's port, or -1.
+export const getNearestInCone = (arithmetic: FloatArithmetic, query: ConeQuery): number =>
+  findNearestRacerInCone(arithmetic, {
+    racerPositions: query.targets.map((target) => target.position),
+    origin: query.origin,
+    direction: query.direction,
+    minimumDistanceSquared: query.window.minimumDistanceSquared,
+    maximumDistanceSquared: query.window.maximumDistanceSquared,
+    minimumCosine: query.window.minimumCosine,
+  }) ?? -1
 
-const getBestInCone = (
-  arithmetic: FloatArithmetic,
-  query: ConeQuery,
-  getIsBetter: (candidate: number, best: number) => boolean,
-  initialBest: number
-): number =>
+// 0x0043c910: the farthest racer in the cone, or -1 (the running best starts at 0.0).
+export const getFarthestInCone = (arithmetic: FloatArithmetic, query: ConeQuery): number =>
   query.targets.reduce(
     (best, target, index) => {
       const distanceSquared = getDistanceSquaredInCone(arithmetic, query, target.position)
-      if (distanceSquared === null || !getIsBetter(distanceSquared, best.distanceSquared)) {
+      if (
+        distanceSquared === null ||
+        !arithmetic.getIsBelow(best.distanceSquared, distanceSquared)
+      ) {
         return best
       }
       return { index, distanceSquared }
     },
-    { index: -1, distanceSquared: initialBest }
+    { index: -1, distanceSquared: 0 }
   ).index
-
-// 0x0043ca60 (racers) and 0x0045c6a0 (track targets): the nearest candidate in the cone, or -1.
-export const getNearestInCone = (arithmetic: FloatArithmetic, query: ConeQuery): number =>
-  getBestInCone(arithmetic, query, arithmetic.getIsBelow, FLOAT32_MAXIMUM)
-
-// 0x0043c910: the farthest racer in the cone, or -1 (the running best starts at 0.0).
-export const getFarthestInCone = (arithmetic: FloatArithmetic, query: ConeQuery): number =>
-  getBestInCone(
-    arithmetic,
-    query,
-    (candidate, best) => arithmetic.getIsBelow(best, candidate),
-    0
-  )
 
 // 0x0043c6e0 (afterIndex -1) and 0x0043c7f0: the first racer after afterIndex in the cone, or -1.
 export const getNextInCone = (

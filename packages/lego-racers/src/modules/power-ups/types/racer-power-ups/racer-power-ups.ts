@@ -1,4 +1,5 @@
-import type { BrickKind, RacerPowerUps, RandomSource } from '../power-ups.types.ts'
+import { drawRandomRemainder, drawRandomValue } from '../../../random-table/index.ts'
+import type { BrickKind, RacerPowerUps, RandomState } from '../power-ups.types.ts'
 import type {
   EnhancementCollectResult,
   EnhancementDropResult,
@@ -41,22 +42,21 @@ export const getRacerWithBrick = (racer: RacerPowerUps, kind: BrickKind): RacerP
 // 0x00439240 (thiscall, one stack argument): a taunt (1) or a complaint (0), only when the cooldown is 0.
 export const getRacerVoice = (
   racer: RacerPowerUps,
-  random: RandomSource,
+  random: RandomState,
   isTaunt: boolean
 ): VoiceResult => {
   if (racer.voiceCooldownMilliseconds !== 0) {
     return Object.freeze({ racer, random, voiceSound: null })
   }
-  const soundDraw = random.drawNext()
-  const variant = soundDraw.value % VOICE_VARIANTS
-  const voiceSound = racer.voiceSoundBase + variant + (isTaunt ? VOICE_VARIANTS : 0)
-  const cooldownDraw = soundDraw.random.drawNext()
+  const soundDraw = drawRandomRemainder(random.table, random.position, VOICE_VARIANTS)
+  const voiceSound = racer.voiceSoundBase + soundDraw.value + (isTaunt ? VOICE_VARIANTS : 0)
+  const cooldownDraw = drawRandomValue(random.table, soundDraw.position)
   return Object.freeze({
     racer: Object.freeze({
       ...racer,
       voiceCooldownMilliseconds: cooldownDraw.value * 4 + VOICE_COOLDOWN_BASE_MILLISECONDS,
     }),
-    random: cooldownDraw.random,
+    random: Object.freeze({ table: random.table, position: cooldownDraw.position }),
     voiceSound,
   })
 }
@@ -75,7 +75,7 @@ const getSlotsWith = (
 // 0x00439420: the first empty slot takes the brick; reaching level 3 plays a taunt.
 export const getRacerWithEnhancement = (
   racer: RacerPowerUps,
-  random: RandomSource,
+  random: RandomState,
   brickIndex: number
 ): EnhancementCollectResult => {
   const slotIndex = racer.enhancementBrickIndices.indexOf(null)

@@ -21,7 +21,7 @@ export const usePowerUp = (
 ): PowerUpStep => {
   const racer = getRacer(step, racerIndex)
   if (racer.heldBrickKind === null) {
-    return getStepWithEvents(step, [{ type: 'power_ups.horn', racer: racerIndex }])
+    return getStepWithEvents(step, [{ type: 'power_ups.racer_taunted', racer: racerIndex }])
   }
   const level = abilities.isAlwaysLevelThree ? MAXIMUM_LEVEL : racer.enhancementLevel
   const activated = ((): PowerUpStep => {

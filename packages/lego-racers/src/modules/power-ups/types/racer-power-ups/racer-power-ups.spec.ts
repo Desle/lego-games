@@ -1,4 +1,5 @@
-import type { RandomSource } from '../power-ups.types.ts'
+import { createRandomTable, drawRandomValue } from '../../../random-table/index.ts'
+import type { RandomState } from '../power-ups.types.ts'
 import {
   createRacerPowerUps,
   getRacerAfterDrop,
@@ -8,13 +9,13 @@ import {
   getRacerWithVoiceCooldownAdvanced,
 } from './racer-power-ups.ts'
 
-const createRandom = (values: readonly number[], index = 0): RandomSource =>
+// The first draw reads table index 0 (the position advances before each read).
+const createRandom = (values: readonly number[]): RandomState =>
   Object.freeze({
-    drawNext: () =>
-      Object.freeze({
-        value: values[index % values.length] ?? 0,
-        random: createRandom(values, index + 1),
-      }),
+    table: createRandomTable(
+      Array.from({ length: 1024 }, (_, index) => values[index % values.length] ?? 0)
+    ),
+    position: 1023,
   })
 
 describe('getRacerVoice', () => {
@@ -31,7 +32,7 @@ describe('getRacerVoice', () => {
     expect(complaint.voiceSound).toBe(101)
     expect(taunt.voiceSound).toBe(107)
     expect(complaint.racer.voiceCooldownMilliseconds).toBe(5040)
-    expect(complaint.random.drawNext().value).toBe(99)
+    expect(drawRandomValue(complaint.random.table, complaint.random.position).value).toBe(99)
   })
 
   it('stays silent and draws nothing while the cooldown runs', () => {

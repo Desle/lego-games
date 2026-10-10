@@ -1,4 +1,10 @@
 import type { EnumValues } from '../../../shared/types/enum.types.ts'
+import type { RandomTable, RandomTablePosition } from '../../random-table/index.ts'
+import type { ComputerPersonality } from '../../racer-ai/index.ts'
+import type {
+  EnhancementBrick as ParsedEnhancementBrick,
+  PowerUpBrick as ParsedPowerUpBrick,
+} from '../../power-up/index.ts'
 import type { Vector3 } from '../../simulation-math/index.ts'
 import type { BrickKind as BrickKindValues } from './brick-kind/brick-kind.ts'
 import type {
@@ -12,29 +18,15 @@ export type BrickState = EnumValues<typeof BrickStateValues>
 export type EffectState = EnumValues<typeof EffectStateValues>
 export type PowerUpEffectKind = EnumValues<typeof PowerUpEffectKindValues>
 
-// The table at 0x004befec read through the cursor at 0x004c6ee4; owned by the random-table module.
-export type RandomDraw = {
-  // table[(cursor + 1) & 0x3ff], 0..1023.
-  readonly value: number
-  readonly random: RandomSource
+// The random table at 0x004befec and its position at 0x004c6ee4 (the random-table module).
+export type RandomState = {
+  readonly table: RandomTable
+  readonly position: RandomTablePosition
 }
 
-export type RandomSource = {
-  readonly drawNext: () => RandomDraw
-}
-
-// What the power-ups read from one PWB brick block (0x00458a80); the power-up module parses it.
-export type PowerUpBrickPlacement = {
-  readonly position: readonly [number, number, number]
-  // 1..4 as read from the file, before the race-mode override.
-  readonly kind: number
-  readonly identifier: number
-}
-
-// What the power-ups read from one PWB enhancement-brick block (0x00458e80).
-export type EnhancementBrickPlacement = {
-  readonly position: readonly [number, number, number]
-}
+// One PWB brick block (0x00458a80) and enhancement-brick block (0x00458e80), parsed by the power-up module.
+export type PowerUpBrickPlacement = ParsedPowerUpBrick
+export type EnhancementBrickPlacement = ParsedEnhancementBrick
 
 // Brick base fields shared by both brick classes (constructor 0x00453910, vtable 0x004b14b0).
 export type BrickBase = {
@@ -135,12 +127,9 @@ export type RacerPowerUpAbilities = {
   readonly isPermanentTurbo: boolean
 }
 
-// The computer racer's personality bytes (racer +0xd1c..+0xd1f, +0xcd0, +0xcd4).
+// A computer racer's power-up personality: racer-ai's chances (racer +0xd1c..+0xd1f) and racer +0xcd0, +0xcd4.
 export type ComputerPowerUpPersonality = {
-  readonly projectileUseChance: number
-  readonly hazardUseChance: number
-  readonly turboUseChance: number
-  readonly shieldUseChance: number
+  readonly chances: ComputerPersonality
   // +0xcd0 and +0xcd4: hold this kind until this level.
   readonly preferredKind: BrickKind | null
   readonly preferredLevel: number
@@ -216,7 +205,7 @@ export type PowerUpWorld = {
   readonly effects: PowerUpEffects
   // +0x199c, radians.
   readonly brickSpinAngle: number
-  readonly random: RandomSource
+  readonly random: RandomState
 }
 
 // Which brick a racer touched this frame, reported by the collision registry (0x0043d270).

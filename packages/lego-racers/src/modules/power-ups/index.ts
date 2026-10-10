@@ -2,6 +2,7 @@ export { activatePowerUp } from './controller/activate-power-up/activate-power-u
 export {
   advanceComputerPowerUpUse,
   keepPermanentTurbo,
+  rollComputerStartTurbo,
 } from './controller/computer-power-up-use/computer-power-up-use.ts'
 export {
   endProjectileFlight,
@@ -60,6 +61,5 @@ export type {
   RacerPowerUpAbilities,
   RacerPowerUps,
   RacerPowerUpStatus,
-  RandomDraw,
-  RandomSource,
+  RandomState,
 } from './types/power-ups.types.ts'

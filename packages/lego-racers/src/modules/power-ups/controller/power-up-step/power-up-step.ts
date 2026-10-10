@@ -9,7 +9,8 @@ import {
   getRacerAfterRelease,
   getRacerVoice,
 } from '../../types/racer-power-ups/racer-power-ups.ts'
-import type { PowerUpContext, PowerUpStep } from './power-up-step.types.ts'
+import { drawRandomValue } from '../../../random-table/index.ts'
+import type { PowerUpContext, PowerUpStep, StepDraws } from './power-up-step.types.ts'
 
 export class UnknownIndexError extends Error {
   constructor(what: string, index: number) {
@@ -81,6 +82,27 @@ export const getStepWithEnhancementBrick = (
   })
 }
 
+// Plain table reads (0x004c6ee4 advanced before each read), returning the values in order.
+export const getStepDraws = (step: PowerUpStep, count: number): StepDraws => {
+  const values: number[] = []
+  let position = step.world.random.position
+  for (let drawIndex = 0; drawIndex < count; drawIndex += 1) {
+    const draw = drawRandomValue(step.world.random.table, position)
+    position = draw.position
+    values.push(draw.value)
+  }
+  return Object.freeze({
+    step: Object.freeze({
+      ...step,
+      world: Object.freeze({
+        ...step.world,
+        random: Object.freeze({ table: step.world.random.table, position }),
+      }),
+    }),
+    values: Object.freeze(values),
+  })
+}
+
 // 0x00439240 applied to the world: one random draw for the sound and one for the cooldown.
 export const getStepWithVoice = (
   step: PowerUpStep,
@@ -102,13 +124,12 @@ export const getStepWithVoice = (
 
 // 0x0043a270: sound 1, 0x46 or 0x47 by table % 3.
 export const getStepWithShieldStruck = (step: PowerUpStep, racerIndex: number): PowerUpStep => {
-  const draw = step.world.random.drawNext()
-  const remainder = draw.value % 3
+  const draw = getStepDraws(step, 1)
+  const remainder = (draw.values[0] ?? 0) % 3
   const sound = remainder === 1 ? 0x46 : remainder === 2 ? 0x47 : 1
-  return getStepWithEvents(
-    Object.freeze({ ...step, world: Object.freeze({ ...step.world, random: draw.random }) }),
-    [{ type: 'power_ups.racer_shield_struck', racer: racerIndex, sound }]
-  )
+  return getStepWithEvents(draw.step, [
+    { type: 'power_ups.racer_shield_struck', racer: racerIndex, sound },
+  ])
 }
 
 // 0x00439490: the hit racer drops its first enhancement brick where it is.

@@ -1,11 +1,6 @@
 import { createFloatArithmetic, FpuPrecision } from '../../../simulation-math/index.ts'
 import type { ConeQuery } from '../power-ups.types.ts'
-import {
-  COMPUTER_PROJECTILE_WINDOW,
-  getFarthestInCone,
-  getNearestInCone,
-  getNextInCone,
-} from './cone-query.ts'
+import { getFarthestInCone, getNearestInCone, getNextInCone } from './cone-query.ts'
 
 const SINGLE = createFloatArithmetic(FpuPrecision.SINGLE)
 
@@ -13,7 +8,11 @@ const getQuery = (positions: readonly (readonly [number, number, number])[]): Co
   Object.freeze({
     origin: { x: 0, y: 0, z: 0 },
     direction: { x: 1, y: 0, z: 0 },
-    window: COMPUTER_PROJECTILE_WINDOW,
+    window: {
+      minimumDistanceSquared: 100,
+      maximumDistanceSquared: 62500,
+      minimumCosine: Math.fround(0.96),
+    },
     targets: positions.map(([x, y, z]) => ({ position: { x, y, z } })),
   })
 

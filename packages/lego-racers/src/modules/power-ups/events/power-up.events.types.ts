@@ -79,5 +79,5 @@ export type PowerUpEvent =
     }
   // 0x00439240: a driver voice.
   | { readonly type: 'power_ups.voice'; readonly racer: number; readonly sound: number }
-  // 0x00439c90: using with nothing held sounds the horn (racer +0xd23) and notifies the event system.
-  | { readonly type: 'power_ups.horn'; readonly racer: number }
+  // 0x00439c90 (Racer_Taunt): using with nothing held plays sound racer +0xd23 and notifies the event system.
+  | { readonly type: 'power_ups.racer_taunted'; readonly racer: number }

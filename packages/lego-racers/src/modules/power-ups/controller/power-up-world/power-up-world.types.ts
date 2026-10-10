@@ -1,7 +1,7 @@
 import type {
   EnhancementBrickPlacement,
   PowerUpBrickPlacement,
-  RandomSource,
+  RandomState,
 } from '../../types/power-ups.types.ts'
 
 // What the race passes when it loads the power-ups (Race_LoadTrackContent 0x00433480).
@@ -17,5 +17,5 @@ export type PowerUpWorldDefinition = {
     readonly voiceSoundBase: number
     readonly voiceCooldownMilliseconds: number
   }[]
-  readonly random: RandomSource
+  readonly random: RandomState
 }

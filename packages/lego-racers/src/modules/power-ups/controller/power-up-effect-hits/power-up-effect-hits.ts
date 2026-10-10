@@ -10,6 +10,7 @@ import {
 } from '../power-up-effect-timeline/power-up-effect-timeline.ts'
 import {
   getEffect,
+  getStepDraws,
   getStepWithDroppedEnhancement,
   getStepWithEffect,
   getStepWithEvents,
@@ -67,32 +68,23 @@ export const getStepWithDebris = (
   direction: Vector3
 ): PowerUpStep => {
   const { add, subtract, multiply, storeFloat } = context.arithmetic
-  const countDraw = step.world.random.drawNext()
-  let random = countDraw.random
-  const directions: Vector3[] = []
-  for (let piece = 0; piece < (countDraw.value % 3) + 1; piece += 1) {
-    const first = random.drawNext()
-    const second = first.random.drawNext()
-    random = second.random
-    const getSpread = (value: number, component: number): number =>
-      storeFloat(
-        subtract(
-          add(multiply(value % 100, DEBRIS_SPREAD_PER_UNIT), component),
-          DEBRIS_SPREAD_CENTRE
-        )
-      )
-    directions.push(
-      Object.freeze({
-        x: getSpread(first.value, direction.x),
-        y: getSpread(second.value, direction.y),
-        z: 0,
-      })
+  const countDraw = getStepDraws(step, 1)
+  const pieces = ((countDraw.values[0] ?? 0) % 3) + 1
+  const spreadDraws = getStepDraws(countDraw.step, pieces * 2)
+  const getSpread = (value: number, component: number): number =>
+    storeFloat(
+      subtract(add(multiply(value % 100, DEBRIS_SPREAD_PER_UNIT), component), DEBRIS_SPREAD_CENTRE)
     )
-  }
-  return getStepWithEvents(
-    Object.freeze({ ...step, world: Object.freeze({ ...step.world, random }) }),
-    [{ type: 'power_ups.debris_thrown', racer: victim, directions: Object.freeze(directions) }]
+  const directions = Array.from({ length: pieces }, (_, piece) =>
+    Object.freeze({
+      x: getSpread(spreadDraws.values[piece * 2] ?? 0, direction.x),
+      y: getSpread(spreadDraws.values[piece * 2 + 1] ?? 0, direction.y),
+      z: 0,
+    })
   )
+  return getStepWithEvents(spreadDraws.step, [
+    { type: 'power_ups.debris_thrown', racer: victim, directions: Object.freeze(directions) },
+  ])
 }
 
 // Cannon 0x00452370 and rocket 0x00456fa0 (vtable slot 8), then the rest of their update when the hit is reported

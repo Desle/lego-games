@@ -23,3 +23,8 @@ export type PowerUpStep = {
   readonly world: PowerUpWorld
   readonly events: readonly PowerUpEvent[]
 }
+
+export type StepDraws = {
+  readonly step: PowerUpStep
+  readonly values: readonly number[]
+}

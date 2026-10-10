@@ -6,6 +6,7 @@ import {
 import type { EffectState as EffectStateValue, PowerUpEffect } from '../../types/power-ups.types.ts'
 import {
   getEffect,
+  getStepDraws,
   getStepWithEffect,
   getStepWithEvents,
   getStepWithVoice,
@@ -33,24 +34,21 @@ const getWithState = (
 
 // 0x00453240 states 4 and 5: two draws for the offset, then an explosion through 0x0045b4f0.
 const getStepWithScatteredExplosion = (step: PowerUpStep, effect: PowerUpEffect): PowerUpStep => {
-  const first = step.world.random.drawNext()
-  const second = first.random.drawNext()
-  return getStepWithEvents(
-    Object.freeze({ ...step, world: Object.freeze({ ...step.world, random: second.random }) }),
-    [
-      {
-        type: 'power_ups.explosion',
-        effect: effect.id,
-        isSpiked: true,
-        isGroundHit: true,
-        offset: Object.freeze({
-          x: (first.value % BARREL_SCATTER_MODULUS) - BARREL_SCATTER_OFFSET,
-          y: (second.value % BARREL_SCATTER_MODULUS) - BARREL_SCATTER_OFFSET,
-          z: 0,
-        }),
-      },
-    ]
-  )
+  const draws = getStepDraws(step, 2)
+  const [first = 0, second = 0] = draws.values
+  return getStepWithEvents(draws.step, [
+    {
+      type: 'power_ups.explosion',
+      effect: effect.id,
+      isSpiked: true,
+      isGroundHit: true,
+      offset: Object.freeze({
+        x: (first % BARREL_SCATTER_MODULUS) - BARREL_SCATTER_OFFSET,
+        y: (second % BARREL_SCATTER_MODULUS) - BARREL_SCATTER_OFFSET,
+        z: 0,
+      }),
+    },
+  ])
 }
 
 const advanceBarrel = (step: PowerUpStep, effect: PowerUpEffect): PowerUpStep => {
@@ -240,11 +238,8 @@ const countDown = (
   )
 }
 
-const getStepWithDraws = (step: PowerUpStep, count: number): PowerUpStep => {
-  let random = step.world.random
-  for (let drawIndex = 0; drawIndex < count; drawIndex += 1) random = random.drawNext().random
-  return Object.freeze({ ...step, world: Object.freeze({ ...step.world, random }) })
-}
+const getStepWithDraws = (step: PowerUpStep, count: number): PowerUpStep =>
+  getStepDraws(step, count).step
 
 // 0x00454d70 after the countdown: jitter draws, the hold on a struck racer, and sparks (0x00454e50).
 const updateWand = (step: PowerUpStep, effectId: number, stepMilliseconds: number): PowerUpStep => {
@@ -284,12 +279,11 @@ const updateWand = (step: PowerUpStep, effectId: number, stepMilliseconds: numbe
       sparkMilliseconds: current.sparkMilliseconds - stepMilliseconds,
     })
   }
-  const offsetDraw = held.world.random.drawNext()
-  const timerDraw = offsetDraw.random.drawNext()
-  return getStepWithEffect(
-    Object.freeze({ ...held, world: Object.freeze({ ...held.world, random: timerDraw.random }) }),
-    { ...current, sparkMilliseconds: (timerDraw.value % 300) + 200 }
-  )
+  const sparkDraws = getStepDraws(held, 2)
+  return getStepWithEffect(sparkDraws.step, {
+    ...current,
+    sparkMilliseconds: ((sparkDraws.values[1] ?? 0) % 300) + 200,
+  })
 }
 
 // Vtable slot 2 for one active effect; the movement and collision parts are not ported (power-ups.md).

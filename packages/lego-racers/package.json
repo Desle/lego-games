@@ -23,6 +23,7 @@
     "./material-animation": "./src/modules/material-animation/index.ts",
     "./model": "./src/modules/model/index.ts",
     "./power-up": "./src/modules/power-up/index.ts",
+    "./power-ups": "./src/modules/power-ups/index.ts",
     "./race-description": "./src/modules/race-description/index.ts",
     "./racer-ai": "./src/modules/racer-ai/index.ts",
     "./racer-physics": "./src/modules/racer-physics/index.ts",

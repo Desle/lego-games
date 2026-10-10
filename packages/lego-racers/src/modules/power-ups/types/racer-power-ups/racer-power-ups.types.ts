@@ -1,8 +1,8 @@
-import type { RacerPowerUps, RandomSource } from '../power-ups.types.ts'
+import type { RacerPowerUps, RandomState } from '../power-ups.types.ts'
 
 export type VoiceResult = {
   readonly racer: RacerPowerUps
-  readonly random: RandomSource
+  readonly random: RandomState
   // The sound index passed to 0x00443b80, or null when none plays.
   readonly voiceSound: number | null
 }
