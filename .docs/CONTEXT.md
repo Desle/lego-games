@@ -23,6 +23,9 @@ Never commit or redistribute the original game files or raw decompiler output. N
 
 - **JAM archive**: `LEGO.JAM`, the single archive holding the game's data files in a directory tree.
 - **Tune**: a `.tun` music file (ALP-ADPCM).
+- **Model**: a `.GDB` file: material names, a vertex buffer, faces and the draw commands that render them.
+- **Material library**: a `.MDB` file: named materials (colors, texture, shading, alpha test, blending) that models refer to by name.
+- **Token reader**: the Gol engine's reader for its tokenized binary `*DB` files.
 - **Gol engine**: the engine in `GolDP.dll` that `LEGORacers.exe` loads through `GolEntry`/`GolExit`.
 
 ## Related

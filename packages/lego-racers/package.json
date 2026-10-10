@@ -5,7 +5,10 @@
   "description": "LEGO Racers (1999), ported exactly from LEGORacers.exe and GolDP.dll.",
   "type": "module",
   "exports": {
-    "./jam-archive": "./src/modules/jam-archive/index.ts"
+    "./jam-archive": "./src/modules/jam-archive/index.ts",
+    "./token-reader": "./src/modules/token-reader/index.ts",
+    "./model": "./src/modules/model/index.ts",
+    "./material": "./src/modules/material/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
