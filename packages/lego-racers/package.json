@@ -7,7 +7,8 @@
   "exports": {
     "./audio": "./src/modules/audio/index.ts",
     "./bitmap": "./src/modules/bitmap/index.ts",
-    "./jam-archive": "./src/modules/jam-archive/index.ts"
+    "./jam-archive": "./src/modules/jam-archive/index.ts",
+    "./world": "./src/modules/world/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
