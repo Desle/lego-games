@@ -7,3 +7,11 @@ dist/
 .DS_Store
 coverage/
 .claude/settings.local.json
+
+# Original game files are copyrighted: never commit them
+original-files/
+
+# Ghidra project and raw decompiler output (derived from the original binaries)
+reverse-engineering/ghidra/
+reverse-engineering/*.log
+reverse-engineering/*.c

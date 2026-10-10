@@ -1,0 +1,12 @@
+{
+  "name": "sample-workspace",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "verify": "tooling verify",
+    "check": "pnpm run verify && pnpm -r run check",
+    "format:check": "prettier --check .",
+    "ci": "pnpm run verify && pnpm -r run ci && pnpm run format:check",
+    "prepare": "git config core.hooksPath .git-hooks"
+  }
+}

@@ -1,8 +1,0 @@
-{
-  "extends": "@desle/typescript-foundation/tsconfig/node",
-  "compilerOptions": {
-    "noEmit": true,
-    "types": ["node", "vitest/globals"]
-  },
-  "include": ["src", "*.ts"]
-}

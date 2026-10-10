@@ -1,0 +1,17 @@
+{
+  "name": "@sample-workspace/notes",
+  "private": true,
+  "description": "Notes, the sample bounded context.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "verify": "tooling verify",
+    "test": "vitest run",
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run verify && pnpm run test",
+    "format:check": "prettier --check .",
+    "build": "tsc -p tsconfig.build.json",
+    "audit:high": "pnpm audit --audit-level high",
+    "ci": "pnpm run check && pnpm run format:check && pnpm run build && pnpm run audit:high"
+  }
+}
