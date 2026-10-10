@@ -1,3 +1,4 @@
+import { readFloatTriple } from '../../../token-reader/index.ts'
 import {
   BinaryToken,
   createTokenReader,
@@ -15,20 +16,13 @@ const truncateToInteger = (value: number): number => {
   return truncated >= -0x80000000 && truncated <= 0x7fffffff ? truncated : INTEGER_INDEFINITE
 }
 
-const readVector = (reader: TokenReader): Vector3 => {
-  const x = reader.readFloat()
-  const y = reader.readFloat()
-  const z = reader.readFloat()
-  return Object.freeze([x, y, z] as const)
-}
-
 // Keyword 0x2b of 0x0048a130: `[ count ] {` and count points of three floats, then `}`.
 const readPoints = (reader: TokenReader): readonly Vector3[] => {
   reader.expectLeftBracket()
   const count = reader.readInteger() >>> 0
   reader.expectRightBracket()
   reader.expectLeftCurly()
-  const points = Array.from({ length: count }, () => readVector(reader))
+  const points = Array.from({ length: count }, () => readFloatTriple(reader))
   reader.expectRightCurly()
   return Object.freeze(points)
 }
@@ -40,7 +34,7 @@ const applyKeyword = (reader: TokenReader, keyword: number, emitter: Emitter): E
     case EmitterKeyword.SECOND_TRUNCATED_VALUE:
       return { ...emitter, secondTruncatedValue: truncateToInteger(reader.readFloat()) & 0xff }
     case EmitterKeyword.VECTOR:
-      return { ...emitter, vector: readVector(reader) }
+      return { ...emitter, vector: readFloatTriple(reader) }
     case EmitterKeyword.POINTS:
       return { ...emitter, points: readPoints(reader) }
     case EmitterKeyword.FIRST_FLOAT:

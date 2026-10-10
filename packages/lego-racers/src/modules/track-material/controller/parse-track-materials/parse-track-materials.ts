@@ -1,3 +1,4 @@
+import { readFloatTriple } from '../../../token-reader/index.ts'
 import {
   BinaryToken,
   createTokenReader,
@@ -37,14 +38,6 @@ const FLAG_ONLY_BITS: ReadonlyMap<number, number> = new Map([
   [TrackMaterialKeyword.FLAG_40000, 0x40000],
 ])
 
-// 0x2c and 0x2d negate their y on a mirrored track.
-const readVector = (reader: TokenReader, isMirrored: boolean): Vector3 => {
-  const x = reader.readFloat()
-  const y = reader.readFloat()
-  const z = reader.readFloat()
-  return Object.freeze([x, isMirrored ? -y : y, z] as const)
-}
-
 const applyKeyword = (
   reader: TokenReader,
   keyword: number,
@@ -66,9 +59,13 @@ const applyKeyword = (
   if (flagOnlyBit !== undefined) return { ...material, flags: addFlag(flagOnlyBit) }
   switch (keyword) {
     case TrackMaterialKeyword.FIRST_VECTOR:
-      return { ...material, firstVector: readVector(reader, isMirrored), flags: addFlag(0x20) }
+      return { ...material, firstVector: readFloatTriple(reader, isMirrored), flags: addFlag(0x20) }
     case TrackMaterialKeyword.SECOND_VECTOR:
-      return { ...material, secondVector: readVector(reader, isMirrored), flags: addFlag(0x40) }
+      return {
+        ...material,
+        secondVector: readFloatTriple(reader, isMirrored),
+        flags: addFlag(0x40),
+      }
     case TrackMaterialKeyword.LINKED_NAME:
       return {
         ...material,

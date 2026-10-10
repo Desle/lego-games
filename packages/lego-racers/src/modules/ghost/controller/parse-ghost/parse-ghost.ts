@@ -1,3 +1,4 @@
+import { readFloatQuadruple, readFloatTriple } from '../../../token-reader/index.ts'
 import { getSignedShort, getUnsignedByte } from '../../../../shared/binary-values/binary-values.ts'
 import {
   BinaryToken,
@@ -11,7 +12,7 @@ import {
   MAXIMUM_SAMPLE_COUNT,
   SAMPLE_BYTE_COUNT,
 } from '../../types/ghost-keyword/ghost-keyword.ts'
-import type { Ghost, GhostSample, Quaternion, Vector3 } from '../../types/ghost.types.ts'
+import type { Ghost, GhostSample } from '../../types/ghost.types.ts'
 
 // A mirrored ghost (ghost flags bit 0x20) negates the y short and orientation bytes 1 and 3.
 const readSample = (reader: TokenReader, isMirrored: boolean): GhostSample => {
@@ -38,21 +39,6 @@ const readSamples = (reader: TokenReader, isMirrored: boolean): readonly GhostSa
   return Object.freeze(samples)
 }
 
-const readVector = (reader: TokenReader, isMirrored: boolean): Vector3 => {
-  const x = reader.readFloat()
-  const y = reader.readFloat()
-  const z = reader.readFloat()
-  return Object.freeze([x, isMirrored ? -y : y, z] as const)
-}
-
-const readQuaternion = (reader: TokenReader, isMirrored: boolean): Quaternion => {
-  const x = reader.readFloat()
-  const y = reader.readFloat()
-  const z = reader.readFloat()
-  const w = reader.readFloat()
-  return Object.freeze(isMirrored ? ([x, -y, z, -w] as const) : ([x, y, z, w] as const))
-}
-
 const applyKeyword = (
   reader: TokenReader,
   keyword: number,
@@ -63,9 +49,9 @@ const applyKeyword = (
     case GhostKeyword.SAMPLES:
       return { ...ghost, samples: readSamples(reader, isMirrored) }
     case GhostKeyword.START_POSITION:
-      return { ...ghost, startPosition: readVector(reader, isMirrored) }
+      return { ...ghost, startPosition: readFloatTriple(reader, isMirrored) }
     case GhostKeyword.START_QUATERNION:
-      return { ...ghost, startQuaternion: readQuaternion(reader, isMirrored) }
+      return { ...ghost, startQuaternion: readFloatQuadruple(reader, isMirrored) }
     case GhostKeyword.FIRST_INTEGERS: {
       const first = reader.readInteger()
       const second = reader.readInteger()

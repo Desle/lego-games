@@ -1,3 +1,4 @@
+import { readFloatQuadruple, readFloatTriple } from '../../../token-reader/index.ts'
 import { getSignedShort, getUnsignedByte } from '../../../../shared/binary-values/binary-values.ts'
 import {
   createTokenReader,
@@ -14,22 +15,6 @@ import type {
   Quaternion,
   Vector3,
 } from '../../types/computer-racer-route.types.ts'
-
-const readVector = (reader: TokenReader, isMirrored: boolean): Vector3 => {
-  const x = reader.readFloat()
-  const y = reader.readFloat()
-  const z = reader.readFloat()
-  return Object.freeze([x, isMirrored ? -y : y, z] as const)
-}
-
-// 0x004a4f36 and 0x004a4fd7: a mirrored route negates the second and fourth component.
-const readQuaternion = (reader: TokenReader, isMirrored: boolean): Quaternion => {
-  const x = reader.readFloat()
-  const y = reader.readFloat()
-  const z = reader.readFloat()
-  const w = reader.readFloat()
-  return Object.freeze(isMirrored ? ([x, -y, z, -w] as const) : ([x, y, z, w] as const))
-}
 
 // 0x004a5e10: a mirrored sample negates the second int16 and bytes 2 and 4, and swaps bytes 5 and 6.
 const readSample = (reader: TokenReader, isMirrored: boolean): ComputerRacerRouteSample => {
@@ -90,16 +75,16 @@ export const parseComputerRacerRoute = (
         samples = readSamples(reader, isMirrored)
         break
       case ComputerRacerRouteKeyword.FIRST_QUATERNION:
-        firstQuaternion = readQuaternion(reader, isMirrored)
+        firstQuaternion = readFloatQuadruple(reader, isMirrored)
         break
       case ComputerRacerRouteKeyword.FIRST_VECTOR:
-        firstVector = readVector(reader, isMirrored)
+        firstVector = readFloatTriple(reader, isMirrored)
         break
       case ComputerRacerRouteKeyword.SECOND_VECTOR:
-        secondVector = readVector(reader, isMirrored)
+        secondVector = readFloatTriple(reader, isMirrored)
         break
       case ComputerRacerRouteKeyword.SECOND_QUATERNION:
-        secondQuaternion = readQuaternion(reader, isMirrored)
+        secondQuaternion = readFloatQuadruple(reader, isMirrored)
         break
       case ComputerRacerRouteKeyword.FIRST_INTEGER:
         firstInteger = reader.readInteger()

@@ -1,3 +1,4 @@
+import { readFloatTriple } from '../../../token-reader/index.ts'
 import {
   BinaryToken,
   createTokenReader,
@@ -6,13 +7,6 @@ import {
 } from '../../../token-reader/index.ts'
 import { StartPositionKeyword } from '../../types/start-position-keyword/start-position-keyword.ts'
 import type { StartPosition, StartPositionList, Vector3 } from '../../types/start-position.types.ts'
-
-const readVector = (reader: TokenReader, isMirrored: boolean): Vector3 => {
-  const x = reader.readFloat()
-  const y = reader.readFloat()
-  const z = reader.readFloat()
-  return Object.freeze([x, isMirrored ? -y : y, z] as const)
-}
 
 const readStartPosition = (reader: TokenReader, isMirrored: boolean): StartPosition => {
   reader.expectToken(StartPositionKeyword.START_POSITION)
@@ -28,11 +22,11 @@ const readStartPosition = (reader: TokenReader, isMirrored: boolean): StartPosit
   ) {
     switch (keyword) {
       case StartPositionKeyword.POSITION:
-        position = readVector(reader, isMirrored)
+        position = readFloatTriple(reader, isMirrored)
         break
       case StartPositionKeyword.AXES:
-        firstAxis = readVector(reader, isMirrored)
-        secondAxis = readVector(reader, isMirrored)
+        firstAxis = readFloatTriple(reader, isMirrored)
+        secondAxis = readFloatTriple(reader, isMirrored)
         break
       default:
         reader.fail(TokenReaderFailure.SYNTAX_ERROR)

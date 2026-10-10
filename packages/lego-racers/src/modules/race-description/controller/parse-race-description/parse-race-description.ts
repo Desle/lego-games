@@ -1,3 +1,4 @@
+import { readFloatTriple } from '../../../token-reader/index.ts'
 import {
   BinaryToken,
   createTokenReader,
@@ -14,13 +15,6 @@ import type { RaceDescription, Vector3 } from '../../types/race-description.type
 
 const readName = (reader: TokenReader) =>
   reader.readStringWithMaximumLength(FILE_NAME_MAXIMUM_LENGTH)
-
-const readVector = (reader: TokenReader): Vector3 => {
-  const x = reader.readFloat()
-  const y = reader.readFloat()
-  const z = reader.readFloat()
-  return Object.freeze([x, y, z] as const)
-}
 
 const negateY = (vector: Vector3): Vector3 => Object.freeze([vector[0], -vector[1], vector[2]])
 
@@ -103,12 +97,12 @@ const applyKeyword = (
   }
   switch (keyword) {
     case RaceDescriptionKeyword.CAMERA_VECTORS: {
-      const first = readVector(reader)
-      const second = readVector(reader)
+      const first = readFloatTriple(reader)
+      const second = readFloatTriple(reader)
       return { ...description, cameraVectors: Object.freeze([first, second] as const) }
     }
     case RaceDescriptionKeyword.CAMERA_POINT:
-      return { ...description, cameraPoint: readVector(reader) }
+      return { ...description, cameraPoint: readFloatTriple(reader) }
     case RaceDescriptionKeyword.COLLISION_WORLD: {
       const collisionWorld = readName(reader)
       const firstCollisionObject = readName(reader)

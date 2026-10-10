@@ -1,3 +1,4 @@
+import { readFloatTriple } from '../../../token-reader/index.ts'
 import {
   BinaryToken,
   createTokenReader,
@@ -25,13 +26,6 @@ const BRICK_KINDS: ReadonlyMap<number, number> = new Map([
   [PowerUpKeyword.BRICK_KIND_3, 3],
   [PowerUpKeyword.BRICK_KIND_4, 4],
 ])
-
-const readPosition = (reader: TokenReader): Vector3 => {
-  const x = reader.readFloat()
-  const y = reader.readFloat()
-  const z = reader.readFloat()
-  return Object.freeze([x, y, z] as const)
-}
 
 // The y is negated after the block is read, when the race is mirrored.
 const mirrorPosition = (position: Vector3, isMirrored: boolean): Vector3 =>
@@ -61,7 +55,7 @@ const readBrick = (reader: TokenReader, isMirrored: boolean): PowerUpBrick => {
   ) {
     const brickKind = BRICK_KINDS.get(keyword)
     if (brickKind !== undefined) kind = brickKind
-    else if (keyword === PowerUpKeyword.POSITION) position = readPosition(reader)
+    else if (keyword === PowerUpKeyword.POSITION) position = readFloatTriple(reader)
     else if (keyword === PowerUpKeyword.IDENTIFIER) identifier = reader.readInteger()
     else if (getIsIgnoredKeyword(keyword)) skipIgnoredValues(reader, keyword)
     else reader.fail(TokenReaderFailure.SYNTAX_ERROR)
@@ -78,7 +72,7 @@ const readEnhancementBrick = (reader: TokenReader, isMirrored: boolean): Enhance
     keyword !== BinaryToken.RIGHT_CURLY;
     keyword = reader.getNextToken()
   ) {
-    if (keyword === PowerUpKeyword.POSITION) position = readPosition(reader)
+    if (keyword === PowerUpKeyword.POSITION) position = readFloatTriple(reader)
     else if (getIsIgnoredKeyword(keyword)) skipIgnoredValues(reader, keyword)
     else reader.fail(TokenReaderFailure.SYNTAX_ERROR)
   }
