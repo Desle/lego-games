@@ -136,3 +136,13 @@ export type ComputerTauntStep = {
   readonly tauntMilliseconds: number
   readonly isTaunting: boolean
 }
+
+// The segment of a route between two samples that 0x004a5750 works on.
+export type RouteSegment = {
+  readonly previousSampleIndex: number
+  readonly nextSampleIndex: number
+  readonly previousTime: number
+  readonly nextTime: number
+  readonly previousPosition: Vector3
+  readonly nextPosition: Vector3
+}

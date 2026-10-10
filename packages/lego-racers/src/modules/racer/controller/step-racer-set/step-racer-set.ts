@@ -35,6 +35,7 @@ import {
 } from '../collide-racers/collide-racers.ts'
 import { notifyRacerContact } from '../notify-racer-contact/notify-racer-contact.ts'
 import { updatePlayerGuidance } from '../update-player-guidance/update-player-guidance.ts'
+import { followDriverRoute } from '../follow-driver-route/follow-driver-route.ts'
 import { updateVehicle } from '../../types/vehicle/vehicle.ts'
 import { stopRacerPowerSlide } from '../racer-power-slide/racer-power-slide.ts'
 
@@ -87,7 +88,7 @@ export const stepRacerRigidBody: RacerBoundary = (
 }
 
 export const RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED: RacerSetStepDependencies = Object.freeze({
-  followDriverRoute: keepRacerSetNotYetPorted,
+  followDriverRoute,
   stepRigidBody: stepRacerRigidBody,
   stepScriptedCarBody: keepRacerSetNotYetPorted,
   updateEngineSound: keepRacerSetNotYetPorted,

@@ -6,6 +6,8 @@ import type {
 } from '../../../computer-racer-route/index.ts'
 import {
   getBlendedQuaternion,
+  getDotProduct,
+  getSquaredLength,
   getStoredDifference,
   getStoredSum,
   ZERO_VECTOR3,
@@ -13,7 +15,7 @@ import {
 import type { FloatArithmetic, Quaternion, Vector3 } from '../../../simulation-math/index.ts'
 import { getFloatToInteger } from '../float-to-integer/float-to-integer.ts'
 import { UnportableRouteError } from '../racer-ai-errors/racer-ai-errors.ts'
-import type { RouteFollower } from '../racer-ai.types.ts'
+import type { RouteFollower, RouteSegment } from '../racer-ai.types.ts'
 import {
   getRouteSampleContactState,
   getRouteSampleDuration,
@@ -25,6 +27,8 @@ import {
 
 const ZERO_QUATERNION: Quaternion = Object.freeze({ x: 0, y: 0, z: 0, w: 0 })
 const FIRST_ADVANCE_CONTACT_STATE = 4
+const SEGMENT_EPSILON = Math.fround(0.001) // 0x004b4bc8
+const ONE = 1
 
 const toVector = ([x, y, z]: RouteVector): Vector3 => Object.freeze({ x, y, z })
 
@@ -255,4 +259,132 @@ export const advanceRouteFollower = (
     position,
     rotation: getBlendedQuaternion(arithmetic, previousRotation, nextRotation, fraction),
   })
+}
+
+const getUnstoredDifference = (
+  arithmetic: FloatArithmetic,
+  left: Vector3,
+  right: Vector3
+): Vector3 => ({
+  x: arithmetic.subtract(left.x, right.x),
+  y: arithmetic.subtract(left.y, right.y),
+  z: arithmetic.subtract(left.z, right.z),
+})
+
+// 0x004a5750, the first loop: samples whose segment is shorter than 0.001 are skipped. Null when the route ends.
+const getFirstUsableSegment = (
+  arithmetic: FloatArithmetic,
+  follower: RouteFollower,
+  route: ComputerRacerRoute
+): RouteSegment | null => {
+  let segment: RouteSegment = {
+    previousSampleIndex: follower.previousSampleIndex,
+    nextSampleIndex: follower.nextSampleIndex,
+    previousTime: follower.previousTime,
+    nextTime:
+      getRouteSampleDuration(getSample(route, follower.nextSampleIndex)) + follower.previousTime,
+    previousPosition: follower.previousPosition,
+    nextPosition: follower.nextPosition,
+  }
+  const getIsShort = (): boolean =>
+    arithmetic.getIsBelow(
+      getSquaredLength(
+        arithmetic,
+        getUnstoredDifference(arithmetic, segment.previousPosition, segment.nextPosition)
+      ),
+      SEGMENT_EPSILON
+    )
+  while (getIsShort()) {
+    const nextSampleIndex = segment.nextSampleIndex + 1
+    if (nextSampleIndex >= route.samples.length) return null
+    const enteringSample = getSample(route, nextSampleIndex)
+    segment = {
+      previousSampleIndex: segment.nextSampleIndex,
+      nextSampleIndex,
+      previousTime: segment.nextTime,
+      nextTime: segment.nextTime + getRouteSampleDuration(enteringSample),
+      previousPosition: segment.nextPosition,
+      nextPosition: getStoredSum(
+        arithmetic,
+        getRouteSampleOffset(arithmetic, enteringSample),
+        segment.nextPosition
+      ),
+    }
+  }
+  return segment
+}
+
+// 0x004a5750 (thiscall: displacement): moves the follower along the route by the part of the displacement along
+// the current segment, then advances by 0 ms (0x004a5320). Only the case where the move ends inside the segment
+// is ported (a zero displacement, as 0x0042b0c0 passes, always is); moving past either end of the segment
+// (0x004a5bc6, 0x004a59ab) is refused.
+export const moveRouteFollower = (
+  arithmetic: FloatArithmetic,
+  follower: RouteFollower,
+  displacement: Vector3
+): RouteFollower => {
+  const { route } = follower
+  if (route === null) return follower
+  const {
+    add,
+    subtract,
+    multiply,
+    divide,
+    getSquareRoot,
+    storeFloat,
+    getIsBelow,
+    getIsBelowOrEqual,
+  } = arithmetic
+  const segment = getFirstUsableSegment(arithmetic, follower, route)
+  if (segment === null) return follower
+  const { previousPosition, nextPosition } = segment
+  const directionX = subtract(nextPosition.x, previousPosition.x)
+  const directionY = storeFloat(subtract(nextPosition.y, previousPosition.y))
+  const directionZ = subtract(nextPosition.z, previousPosition.z)
+  const storedDirectionZ = storeFloat(directionZ)
+  const length = storeFloat(
+    getSquareRoot(
+      add(
+        add(multiply(directionZ, storedDirectionZ), multiply(directionY, directionY)),
+        multiply(directionX, directionX)
+      )
+    )
+  )
+  const inverseLength = storeFloat(divide(ONE, length))
+  const unit: Vector3 = {
+    x: storeFloat(multiply(directionX, inverseLength)),
+    y: storeFloat(multiply(directionY, inverseLength)),
+    z: storeFloat(multiply(storedDirectionZ, inverseLength)),
+  }
+  const alongRaw = getDotProduct(arithmetic, unit, displacement)
+  const distanceToNext = getSquareRoot(
+    getSquaredLength(arithmetic, getUnstoredDifference(arithmetic, follower.position, nextPosition))
+  )
+  const along = storeFloat(alongRaw)
+  if (getIsBelow(alongRaw, 0) || !getIsBelowOrEqual(along, distanceToNext)) {
+    throw new UnportableRouteError(segment.nextSampleIndex)
+  }
+  const travelled = subtract(add(along, length), distanceToNext)
+  const duration = segment.nextTime - segment.previousTime
+  const time = storeFloat(
+    add(multiply(duration, multiply(travelled, inverseLength)), segment.previousTime)
+  )
+  return advanceRouteFollower(
+    arithmetic,
+    Object.freeze({
+      ...follower,
+      time,
+      previousTime: segment.previousTime,
+      previousPosition,
+      nextPosition,
+      previousSampleIndex: segment.previousSampleIndex,
+      nextSampleIndex: segment.nextSampleIndex,
+      previousRotation: getRouteSampleRotation(
+        arithmetic,
+        getSample(route, segment.previousSampleIndex)
+      ),
+      nextRotation: getRouteSampleRotation(arithmetic, getSample(route, segment.nextSampleIndex)),
+    }),
+    0
+  )
 }

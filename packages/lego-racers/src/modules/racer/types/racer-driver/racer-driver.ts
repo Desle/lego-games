@@ -1,6 +1,14 @@
 import { drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
-import type { FloatArithmetic } from '../../../simulation-math/index.ts'
+import {
+  advanceRouteFollower,
+  createRouteFollower,
+  setRouteFollowerSpeedFactor,
+  startRouteFollowerAtLoop,
+} from '../../../racer-ai/index.ts'
+import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
+import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
+import type { FloatArithmetic, Quaternion } from '../../../simulation-math/index.ts'
 import {
   getCarBodyMaximumCurvature,
   getIsCarBodyAbleToPowerSlide,
@@ -47,6 +55,15 @@ const POWER_SLIDE_FACTOR = Math.fround(0.3) // 0x3e99999a
 const BRAKING_POWER_SLIDE_FACTOR = Math.fround(0.4) // 0x3ecccccd
 const SLIDE_BOOST_MILLISECONDS = 300 // 0x12c
 
+const STUCK_SPEED = Math.fround(0.009) // 0x004b0084
+const STUCK_MILLISECONDS = 1000 // 0x3e8
+const REVERSING_MILLISECONDS = 2000 // 0x7d0
+const ROUTE_TARGET_STEP_MILLISECONDS = 250 // 0xfa
+const INITIAL_ROUTE_TARGET_MILLISECONDS = 1000 // 0x3e8
+const REVERSING_FLAG = 0x20
+const ON_ROUTE_FLAG = 0x40
+const SPINNING_FLAG = 0x2
+
 const FULL_THROTTLE_FLAG = 0x1
 const HOLD_FLAG = 0x2
 const POWER_SLIDE_FLAG = 0x4
@@ -54,12 +71,14 @@ const SLIDE_BOOST_FLAG = 0x8
 const WOBBLE_FLAG = 0x10
 const TOUCHING_FULL_THROTTLE_FLAG = 0x100
 
+const ZERO_QUATERNION: Quaternion = Object.freeze({ x: 0, y: 0, z: 0, w: 0 })
+
 const toUnsigned = (value: number): number => value >>> 0
 
 // 0x0041fb80 (reached through the constructor 0x0041fb50): every field zero.
 export const createRacerDriver = (): RacerDriver =>
   Object.freeze({
-    routeTime: 0,
+    route: null,
     previousCurvature: 0,
     curvature: 0,
     throttle: 0,
@@ -71,6 +90,9 @@ export const createRacerDriver = (): RacerDriver =>
     stuckMilliseconds: 0,
     slideMilliseconds: 0,
     slideDirection: 0,
+    targetPosition: ZERO_VECTOR3,
+    targetRotation: ZERO_QUATERNION,
+    follower: null,
   })
 
 const getSteeringCurvature = (arithmetic: FloatArithmetic, scaledSteering: number): number => {
@@ -438,3 +460,117 @@ export const updateDriverWithoutRoute = (
   })
   return applyDriverThrottle(arithmetic, applyDriverSteering(arithmetic, tables, braked))
 }
+
+// 0x0041fdb0 (thiscall: step): a car that stays below 0.009 in speed for a second starts reversing on the
+// route for two seconds. A spinning car clears the reversing.
+export const stepDriverStuckTimer = (
+  arithmetic: FloatArithmetic,
+  driven: DrivenCarBody,
+  stepMilliseconds: number
+): RacerDriver => {
+  const { driver, carBody } = driven
+  const stuckMilliseconds = toUnsigned(driver.stuckMilliseconds + stepMilliseconds)
+  if ((carBody.rigidBody.flags & SPINNING_FLAG) !== 0) {
+    return Object.freeze({
+      ...driver,
+      stuckMilliseconds: 0,
+      flags: driver.flags & ~REVERSING_FLAG,
+    })
+  }
+  if ((driver.flags & REVERSING_FLAG) !== 0) {
+    return stuckMilliseconds < REVERSING_MILLISECONDS
+      ? Object.freeze({ ...driver, stuckMilliseconds })
+      : Object.freeze({ ...driver, stuckMilliseconds: 0, flags: driver.flags & ~REVERSING_FLAG })
+  }
+  const { forwardSpeed } = carBody.rigidBody
+  const isMoving =
+    !arithmetic.getIsBelowOrEqual(forwardSpeed, STUCK_SPEED) ||
+    !arithmetic.getIsBelowOrEqual(-STUCK_SPEED, forwardSpeed)
+  if (isMoving) return Object.freeze({ ...driver, stuckMilliseconds: 0 })
+  return stuckMilliseconds < STUCK_MILLISECONDS
+    ? Object.freeze({ ...driver, stuckMilliseconds })
+    : Object.freeze({ ...driver, stuckMilliseconds: 0, flags: driver.flags | REVERSING_FLAG })
+}
+
+// The follower of 0x004202f0 and 0x004203b0 moves to the route's loop point and then ahead by the route step;
+// the driver aims at where it ends up.
+export const getDriverTargetAhead = (
+  arithmetic: FloatArithmetic,
+  driver: RacerDriver,
+  route: ComputerRacerRoute,
+  routeStepMilliseconds: number
+): RacerDriver => {
+  const started = setRouteFollowerSpeedFactor(
+    startRouteFollowerAtLoop(arithmetic, driver.follower ?? createRouteFollower(route, ONE), route),
+    ONE
+  )
+  const follower = advanceRouteFollower(
+    arithmetic,
+    started,
+    arithmetic.storeFloat(routeStepMilliseconds)
+  )
+  return Object.freeze({
+    ...driver,
+    routeStepMilliseconds,
+    follower,
+    targetPosition: follower.position,
+    targetRotation: follower.rotation,
+  })
+}
+
+// 0x004202f0 (thiscall: route): the driver follows the route from now on. The route's follower is created here;
+// the original has it from the racer's creation. Its speed factor is 1.0.
+export const assignDriverRoute = (
+  arithmetic: FloatArithmetic,
+  driven: DrivenCarBody,
+  route: ComputerRacerRoute
+): DrivenCarBody => {
+  const stopped = stopDriverPowerSlide(
+    Object.freeze({
+      driver: Object.freeze({
+        ...driven.driver,
+        routeStepMilliseconds: INITIAL_ROUTE_TARGET_MILLISECONDS,
+        route,
+        flags: driven.driver.flags | ON_ROUTE_FLAG,
+      }),
+      carBody: driven.carBody,
+    })
+  )
+  const driver = getDriverTargetAhead(
+    arithmetic,
+    Object.freeze({ ...stopped.driver, curvature: 0 }),
+    route,
+    INITIAL_ROUTE_TARGET_MILLISECONDS
+  )
+  return Object.freeze({ driver, carBody: stopped.carBody })
+}
+
+// The target moves 250 ms further along the route (the update inside 0x004203b0).
+export const advanceDriverTarget = (
+  arithmetic: FloatArithmetic,
+  driver: RacerDriver,
+  route: ComputerRacerRoute
+): RacerDriver =>
+  getDriverTargetAhead(
+    arithmetic,
+    driver,
+    route,
+    toUnsigned(driver.routeStepMilliseconds + ROUTE_TARGET_STEP_MILLISECONDS)
+  )
+
+// 0x00420380: the car body has taken over the route; the driver lets go of it and of the steering and throttle.
+export const releaseDriverRoute = (
+  arithmetic: FloatArithmetic,
+  driven: DrivenCarBody
+): DrivenCarBody =>
+  Object.freeze({
+    driver: Object.freeze({
+      ...driven.driver,
+      route: null,
+      flags: driven.driver.flags & ~ON_ROUTE_FLAG,
+      routeStepMilliseconds: 0,
+      curvature: 0,
+      throttle: 0,
+    }),
+    carBody: setCarBodyThrottle(arithmetic, setCarBodySteering(arithmetic, driven.carBody, 0), 0),
+  })

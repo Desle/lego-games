@@ -4,6 +4,7 @@ export {
   RACER_COLLISION_DEPENDENCIES_NOT_YET_PORTED,
 } from './controller/collide-racers/collide-racers.ts'
 export { endRacerKick, respondToRacerContact } from './controller/racer-contact/racer-contact.ts'
+export { followDriverRoute } from './controller/follow-driver-route/follow-driver-route.ts'
 export { notifyRacerContact } from './controller/notify-racer-contact/notify-racer-contact.ts'
 export { updatePlayerGuidance } from './controller/update-player-guidance/update-player-guidance.ts'
 export {
@@ -56,6 +57,7 @@ export { createVehicle, updateVehicle, updateVehicleDriver } from './types/vehic
 export { COSINE_TABLE_ADDRESS, getTableCosine } from './types/cosine-table/cosine-table.ts'
 export {
   applyDriverSteering,
+  assignDriverRoute,
   applyDriverThrottle,
   createRacerDriver,
   setDriverSteering,

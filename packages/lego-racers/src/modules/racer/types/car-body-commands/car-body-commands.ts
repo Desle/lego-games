@@ -1,4 +1,12 @@
-import { getPushedSpeedState, getRestoredSpeedState } from '../../../racer-ai/index.ts'
+import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
+import {
+  createRouteFollower,
+  getPushedSpeedState,
+  getRestoredSpeedState,
+  moveRouteFollower,
+  setRouteFollowerSpeedFactor,
+  startRouteFollowerAtLoop,
+} from '../../../racer-ai/index.ts'
 import type { ComputerSpeedState } from '../../../racer-ai/index.ts'
 import {
   addScaledImpulse,
@@ -6,7 +14,13 @@ import {
   setExtraForce,
   startSpin,
 } from '../../../racer-physics/index.ts'
-import { getFloatFromBits, getTruncatedInteger } from '../../../simulation-math/index.ts'
+import {
+  getFloatFromBits,
+  getFrameTransformedPoint,
+  getMatrixFromQuaternion,
+  getTruncatedInteger,
+  ZERO_VECTOR3,
+} from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 import type { CarBody, CarBodyPushSlot } from '../racer.types.ts'
 
@@ -154,3 +168,63 @@ export const setCarBodyPush = (
     rigidBody: setExtraForce(arithmetic, body.rigidBody, slot, force),
   })
 }
+
+// 0x0042a730 (thiscall: route): the car body follows the route from its loop point. The follower restarts there,
+// and the display frame takes the loop position and rotation, with the centre of mass and the hull points
+// moved with it (frame slots +8, +0x2c).
+export const placeCarBodyAtRouteLoop = (
+  arithmetic: FloatArithmetic,
+  body: CarBody,
+  route: ComputerRacerRoute
+): CarBody => {
+  const [x, y, z] = route.secondVector
+  const [quaternionX, quaternionY, quaternionZ, quaternionW] = route.secondQuaternion
+  const displayFrame = Object.freeze({
+    rotation: getMatrixFromQuaternion(arithmetic, {
+      x: quaternionX,
+      y: quaternionY,
+      z: quaternionZ,
+      w: quaternionW,
+    }),
+    position: Object.freeze({ x, y, z }),
+  })
+  const getWorldPoint = (point: Vector3): Vector3 =>
+    getFrameTransformedPoint(arithmetic, displayFrame, point)
+  const { rigidBody } = body
+  return Object.freeze({
+    ...body,
+    isScripted: true,
+    routeFollower: startRouteFollowerAtLoop(
+      arithmetic,
+      body.routeFollower ?? createRouteFollower(route, body.speedFactor),
+      route
+    ),
+    rigidBody: Object.freeze({
+      ...rigidBody,
+      displayFrame,
+      worldCentreOfMass: getWorldPoint(rigidBody.localCentreOfMass),
+      worldHullPoints: Object.freeze(rigidBody.localHullPoints.map(getWorldPoint)),
+    }),
+  })
+}
+
+// 0x0042b0c0: the route speed factor and targets return to 1, the follower settles on its segment
+// (0x004a5750 with no displacement) and the sideways offset and bounce return to 0. +0x7c4 is not modelled.
+export const resetCarBodyRoute = (arithmetic: FloatArithmetic, body: CarBody): CarBody =>
+  Object.freeze({
+    ...body,
+    speedFactor: 1,
+    routeFollower:
+      body.routeFollower === null
+        ? null
+        : moveRouteFollower(
+            arithmetic,
+            setRouteFollowerSpeedFactor(body.routeFollower, 1),
+            ZERO_VECTOR3
+          ),
+    defaultTargetSpeedFactor: 1,
+    bounceHeight: 0,
+    lateralOffset: 0,
+    bounceVerticalSpeed: 0,
+    targetSpeedFactor: 1,
+  })

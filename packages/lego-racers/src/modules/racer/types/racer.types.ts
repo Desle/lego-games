@@ -1,5 +1,6 @@
 import type { Checkpoint } from '../../checkpoint/index.ts'
 import type { CollisionObject } from '../../collision/index.ts'
+import type { ComputerRacerRoute } from '../../computer-racer-route/index.ts'
 import type { RouteFollower, RubberBand } from '../../racer-ai/index.ts'
 import type { CarRigidBody } from '../../racer-physics/index.ts'
 import type { RandomTable, RandomTablePosition } from '../../random-table/index.ts'
@@ -70,8 +71,8 @@ export type PlayerController = {
 
 // Racer driver (racer +0xc70, constructor 0x0041fb80): turns steering and throttle into car body commands.
 export type RacerDriver = {
-  // +0x04: route time (float32) when following a route (flag 0x40); not used by the ported code.
-  readonly routeTime: number
+  // +0x04: the route being followed (flag 0x40); 0x00420380 clears it when the car body takes over the script.
+  readonly route: ComputerRacerRoute | null
   // +0x08: float32 curvature of the previous step.
   readonly previousCurvature: number
   // +0x0c: float32 curvature asked for (1 / turning radius, signed).
@@ -93,6 +94,12 @@ export type RacerDriver = {
   readonly slideMilliseconds: number
   // +0x30: power slide direction passed to 0x00420260 (1 when braking).
   readonly slideDirection: number
+  // +0x34..+0x3c and +0x40..+0x4c: the target ahead of the car on the route, a copy of the follower's position and
+  // rotation (0x004202f0, 0x004203b0).
+  readonly targetPosition: Vector3
+  readonly targetRotation: Quaternion
+  // +0x50: the follower that places the target (created with the racer in the original; 0x004202f0 here).
+  readonly follower: RouteFollower | null
 }
 
 // The driver acts on its car body (driver +0x00 points to it), so its functions return both.
