@@ -18,4 +18,4 @@ Decodes the game's own `.BMP` texture format from `LEGO.JAM` into the engine's i
 
 ## Out of scope
 
-Real Windows bitmaps (starting with `BM`), which the engine also reads but which never occur inside `LEGO.JAM`, and transparency, which materials decide.
+Real Windows bitmaps (starting with `BM`), which the engine also reads but which never occur inside `LEGO.JAM`, transparency, which materials decide, and Targa images, which `targa` decodes into the same form.

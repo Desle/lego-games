@@ -1,6 +1,14 @@
 export { getWorldPaths, loadScene } from './controller/load-scene/load-scene.ts'
-export { COMMON_DIRECTORY, getRaceWorldPaths } from './types/race-world-paths/race-world-paths.ts'
-export type { RaceWorldNames } from './types/race-world-paths/race-world-paths.types.ts'
+export {
+  COMMON_DIRECTORY,
+  getRaceBackgroundWorldPath,
+  getRaceSkyPath,
+  getRaceWorldPaths,
+} from './types/race-world-paths/race-world-paths.ts'
+export type {
+  RaceSkyNames,
+  RaceWorldNames,
+} from './types/race-world-paths/race-world-paths.types.ts'
 export {
   BlendFactor,
   CompareFunction,
@@ -15,6 +23,7 @@ export { SceneLinkError, ScenePathError } from './types/scene-errors/scene-error
 export type {
   Scene,
   SceneAmbientLight,
+  SceneAnimation,
   SceneBitmap,
   SceneCamera,
   SceneDirectionalLight,
@@ -26,6 +35,7 @@ export type {
   SceneMesh,
   SceneRenderState,
   SceneRotation,
+  SceneSkeleton,
   SceneTexture,
   SceneVector,
 } from './types/scene.types.ts'

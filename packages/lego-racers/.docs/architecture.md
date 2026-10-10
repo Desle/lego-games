@@ -143,8 +143,20 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 ### `sky`
 
 - Layers: `controller`, `types`
-- Public API (`index.ts`): `parseSky`, `SkyKeyword`, and the `Sky` types
-- SKB sky settings (`0x0041c550`).
+- Public API (`index.ts`): `parseSky`, `createSkyDome`, `createSkyState`, `advanceSky`, `switchSkySetting`, `getSkyRingColors`, `getSkyVertexColors`, `getSkyPlacement`, `SkyStateError`, `SkyKeyword`, and the `Sky` types
+- SKB sky settings (`0x0041c550`), the dome sphere builder (`0x004907f0`), keyframe running (`0x0041ccb0`) and placement (`0x0041d040`). Depends on `simulation-math`.
+
+### `targa`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `decodeTarga`, `readTargaHeader`, `InvalidTargaError`, `UnsupportedTargaDepthError`, and the `TargaHeader` types
+- `.TGA` images (`GolDP.dll` `0x1002a5e0`, `0x1002ae50`) decoded into the `bitmap` module's `Bitmap`.
+
+### `skeletal-animation`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `getSkeletalAnimation`, `getRestPose`, `getSkeletonPose`, `getBoneMatrices`, `getBoneRotation`, `createSkeletonAnimationState`, `advanceSkeletonAnimation`, `samplePosition`, `sampleRotation`, `getBlendedQuaternion`, `getInstancePosition`, `SkeletalAnimationError`, and the pose and state types
+- Poses skeletons from animations as the skeleton instance does (`0x10023580`, `0x10023b10`, `0x10024380`, `0x10024540`, `0x10002e30`, `0x1002f450`). Depends on `animation`, `skeleton` and `simulation-math`; free of DOM and rendering libraries.
 
 ### `load-screen`
 
@@ -217,5 +229,5 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 ### `scene`
 
 - Layers: `controller`, `types`
-- Public API (`index.ts`): `loadScene`, `getWorldPaths`, `getRaceWorldPaths`, `COMMON_DIRECTORY`, `SceneLinkError`, `ScenePathError`, the render-state enums (`ShadeMode`, `TextureOperation`, `CompareFunction`, `BlendFactor`, `TextureFilter`, `TextureAddressing`), `SceneInstanceKind`, `MissingBitmapReason`, and the `Scene` types
-- Links worlds into a renderable scene (`0x10017ac0`, `0x1002e640`) and derives each material's Direct3D state (`0x1000a2c0`). Depends on `jam-archive`, `world`, `texture-database`, `material`, `model` and `bitmap`; free of DOM and rendering libraries.
+- Public API (`index.ts`): `loadScene`, `getWorldPaths`, `getRaceWorldPaths`, `getRaceSkyPath`, `getRaceBackgroundWorldPath`, `COMMON_DIRECTORY`, `SceneLinkError`, `ScenePathError`, the render-state enums (`ShadeMode`, `TextureOperation`, `CompareFunction`, `BlendFactor`, `TextureFilter`, `TextureAddressing`), `SceneInstanceKind`, `MissingBitmapReason`, and the `Scene` types
+- Links worlds into a renderable scene (`0x10017ac0`, `0x1002e640`) and derives each material's Direct3D state (`0x1000a2c0`). Depends on `jam-archive`, `world`, `texture-database`, `material`, `model`, `bitmap`, `targa`, `skeleton`, `animation` and `skeletal-animation`; free of DOM and rendering libraries.

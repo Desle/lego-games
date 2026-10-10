@@ -8,9 +8,14 @@ import type {
   SceneCamera,
   SceneDirectionalLight,
 } from '../../types/scene.types.ts'
-import { linkBspTreeInstances, linkMeshInstances } from './link-instances.ts'
+import {
+  linkBspTreeInstances,
+  linkMeshInstances,
+  linkSkeletonInstances,
+} from './link-instances.ts'
 import { linkMaterials } from './link-materials.ts'
 import { linkMaterialAssignments, linkMeshes } from './link-meshes.ts'
+import { linkAnimations, linkSkeletons } from './link-skeletons.ts'
 import { linkTextures } from './link-textures.ts'
 
 const getRgb = (colorBytes: readonly number[]): readonly [number, number, number] =>
@@ -37,6 +42,8 @@ const EMPTY_SCENE: Scene = Object.freeze({
   materials: [],
   meshes: [],
   materialAssignments: [],
+  skeletons: [],
+  animations: [],
   instances: [],
   cameras: [],
   ambientLights: [],
@@ -61,12 +68,20 @@ const getSceneWithWorld = (archive: JamArchive, scene: Scene, worldPath: string)
     indexByName: new Map(scene.materials.map((material, index) => [material.name, index])),
   })
   const counts = Object.freeze({
+    worldPath,
     meshOffset: scene.meshes.length,
     materialAssignmentOffset: scene.materialAssignments.length,
+    skeletonOffset: scene.skeletons.length,
+    animationOffset: scene.animations.length,
     meshCount: world.meshes.length,
     materialAssignmentCount: world.materialAssignments.length,
+    skeletonCount: world.skeletons.length,
     bspTreeCount: world.bspTrees.length,
   })
+  const animations = Object.freeze([
+    ...scene.animations,
+    ...linkAnimations(source, world.animations),
+  ])
   return Object.freeze({
     worldPaths: Object.freeze([...scene.worldPaths, worldPath]),
     textures: linkedTextures.textures,
@@ -76,9 +91,12 @@ const getSceneWithWorld = (archive: JamArchive, scene: Scene, worldPath: string)
       ...scene.materialAssignments,
       ...linkMaterialAssignments(source, world.materialAssignments, linkedMaterials),
     ]),
+    skeletons: Object.freeze([...scene.skeletons, ...linkSkeletons(source, world.skeletons)]),
+    animations,
     instances: Object.freeze([
       ...scene.instances,
       ...linkMeshInstances(world.meshInstances, counts),
+      ...linkSkeletonInstances(world.skeletonInstances, counts, animations),
       ...linkBspTreeInstances(world.bspTreeInstances, counts),
     ]),
     cameras: Object.freeze([...scene.cameras, ...world.cameras.map(getSceneCamera)]),

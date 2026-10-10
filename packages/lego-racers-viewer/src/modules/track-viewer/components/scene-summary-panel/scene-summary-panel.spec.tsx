@@ -31,7 +31,7 @@ describe('SceneSummaryPanel', () => {
     // Arrange
     const summary = {
       ...SUMMARY,
-      missingTextures: ['GAMEDATA\\COMMON\\LITFLASH.TGA (targa_not_ported)'],
+      missingTextures: ['GAMEDATA\\COMMON\\FONT_HLP.BMP (file_not_found)'],
     }
 
     // Act
