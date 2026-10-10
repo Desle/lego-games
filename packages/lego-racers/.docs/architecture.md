@@ -207,3 +207,14 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 - Layers: `controller`, `events`, `types`
 - Public API (`index.ts`): `createPowerUpWorld`, `updatePowerUps`, `touchPowerUpBricks`, `touchEnhancementBricks`, `setBrickSoundsEnabled`, `usePowerUp`, `activatePowerUp`, `advanceComputerPowerUpUse`, `rollComputerStartTurbo`, `keepPermanentTurbo`, `hitRacerWithProjectile`, `touchHazardEffect`, `endProjectileFlight`, `advancePowerUpEffect`, `updatePowerUpEffects`, `createPowerUpEffects`, `getRacerWithVoiceCooldownAdvanced`, `getRaceModeBrickKind`, `getPowerUpEffectKind`, `BrickKind`, `BrickState`, `EffectState`, `PowerUpEffectKind`, `RaceModeFlag`, `POWER_UP_EFFECT_POOL_SIZES`, `ATTACHMENT_SLOT_COUNT`, the errors, the `PowerUpEvent` union and the world, racer and effect types
 - The power-up behaviour (bricks, enhancements, effects); `power-up` is its file format. Pure state transitions that return events for the racer, sound and explosion code. Depends on `simulation-math`, `random-table`, `racer-ai` and `power-up`.
+### `racer`
+
+- Layers: `controller`, `services`, `types`
+- Public API (`index.ts`): `stepRacerSet`, `RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED`, `applyRacerControls`, `updatePlayerController`, `createPlayerController`, `startRacerPowerSlide`, `stopRacerPowerSlide`, `readRacerTables`, `createCarBody`, `createRacer`, `createRacerSet`, the car body and driver functions, `rankRacers`, `playRacerVoice`, `getTableCosine`, and the `Racer`, `CarBody`, `RacerDriver`, `RacerControls`, `RacerSet` types
+- `RacerSet_Step` (`0x0043c030`) and the player controls. Calls into code not ported yet (rigid body step, AI, power-ups, audio, vehicle effects) are typed dependencies that receive and return the whole racer set. Reuses `racer-ai` (rubber band, progress, taunt), `random-table` and `checkpoint`; depends on `simulation-math` and `racer-physics`.
+
+### `scene`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `loadScene`, `getWorldPaths`, `getRaceWorldPaths`, `COMMON_DIRECTORY`, `SceneLinkError`, `ScenePathError`, the render-state enums (`ShadeMode`, `TextureOperation`, `CompareFunction`, `BlendFactor`, `TextureFilter`, `TextureAddressing`), `SceneInstanceKind`, `MissingBitmapReason`, and the `Scene` types
+- Links worlds into a renderable scene (`0x10017ac0`, `0x1002e640`) and derives each material's Direct3D state (`0x1000a2c0`). Depends on `jam-archive`, `world`, `texture-database`, `material`, `model` and `bitmap`; free of DOM and rendering libraries.

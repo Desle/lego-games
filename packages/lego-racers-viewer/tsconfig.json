@@ -1,0 +1,7 @@
+{
+  "extends": "@lego-games/tooling/tsconfig/bundler",
+  "compilerOptions": {
+    "types": ["node", "vite/client", "vitest/globals", "@testing-library/jest-dom"]
+  },
+  "include": ["src", "*.ts"]
+}

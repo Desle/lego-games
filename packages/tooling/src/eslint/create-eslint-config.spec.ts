@@ -184,3 +184,24 @@ describe('names taken from someone else', () => {
     expect(problems).toEqual([])
   })
 })
+
+describe('environments', () => {
+  const getGlobalNames = (environment: 'node' | 'browser') =>
+    createEslintConfig({ rootDirectory: process.cwd(), environment }).flatMap((config) =>
+      Object.keys(config.languageOptions?.['globals'] ?? {})
+    )
+
+  it('gives browser packages the DOM globals and node packages the Node ones', () => {
+    // Arrange
+    const environments = ['browser', 'node'] as const
+
+    // Act
+    const [browserGlobals, nodeGlobals] = environments.map(getGlobalNames)
+
+    // Assert
+    expect(browserGlobals).toContain('document')
+    expect(browserGlobals).not.toContain('process')
+    expect(nodeGlobals).toContain('process')
+    expect(nodeGlobals).not.toContain('document')
+  })
+})
