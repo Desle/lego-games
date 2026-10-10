@@ -1,5 +1,6 @@
 import type { EnumValues } from '../../../shared/types/enum.types.ts'
 import type { Checkpoint } from '../../checkpoint/index.ts'
+import type { CollisionObject } from '../../collision/index.ts'
 import type { ComputerRacerRoute } from '../../computer-racer-route/index.ts'
 import type { HazardList } from '../../hazard/index.ts'
 import type {
@@ -60,6 +61,8 @@ export type RaceDefinition = {
   readonly isMirrored: boolean
   readonly racers: readonly RaceRacerDefinition[]
   readonly checkpoints: readonly Checkpoint[]
+  // Every car rigid body's collision list: the track's COLLIDE.BVB first, then the moving objects.
+  readonly collisionObjects: readonly CollisionObject[]
   readonly startPositions: readonly StartPosition[]
   readonly powerUps: PowerUpPlacements
   readonly timers: TimerList | null

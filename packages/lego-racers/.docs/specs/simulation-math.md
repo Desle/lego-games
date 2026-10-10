@@ -18,4 +18,4 @@ The vector, matrix, quaternion and frame helpers that `LEGORacers.exe`'s race ph
 
 ## Out of scope
 
-Collision geometry, the frame's other methods (bounding sphere at frame `+0x04`/`+0x10`, point transforms `0x00410d60` and `0x00410de0`) and the remaining helpers in `0x004497f0` onwards, which the integrator does not call.
+Collision geometry (the `collision` module), the frame's bounding sphere (frame `+0x04`/`+0x10`) and the frame mirror `0x00411040`. The frame transforms (`0x00410c80`, `0x00410cf0`, `0x00410d60`, `0x00410de0`), the axis builders `0x00410a00` and `0x00410b00`, float32 constants by bit pattern and `_ftol` are here.

@@ -1,6 +1,14 @@
 import { createFloatArithmetic } from '../float-arithmetic/float-arithmetic.ts'
 import { FpuPrecision } from '../fpu-precision/fpu-precision.ts'
-import { getNormalizedVector2, getNormalizedVector3, getVectorRotatedAroundAxis } from './vector.ts'
+import {
+  getDotProduct,
+  getNormalizedVector2,
+  getNormalizedVector3,
+  getStoredDifference,
+  getStoredScaledVector,
+  getStoredSum,
+  getVectorRotatedAroundAxis,
+} from './vector.ts'
 
 const SINGLE = createFloatArithmetic(FpuPrecision.SINGLE)
 const DOUBLE = createFloatArithmetic(FpuPrecision.DOUBLE)
@@ -108,5 +116,29 @@ describe('getVectorRotatedAroundAxis', () => {
     const expected = { x: getFloatFromBits(0xb33bbd2e), y: -1, z: 0 }
     expect(single).toEqual(expected)
     expect(double).toEqual(expected)
+  })
+})
+
+describe('stored vector helpers', () => {
+  it('scale, subtract and add per component, and dot as (z·z + y·y) + x·x', () => {
+    // Arrange
+    const left = { x: 1, y: 2, z: 3 }
+    const right = { x: 0.5, y: -1, z: 4 }
+
+    // Act
+    const results = {
+      scaled: getStoredScaledVector(SINGLE, left, 2),
+      difference: getStoredDifference(SINGLE, left, right),
+      sum: getStoredSum(SINGLE, left, right),
+      dot: getDotProduct(SINGLE, left, right),
+    }
+
+    // Assert
+    expect(results).toEqual({
+      scaled: { x: 2, y: 4, z: 6 },
+      difference: { x: 0.5, y: 3, z: -1 },
+      sum: { x: 1.5, y: 1, z: 7 },
+      dot: 10.5,
+    })
   })
 })
