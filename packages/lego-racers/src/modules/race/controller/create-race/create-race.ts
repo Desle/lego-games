@@ -166,6 +166,7 @@ export const createRace = (definition: RaceDefinition): RaceState => {
       tables: definition.tables,
       checkpoints: definition.checkpoints,
       collisionObjects: definition.collisionObjects,
+      raceLapCount: lapCount,
     }),
     racerSet: Object.freeze({
       ...racerSet,

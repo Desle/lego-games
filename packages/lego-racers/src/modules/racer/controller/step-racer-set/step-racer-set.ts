@@ -35,6 +35,7 @@ import {
 } from '../collide-racers/collide-racers.ts'
 import { notifyRacerContact } from '../notify-racer-contact/notify-racer-contact.ts'
 import { updatePlayerGuidance } from '../update-player-guidance/update-player-guidance.ts'
+import { updateVehicle } from '../../types/vehicle/vehicle.ts'
 import { stopRacerPowerSlide } from '../racer-power-slide/racer-power-slide.ts'
 
 const COMPUTER_CONTROLLER = 2
@@ -92,7 +93,7 @@ export const RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED: RacerSetStepDependencie
   updateEngineSound: keepRacerSetNotYetPorted,
   endPowerSlideEffects: keepRacerSetNotYetPorted,
   collideRacers: createCollideRacers(RACER_COLLISION_DEPENDENCIES_NOT_YET_PORTED),
-  updateVehicle: keepRacerSetNotYetPorted,
+  updateVehicle,
   updateRacerSounds: keepRacerSetNotYetPorted,
   considerComputerPowerUp: keepRacerSetNotYetPorted,
   endCarBodyEffect: keepRacerSetNotYetPorted,

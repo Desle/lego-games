@@ -253,7 +253,6 @@ export const createCarRigidBody = (
     ...box,
     displayFrame: definition.displayFrame,
     displayBoundingRadius: definition.displayBoundingRadius,
-    displayBoundingCentre: definition.displayBoundingCentre ?? ZERO_VECTOR3,
     scaledMass: storeFloat(multiply(multiply(definition.mass, ONE_THOUSANDTH), ONE_THOUSANDTH)),
     gravity: getFloatFromBits(0x421c0000),
     weight: 0,

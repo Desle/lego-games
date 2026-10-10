@@ -1,3 +1,4 @@
+import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import {
   getBoundingInterval,
   getBoundingSphere,
@@ -9,6 +10,7 @@ import type {
   BoundingSphere,
   OrientedBox,
 } from '../../../racer-collision/index.ts'
+import { getFigureBounds } from '../../types/figure/figure.ts'
 import { getRacer, setRacer } from '../../types/racer-state/racer-state.ts'
 import type {
   Racer,
@@ -21,13 +23,16 @@ import { endRacerKick, respondToRacerContact } from '../racer-contact/racer-cont
 
 const CONTACT_TIMER_PERIOD_MILLISECONDS = 750 // 0x2ee, 0x00438e60
 
+// 0x004113c0 -> 0x0040e0b0 on the display figure (racer +0x5c): its animation decides the sphere. A figure without
+// a model part has radius 0 around the origin.
 const getSphere = (context: RacerSetContext, racer: Racer): BoundingSphere => {
-  const { rigidBody } = racer.carBody
+  const bounds = getFigureBounds(context.arithmetic, racer.figure)
+  if (bounds === null) return { centre: ZERO_VECTOR3, radius: 0 }
   return getBoundingSphere(
     context.arithmetic,
-    rigidBody.displayFrame,
-    rigidBody.displayBoundingCentre,
-    rigidBody.displayBoundingRadius
+    racer.carBody.rigidBody.displayFrame,
+    bounds.centre,
+    bounds.radius
   )
 }
 

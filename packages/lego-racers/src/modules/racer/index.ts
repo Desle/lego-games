@@ -43,6 +43,16 @@ export {
   stopCarBodyPowerSlide,
   stopCarBodySlide,
 } from './types/car-body/car-body.ts'
+export {
+  blendFigureAnimation,
+  chainFigureAnimation,
+  createFigure,
+  getFigureAnimationId,
+  getFigureBounds,
+  playFigureAnimation,
+  updateFigure,
+} from './types/figure/figure.ts'
+export { createVehicle, updateVehicle, updateVehicleDriver } from './types/vehicle/vehicle.ts'
 export { COSINE_TABLE_ADDRESS, getTableCosine } from './types/cosine-table/cosine-table.ts'
 export {
   applyDriverSteering,
@@ -68,6 +78,11 @@ export type {
   CarBodyDefinition,
   DrivenCarBody,
   DriverUpdate,
+  Figure,
+  FigureAnimation,
+  FigureBounds,
+  FigureChild,
+  Vehicle,
   ForceFeedbackEffect,
   PlayerController,
   PlayerControllerDependencies,

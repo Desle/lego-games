@@ -183,10 +183,100 @@ export type ForceFeedbackEffect = {
   readonly elapsed: number
 }
 
+// One animation record of a figure's animation set (figure +0xa8 -> +0x2c, 0x28 bytes each).
+export type FigureAnimation = {
+  // +0x00: float32 playback rate per millisecond.
+  readonly rate: number
+  // +0x04..+0x0c: float32 vector the animation puts the figure's offset at.
+  readonly vector: Vector3
+  // +0x10..+0x18 and +0x1c: float32 centre and radius of the bounding sphere in this animation.
+  readonly boundsCentre: Vector3
+  readonly boundsRadius: number
+  // +0x24 and +0x26: uint16 frame count and the period times wrap at.
+  readonly frameCount: number
+  readonly period: number
+}
+
+// The model part a figure holds at +0x78 (its +0x28..+0x30 centre, +0x34 radius and +0x38 radius scale).
+export type FigureChild = {
+  readonly centre: Vector3
+  readonly radius: number
+  readonly radiusScale: number
+}
+
+// A figure (class 0x004af5ec, constructor 0x0040d530, 0xf4 bytes): a frame with an animation player. The racer's
+// display frame (racer +0x5c, vehicle +0x44) and the driver (vehicle +0x48) are figures.
+export type Figure = {
+  // +0x5c: 0x10000 plays, 0x20000 blends towards the target, 0x40000 loops, 0x80000 ended, 0x100000 chains to
+  // the target animation, 0x400000 the target loops, 0x2000000 wrapped this update.
+  readonly flags: number
+  // +0xbc and +0xd8: uint16 ids of the current and the target animation.
+  readonly currentId: number
+  readonly targetId: number
+  // +0xb4, +0xb8: float32 time (frames) and rate of the current animation; +0xd0, +0xd4 of the target.
+  readonly currentTime: number
+  readonly currentRate: number
+  readonly targetTime: number
+  readonly targetRate: number
+  // +0xec and +0xf0: float32 blend position in [0, 1] and its rate per millisecond.
+  readonly blend: number
+  readonly blendRate: number
+  // +0xcc and +0xe8: whether the current and the target animation advance while blending.
+  readonly isCurrentAdvancing: boolean
+  readonly isTargetAdvancing: boolean
+  // +0xc0..+0xc8, +0xdc..+0xe4 and +0x1c..+0x24: float32 vectors of the current animation, the target and the blend.
+  readonly currentVector: Vector3
+  readonly targetVector: Vector3
+  readonly outputVector: Vector3
+  // +0x58: float32 scale.
+  readonly scale: number
+  readonly animations: readonly FigureAnimation[]
+  readonly child: FigureChild | null
+}
+
+// 0x0040dd60's blend step: the figure after it and the milliseconds left for the plain advance.
+export type FigureBlend = {
+  readonly figure: Figure
+  readonly remainingMilliseconds: number
+}
+
+// A figure's bounding sphere in its own space (0x0040e0b0).
+export type FigureBounds = {
+  readonly centre: Vector3
+  readonly radius: number
+}
+
+// The vehicle (racer +0x18, constructor 0x0043d5a0, update 0x0043e070) as far as the ported code goes: the animated
+// driver and the state that decides which animation plays next. Its particle emitters and sounds are presentation.
+export type Vehicle = {
+  // +0x48: the driver figure (vehicle animations 0..0x11).
+  readonly driverFigure: Figure
+  // +0x40: the optional second chassis figure (racer +0x58), whose rate follows the wheels.
+  readonly secondFigure: Figure | null
+  // +0x384: reactions asked for since the last update (1 start boost, 2 hit); cleared by 0x0043ec10.
+  readonly reactionFlags: number
+  // +0x388: uint32 milliseconds until the driver may look at another racer again.
+  readonly lookMilliseconds: number
+  // +0x38c: float32 forward speed of the previous update.
+  readonly previousForwardSpeed: number
+  // +0x380: index of the racer the driver looks at, or -1.
+  readonly watchedRacerIndex: number
+  // +0x270, +0x274, +0x278: the effect emitters (smoke and dust) that exist, as the milliseconds they have lived
+  // (null when absent). Only the presentation layer creates them, so they stay null here; 0x0043e070 draws from the
+  // random table for the first two while they live.
+  readonly smokeEmitterAge: number | null
+  readonly dustEmitterAge: number | null
+  readonly boostEmitterAge: number | null
+}
+
 // The racer (0xe34 bytes; constructor 0x00436990, field reset 0x00436bd0). Only the fields the ported passes touch.
 export type Racer = {
   readonly carBody: CarBody
   readonly driver: RacerDriver
+  // +0x5c: the display figure (the car body's display frame, vehicle +0x44).
+  readonly figure: Figure
+  // +0x18: the vehicle.
+  readonly vehicle: Vehicle
   // +0x3b4 (vehicle +0x39c): float32 written by pass 3 (0x00437b50) while power sliding.
   readonly vehicleSlideAngle: number
   // +0xcc4: index of the current checkpoint in RacerSetContext.checkpoints, or -1 (a null pointer).
@@ -284,6 +374,8 @@ export type RacerSetContext = {
   readonly checkpoints: readonly Checkpoint[]
   // Every car rigid body's collision list (+0x140): the track's BVB instance, then the moving objects.
   readonly collisionObjects: readonly CollisionObject[]
+  // 0x004bef70, written by Race_LoadTrackContent from race +0x3348: the number of laps of the race.
+  readonly raceLapCount: number
 }
 
 // A call into code this module does not port. It receives and returns the whole set so it can move the random cursor.

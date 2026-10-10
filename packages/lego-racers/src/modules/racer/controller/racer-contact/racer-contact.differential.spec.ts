@@ -359,6 +359,7 @@ const expectMatchesOriginal = async (precision: EmulatorPrecision): Promise<void
     tables,
     checkpoints: [],
     collisionObjects: [],
+    raceLapCount: 3,
   }
   const session = openEmulatorSession()
 

@@ -1,8 +1,17 @@
 import { createRubberBand, getRacerProgress } from '../../../racer-ai/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
 import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
+import { createFigure } from '../figure/figure.ts'
+import { createVehicle } from '../vehicle/vehicle.ts'
 import { createRacerDriver } from '../racer-driver/racer-driver.ts'
-import type { CarBody, DrivenCarBody, Racer, RacerSet, RacerSetContext } from '../racer.types.ts'
+import type {
+  CarBody,
+  DrivenCarBody,
+  Figure,
+  Racer,
+  RacerSet,
+  RacerSetContext,
+} from '../racer.types.ts'
 
 const COMPUTER_CONTROLLER = 2
 const NO_POWER_UP_CHANCE = 0xff
@@ -10,10 +19,12 @@ const LAP_SLOTS = 5
 const NO_CHECKPOINT = -1
 
 // Racer_Constructor 0x00436990 with its field reset 0x00436bd0; the car body comes from 0x00429020 and its attach.
-export const createRacer = (carBody: CarBody): Racer =>
+export const createRacer = (carBody: CarBody, figure: Figure = createFigure([], null)): Racer =>
   Object.freeze({
     carBody,
     driver: createRacerDriver(),
+    figure,
+    vehicle: createVehicle(),
     vehicleSlideAngle: 0,
     checkpointIndex: NO_CHECKPOINT,
     checkpointSide: 1,

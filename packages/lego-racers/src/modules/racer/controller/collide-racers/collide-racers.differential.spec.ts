@@ -18,6 +18,7 @@ import { readOriginalExecutable } from '../../../../shared/testing/original-file
 import { createFloatArithmetic } from '../../../simulation-math/index.ts'
 import type { Matrix3 } from '../../../simulation-math/index.ts'
 import { readRacerTables } from '../../services/read-racer-tables/read-racer-tables.ts'
+import { createFigure } from '../../types/figure/figure.ts'
 import { createTestCarBody } from '../../types/racer-fixtures/racer-fixtures.ts'
 import { createRacer, createRacerSet, getRacer } from '../../types/racer-state/racer-state.ts'
 import type { Racer, RacerSet } from '../../types/racer.types.ts'
@@ -40,7 +41,7 @@ const VTABLES = Object.freeze({
   racer: 0x004b09b0,
   carBody: 0x004b04e4,
   frame: 0x004af700,
-  displayFrame: 0x004af754,
+  displayFrame: 0x004af5ec,
   manager: 0x004b0aa8,
 })
 const FLOAT_OFFSETS: readonly number[] = [0x08, 0x0c, 0x10, 0x130, 0x134, 0x138]
@@ -55,6 +56,9 @@ type RacerCase = {
   readonly velocity: readonly number[]
   readonly sphereCentre: readonly number[]
   readonly radius: number
+  readonly figureFlags: number
+  readonly animationBounds: readonly (readonly number[])[]
+  readonly scale: number
   readonly inertia: readonly number[]
   readonly inverseMass: number
   readonly speed: number
@@ -111,6 +115,12 @@ const sampleRacer = (sampler: FloatSampler): RacerCase => ({
   velocity: sampleVector(sampler, 0.5),
   sphereCentre: sampleVector(sampler, 0.2),
   radius: Math.fround(1.5 + Math.abs(sampler.sampleUniform(1))),
+  figureFlags: sampleChoice(sampler, 0, 0x10000, 0x10000 | 0x20000),
+  animationBounds: Array.from({ length: 2 }, () => [
+    ...sampleVector(sampler, 0.3),
+    Math.fround(1.5 + Math.abs(sampler.sampleUniform(1))),
+  ]),
+  scale: sampleChoice(sampler, 1, 1, Math.fround(0.9)),
   inertia: Array.from({ length: 9 }, () =>
     Math.fround(Math.abs(sampler.sampleUniform(0.01)) + 0.002)
   ),
@@ -176,20 +186,27 @@ const getRacerWords = (spec: RacerCase, index: number): readonly EmulatorArgumen
 }
 
 const getDisplayWords = (spec: RacerCase, index: number): readonly EmulatorArgument[] =>
-  buildWords(48, [
+  buildWords(64, [
     [0, VTABLES.displayFrame],
     ...getFloatEntries(0x10 / 4, [-1]),
     ...getFloatEntries(10, spec.rotation),
     ...getFloatEntries(0x4c / 4, spec.position),
-    ...getFloatEntries(0x58 / 4, [1]),
+    ...getFloatEntries(0x58 / 4, [spec.scale]),
+    [0x5c / 4, spec.figureFlags],
     [0x78 / 4, { buffer: `${getRacerName(index)}Child` }],
+    [0xa8 / 4, { buffer: `${getRacerName(index)}Set` }],
+    [0xbc / 4, 0],
+    [0xd8 / 4, 1],
   ])
 
 const getChildWords = (spec: RacerCase): readonly EmulatorArgument[] =>
   buildWords(16, [
     ...getFloatEntries(0x28 / 4, spec.sphereCentre),
-    ...getFloatEntries(0x34 / 4, [spec.radius]),
+    ...getFloatEntries(0x34 / 4, [spec.radius, Math.fround(0.75)]),
   ])
+
+const getRecordWords = (spec: RacerCase): readonly EmulatorArgument[] =>
+  spec.animationBounds.flatMap((bounds) => buildWords(10, getFloatEntries(4, bounds)))
 
 const getNodeAddress = (index: number): EmulatorArgument => ({
   buffer: 'nodes',
@@ -245,6 +262,12 @@ const getEmulatorCall = (precision: EmulatorPrecision, item: ManagerCase): Emula
       { name: getRacerName(index), words: getRacerWords(spec, index), isRead: true },
       { name: `${getRacerName(index)}Display`, words: getDisplayWords(spec, index), isRead: true },
       { name: `${getRacerName(index)}Child`, words: getChildWords(spec), isRead: false },
+      {
+        name: `${getRacerName(index)}Set`,
+        words: buildWords(16, [[0x2c / 4, { buffer: `${getRacerName(index)}Records` }]]),
+        isRead: false,
+      },
+      { name: `${getRacerName(index)}Records`, words: getRecordWords(spec), isRead: false },
     ]),
     { name: 'sound', words: [0, 0, 0, 0], isRead: false },
     { name: 'nodes', words: getNodeWords(item), isRead: true },
@@ -289,12 +312,27 @@ const getRacerFromCase = (spec: RacerCase): Racer => {
   const [width, length, height] = spec.dimensions as [number, number, number]
   const [vx, vy, vz] = spec.velocity as [number, number, number]
   const [cx, cy, cz] = spec.sphereCentre as [number, number, number]
+  const figure = {
+    ...createFigure(
+      spec.animationBounds.map(([ax, ay, az, radius]) => ({
+        rate: 0,
+        vector: { x: 0, y: 0, z: 0 },
+        boundsCentre: { x: ax ?? 0, y: ay ?? 0, z: az ?? 0 },
+        boundsRadius: radius ?? 0,
+        frameCount: 10,
+        period: 10,
+      })),
+      { centre: { x: cx, y: cy, z: cz }, radius: spec.radius, radiusScale: Math.fround(0.75) }
+    ),
+    flags: spec.figureFlags,
+    currentId: 0,
+    targetId: 1,
+    scale: spec.scale,
+  }
   const rigidBody = Object.freeze({
     ...body.rigidBody,
     frame,
     displayFrame: frame,
-    displayBoundingRadius: spec.radius,
-    displayBoundingCentre: { x: cx, y: cy, z: cz },
     dimensions: { x: width, y: length, z: height },
     linearVelocity: { x: vx, y: vy, z: vz },
     worldCentreOfMass: frame.position,
@@ -306,7 +344,7 @@ const getRacerFromCase = (spec: RacerCase): Racer => {
     groundedWheelCount: 4,
   })
   return Object.freeze({
-    ...createRacer(Object.freeze({ ...body, rigidBody, fadeFactor: spec.fade })),
+    ...createRacer(Object.freeze({ ...body, rigidBody, fadeFactor: spec.fade }), figure),
     flags: spec.flags | (spec.timer === null ? 0 : 0x100),
     controllerKind: spec.controller,
     attackKind: 1,
@@ -373,6 +411,7 @@ const expectMatchesOriginal = async (precision: EmulatorPrecision): Promise<void
     tables: readRacerTables(readOriginalExecutable()),
     checkpoints: [],
     collisionObjects: [],
+    raceLapCount: 3,
   }
   const session = openEmulatorSession()
 
