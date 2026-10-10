@@ -18,3 +18,5 @@ reverse-engineering/*.c
 
 # Agent worktrees
 .claude/worktrees/
+reverse-engineering/ghidra-server/
+reverse-engineering/ghidra-server-logs/
