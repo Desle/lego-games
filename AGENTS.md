@@ -38,4 +38,5 @@ Each package has its own `AGENTS.md` with its layout, commands and definition of
 
 - `.docs/CONTEXT.md` explains the project; read it first.
 - **Reverse engineering.** The ports are recovered from the original binaries, not imitated. Findings (addresses, structures, file layouts) live in `.docs/reverse-engineering/`. Ghidra headless scripts live in `reverse-engineering/scripts/`; the Ghidra project itself is in `reverse-engineering/ghidra/` and is gitignored.
+- **Fast lookups.** `reverse-engineering/ghidra-server.sh start` keeps one Ghidra process open per binary (about 1 minute to start). Then `reverse-engineering/ghidra-query.sh <exe|dll> <command>` answers in under a second: `decompile <address…>`, `disassemble <start> <end>` (use this for float code), `xrefs <address>`, `bytes <address> <count>`, `strings <text>`, `function <address>`. Use the headless scripts only to change the project (create functions, apply names), then restart the servers so they pick it up.
 - **Original game files** are copyrighted. They live in `original-files/` (gitignored) and are never committed, nor is raw decompiler output.
