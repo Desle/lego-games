@@ -13,6 +13,8 @@ export type FloatArithmetic = {
   readonly getSquareRoot: (value: number) => number
   readonly getSine: (angle: number) => number
   readonly getCosine: (angle: number) => number
+  // FPTAN (0x0044542c): like FSIN, not affected by precision control.
+  readonly getTangent: (angle: number) => number
   readonly storeFloat: (value: number) => number
   readonly getIsEqual: (left: number, right: number) => boolean
   readonly getIsBelow: (left: number, right: number) => boolean
@@ -60,6 +62,18 @@ export type SineCosine = {
 export type HalfRoot = {
   readonly half: number
   readonly factor: number
+}
+
+// A Gol frame's transform: rotation at frame +0x28..+0x48 (row-major), position at +0x4c..+0x54.
+export type Frame = {
+  readonly rotation: Matrix3
+  readonly position: Vector3
+}
+
+// A normalized leading axis and a second axis made orthogonal to it and normalized.
+export type OrthonormalPair = {
+  readonly lead: Vector3
+  readonly orthogonal: Vector3
 }
 
 // Rows 0 and 2 of a frame's rotation, as frame slot +0x48 (0x00403c90) returns them.

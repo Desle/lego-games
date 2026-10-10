@@ -36,11 +36,11 @@ const getIsResting = (arithmetic: FloatArithmetic, speed: number): boolean =>
   arithmetic.getIsBelow(speed, RESTING_SPEED) && arithmetic.getIsBelow(-RESTING_SPEED, speed)
 
 // RigidBody_Integrate 0x00440e10 (thiscall: integer milliseconds). Semi-implicit step of one body, no contacts.
-export const integrateRigidBody = (
+export const integrateRigidBody = <Body extends RigidBody>(
   arithmetic: FloatArithmetic,
-  body: RigidBody,
+  body: Body,
   stepMilliseconds: number
-): RigidBody => {
+): Body => {
   const { add, multiply, storeFloat, getIsEqual, getIsBelow } = arithmetic
   const angularVelocity = getAngularVelocity(arithmetic, body)
   const step = storeFloat(stepMilliseconds)
