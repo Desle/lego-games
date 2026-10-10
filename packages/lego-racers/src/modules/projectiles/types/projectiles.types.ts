@@ -35,4 +35,6 @@ export type FlightRacer = {
   readonly boundingRadius: number
   // Racer +0x2c (the radius of the object at +0x1c): how far from the racer the wand's beam bends to it.
   readonly beamRadius: number
+  // Racer +0xcc4: the route node the racer is at (an index into the route), or null.
+  readonly routeNodeIndex: number | null
 }

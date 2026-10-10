@@ -3,6 +3,7 @@ import type { Vector3 } from '../../../simulation-math/index.ts'
 import type { ProjectileEvent } from '../../events/projectile.events.types.ts'
 import type { BallisticFlight } from '../ballistic-flight/ballistic-flight.types.ts'
 import type { GrappleHook } from '../grapple-hook/grapple-hook.types.ts'
+import type { RouteNode } from '../route-movement/route-movement.types.ts'
 import type { WandBeam } from '../wand-beam/wand-beam.types.ts'
 import type { FlightRacer, LineProbe } from '../projectiles.types.ts'
 
@@ -52,6 +53,8 @@ export type ProjectileContext = {
   readonly powerUps: PowerUpContext
   // Indexed like powerUps.racers.
   readonly racers: readonly FlightRacer[]
+  // The race's route (racer set +0x10), the nodes a warping racer follows.
+  readonly route: readonly RouteNode[]
   readonly probe: LineProbe
 }
 

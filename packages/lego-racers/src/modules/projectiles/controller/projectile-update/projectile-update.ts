@@ -20,6 +20,7 @@ import type {
   ProjectileStep,
   ProjectileWorld,
 } from '../../types/projectile-world/projectile-world.types.ts'
+import { updateWarp } from '../warp-effect/warp-effect.ts'
 import { updateWand } from '../wand-effect/wand-effect.ts'
 import { updateGrapple } from '../grapple-effect/grapple-effect.ts'
 import { getIsSpeedNearZero } from '../../types/turbo-early-end/turbo-early-end.ts'
@@ -226,7 +227,9 @@ export const updateProjectileEffect = (
       ? updateCannon(step, world, context, before, stepMilliseconds)
       : before.kind === PowerUpEffectKind.BARREL
         ? updateBarrel(step, world, context, before, stepMilliseconds)
-        : before.kind === PowerUpEffectKind.WAND
+        : before.kind === PowerUpEffectKind.WARP
+          ? updateWarp(step, world, context, before, stepMilliseconds)
+          : before.kind === PowerUpEffectKind.WAND
           ? updateWand(step, world, context, before, stepMilliseconds)
           : before.kind === PowerUpEffectKind.GRAPPLE
           ? updateGrapple(step, world, context, before, stepMilliseconds)

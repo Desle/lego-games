@@ -29,5 +29,14 @@ export type ProjectileEvent =
     }
   // Car body slots +0x44 and +0x4c (0x004298d0, 0x00429920): the tow ends (flags +0x6c0 &= ~0x20 and ~0x40).
   | { readonly type: 'projectiles.racer_tow_ended'; readonly racer: number }
-  // 0x0045dc90 state 2 and 3 and 0x0045d560: the warp moves the racer's frame to this position.
+  // 0x0045d780 state 3: the warp moves the racer's frame (racer +0x5c, slot 8) to this position.
   | { readonly type: 'projectiles.racer_moved'; readonly racer: number; readonly position: Vector3 }
+  // 0x0045dc90 state 3 with 0x0045e080: the warp ends; the racer's frame goes to this position facing forward, its
+  // velocity is cleared and car body slot +0x20 (0x00429770) is given the speed (hypothesis: sets it moving).
+  | {
+      readonly type: 'projectiles.racer_landed'
+      readonly racer: number
+      readonly position: Vector3
+      readonly forward: Vector3
+      readonly speed: number
+    }

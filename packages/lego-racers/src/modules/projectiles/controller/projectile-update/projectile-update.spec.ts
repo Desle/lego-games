@@ -61,6 +61,7 @@ const getFlightRacer = (x: number, overrides: Partial<FlightRacer> = {}): Flight
   boundingCenter: { x, y: 0, z: 0 },
   boundingRadius: 2,
   beamRadius: 2,
+  routeNodeIndex: null,
   ...overrides,
 })
 
@@ -83,6 +84,7 @@ const getContexts = (
     projectiles: {
       powerUps,
       racers: [getFlightRacer(0), getFlightRacer(360, flightOverrides)],
+      route: [],
       probe,
     },
   }
