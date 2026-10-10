@@ -86,6 +86,7 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 - `errors/gol-file-errors.ts`: `DuplicateNameError` and `UnportableFileError`.
 - `binary-values`: the 16-bit and 8-bit truncations and the float32 scalings the loaders apply.
 - `token-encoding`: builds binary token streams for tests.
+
 ### `simulation-math`
 
 - Layers: `types`
