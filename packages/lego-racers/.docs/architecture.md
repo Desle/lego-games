@@ -207,6 +207,7 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 - Layers: `controller`, `events`, `types`
 - Public API (`index.ts`): `createPowerUpWorld`, `updatePowerUps`, `touchPowerUpBricks`, `touchEnhancementBricks`, `setBrickSoundsEnabled`, `usePowerUp`, `activatePowerUp`, `advanceComputerPowerUpUse`, `rollComputerStartTurbo`, `keepPermanentTurbo`, `hitRacerWithProjectile`, `touchHazardEffect`, `endProjectileFlight`, `advancePowerUpEffect`, `updatePowerUpEffects`, `createPowerUpEffects`, `getRacerWithVoiceCooldownAdvanced`, `getRaceModeBrickKind`, `getPowerUpEffectKind`, `BrickKind`, `BrickState`, `EffectState`, `PowerUpEffectKind`, `RaceModeFlag`, `POWER_UP_EFFECT_POOL_SIZES`, `ATTACHMENT_SLOT_COUNT`, the errors, the `PowerUpEvent` union and the world, racer and effect types
 - The power-up behaviour (bricks, enhancements, effects); `power-up` is its file format. Pure state transitions that return events for the racer, sound and explosion code. Depends on `simulation-math`, `random-table`, `racer-ai` and `power-up`.
+
 ### `racer`
 
 - Layers: `controller`, `services`, `types`

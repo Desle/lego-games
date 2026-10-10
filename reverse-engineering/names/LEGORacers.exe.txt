@@ -181,7 +181,7 @@
 00436bd0 Racer_ResetFields
 0043a0a0 Racer_GetProgress
 0043a210 Racer_SetRacePosition
-00439240 Racer_StartVoice
+00439240 Racer_PlayVoice
 004397c0 Racer_StartPowerSlide
 00439870 Racer_StopPowerSlide
 00437b50 Racer_TurnWhilePowerSliding
@@ -190,8 +190,8 @@
 00437be0 Racer_UpdateLoopedSounds
 004377f0 Racer_UpdateTimers
 0043c1b0 RacerSet_RankRacers
-0043a450 CatchUp_Attach
-0043a480 CatchUp_Update
+0043a450 RubberBand_Initialize
+0043a480 RubberBand_Step
 0043d180 RacerCollisions_Update
 0041fb80 RacerDriver_Reset
 0041fd60 RacerDriver_UpdateWithoutRoute
