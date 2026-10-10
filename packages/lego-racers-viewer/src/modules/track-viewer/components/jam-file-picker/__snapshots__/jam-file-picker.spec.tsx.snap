@@ -1,0 +1,65 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`JamFilePicker > renders default snapshot 1`] = `
+<div>
+  <div
+    class="flex flex-col gap-2"
+  >
+    <label
+      class="flex cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-slate-500 p-4 text-center text-sm hover:border-amber-400"
+    >
+      <span
+        class="font-semibold"
+      >
+        Open LEGO.JAM
+      </span>
+      <span
+        class="text-slate-400"
+      >
+        Pick or drop the file; it never leaves your browser.
+      </span>
+      <input
+        accept=".jam,.JAM"
+        class="sr-only"
+        type="file"
+      />
+    </label>
+  </div>
+</div>
+`;
+
+exports[`JamFilePicker > renders the development button and the busy state 1`] = `
+<div>
+  <div
+    class="flex flex-col gap-2"
+  >
+    <label
+      class="flex cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-slate-500 p-4 text-center text-sm hover:border-amber-400"
+    >
+      <span
+        class="font-semibold"
+      >
+        Open LEGO.JAM
+      </span>
+      <span
+        class="text-slate-400"
+      >
+        Pick or drop the file; it never leaves your browser.
+      </span>
+      <input
+        accept=".jam,.JAM"
+        class="sr-only"
+        disabled=""
+        type="file"
+      />
+    </label>
+    <button
+      class="rounded bg-slate-700 px-3 py-1 text-xs hover:bg-slate-600 disabled:opacity-50"
+      disabled=""
+      type="button"
+    >
+      Load the development LEGO.JAM
+    </button>
+  </div>
+</div>
+`;

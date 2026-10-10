@@ -15,7 +15,8 @@
     "format": "pnpm -r run format && prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .git-hooks || true",
-    "duplicates": "jscpd packages"
+    "duplicates": "jscpd packages",
+    "dev:viewer": "pnpm --filter @lego-games/lego-racers-viewer run dev"
   },
   "prettier": "@lego-games/tooling/prettier",
   "devDependencies": {

@@ -237,3 +237,8 @@
 00439c90 Racer_Taunt
 0043ca60 RacerSet_FindNearestInCone
 004a84b0 MSVCRT_ftol
+0044d190 Jam_BuildArchivePath
+0044c810 Jam_FindDirectory
+0044cb30 File_Open
+004328f0 Race_LoadVoicesAndSounds
+00432e20 Race_LoadWorlds

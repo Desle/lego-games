@@ -1,0 +1,10 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SceneViewport > renders default snapshot 1`] = `
+<div>
+  <div
+    class="h-full w-full"
+    data-testid="scene-viewport"
+  />
+</div>
+`;
