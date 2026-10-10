@@ -22,3 +22,9 @@ export type GrappleAdvance = {
   readonly hook: GrappleHook
   readonly result: BallisticFlightState
 }
+
+// 0x00449a90: the moved point and whether it is there.
+export type PointMove = {
+  readonly position: Vector3
+  readonly isArrived: boolean
+}

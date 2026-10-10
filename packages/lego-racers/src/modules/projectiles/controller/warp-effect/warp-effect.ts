@@ -1,7 +1,7 @@
 import { EffectState, getEffect, updatePowerUpEffect } from '../../../power-ups/index.ts'
 import type { PowerUpEffect, PowerUpStep } from '../../../power-ups/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
-import type { ProjectileEvent } from '../../events/projectile.events.types.ts'
+import type { ProjectileEvent } from '../../types/projectile-event/projectile-event.types.ts'
 import { getWorldWithEvents } from '../../types/projectile-world/projectile-world.ts'
 import type {
   ProjectileContext,

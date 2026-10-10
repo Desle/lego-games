@@ -24,7 +24,7 @@ export type FlightRacer = {
   // Racer +0x550..+0x558.
   readonly sideAxis: Vector3
   // Racer +0xb2c is non-null (hypothesis: the vehicle object exists; the magnet only tows racers without one).
-  readonly hasVehicle: boolean
+  readonly isVehiclePresent: boolean
   // Car body +0x604, the speed 0x0042a7f0 tests.
   readonly speed: number
   // Racer +0xe08 (position at +0x00..+0x08, direction at +0x18..+0x20): where the wand's beam leaves the racer.

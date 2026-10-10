@@ -1,4 +1,4 @@
-import type { Vector3 } from '../../simulation-math/index.ts'
+import type { Vector3 } from '../../../simulation-math/index.ts'
 
 // What the moving effects ask of the racers, the explosions and the sound code; each names the original call.
 export type ProjectileEvent =
@@ -39,4 +39,11 @@ export type ProjectileEvent =
       readonly position: Vector3
       readonly forward: Vector3
       readonly speed: number
+    }
+  // 0x00421c00: an explosion throws the racer: car body slot +0x38 (0x004397a0) stops it, its velocity (racer
+  // +0x3f0..+0x3f8) is cleared, and car body slot +0x1c (0x00429a70) gets this impulse.
+  | {
+      readonly type: 'projectiles.racer_blasted'
+      readonly racer: number
+      readonly impulse: Vector3
     }

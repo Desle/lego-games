@@ -12,11 +12,7 @@ import {
   getStepWithVoice,
 } from '../power-up-step/power-up-step.ts'
 import type { PowerUpContext, PowerUpStep } from '../power-up-step/power-up-step.types.ts'
-import type {
-  OwnerEvent,
-  OwnerEventType,
-  WandBeamStep,
-} from './power-up-effect-timeline.types.ts'
+import type { OwnerEvent, OwnerEventType, WandBeamStep } from './power-up-effect-timeline.types.ts'
 
 const keepStep: WandBeamStep = (step) => step
 

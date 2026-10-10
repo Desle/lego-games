@@ -36,6 +36,7 @@ import type {
   ProjectileWorld,
   RocketMotion,
 } from '../../types/projectile-world/projectile-world.types.ts'
+import type { LaunchedRocket } from './rocket-effect.types.ts'
 import { resolveExplodingProjectile } from '../ballistic-effects/ballistic-effects.ts'
 
 // 0x004b1684, 0x004b1688, 0x004b168c: the rocket looks for racers 10 to 400 units away, within 45 degrees.
@@ -142,7 +143,7 @@ const getLaunchedRocket = (
   effect: PowerUpEffect,
   owner: number,
   framePosition: Vector3
-): { readonly homing: HomingFlight; readonly targetRacer: number | null } => {
+): LaunchedRocket => {
   const { arithmetic } = context.powerUps
   const ownerRacer = context.racers[owner]
   if (ownerRacer === undefined) throw new RangeError(`No racer at index ${String(owner)}`)

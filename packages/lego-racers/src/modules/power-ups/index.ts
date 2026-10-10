@@ -19,6 +19,8 @@ export {
 } from './controller/power-up-effect-timeline/power-up-effect-timeline.ts'
 export {
   createPowerUpEffects,
+  getStepWithAttachmentSlot,
+  getStepWithAttachmentSlotFreed,
   getStepWithRacerEffectsFinished,
   NoPowerUpEffectToTakeError,
 } from './controller/power-up-effects/power-up-effects.ts'

@@ -1,5 +1,6 @@
 import type { EnumValues } from '../../../../shared/types/enum.types.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
+import type { FlightRacer } from '../projectiles.types.ts'
 import type { BallisticFlightState as BallisticFlightStateValues } from './ballistic-flight.ts'
 
 export type BallisticFlightState = EnumValues<typeof BallisticFlightStateValues>
@@ -59,4 +60,29 @@ export type BallisticFlight = {
 export type BallisticFlightAdvance = {
   readonly flight: BallisticFlight
   readonly result: BallisticFlightState
+}
+
+// 0x00430d80's arguments after the parameters.
+export type RacerLaunchRequest = {
+  readonly shooter: number
+  readonly shooterRacer: FlightRacer
+  readonly target: number
+  readonly targetRacer: FlightRacer
+  readonly isFromShooter: boolean
+  readonly isLeadLimited: boolean
+}
+
+// 0x00431050's arguments after the parameters.
+export type PointLaunchRequest = {
+  readonly shooter: number
+  readonly shooterRacer: FlightRacer
+  readonly point: Vector3
+  readonly pointVelocity: Vector3
+  readonly isFromShooter: boolean
+}
+
+// How far the target is and how far the shooter's heading points along the line to it.
+export type LineToPoint = {
+  readonly distance: number
+  readonly alignment: number
 }

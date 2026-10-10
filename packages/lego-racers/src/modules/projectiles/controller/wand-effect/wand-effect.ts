@@ -18,6 +18,7 @@ import type {
   ProjectileStep,
   ProjectileWorld,
 } from '../../types/projectile-world/projectile-world.types.ts'
+import type { BeamedStep, DrawnBeam } from './wand-effect.types.ts'
 import { getRaySphereHit, getWandBeam } from '../../types/wand-beam/wand-beam.ts'
 import type { WandBeam } from '../../types/wand-beam/wand-beam.types.ts'
 
@@ -74,7 +75,7 @@ const getStepWithBeam = (
   step: PowerUpStep,
   context: ProjectileContext,
   effectId: number
-): { readonly step: PowerUpStep; readonly beam: WandBeam | null } => {
+): BeamedStep => {
   const effect = getEffect(step, effectId)
   const owner = effect.ownerRacer === null ? undefined : context.racers[effect.ownerRacer]
   if (owner === undefined) return { step, beam: null }
@@ -106,7 +107,7 @@ export const updateWand = (
   before: PowerUpEffect,
   stepMilliseconds: number
 ): ProjectileStep => {
-  const drawn: { beam: WandBeam | null } = { beam: null }
+  const drawn: DrawnBeam = { beam: null }
   const updated = updatePowerUpEffect(
     step,
     context.powerUps,

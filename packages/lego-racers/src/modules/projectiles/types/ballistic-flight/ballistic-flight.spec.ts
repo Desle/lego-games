@@ -31,7 +31,7 @@ const getRacer = (position: Vector3, velocity: Vector3 = ZERO): FlightRacer => (
   heading: ZERO,
   headingSpeed: 0,
   sideAxis: ZERO,
-  hasVehicle: true,
+  isVehiclePresent: true,
   speed: 0,
   muzzlePosition: ZERO,
   muzzleDirection: ZERO,

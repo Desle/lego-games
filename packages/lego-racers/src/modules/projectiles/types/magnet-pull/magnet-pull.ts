@@ -5,7 +5,7 @@ import {
   getStoredDifference,
 } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
-import type { ProjectileEvent } from '../../events/projectile.events.types.ts'
+import type { ProjectileEvent } from '../projectile-event/projectile-event.types.ts'
 import type { FlightRacer } from '../projectiles.types.ts'
 import type { MagnetMotion } from '../projectile-world/projectile-world.types.ts'
 import type { MagnetPull, MagnetPullRacer } from './magnet-pull.types.ts'
@@ -169,7 +169,7 @@ export const getMagnetPull = (
   }
   const isRacerStopped = magnet.isRacerStopped || isSlow
   let isRacerArrived = magnet.isRacerArrived
-  if (!captured.flight.hasVehicle && isRacerStopped && !isRacerArrived) {
+  if (!captured.flight.isVehiclePresent && isRacerStopped && !isRacerArrived) {
     events.push(getPullEvent(arithmetic, magnet, capturedRacer, captured.flight, stepMilliseconds))
     const target = getGroundTarget(arithmetic, magnet)
     if (

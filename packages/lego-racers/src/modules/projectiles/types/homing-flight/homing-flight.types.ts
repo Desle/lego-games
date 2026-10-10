@@ -1,3 +1,5 @@
+import type { ConeQueryWindow } from '../../../power-ups/index.ts'
+import type { RouteNode } from '../route-movement/route-movement.types.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
 import type {
   BallisticFlight,
@@ -43,4 +45,26 @@ export type HomingTarget = {
   readonly isStruckByLightning: boolean
   // Racer +0xd04 & 0x11: shielded or warping.
   readonly isShieldedOrWarping: boolean
+}
+
+// What 0x00423640 looks at: the racers, the route and the cone's window.
+export type HomingEnvironment = {
+  readonly targets: readonly HomingTarget[]
+  readonly route: readonly RouteNode[]
+  readonly window: ConeQueryWindow
+}
+
+// The guidance of one step (0x00423a20 up to the wobble): the new heading, velocity and position.
+export type HomingGuidance = {
+  readonly heading: Vector3
+  readonly velocity: Vector3
+  readonly isGroundPointKnown: boolean
+  readonly position: Vector3
+  readonly isArrived: boolean
+}
+
+// 0x00423ed0: the wobble state and the position it pushed.
+export type WobbledPosition = {
+  readonly homing: HomingFlight
+  readonly position: Vector3
 }

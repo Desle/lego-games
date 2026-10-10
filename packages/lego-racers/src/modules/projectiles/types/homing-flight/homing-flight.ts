@@ -1,5 +1,4 @@
 import { getNextInCone } from '../../../power-ups/index.ts'
-import type { ConeQueryWindow } from '../../../power-ups/index.ts'
 import {
   getDotProduct,
   getNormalizedVector3,
@@ -13,7 +12,13 @@ import { BallisticFlightState, TARGET_HEIGHT } from '../ballistic-flight/ballist
 import type { BallisticFlight } from '../ballistic-flight/ballistic-flight.types.ts'
 import type { RouteNode } from '../route-movement/route-movement.types.ts'
 import type { LineProbe } from '../projectiles.types.ts'
-import type { HomingAdvance, HomingFlight, HomingTarget } from './homing-flight.types.ts'
+import type {
+  HomingAdvance,
+  HomingEnvironment,
+  HomingFlight,
+  HomingGuidance,
+  WobbledPosition,
+} from './homing-flight.types.ts'
 
 // 0x004af220.
 const SECONDS_PER_MILLISECOND = Math.fround(0.001)
@@ -85,11 +90,7 @@ export const retargetHomingFlight = (
   probe: LineProbe,
   homing: HomingFlight,
   stepMilliseconds: number,
-  environment: {
-    readonly targets: readonly HomingTarget[]
-    readonly route: readonly RouteNode[]
-    readonly window: ConeQueryWindow
-  }
+  environment: HomingEnvironment
 ): HomingFlight => {
   const { add, subtract, getIsBelow, getIsBelowOrEqual } = arithmetic
   const { targets, route, window } = environment
@@ -205,7 +206,7 @@ const getWobbledPosition = (
   seconds: number,
   heading: Vector3,
   position: Vector3
-): { readonly homing: HomingFlight; readonly position: Vector3 } => {
+): WobbledPosition => {
   const { add, subtract, multiply, storeFloat, getIsBelowOrEqual } = arithmetic
   const grown = storeFloat(add(multiply(WOBBLE_GROWTH_PER_SECOND, seconds), homing.wobbleAmplitude))
   const amplitude = getIsBelowOrEqual(grown, homing.wobbleMaximumAmplitude)
@@ -248,7 +249,7 @@ const getArrived = (
   homing: HomingFlight,
   elapsedMilliseconds: number,
   aimed: Vector3,
-  guidance: { readonly heading: Vector3; readonly velocity: Vector3; readonly isGroundPointKnown: boolean }
+  guidance: HomingGuidance
 ): HomingAdvance =>
   Object.freeze({
     homing: Object.freeze({
@@ -268,15 +269,6 @@ const getArrived = (
     result: BallisticFlightState.ENDED,
   })
 
-// The guidance of one step (0x00423a20 up to the wobble): the new heading, velocity and position.
-type Guidance = {
-  readonly heading: Vector3
-  readonly velocity: Vector3
-  readonly isGroundPointKnown: boolean
-  readonly position: Vector3
-  readonly isArrived: boolean
-}
-
 // Within 60 units of the target racer the rocket flies straight at it at its launch speed.
 const getHomingGuidance = (
   arithmetic: FloatArithmetic,
@@ -285,7 +277,7 @@ const getHomingGuidance = (
   aimed: Vector3,
   toTarget: Vector3,
   distanceSquared: number
-): Guidance => {
+): HomingGuidance => {
   const { add, subtract, multiply, getSquareRoot, storeFloat, getIsBelow, getIsBelowOrEqual } =
     arithmetic
   const { flight } = homing
@@ -329,7 +321,7 @@ const getCruiseGuidance = (
   homing: HomingFlight,
   seconds: number,
   towardTarget: Vector3
-): Guidance => {
+): HomingGuidance => {
   const { add, subtract, multiply, storeFloat, getIsBelowOrEqual } = arithmetic
   const { flight } = homing
   let heading = towardTarget
@@ -404,18 +396,26 @@ export const advanceHomingFlight = (
   }
   const seconds = storeFloat(multiply(stepMilliseconds | 0, SECONDS_PER_MILLISECOND))
   const isTargeting = flight.targetRacer !== null && targetPosition !== null
-  const aimed =
-    isTargeting
-      ? Object.freeze({
-          x: targetPosition.x,
-          y: targetPosition.y,
-          z: storeFloat(add(TARGET_HEIGHT, targetPosition.z)),
-        })
-      : flight.targetPosition
-  const toTarget = isTargeting ? getStoredDifference(arithmetic, aimed, homing.position) : homing.heading
+  const aimed = isTargeting
+    ? Object.freeze({
+        x: targetPosition.x,
+        y: targetPosition.y,
+        z: storeFloat(add(TARGET_HEIGHT, targetPosition.z)),
+      })
+    : flight.targetPosition
+  const toTarget = isTargeting
+    ? getStoredDifference(arithmetic, aimed, homing.position)
+    : homing.heading
   const rawDistanceSquared = isTargeting ? getSquaredLength(arithmetic, toTarget) : FLOAT32_MAXIMUM
   const guidance = getIsBelow(rawDistanceSquared, HOMING_DISTANCE_SQUARED)
-    ? getHomingGuidance(arithmetic, homing, seconds, aimed, toTarget, storeFloat(rawDistanceSquared))
+    ? getHomingGuidance(
+        arithmetic,
+        homing,
+        seconds,
+        aimed,
+        toTarget,
+        storeFloat(rawDistanceSquared)
+      )
     : getCruiseGuidance(arithmetic, probe, homing, seconds, toTarget)
   if (guidance.isArrived) return getArrived(homing, elapsedMilliseconds, aimed, guidance)
   const wobbled = getWobbledPosition(

@@ -23,6 +23,7 @@ import type {
 } from '../../types/projectile-world/projectile-world.types.ts'
 import type { FlightRacer, LineProbe } from '../../types/projectiles.types.ts'
 import {
+  touchProjectileExplosions,
   touchProjectileFlights,
   touchProjectileHazards,
 } from '../projectile-touch/projectile-touch.ts'
@@ -54,7 +55,7 @@ const getFlightRacer = (x: number, overrides: Partial<FlightRacer> = {}): Flight
   heading: ZERO,
   headingSpeed: 0,
   sideAxis: ZERO,
-  hasVehicle: false,
+  isVehiclePresent: false,
   speed: 0,
   muzzlePosition: { x, y: 0, z: 0 },
   muzzleDirection: { x: 1, y: 0, z: 0 },
@@ -87,6 +88,7 @@ const getContexts = (
       racers: [getFlightRacer(0), getFlightRacer(360, flightOverrides)],
       route: [],
       rocketLaunchMilliseconds: [100, 100, 100],
+      debrisAnimations: [[200], [200], [200], [200]],
       probe,
     },
   }
@@ -437,11 +439,21 @@ describe('updatePowerUpsWithProjectiles: the grapple', () => {
     const contexts = getContexts(blocked)
     const used = getWorldAfterUse({ category: BrickKind.PROJECTILE, level: 1 }, contexts.powerUps)
     const effectId = getHeadId(used.step)
-    const flying = updatePowerUpsWithProjectiles(used.step, used.world, getContexts(MISS).projectiles, 16)
+    const flying = updatePowerUpsWithProjectiles(
+      used.step,
+      used.world,
+      getContexts(MISS).projectiles,
+      16
+    )
     const touched = touchProjectileFlights(flying.world, contexts.projectiles, [
       { effect: effectId, racer: 1 },
     ])
-    const hit = updatePowerUpsWithProjectiles(flying.step, touched, getContexts(MISS).projectiles, 16)
+    const hit = updatePowerUpsWithProjectiles(
+      flying.step,
+      touched,
+      getContexts(MISS).projectiles,
+      16
+    )
 
     // Act
     const later = updatePowerUpsWithProjectiles(hit.step, hit.world, contexts.projectiles, 1000)
@@ -478,7 +490,9 @@ describe('updatePowerUpsWithProjectiles: the wand', () => {
     const updated = updatePowerUpsWithProjectiles(active, used.world, contexts.projectiles, 16)
 
     // Assert
-    expect(updated.step.events.some((event) => event.type === 'power_ups.racer_struck_by_lightning')).toBe(true)
+    expect(
+      updated.step.events.some((event) => event.type === 'power_ups.racer_struck_by_lightning')
+    ).toBe(true)
     expect(getEffect(updated.step, effectId).targetRacer).toBe(1)
     const motion = getMotion(updated.world, effectId)
     expect(motion?.kind === 'wand' ? motion.beam.points.length : 0).toBe(4)
@@ -535,7 +549,9 @@ describe('updatePowerUpsWithProjectiles: the rockets', () => {
     // Assert
     const targets = ids.map((id) => {
       const motion = getMotion(updated.world, id)
-      return motion?.kind === 'rocket' && motion.homing !== null ? motion.homing.flight.targetRacer : -1
+      return motion?.kind === 'rocket' && motion.homing !== null
+        ? motion.homing.flight.targetRacer
+        : -1
     })
     expect(targets).toEqual([1, 1, 1])
     ids.forEach((id) => {
@@ -560,6 +576,71 @@ describe('updatePowerUpsWithProjectiles: the rockets', () => {
 
     // Assert
     expect(updated.step.events.some((event) => event.type === 'power_ups.explosion')).toBe(true)
-    expect(updated.step.events.some((event) => event.type === 'power_ups.racer_spun_out')).toBe(true)
+    expect(updated.step.events.some((event) => event.type === 'power_ups.racer_spun_out')).toBe(
+      true
+    )
+  })
+})
+
+describe('updatePowerUpsWithProjectiles: explosions and debris', () => {
+  const getHitCannon = () => {
+    const contexts = getContexts(MISS)
+    const used = getWorldAfterUse({ category: BrickKind.PROJECTILE, level: 0 }, contexts.powerUps)
+    const effectId = getHeadId(used.step)
+    const flying = updatePowerUpsWithProjectiles(used.step, used.world, contexts.projectiles, 16)
+    const touched = touchProjectileFlights(flying.world, contexts.projectiles, [
+      { effect: effectId, racer: 1 },
+    ])
+    return {
+      contexts,
+      effectId,
+      hit: updatePowerUpsWithProjectiles(flying.step, touched, contexts.projectiles, 16),
+    }
+  }
+
+  it('start an explosion at the racer a cannonball hit, owned by the shooter, and grow it in the same update', () => {
+    // Arrange / Act
+    const { hit } = getHitCannon()
+
+    // Assert: the update's 16 ms were spent growing.
+    const explosion = hit.world.explosions.explosions[hit.world.explosions.activeIndices[0] ?? 0]
+    expect(hit.world.explosions.activeIndices).toHaveLength(1)
+    expect(explosion).toMatchObject({
+      state: 'growing',
+      owner: 0,
+      position: { x: 360, y: 0, z: 0 },
+      remainingMilliseconds: 984,
+    })
+  })
+
+  it('throw debris from the hit racer onto attachment slots, and free them when the animation ends', () => {
+    // Arrange: every table value is 0, so one piece is thrown.
+    const { contexts, hit } = getHitCannon()
+
+    // Act
+    const later = updatePowerUpsWithProjectiles(hit.step, hit.world, contexts.projectiles, 300)
+
+    // Assert
+    expect(hit.world.debris.pieces.filter((piece) => piece.state === 'playing')).toHaveLength(1)
+    expect(hit.step.world.effects.attachmentSlots.usedCount).toBe(1)
+    expect(later.world.debris.pieces.every((piece) => piece.state === 'idle')).toBe(true)
+    expect(later.step.world.effects.attachmentSlots.usedCount).toBe(0)
+  })
+
+  it('blast a racer that touches the explosion (0x00421c00)', () => {
+    // Arrange
+    const { contexts, hit } = getHitCannon()
+    const index = hit.world.explosions.activeIndices[0] ?? 0
+
+    // Act
+    const touched = touchProjectileExplosions(hit.world, contexts.projectiles, [
+      { isSpiked: false, explosion: index, racer: 1 },
+      { isSpiked: false, explosion: index, racer: 0 },
+    ])
+
+    // Assert: racer 0 fired the cannonball, so only racer 1 is thrown (its axis is zero in this fixture).
+    expect(touched.events).toEqual([
+      { type: 'projectiles.racer_blasted', racer: 1, impulse: { x: 0, y: 0, z: 200 } },
+    ])
   })
 })

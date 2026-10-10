@@ -15,7 +15,7 @@ import {
   ZERO_VECTOR3,
 } from '../../../simulation-math/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
-import type { ProjectileEvent } from '../../events/projectile.events.types.ts'
+import type { ProjectileEvent } from '../../types/projectile-event/projectile-event.types.ts'
 import { BallisticFlightState } from '../../types/ballistic-flight/ballistic-flight.ts'
 import {
   advanceGrappleHook,

@@ -16,10 +16,15 @@ import {
   getWorldWithMotion,
 } from '../../types/projectile-world/projectile-world.ts'
 import type {
+  EffectUpdate,
   ProjectileContext,
   ProjectileStep,
   ProjectileWorld,
 } from '../../types/projectile-world/projectile-world.types.ts'
+import {
+  getStepWithConsequences,
+  getStepWithExplosionsAndDebris,
+} from '../projectile-consequences/projectile-consequences.ts'
 import { updateRocket } from '../rocket-effect/rocket-effect.ts'
 import { updateWarp } from '../warp-effect/warp-effect.ts'
 import { updateWand } from '../wand-effect/wand-effect.ts'
@@ -54,13 +59,7 @@ const getWithBallisticMotion = (
 // 0x00451b50 (cannon vtable slot 2): the countdown first, which calls the advance (0x00451f50) when the timer runs
 // out; the advance launches the ball when the cannon leaves state 2, and the ball flies on in the same call with the
 // time left after the countdown.
-const updateCannon = (
-  step: PowerUpStep,
-  world: ProjectileWorld,
-  context: ProjectileContext,
-  before: PowerUpEffect,
-  stepMilliseconds: number
-): ProjectileStep => {
+const updateCannon: EffectUpdate = (step, world, context, before, stepMilliseconds) => {
   const counted = updatePowerUpEffect(step, context.powerUps, before.id, stepMilliseconds)
   const after = getEffect(counted, before.id)
   const flightMilliseconds =
@@ -86,16 +85,12 @@ const updateCannon = (
 
 // 0x00452ff0 (barrel vtable slot 2): the flight first, then the countdown (0x004513a0), whose advance (0x00453240)
 // launches the barrel when it leaves state 2.
-const updateBarrel = (
-  step: PowerUpStep,
-  world: ProjectileWorld,
-  context: ProjectileContext,
-  before: PowerUpEffect,
-  stepMilliseconds: number
-): ProjectileStep => {
+const updateBarrel: EffectUpdate = (step, world, context, before, stepMilliseconds) => {
   const motion = getMotion(world, before.id)
   const flown =
-    motion !== null && motion.kind === 'ballistic' && motion.flight.state === BallisticFlightState.FLYING
+    motion !== null &&
+    motion.kind === 'ballistic' &&
+    motion.flight.state === BallisticFlightState.FLYING
       ? advanceEffectFlight(context, world, before.id, stepMilliseconds)
       : null
   const afterFlight =
@@ -127,13 +122,7 @@ const getMagnetRacers = (context: ProjectileContext): readonly MagnetPullRacer[]
 
 // 0x00455b40 (magnet vtable slot 2): placed under its owner on the first update (before the countdown), then the
 // countdown, then the pull.
-const updateMagnet = (
-  step: PowerUpStep,
-  world: ProjectileWorld,
-  context: ProjectileContext,
-  before: PowerUpEffect,
-  stepMilliseconds: number
-): ProjectileStep => {
+const updateMagnet: EffectUpdate = (step, world, context, before, stepMilliseconds) => {
   if (before.state === EffectState.FINISHED) return Object.freeze({ step, world })
   const ownerStatus =
     before.ownerRacer === null ? undefined : context.powerUps.racers[before.ownerRacer]
@@ -180,13 +169,7 @@ const updateMagnet = (
 }
 
 // 0x0045ce20 (turbo vtable slot 2): after the countdown, a tumbling racer who has stopped ends the turbo early.
-const updateTurbo = (
-  step: PowerUpStep,
-  world: ProjectileWorld,
-  context: ProjectileContext,
-  before: PowerUpEffect,
-  stepMilliseconds: number
-): ProjectileStep => {
+const updateTurbo: EffectUpdate = (step, world, context, before, stepMilliseconds) => {
   const counted = updatePowerUpEffect(step, context.powerUps, before.id, stepMilliseconds)
   const after = getEffect(counted, before.id)
   const owner = after.ownerRacer === null ? undefined : context.racers[after.ownerRacer]
@@ -214,7 +197,27 @@ const getWorldWithFinishedMotionCleared = (
     ? getWorldWithMotion(world, effectId, null)
     : world
 
-// Vtable slot 2 of one active effect, with the movement the power-ups module does not port.
+const updateWithPowerUps: EffectUpdate = (step, world, context, before, stepMilliseconds) =>
+  Object.freeze({
+    step: updatePowerUpEffect(step, context.powerUps, before.id, stepMilliseconds),
+    world,
+  })
+
+// The effects with movement of their own; the others (oil slick, curse, shield) only count down.
+const EFFECT_UPDATES: Readonly<Partial<Record<PowerUpEffect['kind'], EffectUpdate>>> =
+  Object.freeze({
+    [PowerUpEffectKind.CANNON]: updateCannon,
+    [PowerUpEffectKind.BARREL]: updateBarrel,
+    [PowerUpEffectKind.ROCKET]: updateRocket,
+    [PowerUpEffectKind.WARP]: updateWarp,
+    [PowerUpEffectKind.WAND]: updateWand,
+    [PowerUpEffectKind.GRAPPLE]: updateGrapple,
+    [PowerUpEffectKind.MAGNET]: updateMagnet,
+    [PowerUpEffectKind.TURBO]: updateTurbo,
+  })
+
+// Vtable slot 2 of one active effect, with the movement the power-ups module does not port, and the explosions and
+// debris its events start.
 export const updateProjectileEffect = (
   step: PowerUpStep,
   world: ProjectileWorld,
@@ -223,48 +226,33 @@ export const updateProjectileEffect = (
   stepMilliseconds: number
 ): ProjectileStep => {
   const before = getEffect(step, effectId)
-  const updated: ProjectileStep =
-    before.kind === PowerUpEffectKind.CANNON
-      ? updateCannon(step, world, context, before, stepMilliseconds)
-      : before.kind === PowerUpEffectKind.BARREL
-        ? updateBarrel(step, world, context, before, stepMilliseconds)
-        : before.kind === PowerUpEffectKind.ROCKET
-          ? updateRocket(step, world, context, before, stepMilliseconds)
-          : before.kind === PowerUpEffectKind.WARP
-          ? updateWarp(step, world, context, before, stepMilliseconds)
-          : before.kind === PowerUpEffectKind.WAND
-          ? updateWand(step, world, context, before, stepMilliseconds)
-          : before.kind === PowerUpEffectKind.GRAPPLE
-          ? updateGrapple(step, world, context, before, stepMilliseconds)
-          : before.kind === PowerUpEffectKind.MAGNET
-          ? updateMagnet(step, world, context, before, stepMilliseconds)
-          : before.kind === PowerUpEffectKind.TURBO
-            ? updateTurbo(step, world, context, before, stepMilliseconds)
-            : Object.freeze({
-                step: updatePowerUpEffect(step, context.powerUps, effectId, stepMilliseconds),
-                world,
-              })
+  const update = EFFECT_UPDATES[before.kind] ?? updateWithPowerUps
+  const updated = getStepWithConsequences(
+    update(step, world, context, before, stepMilliseconds),
+    step.events.length,
+    context
+  )
   return Object.freeze({
     step: updated.step,
     world: getWorldWithFinishedMotionCleared(updated.world, updated.step, effectId),
   })
 }
 
-// PowerUps_Update 0x0045a490 with the moving effects: every active effect, head first, then the power-ups' own
-// frame work around it.
+// PowerUps_Update 0x0045a490 with the moving effects: every active effect, head first, then the explosions and the
+// debris, before the power-ups recycle their finished effects.
 export const updatePowerUpsWithProjectiles = (
   step: PowerUpStep,
   world: ProjectileWorld,
   context: ProjectileContext,
   stepMilliseconds: number
 ): ProjectileStep => {
-  let currentWorld = world
+  let currentWorld: ProjectileWorld = Object.freeze({ ...world, events: Object.freeze([]) })
   const updated = updatePowerUps(
     step,
     context.powerUps,
     stepMilliseconds,
-    (effectsStep, _powerUpContext: PowerUpContext, effectsMilliseconds) =>
-      effectsStep.world.effects.activeEffectIds.reduce((current, effectId) => {
+    (effectsStep, _powerUpContext: PowerUpContext, effectsMilliseconds) => {
+      const effectsDone = effectsStep.world.effects.activeEffectIds.reduce((current, effectId) => {
         const result = updateProjectileEffect(
           current,
           currentWorld,
@@ -275,6 +263,14 @@ export const updatePowerUpsWithProjectiles = (
         currentWorld = result.world
         return result.step
       }, effectsStep)
+      const settled = getStepWithExplosionsAndDebris(
+        Object.freeze({ step: effectsDone, world: currentWorld }),
+        context,
+        effectsMilliseconds
+      )
+      currentWorld = settled.world
+      return settled.step
+    }
   )
   return Object.freeze({ step: updated, world: currentWorld })
 }

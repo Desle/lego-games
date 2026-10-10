@@ -18,10 +18,15 @@ import {
 } from '../../types/ballistic-flight/ballistic-flight.ts'
 import type {
   BallisticFlight,
+  BallisticFlightAdvance,
   BallisticFlightState as BallisticFlightStateValue,
   BallisticLaunchParameters,
 } from '../../types/ballistic-flight/ballistic-flight.types.ts'
-import type { AheadPoint, OwnerFlightRequest } from './ballistic-effects.types.ts'
+import type {
+  AheadPoint,
+  OwnerFlightRequest,
+  ResolvedProjectile,
+} from './ballistic-effects.types.ts'
 import type { FlightRacer } from '../../types/projectiles.types.ts'
 import { getMotion, getWorldWithMotion } from '../../types/projectile-world/projectile-world.ts'
 import type {
@@ -59,7 +64,11 @@ const BARREL_PARAMETERS: BallisticLaunchParameters = Object.freeze({
   heightOffset: 5,
 })
 // 0x004b147c and 0x004b1424: without a target the barrel is thrown 90 units behind and 5 up.
-const BARREL_BEHIND: AheadPoint = Object.freeze({ distance: -90, height: 5, isProductStored: false })
+const BARREL_BEHIND: AheadPoint = Object.freeze({
+  distance: -90,
+  height: 5,
+  isProductStored: false,
+})
 
 // 0x00454360: the grapple's parameter block (0x004b14f0, 0x004b14f4, 0x004b150c) and its point 500 ahead (0x004b14f8,
 // 0x004b14cc).
@@ -217,7 +226,7 @@ export const resolveExplodingProjectile = (
   flight: BallisticFlight,
   result: BallisticFlightStateValue,
   getVelocity: () => Vector3
-): { readonly step: PowerUpStep; readonly flight: BallisticFlight } => {
+): ResolvedProjectile => {
   if (result === BallisticFlightState.FLYING) return { step, flight }
   if (result === BallisticFlightState.TOUCHED_RACER && flight.touchedRacer !== null) {
     const victim = flight.touchedRacer
@@ -283,7 +292,7 @@ export const advanceEffectFlight = (
   world: ProjectileWorld,
   effectId: number,
   stepMilliseconds: number
-): { readonly flight: BallisticFlight; readonly result: BallisticFlightStateValue } | null => {
+): BallisticFlightAdvance | null => {
   const motion = getMotion(world, effectId)
   if (motion === null || motion.kind !== 'ballistic') return null
   const advance = advanceBallisticFlight(

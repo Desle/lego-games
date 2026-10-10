@@ -6,7 +6,7 @@ import {
 } from '../ballistic-flight/ballistic-flight.ts'
 import type { BallisticFlight } from '../ballistic-flight/ballistic-flight.types.ts'
 import type { LineProbe } from '../projectiles.types.ts'
-import type { GrappleAdvance, GrappleHook } from './grapple-hook.types.ts'
+import type { GrappleAdvance, GrappleHook, PointMove } from './grapple-hook.types.ts'
 
 // 0x004af220.
 const SECONDS_PER_MILLISECOND = Math.fround(0.001)
@@ -43,7 +43,7 @@ export const getPointMovedToward = (
   arrivalDistanceSquared: number,
   speed: number,
   seconds: number
-): { readonly position: Vector3; readonly isArrived: boolean } => {
+): PointMove => {
   const { add, subtract, multiply, storeFloat, getIsBelow, getIsBelowOrEqual } = arithmetic
   const differenceX = storeFloat(subtract(target.x, position.x))
   const differenceY = storeFloat(subtract(target.y, position.y))

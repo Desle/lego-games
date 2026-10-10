@@ -6,6 +6,9 @@ import type {
   BallisticFlight,
   BallisticFlightAdvance,
   BallisticLaunchParameters,
+  LineToPoint,
+  PointLaunchRequest,
+  RacerLaunchRequest,
 } from './ballistic-flight.types.ts'
 
 // Flight +0x04. The original's numbers are kept in the comments.
@@ -115,6 +118,35 @@ export const getFlightWithVelocity = (
   })
 }
 
+// The head the two launches at a target share (0x00430dd0..0x00430eaf, 0x004310cb..0x0043115e): the horizontal
+// distance from the start to the target (1 when it is 0) and how far the shooter's heading points along that line.
+const getLineToPoint = (
+  arithmetic: FloatArithmetic,
+  start: Vector3,
+  point: Vector3,
+  shooterRacer: FlightRacer
+): LineToPoint => {
+  const { add, subtract, multiply, divide, getSquareRoot, storeFloat, getIsEqual } = arithmetic
+  const differenceX = storeFloat(subtract(point.x, start.x))
+  const rawDifferenceY = subtract(point.y, start.y)
+  const differenceY = storeFloat(rawDifferenceY)
+  const rawDistance = getSquareRoot(
+    add(multiply(rawDifferenceY, differenceY), multiply(differenceX, differenceX))
+  )
+  const isDegenerate = getIsEqual(rawDistance, 0)
+  const inverseDistance = isDegenerate ? 1 : divide(1, rawDistance)
+  const directionX = storeFloat(multiply(inverseDistance, differenceX))
+  const directionY = multiply(inverseDistance, differenceY)
+  const { heading } = shooterRacer
+  return {
+    distance: isDegenerate ? 1 : rawDistance,
+    alignment: add(
+      add(multiply(heading.y, directionY), multiply(heading.z, 0)),
+      multiply(heading.x, directionX)
+    ),
+  }
+}
+
 // 0x00430d80 (thiscall; arguments: parameters, shooter, target, isFromShooter, isLeadLimited): a flight at a racer.
 // The target is aimed at 5 units above its frame, led by its velocity over the flight time, and the closing speed of
 // the shooter along the line is added to the shot's speed. With isLeadLimited the led point is only used when it lies
@@ -123,16 +155,9 @@ export const launchFlightAtRacer = (
   arithmetic: FloatArithmetic,
   flight: BallisticFlight,
   parameters: BallisticLaunchParameters,
-  request: {
-    readonly shooter: number
-    readonly shooterRacer: FlightRacer
-    readonly target: number
-    readonly targetRacer: FlightRacer
-    readonly isFromShooter: boolean
-    readonly isLeadLimited: boolean
-  }
+  request: RacerLaunchRequest
 ): BallisticFlight => {
-  const { add, subtract, multiply, divide, getSquareRoot, storeFloat, getIsEqual } = arithmetic
+  const { add, subtract, multiply, divide, storeFloat } = arithmetic
   const { shooterRacer, targetRacer } = request
   const initialized = getInitializedFlight(flight, parameters)
   const start = request.isFromShooter
@@ -143,22 +168,7 @@ export const launchFlightAtRacer = (
     targetRacer.position.y,
     storeFloat(add(TARGET_HEIGHT, targetRacer.position.z))
   )
-  const differenceX = storeFloat(subtract(aimedAt.x, start.x))
-  const rawDifferenceY = subtract(aimedAt.y, start.y)
-  const differenceY = storeFloat(rawDifferenceY)
-  const rawDistance = getSquareRoot(
-    add(multiply(rawDifferenceY, differenceY), multiply(differenceX, differenceX))
-  )
-  const isDegenerate = getIsEqual(rawDistance, 0)
-  const distance = isDegenerate ? 1 : rawDistance
-  const inverseDistance = isDegenerate ? 1 : divide(1, rawDistance)
-  const directionX = storeFloat(multiply(inverseDistance, differenceX))
-  const directionY = multiply(inverseDistance, differenceY)
-  const { heading } = shooterRacer
-  const alignment = add(
-    add(multiply(heading.y, directionY), multiply(heading.z, 0)),
-    multiply(heading.x, directionX)
-  )
+  const { distance, alignment } = getLineToPoint(arithmetic, start, aimedAt, shooterRacer)
   const magnitude = arithmetic.getIsBelow(alignment, 0) ? -alignment : alignment
   const closingSpeed = add(
     multiply(multiply(magnitude, shooterRacer.headingSpeed), MILLISECONDS_PER_SECOND),
@@ -187,8 +197,7 @@ export const launchFlightAtRacer = (
       subtract(ledPoint.z, start.z)
     )
   )
-  const led =
-    request.isLeadLimited && !arithmetic.getIsBelow(ledAlignment, 0) ? aimedAt : ledPoint
+  const led = request.isLeadLimited && !arithmetic.getIsBelow(ledAlignment, 0) ? aimedAt : ledPoint
   const target = getVector(
     storeFloat(add(led.x, parameters.targetOffset.x)),
     storeFloat(add(led.y, parameters.targetOffset.y)),
@@ -215,36 +224,15 @@ export const launchFlightAtPoint = (
   arithmetic: FloatArithmetic,
   flight: BallisticFlight,
   parameters: BallisticLaunchParameters,
-  request: {
-    readonly shooter: number
-    readonly shooterRacer: FlightRacer
-    readonly point: Vector3
-    readonly pointVelocity: Vector3
-    readonly isFromShooter: boolean
-  }
+  request: PointLaunchRequest
 ): BallisticFlight => {
-  const { add, subtract, multiply, divide, getSquareRoot, storeFloat, getIsEqual } = arithmetic
+  const { add, multiply, divide, storeFloat } = arithmetic
   const { shooterRacer, point } = request
   const initialized = getInitializedFlight(flight, parameters)
   const start = request.isFromShooter
     ? getShooterStart(arithmetic, initialized, shooterRacer)
     : initialized.framePosition
-  const differenceX = storeFloat(subtract(point.x, start.x))
-  const rawDifferenceY = subtract(point.y, start.y)
-  const differenceY = storeFloat(rawDifferenceY)
-  const rawDistance = getSquareRoot(
-    add(multiply(rawDifferenceY, differenceY), multiply(differenceX, differenceX))
-  )
-  const isDegenerate = getIsEqual(rawDistance, 0)
-  const distance = isDegenerate ? 1 : rawDistance
-  const inverseDistance = isDegenerate ? 1 : divide(1, rawDistance)
-  const directionX = storeFloat(multiply(inverseDistance, differenceX))
-  const directionY = multiply(inverseDistance, differenceY)
-  const { heading } = shooterRacer
-  const alignment = add(
-    add(multiply(heading.y, directionY), multiply(heading.z, 0)),
-    multiply(heading.x, directionX)
-  )
+  const { distance, alignment } = getLineToPoint(arithmetic, start, point, shooterRacer)
   const effectiveSpeed = arithmetic.getIsBelowOrEqual(alignment, 0)
     ? parameters.speed
     : add(

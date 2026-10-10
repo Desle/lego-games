@@ -1,4 +1,4 @@
-import type { ProjectileEvent } from '../../events/projectile.events.types.ts'
+import type { ProjectileEvent } from '../projectile-event/projectile-event.types.ts'
 import type { FlightRacer } from '../projectiles.types.ts'
 import type { MagnetMotion } from '../projectile-world/projectile-world.types.ts'
 

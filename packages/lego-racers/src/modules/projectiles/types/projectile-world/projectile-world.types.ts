@@ -1,8 +1,10 @@
-import type { PowerUpContext, PowerUpStep } from '../../../power-ups/index.ts'
+import type { PowerUpContext, PowerUpEffect, PowerUpStep } from '../../../power-ups/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
-import type { ProjectileEvent } from '../../events/projectile.events.types.ts'
+import type { ProjectileEvent } from '../projectile-event/projectile-event.types.ts'
 import type { BallisticFlight } from '../ballistic-flight/ballistic-flight.types.ts'
 import type { HomingFlight } from '../homing-flight/homing-flight.types.ts'
+import type { DebrisAnimations, DebrisPool } from '../debris/debris.types.ts'
+import type { ExplosionPool } from '../explosion/explosion.types.ts'
 import type { GrappleHook } from '../grapple-hook/grapple-hook.types.ts'
 import type { RouteNode } from '../route-movement/route-movement.types.ts'
 import type { WandBeam } from '../wand-beam/wand-beam.types.ts'
@@ -50,7 +52,8 @@ export type RocketMotion = {
   readonly homing: HomingFlight | null
 }
 
-export type EffectMotion = BallisticMotion | GrappleMotion | MagnetMotion | RocketMotion | WandMotion
+export type EffectMotion =
+  BallisticMotion | GrappleMotion | MagnetMotion | RocketMotion | WandMotion
 
 // Everything the projectiles keep between frames, beside the power-ups' own state.
 export type ProjectileWorld = {
@@ -58,6 +61,10 @@ export type ProjectileWorld = {
   readonly motions: readonly (EffectMotion | null)[]
   // The events of the update in progress; updatePowerUpsWithProjectiles starts them empty.
   readonly events: readonly ProjectileEvent[]
+  // The explosions of power-up system +0x193c ("Explsn") and +0x1940 ("spikexp"), and the debris at +0x18bc.
+  readonly explosions: ExplosionPool
+  readonly spikedExplosions: ExplosionPool
+  readonly debris: DebrisPool
 }
 
 export type ProjectileContext = {
@@ -68,6 +75,8 @@ export type ProjectileContext = {
   readonly route: readonly RouteNode[]
   // How long each rocket's launch animation lasts (model data the port does not read): rocket 0, 1 and 2.
   readonly rocketLaunchMilliseconds: readonly number[]
+  // The lengths of the debris animations (model data the port does not read).
+  readonly debrisAnimations: DebrisAnimations
   readonly probe: LineProbe
 }
 
@@ -81,3 +90,19 @@ export type ProjectileContact = {
   readonly effect: number
   readonly racer: number
 }
+
+// A racer the collision registry paired with an explosion.
+export type ExplosionContact = {
+  readonly isSpiked: boolean
+  readonly explosion: number
+  readonly racer: number
+}
+
+// One class's slot 2 (0x00451b50 and its siblings): the countdown and the movement of an active effect.
+export type EffectUpdate = (
+  step: PowerUpStep,
+  world: ProjectileWorld,
+  context: ProjectileContext,
+  before: PowerUpEffect,
+  stepMilliseconds: number
+) => ProjectileStep
