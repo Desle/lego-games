@@ -1,0 +1,5 @@
+export { decodeMusic } from './controller/decode-music/decode-music.ts'
+export { decodeSoundBank } from './controller/decode-sound-bank/decode-sound-bank.ts'
+export { decodeSoundEffect } from './controller/decode-sound-effect/decode-sound-effect.ts'
+export { MusicReadError, SoundEffectReadError } from './types/audio-errors/audio-errors.ts'
+export type { Music, SoundBank, SoundEffect } from './types/audio.types.ts'
