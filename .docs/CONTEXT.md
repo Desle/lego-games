@@ -27,6 +27,10 @@ Never commit or redistribute the original game files or raw decompiler output. N
 - **Material library**: a `.MDB` file: named materials (colors, texture, shading, alpha test, blending) that models refer to by name.
 - **Token reader**: the Gol engine's reader for its tokenized binary `*DB` files.
 - **Gol engine**: the engine in `GolDP.dll` that `LEGORacers.exe` loads through `GolEntry`/`GolExit`.
+- **Frame**: a Gol scene object holding a rotation matrix and a position; a rigid body moves one.
+- **Rigid body**: the physics object under every racer's car body: velocity, angular momentum, inertia and force and torque accumulators.
+- **Time step**: the race's integer milliseconds for one frame (1.75× with the fast-time setting); **sub-step**: a piece of at most 40 ms the physics runs at once.
+- **Precision policy**: whether x87 intermediate results are rounded to float32 (24-bit precision) or kept as doubles (53-bit) in the port.
 
 ## Related
 

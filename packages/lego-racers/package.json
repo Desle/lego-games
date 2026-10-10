@@ -16,6 +16,8 @@
     "./material": "./src/modules/material/index.ts",
     "./material-animation": "./src/modules/material-animation/index.ts",
     "./model": "./src/modules/model/index.ts",
+    "./racer-physics": "./src/modules/racer-physics/index.ts",
+    "./simulation-math": "./src/modules/simulation-math/index.ts",
     "./skeleton": "./src/modules/skeleton/index.ts",
     "./texture-database": "./src/modules/texture-database/index.ts",
     "./token-reader": "./src/modules/token-reader/index.ts",
