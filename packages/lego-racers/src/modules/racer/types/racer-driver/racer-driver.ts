@@ -125,7 +125,7 @@ export const setDriverThrottle = (
   const { multiply, storeFloat } = arithmetic
   const value = getWobbledThrottle(arithmetic, driver, throttle)
   const force = multiply(THROTTLE_FORCE, value)
-  const isBraking = getIsBraking(arithmetic, value, carBody.forwardSpeed)
+  const isBraking = getIsBraking(arithmetic, value, carBody.rigidBody.forwardSpeed)
   return Object.freeze({
     ...driver,
     throttle: storeFloat(isBraking ? multiply(force, BRAKING_MULTIPLIER) : force),
@@ -227,7 +227,7 @@ export const applyDriverSteering = (
     })
   }
   const curvature =
-    !getIsEqual(driver.curvature, 0) && getIsBelow(carBody.speed, SLOW_SPEED)
+    !getIsEqual(driver.curvature, 0) && getIsBelow(carBody.rigidBody.speed, SLOW_SPEED)
       ? storeFloat(multiply(driver.curvature, SLOW_STEERING_SCALE))
       : driver.curvature
   const magnitude = getIsBelow(curvature, 0) ? -curvature : curvature
@@ -364,7 +364,7 @@ const updateSlideTimers = (
 ): DrivenCarBody => {
   const { driver, carBody } = driven
   if ((driver.flags & POWER_SLIDE_FLAG) !== 0) {
-    if (arithmetic.getIsBelow(carBody.forwardSpeed, POWER_SLIDE_MINIMUM_FORWARD_SPEED)) {
+    if (arithmetic.getIsBelow(carBody.rigidBody.forwardSpeed, POWER_SLIDE_MINIMUM_FORWARD_SPEED)) {
       return stopDriverPowerSlide(driven)
     }
     const slideMilliseconds = toUnsigned(driver.slideMilliseconds + stepMilliseconds)
@@ -408,7 +408,7 @@ export const updateRacerDriver = (
     stepMilliseconds
   )
   const isTouchingAtFullThrottle =
-    (timed.driver.flags & FULL_THROTTLE_FLAG) !== 0 && timed.carBody.contact !== 0
+    (timed.driver.flags & FULL_THROTTLE_FLAG) !== 0 && timed.carBody.rigidBody.contactCount !== 0
   const flagged = isTouchingAtFullThrottle
     ? Object.freeze({
         driver: Object.freeze({
@@ -428,7 +428,7 @@ export const updateDriverWithoutRoute = (
   tables: RacerTables,
   driven: DrivenCarBody
 ): DrivenCarBody => {
-  const isMovingForward = !arithmetic.getIsBelowOrEqual(driven.carBody.forwardSpeed, 0)
+  const isMovingForward = !arithmetic.getIsBelowOrEqual(driven.carBody.rigidBody.forwardSpeed, 0)
   const throttle = isMovingForward
     ? arithmetic.storeFloat(-arithmetic.add(THROTTLE_FORCE, THROTTLE_FORCE))
     : 0

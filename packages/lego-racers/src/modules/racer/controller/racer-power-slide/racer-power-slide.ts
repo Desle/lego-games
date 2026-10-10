@@ -30,7 +30,7 @@ export const startRacerPowerSlide = (
   const updated = setRacer(racerSet, racerIndex, flagged)
   const isShowingEffects =
     flagged.controllerKind === PLAYER_CONTROLLER &&
-    (flagged.carBody.flags & CAR_BODY_AIRBORNE_CONTROL_FLAG) === 0
+    (flagged.carBody.rigidBody.flags & CAR_BODY_AIRBORNE_CONTROL_FLAG) === 0
   return isShowingEffects ? startEffects(context, updated, racerIndex, 0) : updated
 }
 
@@ -48,7 +48,7 @@ export const stopRacerPowerSlide = (
       ? racer
       : setDriven(racer, stopDriverPowerSlide(getDriven(racer)))
   const withEffects =
-    (stopped.carBody.flags & CAR_BODY_AIRBORNE_CONTROL_FLAG) === 0
+    (stopped.carBody.rigidBody.flags & CAR_BODY_AIRBORNE_CONTROL_FLAG) === 0
       ? endEffects(context, setRacer(racerSet, racerIndex, stopped), racerIndex, 0)
       : setRacer(racerSet, racerIndex, stopped)
   const after = getRacer(withEffects, racerIndex)

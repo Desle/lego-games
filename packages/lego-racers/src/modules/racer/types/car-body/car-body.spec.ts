@@ -1,6 +1,8 @@
+import type { CarRigidBody } from '../../../racer-physics/index.ts'
 import { IDENTITY_MATRIX3 } from '../../../simulation-math/index.ts'
 import {
   createTestCarBody,
+  createTestCarBodyWith,
   IDENTITY_TABLES,
   SINGLE_ARITHMETIC,
 } from '../racer-fixtures/racer-fixtures.ts'
@@ -18,6 +20,13 @@ import {
 } from './car-body.ts'
 
 const PI = Math.fround(Math.PI)
+
+const getWheels = (grounded: readonly (readonly [boolean, number])[]): CarRigidBody['wheels'] =>
+  createTestCarBody().rigidBody.wheels.map((wheel, index) => ({
+    ...wheel,
+    isOnGround: grounded[index]?.[0] ?? false,
+    grip: grounded[index]?.[1] ?? 0,
+  }))
 
 describe('setCarBodySteering', () => {
   it.each([
@@ -37,7 +46,7 @@ describe('setCarBodySteering', () => {
     const result = setCarBodySteering(SINGLE_ARITHMETIC, body, steering)
 
     // Assert
-    expect(result.steering).toBe(expected)
+    expect(result.rigidBody.turnRadius).toBe(expected)
   })
 })
 
@@ -53,11 +62,11 @@ describe('startCarBodySlide', () => {
     const result = startCarBodySlide(SINGLE_ARITHMETIC, IDENTITY_TABLES, body, 1.5, 0.85, rate)
 
     // Assert
-    expect(result).toMatchObject({
-      slideStrength: 1.5,
-      slideDamping: 0.85,
-      slideRate: rate,
-      slideCosine: index,
+    expect(result.rigidBody).toMatchObject({
+      driftYawFactor: 1.5,
+      driftBrake: 0.85,
+      driftMaximumAngle: rate,
+      driftThreshold: index,
       flags: 0x1,
     })
   })
@@ -66,29 +75,32 @@ describe('startCarBodySlide', () => {
 describe('stopCarBodySlide', () => {
   it('resets the phase to -1 and the rate to π and clears flags 0x201', () => {
     // Arrange
-    const body = { ...createTestCarBody(), flags: 0x203, slideCosine: 5, slideRate: 2 }
+    const body = createTestCarBodyWith({ flags: 0x203, driftThreshold: 5, driftMaximumAngle: 2 })
 
     // Act
     const result = stopCarBodySlide(body)
 
     // Assert
-    expect(result).toMatchObject({ flags: 0x2, slideCosine: -1, slideRate: PI })
+    expect(result.rigidBody).toMatchObject({
+      flags: 0x2,
+      driftThreshold: -1,
+      driftMaximumAngle: PI,
+    })
   })
 })
 
 describe('getCarBodyMaximumCurvature', () => {
   it('is forwardSpeed² · mass / (gravity · scaledMass · average grip)', () => {
     // Arrange: grip (1 + 1) / 2 · 0.5 = 0.5, support 2 · 3 · 0.5 = 3, 3² · 2 / 3 = 6.
-    const body = {
-      ...createTestCarBody(),
+    const body = createTestCarBodyWith({
       forwardSpeed: 3,
-      wheels: [
-        { flags: 1, grip: 1 },
-        { flags: 1, grip: 1 },
-        { flags: 0, grip: 9 },
-        { flags: 0, grip: 9 },
-      ],
-    }
+      wheels: getWheels([
+        [true, 1],
+        [true, 1],
+        [false, 9],
+        [false, 9],
+      ]),
+    })
 
     // Act
     const curvature = getCarBodyMaximumCurvature(SINGLE_ARITHMETIC, body)
@@ -102,7 +114,7 @@ describe('getCarBodyMaximumCurvature', () => {
     [2, 4096],
   ])('without grip returns 100 airborne and 4096 grounded (%d wheels)', (count, expected) => {
     // Arrange
-    const body = { ...createTestCarBody(), groundedWheelCount: count }
+    const body = createTestCarBodyWith({ groundedWheelCount: count })
 
     // Act
     const curvature = getCarBodyMaximumCurvature(SINGLE_ARITHMETIC, body)
@@ -113,12 +125,8 @@ describe('getCarBodyMaximumCurvature', () => {
 })
 
 describe('getIsCarBodyAbleToSlide', () => {
-  const createAlignedBody = (speed: number, steering: number) => ({
-    ...createTestCarBody(),
-    travelDirection: { x: 1, y: 0, z: 0 },
-    speed,
-    steering,
-  })
+  const createAlignedBody = (speed: number, steering: number) =>
+    createTestCarBodyWith({ velocityDirection: { x: 1, y: 0, z: 0 }, speed, turnRadius: steering })
 
   it.each([
     [0.1, 0, 1, true],
@@ -140,18 +148,23 @@ describe('getIsCarBodyAbleToSlide', () => {
 describe('getIsCarBodyAbleToPowerSlide', () => {
   it('needs three grounded wheels, alignment over 0.85 and forward speed of 0.05', () => {
     // Arrange
-    const body = {
-      ...createTestCarBody(),
-      travelDirection: { x: 1, y: 0, z: 0 },
+    const body = createTestCarBodyWith({
+      velocityDirection: { x: 1, y: 0, z: 0 },
       groundedWheelCount: 3,
       forwardSpeed: Math.fround(0.05),
-    }
+    })
 
     // Act
     const results = [
       getIsCarBodyAbleToPowerSlide(SINGLE_ARITHMETIC, body),
-      getIsCarBodyAbleToPowerSlide(SINGLE_ARITHMETIC, { ...body, groundedWheelCount: 2 }),
-      getIsCarBodyAbleToPowerSlide(SINGLE_ARITHMETIC, { ...body, forwardSpeed: 0.04 }),
+      getIsCarBodyAbleToPowerSlide(SINGLE_ARITHMETIC, {
+        ...body,
+        rigidBody: { ...body.rigidBody, groundedWheelCount: 2 },
+      }),
+      getIsCarBodyAbleToPowerSlide(SINGLE_ARITHMETIC, {
+        ...body,
+        rigidBody: { ...body.rigidBody, forwardSpeed: 0.04 },
+      }),
     ]
 
     // Assert
@@ -174,8 +187,8 @@ describe('setCarBodyThrottle', () => {
       const result = setCarBodyThrottle(SINGLE_ARITHMETIC, body, throttle)
 
       // Assert
-      expect(result.throttle).toBe(stored)
-      expect(result.driveFactor).toBe(drive)
+      expect(result.rigidBody.throttle).toBe(stored)
+      expect(result.rigidBody.drag).toBe(drive)
     }
   )
 })
@@ -187,21 +200,13 @@ describe('foldCarBodySpinTimer', () => {
     [7, 10, 7],
   ])('folds %d by periods of %d into %d', (pending, period, expected) => {
     // Arrange
-    const body = {
-      ...createTestCarBody(),
-      pendingSpinMilliseconds: pending,
-      spinPeriodMilliseconds: period,
-    }
+    const body = createTestCarBodyWith({ spinTimer: pending, spinPeriod: period })
 
     // Act
     const result = foldCarBodySpinTimer(body)
 
     // Assert
-    expect(result).toMatchObject({
-      spinTimerMilliseconds: expected,
-      pendingSpinMilliseconds: 0,
-      spinPeriodMilliseconds: 0,
-    })
+    expect(result.rigidBody).toMatchObject({ yawTimer: expected, spinTimer: 0, spinPeriod: 0 })
   })
 })
 

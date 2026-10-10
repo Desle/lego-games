@@ -105,7 +105,7 @@ const pressBinding = (input: PlayerControllerInput, flag: number): PlayerControl
   if (flag === ACCELERATE_FLAG) return updateStartBoost(at(pressed))
   if (flag === BRAKE_FLAG) {
     const racer = getRacer(racerSet, racerIndex)
-    if ((racer.carBody.flags & CAR_BODY_SPIN_FLAG) === 0) return pressed
+    if ((racer.carBody.rigidBody.flags & CAR_BODY_SPIN_FLAG) === 0) return pressed
     const folded = Object.freeze({ ...racer, carBody: foldCarBodySpinTimer(racer.carBody) })
     return Object.freeze({ ...pressed, racerSet: setRacer(racerSet, racerIndex, folded) })
   }

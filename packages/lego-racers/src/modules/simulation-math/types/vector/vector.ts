@@ -4,6 +4,63 @@ export const ZERO_VECTOR3: Vector3 = Object.freeze({ x: 0, y: 0, z: 0 })
 
 const ZERO_VECTOR2: Vector2 = Object.freeze({ x: 0, y: 0 })
 
+// The race code's most common pattern: scale × each component, each product stored (FMUL, FSTP float).
+export const getStoredScaledVector = (
+  arithmetic: FloatArithmetic,
+  vector: Vector3,
+  scale: number
+): Vector3 =>
+  Object.freeze({
+    x: arithmetic.storeFloat(arithmetic.multiply(scale, vector.x)),
+    y: arithmetic.storeFloat(arithmetic.multiply(scale, vector.y)),
+    z: arithmetic.storeFloat(arithmetic.multiply(scale, vector.z)),
+  })
+
+// left - right per component, each difference stored.
+export const getStoredDifference = (
+  arithmetic: FloatArithmetic,
+  left: Vector3,
+  right: Vector3
+): Vector3 =>
+  Object.freeze({
+    x: arithmetic.storeFloat(arithmetic.subtract(left.x, right.x)),
+    y: arithmetic.storeFloat(arithmetic.subtract(left.y, right.y)),
+    z: arithmetic.storeFloat(arithmetic.subtract(left.z, right.z)),
+  })
+
+// left + right per component, each sum stored.
+export const getStoredSum = (arithmetic: FloatArithmetic, left: Vector3, right: Vector3): Vector3 =>
+  Object.freeze({
+    x: arithmetic.storeFloat(arithmetic.add(left.x, right.x)),
+    y: arithmetic.storeFloat(arithmetic.add(left.y, right.y)),
+    z: arithmetic.storeFloat(arithmetic.add(left.z, right.z)),
+  })
+
+// left × right with the operand order of 0x00404510 (also 0x00446fd0 and 0x00447230), each component stored.
+export const getStoredCrossProduct = (
+  arithmetic: FloatArithmetic,
+  left: Vector3,
+  right: Vector3
+): Vector3 => {
+  const { subtract, multiply, storeFloat } = arithmetic
+  return Object.freeze({
+    x: storeFloat(subtract(multiply(left.y, right.z), multiply(left.z, right.y))),
+    y: storeFloat(subtract(multiply(left.z, right.x), multiply(right.z, left.x))),
+    z: storeFloat(subtract(multiply(right.y, left.x), multiply(left.y, right.x))),
+  })
+}
+
+// (left.z·right.z + left.y·right.y) + left.x·right.x, the grouping most of the race code's dot products use.
+export const getDotProduct = (arithmetic: FloatArithmetic, left: Vector3, right: Vector3): number =>
+  arithmetic.add(
+    arithmetic.add(arithmetic.multiply(left.z, right.z), arithmetic.multiply(left.y, right.y)),
+    arithmetic.multiply(left.x, right.x)
+  )
+
+// (z² + y²) + x², the grouping of the squared lengths in 0x00445dc0 and 0x004478b0.
+export const getSquaredLength = (arithmetic: FloatArithmetic, vector: Vector3): number =>
+  getDotProduct(arithmetic, vector, vector)
+
 // 0x00449280 (fastcall: ECX source, EDX target). The zero test is FCOM against the double 0.0 at 0x004b0df0.
 export const getNormalizedVector2 = (arithmetic: FloatArithmetic, vector: Vector2): Vector2 => {
   const { add, multiply, divide, getSquareRoot, storeFloat, getIsEqual } = arithmetic
