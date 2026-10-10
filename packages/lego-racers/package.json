@@ -30,6 +30,7 @@
     "./named-record": "./src/modules/named-record/index.ts",
     "./power-up": "./src/modules/power-up/index.ts",
     "./power-ups": "./src/modules/power-ups/index.ts",
+    "./projectiles": "./src/modules/projectiles/index.ts",
     "./race": "./src/modules/race/index.ts",
     "./race-catalog": "./src/modules/race-catalog/index.ts",
     "./race-description": "./src/modules/race-description/index.ts",

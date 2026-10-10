@@ -1,3 +1,4 @@
+import type { PowerUpContext, PowerUpStep } from '../power-up-step/power-up-step.types.ts'
 import type {
   EnhancementBrickPlacement,
   PowerUpBrickPlacement,
@@ -19,3 +20,11 @@ export type PowerUpWorldDefinition = {
   }[]
   readonly random: RandomState
 }
+
+// Runs every active effect for one frame; the default is updatePowerUpEffects. The projectiles module passes its own,
+// which runs a moving effect's movement right after that effect's countdown, as the original's slot 2 does.
+export type EffectsUpdater = (
+  step: PowerUpStep,
+  context: PowerUpContext,
+  stepMilliseconds: number
+) => PowerUpStep

@@ -17,3 +17,9 @@ export type StealCandidate = {
   readonly state: number
   readonly timer: number
 }
+
+// 0x0045b9e0 for an object other than an effect.
+export type AttachmentSlotAllocation = {
+  readonly step: PowerUpStep
+  readonly slotIndex: number | null
+}
