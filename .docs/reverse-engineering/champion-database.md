@@ -12,14 +12,14 @@ Source: `LEGORacers.exe`. Port: `packages/lego-racers/src/modules/champion-datab
 
 The record is 0x30 bytes, zeroed first; every keyword is optional and any other is error 0. Names are registered in a name table that stops the game on a duplicate (`0x00411870`).
 
-| Keyword | Value        | Record               | Port field            | Meaning                                                                                                                              |
-| ------- | ------------ | -------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `0x28`  | name ≤ 8     | `+0x00`              | `materialLibraryName` | Loaded with Gol root slot `+0x10` by `Champion_CreateInstance` (`0x0041d7a0`)                                                        |
-| `0x29`  | name ≤ 8     | `+0x08`              | `textureDatabaseName` | Gol root slot `+0x0c`                                                                                                                |
-| `0x2a`  | name ≤ 8     | `+0x10`              | `modelName`           | Gol root slot `+0x14`: the champion's car body model                                                                                 |
-| `0x2b`  | name ≤ 8     | `+0x18`              | `chassisName`         | The key of the chassis (`0x0043b480` looks it up with `0x004119a0`)                                                                  |
-| `0x2c`  | float        | `+0x20`              | `mass`                | `0x0043b480` stores it as the description's `+0x58`: the mass of the car rigid body (`0x00444d90`, `0x00441210`)                      |
-| `0x2d`  | three floats | `+0x24`,`+0x28`,`+0x2c` | `centreOfMass`     | Description `+0x4c`: the local centre of mass (`CarRigidBody_SetCentreOfMass`, `0x00441190`). Not mirrored                              |
+| Keyword | Value        | Record                  | Port field            | Meaning                                                                                                          |
+| ------- | ------------ | ----------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `0x28`  | name ≤ 8     | `+0x00`                 | `materialLibraryName` | Loaded with Gol root slot `+0x10` by `Champion_CreateInstance` (`0x0041d7a0`)                                    |
+| `0x29`  | name ≤ 8     | `+0x08`                 | `textureDatabaseName` | Gol root slot `+0x0c`                                                                                            |
+| `0x2a`  | name ≤ 8     | `+0x10`                 | `modelName`           | Gol root slot `+0x14`: the champion's car body model                                                             |
+| `0x2b`  | name ≤ 8     | `+0x18`                 | `chassisName`         | The key of the chassis (`0x0043b480` looks it up with `0x004119a0`)                                              |
+| `0x2c`  | float        | `+0x20`                 | `mass`                | `0x0043b480` stores it as the description's `+0x58`: the mass of the car rigid body (`0x00444d90`, `0x00441210`) |
+| `0x2d`  | three floats | `+0x24`,`+0x28`,`+0x2c` | `centreOfMass`        | Description `+0x4c`: the local centre of mass (`CarRigidBody_SetCentreOfMass`, `0x00441190`). Not mirrored       |
 
 ## The files in `LEGO.JAM`
 

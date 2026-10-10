@@ -64,7 +64,11 @@ export const createCarBodySetup = (
     ...body,
     flags: options.isRaceModeFlagged ? body.flags | CAR_RIGID_BODY_RACE_MODE_FLAG : body.flags,
   })
-  const topSpeed = setTopSpeedRating(arithmetic, flagged, getRaisedRating(car.topSpeedRating, bonus))
+  const topSpeed = setTopSpeedRating(
+    arithmetic,
+    flagged,
+    getRaisedRating(car.topSpeedRating, bonus)
+  )
   const withCentre = setLocalCentreOfMass(arithmetic, topSpeed.rigidBody, car.centreOfMass)
   const withWheels = setWheelGeometry(arithmetic, withCentre, wheelAnchor, trackWidth, wheelbase)
   const halfExtentY = storeFloat(multiply(car.hullExtents[0], HULL_HALF))

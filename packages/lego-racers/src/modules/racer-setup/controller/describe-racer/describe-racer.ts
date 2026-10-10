@@ -1,4 +1,4 @@
-import { findNamedRecord } from '../../../named-record/index.ts'
+import { findNamedRecord, type NamedRecord } from '../../../named-record/index.ts'
 import { getBrickKindFromCode } from '../../../power-ups/index.ts'
 import { getFloatFromBits } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
@@ -27,7 +27,7 @@ const CENTRE_OFFSET_SCALE = getFloatFromBits(0x3e800000)
 
 const toVector = ([x, y, z]: FloatTriple): Vector3 => Object.freeze({ x, y, z })
 
-const getRecord = <Entry extends { readonly name: string }>(
+const getRecord = <Entry extends NamedRecord>(
   records: readonly Entry[],
   databaseName: string,
   recordName: string

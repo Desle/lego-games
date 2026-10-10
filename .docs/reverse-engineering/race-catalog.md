@@ -10,15 +10,15 @@ Source: `LEGORacers.exe`. Port: `packages/lego-racers/src/modules/race-catalog`.
 }
 ```
 
-| Keyword | Value                      | Record  | Port field   | Meaning                                                                                                              |
-| ------- | -------------------------- | ------- | ------------ | -------------------------------------------------------------------------------------------------------------------- |
-| `0x28`  | integer                    | `+0x28` | `raceNumber` | The race's index in its circuit; the loader stores the record at `circuit +0x48 + 4 · number` (four slots)           |
-| `0x29`  | name ≤ 8                   | `+0x0c` | `firstName`  | The race's folder: `racec0r0` is `GAMEDATA\RACEC0R0`                                                                 |
-| `0x2a`  | name ≤ 8                   | `+0x24` | `circuitName`| A key of the circuits; an unknown one stops the game ("Unable to find circuit", `0x004bef1c`)                         |
-| `0x2b`  | integer, kept as 16 bits   | `+0x34` | `shortNumber`| 4 for `racec0r0`; the numbers run 4 to 16 and 28, 29                                                                 |
-| `0x2c`  | none                       | `+0x2c` | `isFlagged`  | Sets the flag to 1 (the second pass of a circuit, `c3` to `c5`)                                                      |
-| `0x2d`  | name ≤ 8                   | `+0x14` | `secondName` | The theme of the track (`castle1`, `pirate2`, `space3`, …)                                                           |
-| `0x2e`  | name ≤ 8                   | `+0x1c` | `thirdName`  | The opponent's driver code (`RK` for `racec0r0`)                                                                     |
+| Keyword | Value                    | Record  | Port field    | Meaning                                                                                                    |
+| ------- | ------------------------ | ------- | ------------- | ---------------------------------------------------------------------------------------------------------- |
+| `0x28`  | integer                  | `+0x28` | `raceNumber`  | The race's index in its circuit; the loader stores the record at `circuit +0x48 + 4 · number` (four slots) |
+| `0x29`  | name ≤ 8                 | `+0x0c` | `firstName`   | The race's folder: `racec0r0` is `GAMEDATA\RACEC0R0`                                                       |
+| `0x2a`  | name ≤ 8                 | `+0x24` | `circuitName` | A key of the circuits; an unknown one stops the game ("Unable to find circuit", `0x004bef1c`)              |
+| `0x2b`  | integer, kept as 16 bits | `+0x34` | `shortNumber` | 4 for `racec0r0`; the numbers run 4 to 16 and 28, 29                                                       |
+| `0x2c`  | none                     | `+0x2c` | `isFlagged`   | Sets the flag to 1 (the second pass of a circuit, `c3` to `c5`)                                            |
+| `0x2d`  | name ≤ 8                 | `+0x14` | `secondName`  | The theme of the track (`castle1`, `pirate2`, `space3`, …)                                                 |
+| `0x2e`  | name ≤ 8                 | `+0x1c` | `thirdName`   | The opponent's driver code (`RK` for `racec0r0`)                                                           |
 
 Any other keyword is error 0. The port checks the circuit against the circuits it is given and raises `UnknownCircuitError`, as the original stops.
 
