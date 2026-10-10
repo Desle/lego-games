@@ -29,7 +29,7 @@ import {
   getStepWithRacer,
 } from '../power-up-step/power-up-step.ts'
 import type { PowerUpContext, PowerUpStep } from '../power-up-step/power-up-step.types.ts'
-import type { PowerUpWorldDefinition } from './power-up-world.types.ts'
+import type { EffectsUpdater, PowerUpWorldDefinition } from './power-up-world.types.ts'
 
 // 0x004b1874 and 0x004b1878 in 0x0045a490.
 const SPIN_RADIANS_PER_MILLISECOND = Math.fround(0.004)
@@ -78,7 +78,8 @@ export const setBrickSoundsEnabled = (step: PowerUpStep, isSoundEnabled: boolean
 export const updatePowerUps = (
   step: PowerUpStep,
   context: PowerUpContext,
-  stepMilliseconds: number
+  stepMilliseconds: number,
+  updateEffects: EffectsUpdater = updatePowerUpEffects
 ): PowerUpStep => {
   const { add, subtract, multiply, storeFloat, getIsBelowOrEqual } = context.arithmetic
   const spin = add(
@@ -105,7 +106,7 @@ export const updatePowerUps = (
       brickSpinAngle,
     }),
   })
-  return recyclePowerUpEffects(updatePowerUpEffects(bricksUpdated, context, stepMilliseconds))
+  return recyclePowerUpEffects(updateEffects(bricksUpdated, context, stepMilliseconds))
 }
 
 const getStatusIsWarping = (context: PowerUpContext, racer: number): boolean => {

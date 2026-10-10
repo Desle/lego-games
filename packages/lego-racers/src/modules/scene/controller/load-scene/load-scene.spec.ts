@@ -56,7 +56,9 @@ describe.runIf(isOriginalPresent)('loadScene on the original LEGO.JAM', () => {
       )
     }
     for (const instance of scene.instances) {
-      for (const level of instance.levels) expect(scene.meshes[level.meshIndex]).toBeDefined()
+      for (const level of instance.levels) {
+        if (level.meshIndex >= 0) expect(scene.meshes[level.meshIndex]).toBeDefined()
+      }
     }
     for (const mesh of scene.meshes) {
       for (const batch of mesh.drawBatches) {
@@ -64,6 +66,25 @@ describe.runIf(isOriginalPresent)('loadScene on the original LEGO.JAM', () => {
         expect(Math.max(...batch.vertexIndices)).toBeLessThan(mesh.vertexCount)
       }
     }
+  })
+
+  it('links skeleton instances to their skeletons, animations and starting clip', () => {
+    // Arrange
+    const worldPaths = getRaceWorldPaths('GAMEDATA\\RACEC0R0', FIRST_RACE_WORLDS)
+
+    // Act
+    const scene = loadScene(archive!, worldPaths)
+
+    // Assert
+    const hammer = scene.instances.find((instance) => instance.name === 'rkhamm02')
+    const cameraDummy = scene.instances.find((instance) => instance.name === 'camDUM')
+    expect(hammer?.kind).toBe(SceneInstanceKind.SKELETON)
+    expect(hammer?.worldPath).toBe('GAMEDATA\\RACEC0R0\\RRTRK.WDB')
+    expect(hammer?.startClipIndex).toBe(0)
+    const skeletonIndex = hammer?.levels[0]?.skeletonIndex ?? -1
+    expect(scene.skeletons[skeletonIndex]?.name).toBe('rkhamm02')
+    expect(scene.animations[hammer?.levels[0]?.animationIndex ?? -1]?.name).toBe('rkhamm02')
+    expect(cameraDummy?.levels[0]?.meshIndex).toBe(-1)
   })
 
   it('opens every texture database, library and model the track names from the race directory', () => {

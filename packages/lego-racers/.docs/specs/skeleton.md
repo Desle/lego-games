@@ -17,4 +17,4 @@ Parses a `.SDB` skeleton into plain, frozen data, reading it exactly as the Gol 
 
 ## Out of scope
 
-Building bone matrices (`0x10002e30`) and posing skeletons.
+Building bone matrices and posing skeletons, which `skeletal-animation` does.

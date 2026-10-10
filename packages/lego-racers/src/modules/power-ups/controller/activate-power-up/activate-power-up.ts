@@ -197,6 +197,19 @@ const activateShield = (
   })
 }
 
+// 0x0045b690 then 0x00439730: the racer's turbo effects finish at once and its turbo state ends.
+export const getStepWithRacerTurbosEnded = (step: PowerUpStep, racer: number): PowerUpStep =>
+  getStepWithEvents(
+    getStepWithRacerEffectsFinished(
+      step,
+      PowerUpEffectKind.TURBO,
+      racer,
+      (effect) => effect.ownerRacer,
+      true
+    ),
+    [{ type: 'power_ups.racer_turbo_ended', racer }]
+  )
+
 // 0x0045b1e0 → 0x0045c8f0 and 0x0045cd70.
 const activateTurbo = (
   step: PowerUpStep,
@@ -211,18 +224,7 @@ const activateTurbo = (
     PowerUpEffectKind.TURBO,
     getPlainStart(racer, level, 400, null),
     (started) => {
-      const replaced = status.isInTurbo
-        ? getStepWithEvents(
-            getStepWithRacerEffectsFinished(
-              started,
-              PowerUpEffectKind.TURBO,
-              racer,
-              (effect) => effect.ownerRacer,
-              true
-            ),
-            [{ type: 'power_ups.racer_turbo_ended', racer }]
-          )
-        : started
+      const replaced = status.isInTurbo ? getStepWithRacerTurbosEnded(started, racer) : started
       return getStepWithEvents(replaced, [
         {
           type: 'power_ups.racer_turbo_started',

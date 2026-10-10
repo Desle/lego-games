@@ -16,4 +16,4 @@ Parses a `.ADB` animation into plain, frozen data, reading it exactly as the Gol
 
 ## Out of scope
 
-Playing animations (interpolation, `0x10018790`) and the copy of the loader in `LEGORacers.exe` (`0x00401260`).
+Playing animations, which `skeletal-animation` does, and the copy of the loader in `LEGORacers.exe` (`0x00401260`).

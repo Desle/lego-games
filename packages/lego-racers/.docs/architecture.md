@@ -143,8 +143,20 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 ### `sky`
 
 - Layers: `controller`, `types`
-- Public API (`index.ts`): `parseSky`, `SkyKeyword`, and the `Sky` types
-- SKB sky settings (`0x0041c550`).
+- Public API (`index.ts`): `parseSky`, `createSkyDome`, `createSkyState`, `advanceSky`, `switchSkySetting`, `getSkyRingColors`, `getSkyVertexColors`, `getSkyPlacement`, `SkyStateError`, `SkyKeyword`, and the `Sky` types
+- SKB sky settings (`0x0041c550`), the dome sphere builder (`0x004907f0`), keyframe running (`0x0041ccb0`) and placement (`0x0041d040`). Depends on `simulation-math`.
+
+### `targa`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `decodeTarga`, `readTargaHeader`, `InvalidTargaError`, `UnsupportedTargaDepthError`, and the `TargaHeader` types
+- `.TGA` images (`GolDP.dll` `0x1002a5e0`, `0x1002ae50`) decoded into the `bitmap` module's `Bitmap`.
+
+### `skeletal-animation`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `getSkeletalAnimation`, `getRestPose`, `getSkeletonPose`, `getBoneMatrices`, `getBoneRotation`, `createSkeletonAnimationState`, `advanceSkeletonAnimation`, `samplePosition`, `sampleRotation`, `getBlendedQuaternion`, `getInstancePosition`, `SkeletalAnimationError`, and the pose and state types
+- Poses skeletons from animations as the skeleton instance does (`0x10023580`, `0x10023b10`, `0x10024380`, `0x10024540`, `0x10002e30`, `0x1002f450`). Depends on `animation`, `skeleton` and `simulation-math`; free of DOM and rendering libraries.
 
 ### `load-screen`
 
@@ -220,6 +232,12 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 - Public API (`index.ts`): `createPowerUpWorld`, `updatePowerUps`, `touchPowerUpBricks`, `touchEnhancementBricks`, `setBrickSoundsEnabled`, `usePowerUp`, `activatePowerUp`, `advanceComputerPowerUpUse`, `rollComputerStartTurbo`, `keepPermanentTurbo`, `hitRacerWithProjectile`, `touchHazardEffect`, `endProjectileFlight`, `advancePowerUpEffect`, `updatePowerUpEffects`, `createPowerUpEffects`, `getRacerWithVoiceCooldownAdvanced`, `getRaceModeBrickKind`, `getPowerUpEffectKind`, `BrickKind`, `BrickState`, `EffectState`, `PowerUpEffectKind`, `RaceModeFlag`, `POWER_UP_EFFECT_POOL_SIZES`, `ATTACHMENT_SLOT_COUNT`, the errors, the `PowerUpEvent` union and the world, racer and effect types
 - The power-up behaviour (bricks, enhancements, effects); `power-up` is its file format. Pure state transitions that return events for the racer, sound and explosion code. Depends on `simulation-math`, `random-table`, `racer-ai` and `power-up`.
 
+### `projectiles`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `updatePowerUpsWithProjectiles`, `updateProjectileEffect`, `touchProjectileFlights`, `touchProjectileHazards`, `touchProjectileExplosions`, `createProjectileWorld`, `createTrackLineProbe`, the flights (`launchFlightAtRacer`, `launchFlightAtPoint`, `launchFlightWithOffset`, `advanceBallisticFlight`, `reflectBallisticFlight`, `touchBallisticFlight`, `getFlightVelocity`, `BallisticFlightState`, `advanceHomingFlight`, `retargetHomingFlight`, `advanceGrappleHook`, `getPointMovedToward`), `getWandBeam`, `getRaySphereHit`, `getMagnetPull`, `getIsWithinMagnetCaptureRange`, `getIsSpeedNearZero`, `getPointMovedAlongRoute`, `getWarpLandingPosition`, the explosions and debris (`createExplosionPool`, `getBlastImpulse`, `ExplosionState`, `createDebrisPool`, `DebrisState`), the collision registry (`getRegistryContacts`, `getSortedRegistryEntries`), the errors, the `ProjectileEvent` union and the world, racer and flight types
+- The parts of the power-up effects that move: flights, hooks, beams, pulls, the warp's carry, explosions and debris. Plugs into `power-ups` through its `EffectsUpdater`, and uses its entry points for hits and ends. Takes the track probe, the route and the model data it does not read as typed dependencies. Depends on `power-ups`, `collision`, `random-table` (through `power-ups`) and `simulation-math`.
+
 ### `racer`
 
 - Layers: `controller`, `services`, `types`
@@ -229,5 +247,11 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 ### `scene`
 
 - Layers: `controller`, `types`
-- Public API (`index.ts`): `loadScene`, `getWorldPaths`, `getRaceWorldPaths`, `COMMON_DIRECTORY`, `SceneLinkError`, `ScenePathError`, the render-state enums (`ShadeMode`, `TextureOperation`, `CompareFunction`, `BlendFactor`, `TextureFilter`, `TextureAddressing`), `SceneInstanceKind`, `MissingBitmapReason`, and the `Scene` types
-- Links worlds into a renderable scene (`0x10017ac0`, `0x1002e640`) and derives each material's Direct3D state (`0x1000a2c0`). Depends on `jam-archive`, `world`, `texture-database`, `material`, `model` and `bitmap`; free of DOM and rendering libraries.
+- Public API (`index.ts`): `loadScene`, `getWorldPaths`, `getRaceWorldPaths`, `getRaceSkyPath`, `getRaceBackgroundWorldPath`, `COMMON_DIRECTORY`, `SceneLinkError`, `ScenePathError`, the render-state enums (`ShadeMode`, `TextureOperation`, `CompareFunction`, `BlendFactor`, `TextureFilter`, `TextureAddressing`), `SceneInstanceKind`, `MissingBitmapReason`, and the `Scene` types
+- Links worlds into a renderable scene (`0x10017ac0`, `0x1002e640`) and derives each material's Direct3D state (`0x1000a2c0`). Depends on `jam-archive`, `world`, `texture-database`, `material`, `model`, `bitmap`, `targa`, `skeleton`, `animation` and `skeletal-animation`; free of DOM and rendering libraries.
+
+### `race`
+
+- Layers: `controller`, `services`, `types`
+- Public API (`index.ts`): `stepRace`, `createRace`, `updateRace`, `loadRaceDefinition`, `runHeadlessRace`, `RACE_STEP_DEPENDENCIES`, `IDLE_RACER_CONTROLS`, `NO_RACE_CONTACTS`, `RacePhase`, the phase timings, the racer transitions (`resetRacerForRace`, `releaseRacerAtStart`, `enterZoneZero`, `enterZoneOne`, `enterZoneTwo`, `getRacerAfterCheckpointTouch`, `convertRacerToComputer`), `getRacerAfterWrongWayCheck`, `getRacerAfterTargetGuidance`, `getLapGapMilliseconds`, `placeCarBodyOnRoute`, `stepScriptedCarBody`, `getStartFrame`, `getPlaceholderCarBodyDefinition`, and the `RaceState`, `RaceDefinition`, `RaceInputs`, `RaceEvent`, `RaceContacts` types
+- The race itself: `Race_RunLoop` (`0x00432540`) with its five timed states and `Race_Update` (`0x00435220`), wiring `racer`, `racer-ai`, `power-ups`, `random-table`, `racer-physics` and `collision` into one deterministic `stepRace(raceState, inputs, frameMilliseconds) → { raceState, events }`. Free of DOM, clocks and rendering. The `services/` layer loads a race from the player's own `LEGO.JAM` and `LEGORacers.exe` and runs it headless.

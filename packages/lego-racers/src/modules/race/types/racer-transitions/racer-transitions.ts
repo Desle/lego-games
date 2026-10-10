@@ -1,0 +1,170 @@
+import type { PowerUpEvent } from '../../../power-ups/index.ts'
+import type { Racer } from '../../../racer/index.ts'
+
+export const COMPUTER_CONTROLLER = 2
+export const PLAYER_CONTROLLER = 0
+// Racer +0xd04 bits (see racer.md).
+export const RACER_FINISHED_FLAG = 0x2
+export const RACER_STARTING_FLAG = 0x400
+export const RACER_PLACED_FLAG = 0x1000
+const RACER_RESET_FLAGS_MASK = 0xffff8fff
+const RACER_REVERSE_LAP_FLAG = 0x80000
+// Driver +0x14 bit 0x80: the driver has no route (0x0043a0e0 sets it when 0x0043d070 finds none).
+const DRIVER_NO_ROUTE_FLAG = 0x80
+const LAP_GAP_COUNTDOWN_MILLISECONDS = 2000
+
+// 0x004374c0, the racer fields: flag 0x2 set and 0x1000..0x4000 cleared, no checkpoint, zone history 0, 2, 1, no lap.
+// The route placement (0x0042a670, car body +0xb30 = 1) is done by the scripted car body code.
+export const resetRacerForRace = (racer: Racer): Racer =>
+  Object.freeze({
+    ...racer,
+    flags: ((racer.flags & RACER_RESET_FLAGS_MASK) | RACER_FINISHED_FLAG) >>> 0,
+    checkpointIndex: -1,
+    zoneCurrent: 0,
+    currentLap: 0,
+    wrongWayMilliseconds: 0,
+    checkpointSide: 1,
+    zonePrevious: 2,
+    zoneBeforePrevious: 1,
+    lapCrossings: -1,
+    lap: -1,
+  })
+
+// 0x00439340, the racer fields: flag 0x2 cleared and the zone history restarted at 0, 2, 1.
+export const releaseRacerAtStart = (racer: Racer): Racer =>
+  Object.freeze({
+    ...racer,
+    flags: racer.flags & ~RACER_FINISHED_FLAG,
+    zoneCurrent: 0,
+    zonePrevious: 2,
+    zoneBeforePrevious: 1,
+  })
+
+// 0x0043a0e0: a finished player is driven by the computer from then on. The route search 0x0043d070 is not
+// ported, so a racer without a route gets driver flag 0x80 (the code's own answer when no route is found).
+export const convertRacerToComputer = (racer: Racer): Racer => {
+  const isWithoutRoute = racer.carBody.routeFollower === null
+  return Object.freeze({
+    ...racer,
+    controllerKind: COMPUTER_CONTROLLER,
+    driver: isWithoutRoute
+      ? Object.freeze({ ...racer.driver, flags: racer.driver.flags | DRIVER_NO_ROUTE_FLAG })
+      : racer.driver,
+  })
+}
+
+// The history shift every zone function ends with (0x00439b7c, 0x00439c19, 0x00439c4b).
+const getRacerInZone = (racer: Racer, zone: number): Racer =>
+  Object.freeze({
+    ...racer,
+    zoneBeforePrevious: racer.zonePrevious,
+    zonePrevious: racer.zoneCurrent,
+    zoneCurrent: zone,
+  })
+
+// 0x00439b70: zone 0 (only when the racer is not in it already).
+export const enterZoneZero = (racer: Racer): Racer =>
+  racer.zoneCurrent === 0 ? racer : getRacerInZone(racer, 0)
+
+// 0x00439c40: zone 2.
+export const enterZoneTwo = (racer: Racer): Racer =>
+  racer.zoneCurrent === 2 ? racer : getRacerInZone(racer, 2)
+
+// 0x00439ba0, the lap line (zone 1): coming from zone 0 after zones 2 and 1 counts a crossing, and a crossing
+// beyond the current lap starts the next one. `lapGapMilliseconds` is what 0x0043cda0 returns for the new lap.
+export const enterZoneOne = (
+  racer: Racer,
+  getLapGapMilliseconds: (racer: Racer) => number
+): Racer => {
+  if (racer.zoneCurrent === 1) return racer
+  const isLineCrossed =
+    racer.zoneCurrent === 0 && racer.zonePrevious === 2 && racer.zoneBeforePrevious === 1
+  if (!isLineCrossed) return getRacerInZone(racer, 1)
+  const lapCrossings = racer.lapCrossings + 1
+  const counted = Object.freeze({ ...racer, lapCrossings })
+  if (lapCrossings <= 0 || lapCrossings <= racer.currentLap) return getRacerInZone(counted, 1)
+  const next = Object.freeze({ ...counted, currentLap: racer.currentLap + 1 })
+  const gap = getLapGapMilliseconds(next)
+  const isGapShown = gap !== 0 && next.currentLap < next.lapCount
+  return getRacerInZone(
+    isGapShown
+      ? Object.freeze({
+          ...next,
+          unidentifiedCountdownD84Milliseconds: LAP_GAP_COUNTDOWN_MILLISECONDS,
+        })
+      : next,
+    1
+  )
+}
+
+// 0x00439fc0 after the side test: a checkpoint with progress 0 is the start line.
+export const getRacerAfterCheckpointTouch = (
+  racer: Racer,
+  checkpointIndex: number,
+  isStartLine: boolean,
+  side: number
+): Racer => {
+  if (racer.checkpointIndex === checkpointIndex && racer.checkpointSide === side) return racer
+  const withCheckpoint = (changed: Racer): Racer =>
+    Object.freeze({ ...changed, checkpointIndex, checkpointSide: side })
+  if (isStartLine && side === 0) {
+    return Object.freeze({
+      ...withCheckpoint(racer),
+      checkpointSide: 0,
+      flags: racer.flags | RACER_REVERSE_LAP_FLAG,
+      zoneCurrent: 0,
+      zonePrevious: 2,
+      zoneBeforePrevious: 2,
+    })
+  }
+  const isReversed = (racer.flags & RACER_REVERSE_LAP_FLAG) !== 0
+  if (isStartLine) {
+    return withCheckpoint(
+      Object.freeze({
+        ...racer,
+        lap: isReversed ? racer.lap : racer.lap + 1,
+        flags: racer.flags & ~RACER_REVERSE_LAP_FLAG,
+      })
+    )
+  }
+  if (!isReversed) return withCheckpoint(racer)
+  return withCheckpoint(
+    Object.freeze({ ...racer, lap: racer.lap - 1, flags: racer.flags & ~RACER_REVERSE_LAP_FLAG })
+  )
+}
+
+const getRacerWithFlags = (racer: Racer, flags: number): Racer =>
+  Object.freeze({ ...racer, flags: flags >>> 0 })
+
+// The racer-side effects power-ups names after their original calls: 0x00439770, 0x00439790, 0x0043a270 (+0xd74),
+// 0x00439900 (+0xd7c, flag 0x800), 0x0045d560 (0x200000), 0x004395d0 (0x10), 0x00439660 and 0x0043a130 (0x100000).
+// The rest (turbo, magnet release, lightning, grapple) call racer code that is not ported; they only reach the
+// caller as events.
+export const getRacerAfterPowerUpEvent = (racer: Racer, event: PowerUpEvent): Racer => {
+  switch (event.type) {
+    case 'power_ups.racer_shield_raised':
+      return Object.freeze({
+        ...getRacerWithFlags(racer, racer.flags | 0x1),
+        shieldLevel: event.level,
+      })
+    case 'power_ups.racer_shield_lowered':
+      return getRacerWithFlags(racer, racer.flags & ~0x1)
+    case 'power_ups.racer_shield_struck':
+      return Object.freeze({ ...racer, unidentifiedCountdownD74Milliseconds: 500 })
+    case 'power_ups.racer_cursed':
+      return Object.freeze({
+        ...getRacerWithFlags(racer, racer.flags | 0x800),
+        timedEffectMilliseconds: event.durationMilliseconds,
+      })
+    case 'power_ups.racer_warp_pending':
+      return getRacerWithFlags(racer, racer.flags | 0x200000)
+    case 'power_ups.racer_warp_started':
+      return getRacerWithFlags(racer, (racer.flags & ~0x200000) | 0x10)
+    case 'power_ups.racer_warp_ended':
+      return getRacerWithFlags(racer, racer.flags & ~0x10)
+    case 'power_ups.racer_magnetized':
+      return getRacerWithFlags(racer, racer.flags | 0x100000)
+    default:
+      return racer
+  }
+}

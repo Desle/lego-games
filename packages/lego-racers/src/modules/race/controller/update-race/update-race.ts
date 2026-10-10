@@ -1,0 +1,126 @@
+import { updatePowerUps } from '../../../power-ups/index.ts'
+import { getRaceTimeStep, updateRacePhysics } from '../../../racer-physics/index.ts'
+import { applyRacerControls, stepRacerSet, updatePlayerController } from '../../../racer/index.ts'
+import type { RaceInputs, RaceRacerSet, RaceState } from '../../types/race.types.ts'
+import {
+  RACE_PLAYER_CONTROLLER_DEPENDENCIES,
+  RACE_STEP_DEPENDENCIES,
+} from '../race-dependencies/race-dependencies.ts'
+import {
+  changePowerUps,
+  getRaceRacerSet,
+  getRaceRacerSetOf,
+  getRacerSetOf,
+  IDLE_RACER_CONTROLS,
+  NO_RACE_CONTACTS,
+} from '../race-world/race-world.ts'
+import type { PlayerControllerProgress, PlayerControllerRun } from './update-race.types.ts'
+
+// Race settings +0x20 bit 0x100 scales the time by 1.75.
+const TIME_SCALE_FLAG = 0x100
+// Race_Update 0x00435220: race +0x334c becomes 1,000 when the time step exceeds it.
+const COUNTDOWN_RESET_MILLISECONDS = 1000
+
+export const getIsTimeScaled = (state: RaceState): boolean =>
+  (state.raceModeFlags & TIME_SCALE_FLAG) !== 0
+
+// Runs one controller function for every local player, in order, against the racer set the players drive.
+const runPlayerControllers = (
+  state: RaceState,
+  racerSet: RaceRacerSet,
+  run: PlayerControllerRun
+): PlayerControllerProgress =>
+  state.playerRacerIndices.reduce<PlayerControllerProgress>(
+    (progress, racerIndex, playerIndex) => {
+      const controller = progress.controllers[playerIndex]
+      if (controller === undefined) return progress
+      const next = run(
+        {
+          context: state.context,
+          state: { controller, racerSet: progress.racerSet },
+          racerIndex,
+          dependencies: RACE_PLAYER_CONTROLLER_DEPENDENCIES,
+        },
+        playerIndex
+      )
+      return {
+        controllers: Object.freeze(
+          progress.controllers.map((candidate, index) =>
+            index === playerIndex ? next.controller : candidate
+          )
+        ),
+        racerSet: getRaceRacerSetOf(next.racerSet),
+      }
+    },
+    { controllers: state.playerControllers, racerSet }
+  )
+
+const getStateWithProgress = (state: RaceState, progress: PlayerControllerProgress): RaceState =>
+  Object.freeze({
+    ...state,
+    racerSet: getRacerSetOf(progress.racerSet),
+    powerUpStep: progress.racerSet.powerUpStep,
+    playerControllers: progress.controllers,
+  })
+
+// The device callbacks 0x004309c0: the bindings pressed or released since the last frame.
+export const applyPlayerControls = (state: RaceState, inputs: RaceInputs): RaceState =>
+  getStateWithProgress(
+    state,
+    runPlayerControllers(state, getRaceRacerSet(state, NO_RACE_CONTACTS), (input, playerIndex) =>
+      applyRacerControls(input, inputs.controls[playerIndex] ?? IDLE_RACER_CONTROLS)
+    )
+  )
+
+// Race_Update 0x00435220: the frame's whole time step goes to the power-ups and the players' controllers, then
+// the racers run in sub-steps of at most 40 ms. Not ported: the animations (0x00416090), the tagged positions
+// (0x0045e470), the triggers, events, hazards, timers and emitters, the sky and the HUD; the cameras
+// (0x00428540) and the ghost recorder (0x00422710) only read the racers.
+export const updateRace = (
+  state: RaceState,
+  inputs: RaceInputs,
+  frameMilliseconds: number
+): RaceState => {
+  const { arithmetic } = state.context
+  const timeInput = {
+    frameDeltaMilliseconds: frameMilliseconds,
+    isTimeScaled: getIsTimeScaled(state),
+  }
+  const stepMilliseconds = getRaceTimeStep(arithmetic, timeInput)
+  const counted: RaceState = Object.freeze({
+    ...state,
+    unidentifiedCountdownMilliseconds:
+      state.unidentifiedCountdownMilliseconds < stepMilliseconds
+        ? COUNTDOWN_RESET_MILLISECONDS
+        : state.unidentifiedCountdownMilliseconds - stepMilliseconds,
+  })
+  const powered = changePowerUps(
+    counted.context,
+    getRaceRacerSet(counted, inputs.contacts),
+    (step, powerUpContext) => updatePowerUps(step, powerUpContext, stepMilliseconds)
+  )
+  const controlled = counted.isDemonstration
+    ? { controllers: counted.playerControllers, racerSet: powered }
+    : runPlayerControllers(counted, powered, (input, playerIndex) =>
+        updatePlayerController(
+          input,
+          inputs.controls[playerIndex] ?? IDLE_RACER_CONTROLS,
+          stepMilliseconds
+        )
+      )
+  const stepped = updateRacePhysics(
+    arithmetic,
+    controlled.racerSet,
+    timeInput,
+    (racerSet, subStepMilliseconds) =>
+      getRaceRacerSetOf(
+        stepRacerSet({
+          context: counted.context,
+          racerSet,
+          stepMilliseconds: subStepMilliseconds,
+          dependencies: RACE_STEP_DEPENDENCIES,
+        })
+      )
+  )
+  return getStateWithProgress(counted, { controllers: controlled.controllers, racerSet: stepped })
+}

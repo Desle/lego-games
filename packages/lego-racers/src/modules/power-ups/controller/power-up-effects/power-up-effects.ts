@@ -23,6 +23,7 @@ import type {
   EffectTakeRequest,
   EffectTakeResult,
   StealCandidate,
+  AttachmentSlotAllocation,
 } from './power-up-effects.types.ts'
 
 // The order 0x004590f0 links the pools in.
@@ -196,6 +197,22 @@ export const takePowerUpEffect = (
     effectId,
   })
 }
+
+// 0x0045b9e0 for an object other than an effect (the brick debris): the lowest free slot, or null.
+export const getStepWithAttachmentSlot = (step: PowerUpStep): AttachmentSlotAllocation => {
+  const allocation = allocateAttachmentSlot(step.world.effects.attachmentSlots)
+  return Object.freeze({
+    step: getStepWithEffects(step, { ...step.world.effects, attachmentSlots: allocation.slots }),
+    slotIndex: allocation.slotIndex,
+  })
+}
+
+// 0x0045ba40 for an object other than an effect.
+export const getStepWithAttachmentSlotFreed = (step: PowerUpStep, slotIndex: number): PowerUpStep =>
+  getStepWithEffects(step, {
+    ...step.world.effects,
+    attachmentSlots: freeAttachmentSlot(step.world.effects.attachmentSlots, slotIndex),
+  })
 
 // 0x0045b9e0 for each attachment the class needs; on a failure the effect finishes at once (state 6).
 export const getStepWithAttachments = (step: PowerUpStep, effectId: number): PowerUpStep => {

@@ -3,6 +3,7 @@ import SceneSummaryPanel from './scene-summary-panel.tsx'
 
 const SUMMARY = {
   worldPaths: ['GAMEDATA\\COMMON\\GLOBAL.WDB', 'GAMEDATA\\RACEC0R0\\RRTRK.WDB'],
+  animatedInstanceCount: 0,
   instanceCount: 12,
   meshCount: 5,
   triangleCount: 5020,
@@ -31,7 +32,7 @@ describe('SceneSummaryPanel', () => {
     // Arrange
     const summary = {
       ...SUMMARY,
-      missingTextures: ['GAMEDATA\\COMMON\\LITFLASH.TGA (targa_not_ported)'],
+      missingTextures: ['GAMEDATA\\COMMON\\FONT_HLP.BMP (file_not_found)'],
     }
 
     // Act
