@@ -63,7 +63,7 @@ Touch (`0x00453af0`, from the collision registry `0x0043d270`, which pairs racer
 
 ## Using a brick (`0x00439100`)
 
-Nothing held → `0x00439c90` (taunt sound `+0xd23`, event system notified). Level = `+0xd58`. Racer description byte `+0xf` (copied by `0x00436df0`): `0x40` → `+0xd04 0x1000000`, every brick fires a level-1 projectile; `0x80` → `0x2000000`, every brick is used at level 3; `0x02` → `0x8000000`, turbo bricks below level 3 are spent without effect and `0x004377f0` starts a level-2 turbo every sub-step while the racer is not tumbling. Projectile → `0x0045a950`; shield → taunt, `0x0045b030`; turbo → `0x0045b1e0`; hazard → taunt, `0x0045a9b0`. Then the brick is gone and the enhancement bricks are released.
+Nothing held → `0x00439c90` (taunt sound `+0xd23`, event system notified). Level = `+0xd58`. Game settings `+0x20` bits (the block word `+0x3c` that `0x00436df0` reads; see racer-setup.md): `0x40` → `+0xd04 0x1000000`, every brick fires a level-1 projectile; `0x80` → `0x2000000`, every brick is used at level 3; `0x02` → `0x8000000`, turbo bricks below level 3 are spent without effect and `0x004377f0` starts a level-2 turbo every sub-step while the racer is not tumbling. Projectile → `0x0045a950`; shield → taunt, `0x0045b030`; turbo → `0x0045b1e0`; hazard → taunt, `0x0045a9b0`. Then the brick is gone and the enhancement bricks are released.
 
 Humans call it from the fire button (`0x00430620`). Computers: `0x004377f0` and `0x00438f20` (ported in `racer-ai`; `advanceComputerPowerUpUse` wires them to `usePowerUp`). `0x00439340` (start of a computer race): one low-byte draw below the turbo chance (`+0xd1e`) starts a level-0 turbo.
 

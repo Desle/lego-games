@@ -20,6 +20,7 @@ const HULL_CORNERS: readonly Vector3[] = Object.freeze([
 ])
 const STEERING_SCALE = 1
 const THROTTLE_SCALE = 1
+const TOP_SPEED_SCALE = 1
 
 export const getPlaceholderCarBodyDefinition = (
   arithmetic: FloatArithmetic,
@@ -44,5 +45,6 @@ export const getPlaceholderCarBodyDefinition = (
     ),
     steeringScale: STEERING_SCALE,
     throttleScale: THROTTLE_SCALE,
+    topSpeedScale: TOP_SPEED_SCALE,
   })
 }
