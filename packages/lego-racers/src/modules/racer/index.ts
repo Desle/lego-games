@@ -5,6 +5,7 @@ export {
 export {
   keepRacerSetNotYetPorted,
   RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED,
+  stepRacerRigidBody,
   stepRacerSet,
 } from './controller/step-racer-set/step-racer-set.ts'
 export {
@@ -52,7 +53,6 @@ export {
 export type {
   CarBody,
   CarBodyDefinition,
-  CarWheel,
   DrivenCarBody,
   DriverUpdate,
   PlayerController,

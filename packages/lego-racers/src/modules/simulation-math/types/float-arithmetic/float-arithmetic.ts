@@ -28,6 +28,7 @@ export const createFloatArithmetic = (precision: FpuPrecisionValue): FloatArithm
     // Precision control does not apply to FSIN, FCOS and FSINCOS.
     getSine: (angle) => Math.sin(angle),
     getCosine: (angle) => Math.cos(angle),
+    getTangent: (angle) => Math.tan(angle),
     storeFloat: roundToFloat32,
     getIsEqual: (left, right) => left === right || getIsUnordered(left, right),
     getIsBelow: (left, right) => left < right || getIsUnordered(left, right),

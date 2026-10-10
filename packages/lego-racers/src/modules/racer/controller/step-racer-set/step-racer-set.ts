@@ -1,3 +1,4 @@
+import { stepCarRigidBody } from '../../../racer-physics/index.ts'
 import { restoreCarBodySafePose, saveCarBodySafePose } from '../../types/car-body/car-body.ts'
 import {
   findNearestRacerInCone,
@@ -57,9 +58,30 @@ const RUBBER_BAND_EXEMPT_FLAGS = 0x20100000
 export const keepRacerSetNotYetPorted = (_context: RacerSetContext, racerSet: RacerSet): RacerSet =>
   racerSet
 
+// Pass 2: RigidBody_Step 0x00444ef0 on the racer's car rigid body, against the race's collision objects.
+// The car body's overrides of slots +0x0c and +0x10 (0x0042a830, 0x0042a900) are not ported, so the car
+// rigid body's own behaviour (every hull contact accepted, nothing after a pass) stands in for them.
+export const stepRacerRigidBody: RacerBoundary = (
+  context,
+  racerSet,
+  racerIndex,
+  stepMilliseconds
+) => {
+  const racer = getRacer(racerSet, racerIndex)
+  const rigidBody = stepCarRigidBody(context.arithmetic, racer.carBody.rigidBody, {
+    stepMilliseconds,
+    collisionObjects: context.collisionObjects,
+  })
+  return setRacer(
+    racerSet,
+    racerIndex,
+    Object.freeze({ ...racer, carBody: Object.freeze({ ...racer.carBody, rigidBody }) })
+  )
+}
+
 export const RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED: RacerSetStepDependencies = Object.freeze({
   followDriverRoute: keepRacerSetNotYetPorted,
-  stepRigidBody: keepRacerSetNotYetPorted,
+  stepRigidBody: stepRacerRigidBody,
   stepScriptedCarBody: keepRacerSetNotYetPorted,
   updateEngineSound: keepRacerSetNotYetPorted,
   endPowerSlideEffects: keepRacerSetNotYetPorted,
@@ -120,7 +142,10 @@ const getIsRespawning = (racer: Racer): boolean =>
 const settleCarBody = (context: RacerSetContext, racer: Racer): Racer => {
   const { arithmetic } = context
   const body = racer.carBody
-  const isSafe = body.groundedWheelCount === 4 && body.contact === 0 && !getIsRespawning(racer)
+  const isSafe =
+    body.rigidBody.groundedWheelCount === 4 &&
+    body.rigidBody.contactCount === 0 &&
+    !getIsRespawning(racer)
   const saved = isSafe ? saveCarBodySafePose(arithmetic, body) : body
   const height = saved.rigidBody.frame.position.z
   const isOutOfRange =
@@ -156,7 +181,7 @@ const stepPowerSlide =
       return stopRacerPowerSlide(context, racerSet, racerIndex, dependencies.endPowerSlideEffects)
     }
     const { add, subtract, multiply, storeFloat, getIsBelow } = context.arithmetic
-    const { restingForward: forward, displayFrame, steering } = racer.carBody
+    const { heading: forward, displayFrame, turnRadius: steering } = racer.carBody.rigidBody
     const [rowX, rowY, rowZ] = displayFrame.rotation
     const alignment = add(
       add(multiply(forward.z, rowZ), multiply(forward.y, rowY)),
@@ -194,7 +219,7 @@ const countDownToTimedEffect = (racer: Racer, stepMilliseconds: number): Racer =
     voiceMilliseconds: getCountdown(racer.voiceMilliseconds, stepMilliseconds),
     collisionSoundMilliseconds: getCountdown(racer.collisionSoundMilliseconds, stepMilliseconds),
     airborneMilliseconds:
-      racer.carBody.groundedWheelCount === 0
+      racer.carBody.rigidBody.groundedWheelCount === 0
         ? (racer.airborneMilliseconds + stepMilliseconds) >>> 0
         : 0,
     unidentifiedCountdownD74Milliseconds: getCountdown(
@@ -225,7 +250,8 @@ const countDownAfterTimedEffect = (
       : context.arithmetic.storeFloat(
           context.arithmetic.multiply(fadeLeft - FADE_HOLD_MILLISECONDS, FADE_RATE)
         )
-  const { displayFrame, rigidBody } = racer.carBody
+  const { rigidBody } = racer.carBody
+  const { displayFrame } = rigidBody
   return Object.freeze({
     ...racer,
     unidentifiedCountdownD84Milliseconds: getCountdown(
@@ -272,7 +298,7 @@ const stepRacerThinking = (
     ? dependencies.considerComputerPowerUp(context, timed, racerIndex, stepMilliseconds)
     : timed
   const body = getRacer(considered, racerIndex).carBody
-  return (body.flags & CAR_BODY_EFFECT_FLAG) !== 0 && !body.isScripted
+  return (body.rigidBody.flags & CAR_BODY_EFFECT_FLAG) !== 0 && !body.isScripted
     ? dependencies.endCarBodyEffect(context, considered, racerIndex, stepMilliseconds)
     : considered
 }
@@ -285,7 +311,9 @@ const stepTaunt = (input: RacerSetStepInput, racerSet: RacerSet, racerIndex: num
   const isComputer = racer.controllerKind === COMPUTER_CONTROLLER
   const isRacerNearAhead =
     findNearestRacerInCone(context.arithmetic, {
-      racerPositions: racerSet.racers.map((current) => current.carBody.displayFrame.position),
+      racerPositions: racerSet.racers.map(
+        (current) => current.carBody.rigidBody.displayFrame.position
+      ),
       origin: racer.savedPosition,
       direction: racer.savedForward,
       minimumDistanceSquared: TAUNT_MINIMUM_DISTANCE_SQUARED,
@@ -319,7 +347,7 @@ const stepContact = (
   racerIndex: number
 ): RacerSet => {
   const { context, dependencies, stepMilliseconds } = input
-  if (getRacer(racerSet, racerIndex).carBody.contact === 0) return racerSet
+  if (getRacer(racerSet, racerIndex).carBody.rigidBody.contactCount === 0) return racerSet
   const notified = dependencies.notifyRacerContact(context, racerSet, racerIndex, stepMilliseconds)
   if (getRacer(notified, racerIndex).collisionSoundMilliseconds !== 0) return notified
   const draw = drawRandomValue(context.tables.randomTable, notified.randomPosition)
@@ -382,7 +410,7 @@ const stepRacerSetRubberBand = (
       lap: racer.lap,
       checkpointProgress: context.checkpoints[racer.checkpointIndex]?.progress ?? null,
       speed: {
-        flags: racer.carBody.flags,
+        flags: racer.carBody.rigidBody.flags,
         speedFactor: racer.carBody.speedFactor,
         targetSpeedFactor: racer.carBody.targetSpeedFactor,
         defaultTargetSpeedFactor: racer.carBody.defaultTargetSpeedFactor,

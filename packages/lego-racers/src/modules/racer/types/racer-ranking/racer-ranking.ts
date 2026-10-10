@@ -66,7 +66,7 @@ const getCheckpointDistance = (
   checkpointIndex: number
 ): number => {
   const { add, multiply, storeFloat, getIsBelow } = context.arithmetic
-  const position = getRacer(racerSet, racerIndex).carBody.displayFrame.position
+  const position = getRacer(racerSet, racerIndex).carBody.rigidBody.displayFrame.position
   const neighbours = context.checkpoints[checkpointIndex]?.links ?? []
   return neighbours.reduce((nearest, identifier) => {
     const checkpoint = context.checkpoints[identifier]
