@@ -12,9 +12,8 @@ import {
   createRacerSet,
 } from '../../../racer/index.ts'
 import type { Racer, RacerSet } from '../../../racer/index.ts'
-import { drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
-import { resolveTimerSecondValue } from '../../../timer/index.ts'
+import { createTrackLogic } from '../../../track-logic/index.ts'
 import { RacePhase } from '../../types/race-phase/race-phase.ts'
 import type {
   RaceDefinition,
@@ -83,21 +82,6 @@ const createRacerFromDefinition = (
   })
 }
 
-// Timers_Load 0x00464aa0 → 0x00464750: a randomised second value draws once while the timer is set up.
-const getPositionAfterTimers = (
-  definition: RaceDefinition,
-  position: RandomTablePosition
-): RandomTablePosition =>
-  (definition.timers?.timers ?? []).reduce((current, timer) => {
-    let drawn = current
-    resolveTimerSecondValue(timer, () => {
-      const draw = drawRandomValue(definition.tables.randomTable, drawn)
-      drawn = draw.position
-      return draw.value
-    })
-    return drawn
-  }, position)
-
 // Race_LoadRaceDescription 0x00431e00 and Race_LoadTrackContent 0x00433480, as far as the simulation is
 // concerned: the lap count (0x004327f0), the racers (RacerSet_Setup 0x0043b190), the timers' draws and the
 // power-ups (PowerUps_Initialize 0x00457c20), ending in the state Race_RunLoop starts from.
@@ -131,9 +115,19 @@ export const createRace = (definition: RaceDefinition): RaceState => {
       : made.racer
   )
   const afterRacers = setups.at(-1)?.position ?? definition.randomPosition
+  const trackLogic = createTrackLogic(
+    {
+      eventSet: definition.events,
+      timerList: definition.timers,
+      mainTriggers: definition.mainTriggers,
+      environmentTriggers: definition.environmentTriggers,
+    },
+    definition.arithmetic,
+    { table: definition.tables.randomTable, position: afterRacers }
+  )
   const racerSet: RacerSet = createRacerSet(
     racers,
-    getPositionAfterTimers(definition, afterRacers),
+    trackLogic.random.position,
     definition.isMirrored ? MIRRORED_RUBBER_BAND_BIAS : 0
   )
   const powerUps = createPowerUpWorld({
@@ -182,6 +176,8 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     trackTargets: definition.trackTargets,
     projectileWorld: createProjectileWorld(powerUpStep),
     projectileModelData: definition.projectileModelData,
+    trackLogic,
+    trackEffects: Object.freeze([]),
     timers: definition.timers,
     mainTriggers: definition.mainTriggers,
     environmentTriggers: definition.environmentTriggers,

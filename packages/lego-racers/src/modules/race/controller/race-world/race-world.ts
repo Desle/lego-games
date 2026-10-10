@@ -6,6 +6,8 @@ import type {
   RacerPowerUps,
   RacerPowerUpStatus,
 } from '../../../power-ups/index.ts'
+import { STATIC_TRACK_WORLD } from '../../../track-logic/index.ts'
+import type { TrackLogicContext, TrackLogicStep } from '../../../track-logic/index.ts'
 import { createTrackLineProbe } from '../../../projectiles/index.ts'
 import type {
   FlightRacer,
@@ -64,6 +66,8 @@ export const getRaceRacerSet = (state: RaceState, contacts: RaceContacts): RaceR
     trackTargets: state.trackTargets,
     raceModeFlags: state.raceModeFlags,
     pendingContacts: contacts,
+    trackLogic: state.trackLogic,
+    trackEffects: state.trackEffects,
   })
 
 export const getIsRaceRacerSet = (racerSet: RacerSet): racerSet is RaceRacerSet =>
@@ -262,3 +266,23 @@ export const getRacerSetAfterProjectileEvents = (
       ),
     })
   }, racerSet)
+
+// Runs a track logic operation on the racer set: the random table position goes in and comes out (the track logic
+// shares it with the racers), and the effects it asked for are kept for the race to report.
+export const changeTrackLogic = (
+  context: RacerSetContext,
+  racerSet: RaceRacerSet,
+  run: (trackLogic: RaceRacerSet['trackLogic'], trackContext: TrackLogicContext) => TrackLogicStep
+): RaceRacerSet => {
+  const synced = {
+    ...racerSet.trackLogic,
+    random: { table: racerSet.trackLogic.random.table, position: racerSet.randomPosition },
+  }
+  const step = run(synced, { arithmetic: context.arithmetic, world: STATIC_TRACK_WORLD })
+  return Object.freeze({
+    ...racerSet,
+    trackLogic: step.state,
+    randomPosition: step.state.random.position,
+    trackEffects: Object.freeze([...racerSet.trackEffects, ...step.effects]),
+  })
+}

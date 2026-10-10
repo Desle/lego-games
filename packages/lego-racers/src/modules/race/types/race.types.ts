@@ -2,7 +2,9 @@ import type { EnumValues } from '../../../shared/types/enum.types.ts'
 import type { Checkpoint } from '../../checkpoint/index.ts'
 import type { CollisionObject } from '../../collision/index.ts'
 import type { ComputerRacerRoute } from '../../computer-racer-route/index.ts'
+import type { EventSet } from '../../event/index.ts'
 import type { HazardList } from '../../hazard/index.ts'
+import type { TrackEffect, TrackLogicState } from '../../track-logic/index.ts'
 import type {
   CarBodyDefinition,
   PlayerController,
@@ -71,6 +73,7 @@ export type RaceDefinition = {
   readonly collisionObjects: readonly CollisionObject[]
   readonly startPositions: readonly StartPosition[]
   readonly powerUps: PowerUpPlacements
+  readonly events: EventSet | null
   readonly timers: TimerList | null
   readonly mainTriggers: TriggerList | null
   readonly environmentTriggers: TriggerList | null
@@ -135,6 +138,10 @@ export type RaceState = {
   // The moving power-up effects (power-up system +0x193c, +0x1940, +0x18bc and each effect's body).
   readonly projectileWorld: ProjectileWorld
   readonly projectileModelData: ProjectileModelData
+  // Events, triggers and timers at runtime (race +0x2098, +0x2080, +0x2128, +0x213c).
+  readonly trackLogic: TrackLogicState
+  // The effects the track logic asked for and the race has not reported yet.
+  readonly trackEffects: readonly TrackEffect[]
   // Loaded and kept; their per-frame logic is not ported (race +0x2080, +0x2128, +0x213c, +0x2148).
   readonly timers: TimerList | null
   readonly mainTriggers: TriggerList | null
@@ -192,6 +199,7 @@ export type RaceEvent =
   | { readonly type: 'race.ended' }
   | { readonly type: 'race.power_up'; readonly event: PowerUpEvent }
   | { readonly type: 'race.projectile'; readonly event: ProjectileEvent }
+  | { readonly type: 'race.track_effect'; readonly effect: TrackEffect }
 
 export type RaceStepResult = {
   readonly raceState: RaceState
@@ -206,4 +214,6 @@ export type RaceRacerSet = RacerSet & {
   readonly trackTargets: readonly ConeQueryTarget[]
   readonly raceModeFlags: number
   readonly pendingContacts: RaceContacts
+  readonly trackLogic: TrackLogicState
+  readonly trackEffects: readonly TrackEffect[]
 }

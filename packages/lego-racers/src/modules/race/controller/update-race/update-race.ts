@@ -1,3 +1,4 @@
+import { updateTrackLogicFrame } from '../../../track-logic/index.ts'
 import { updatePowerUpsWithProjectiles } from '../../../projectiles/index.ts'
 import type { ProjectileWorld } from '../../../projectiles/index.ts'
 import { getRaceTimeStep, updateRacePhysics } from '../../../racer-physics/index.ts'
@@ -9,6 +10,7 @@ import {
 } from '../race-dependencies/race-dependencies.ts'
 import {
   changePowerUps,
+  changeTrackLogic,
   getProjectileContext,
   getRacerSetAfterProjectileEvents,
   getRaceRacerSet,
@@ -63,6 +65,8 @@ const getStateWithProgress = (state: RaceState, progress: PlayerControllerProgre
     ...state,
     racerSet: getRacerSetOf(progress.racerSet),
     powerUpStep: progress.racerSet.powerUpStep,
+    trackLogic: progress.racerSet.trackLogic,
+    trackEffects: progress.racerSet.trackEffects,
     playerControllers: progress.controllers,
   })
 
@@ -109,7 +113,10 @@ export const updateRace = (
     projectileWorld = projected.world
     return projected.step
   })
-  const powered = getRacerSetAfterProjectileEvents(changed, projectileWorld.events)
+  const projected = getRacerSetAfterProjectileEvents(changed, projectileWorld.events)
+  const powered = changeTrackLogic(counted.context, projected, (trackLogic, trackContext) =>
+    updateTrackLogicFrame(trackLogic, trackContext, stepMilliseconds, projected.racers.length)
+  )
   const controlled = counted.isDemonstration
     ? { controllers: counted.playerControllers, racerSet: powered }
     : runPlayerControllers(counted, powered, (input, playerIndex) =>

@@ -24,6 +24,7 @@ export const createFixtureDefinition = (): RaceDefinition => ({
   collisionObjects: [],
   startPositions: [],
   powerUps: { bricks: [], enhancementBricks: [], readByteCount: 0 },
+  events: null,
   timers: null,
   mainTriggers: null,
   environmentTriggers: null,

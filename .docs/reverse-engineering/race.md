@@ -71,10 +71,14 @@ Computer routes (`Race_LoadAiRoutes`, one draw per computer racer, ported by `co
 Skipped when `+0x30c0` is non-zero unless `+0x30a0 == 2` and `0x00436160` leaves `+0x30c0 != 3`. Otherwise, with `dt = frameDelta`, or `_ftol(dt · 1.75f)` when `settings +0x20 & 0x100`:
 
 1. `+0x334c` counts down (1,000 when `dt` exceeds it).
-2. World animations `0x00416090` (three worlds), `PowerUps_Update(dt)`, tagged positions `0x0045e470`, trigger and environment-trigger updates (vtable `+8`), emitters ×2, `0x00493a20`, `Events_Update`, `Hazards_Update`, `Timers_Update`, `0x00494f60`, `race +0xc` slot `+0x34`.
+2. World animations `0x00416090` (three worlds), `PowerUps_Update(dt)` (ported with the moving effects, `updatePowerUpsWithProjectiles`), tagged positions `0x0045e470`, trigger and environment-trigger updates (vtable `+8`), emitters ×2, `0x00493a20`, `Events_Update`, `Hazards_Update`, `Timers_Update`, `0x00494f60`, `race +0xc` slot `+0x34`.
 3. Unless a demonstration: for each local player `0x00421e30` (force feedback) and `PlayerController_Update(dt)`.
 4. Sub-steps of at most 40 ms: `RacerSet_Step`, `Camera_Update` per player, `GhostRecorder_RecordSample`.
 5. `0x00492870`, `0x0048ae00` (hazards against the camera), `Sky_Update`; states 2..4: the HUDs (`0x004351f0`).
+
+### Port order of the per-frame track logic
+
+`updateRace` runs: power-ups with projectiles, then `updateTrackLogicFrame` (Triggers_Update environment then main, `Events_Update`, `Timers_Update`; [track-logic.md](track-logic.md)), then the players' controllers and the sub-steps. Inside each sub-step, pass 4 (`collideRacers`) first ticks the registry's time list with the sub-step's milliseconds (the timers' callbacks and their draws), then delivers the contacts. At load, `Events_Load` (the 2A events' draws) comes before `Timers_Load` and after the racers. Not yet in the order: tagged positions, emitters, `0x00493a20`, `Hazards_Update` (between events and timers), `0x00494f60`, the hazards' camera update after the sub-steps, and `Sky_Update`.
 
 ## Lap counting, checkpoints and the wrong-way warning
 
@@ -100,10 +104,10 @@ Stubs (state unchanged), listed as the dependencies they fill:
 - `collideRacers` (pass 4, `0x0043d180`): racer-against-racer collisions and the registry's sphere overlap tests are not ported; it only delivers the frame's `RaceContacts`. Hence a race has no lap, checkpoint or brick progress unless the caller delivers contacts: **the headless run shows no checkpoint or lap progress.**
 - The car body's contact filter `0x0042a830` and `0x0042a900` inside `RigidBody_Step` (checkpoint touches, the `0x40000` finish objects, surface values).
 - The contact loop of the scripted car body (`RigidBody_AdvanceToContact`, `0x0042a220`), flag `0x8` (`0x0042a100`) and the tilts and spins of `0x0042a290`.
-- Race state 1's intro camera hold (`race +0x3ac`), the pause menu (`+0x30c0`, `0x00436010`, `0x00436160`), the ghost (`race +0x3364`), the points record (`race +0x18`), `0x0045b740` (effects of a finishing racer), the race-wide animation, trigger, event, hazard, timer and emitter updates.
+- Race state 1's intro camera hold (`race +0x3ac`), the pause menu (`+0x30c0`, `0x00436010`, `0x00436160`), the ghost (`race +0x3364`), the points record (`race +0x18`), `0x0045b740` (effects of a finishing racer), the race-wide animation, hazard and emitter updates (trigger, event and timer updates are ported in `track-logic`, see [track-logic.md](track-logic.md)).
 - Racer set-up from the databases: `Drivers_Load`, `Champions_Load`, `Chassis_Load`, `0x0043b480`, `0x004371c0`, `0x00429210`: the car is `getPlaceholderCarBodyDefinition` (the numbers of the rigid body specs: box 8 × 5 × 6.2, wheel anchor (3, 2, −1), track 4, wheelbase 6) and the personality bytes are a custom driver's 100s. The start grid slot is the racer index (race `+0x26c`); a racer without a route is put at its slot's position with the rotation from the slot's two axes (**hypothesis**: `0x00429210` may add an offset).
 - Collision objects: only `COLLIDE.BVB` (the RAB's first collision object, race `+0x3b0`) is given to the car rigid bodies. Which objects occupy `+0x140`/`+0x144` per race is **open**: `0x00444d90` takes them as its second and third arguments, passed from `0x004371c0`'s description (`+0xc`, `+0x10`) that `0x0043b480` fills, and I could not resolve the chain. The second collision object `STARTFIN` (race `+0x3b4`) and the checkpoint object (`chckpt00`) hold digit-named materials; with the contact filter unported they would only act as solid walls, so they are left out.
-- Loaders that draw from the random table (emitters, events, hazards, sky) are not modelled.
+- Loaders: events and timers draw and are modelled; hazards, triggers, emitters and sky draw nothing while loading.
 
 ## Headless run (Royal Knights Raceway, 300 frames of 33 ms, no input)
 
