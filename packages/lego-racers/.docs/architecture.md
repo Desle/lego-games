@@ -226,6 +226,12 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 - Public API (`index.ts`): `createPowerUpWorld`, `updatePowerUps`, `touchPowerUpBricks`, `touchEnhancementBricks`, `setBrickSoundsEnabled`, `usePowerUp`, `activatePowerUp`, `advanceComputerPowerUpUse`, `rollComputerStartTurbo`, `keepPermanentTurbo`, `hitRacerWithProjectile`, `touchHazardEffect`, `endProjectileFlight`, `advancePowerUpEffect`, `updatePowerUpEffects`, `createPowerUpEffects`, `getRacerWithVoiceCooldownAdvanced`, `getRaceModeBrickKind`, `getPowerUpEffectKind`, `BrickKind`, `BrickState`, `EffectState`, `PowerUpEffectKind`, `RaceModeFlag`, `POWER_UP_EFFECT_POOL_SIZES`, `ATTACHMENT_SLOT_COUNT`, the errors, the `PowerUpEvent` union and the world, racer and effect types
 - The power-up behaviour (bricks, enhancements, effects); `power-up` is its file format. Pure state transitions that return events for the racer, sound and explosion code. Depends on `simulation-math`, `random-table`, `racer-ai` and `power-up`.
 
+### `projectiles`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `updatePowerUpsWithProjectiles`, `updateProjectileEffect`, `touchProjectileFlights`, `touchProjectileHazards`, `touchProjectileExplosions`, `createProjectileWorld`, `createTrackLineProbe`, the flights (`launchFlightAtRacer`, `launchFlightAtPoint`, `launchFlightWithOffset`, `advanceBallisticFlight`, `reflectBallisticFlight`, `touchBallisticFlight`, `getFlightVelocity`, `BallisticFlightState`, `advanceHomingFlight`, `retargetHomingFlight`, `advanceGrappleHook`, `getPointMovedToward`), `getWandBeam`, `getRaySphereHit`, `getMagnetPull`, `getIsWithinMagnetCaptureRange`, `getIsSpeedNearZero`, `getPointMovedAlongRoute`, `getWarpLandingPosition`, the explosions and debris (`createExplosionPool`, `getBlastImpulse`, `ExplosionState`, `createDebrisPool`, `DebrisState`), the collision registry (`getRegistryContacts`, `getSortedRegistryEntries`), the errors, the `ProjectileEvent` union and the world, racer and flight types
+- The parts of the power-up effects that move: flights, hooks, beams, pulls, the warp's carry, explosions and debris. Plugs into `power-ups` through its `EffectsUpdater`, and uses its entry points for hits and ends. Takes the track probe, the route and the model data it does not read as typed dependencies. Depends on `power-ups`, `collision`, `random-table` (through `power-ups`) and `simulation-math`.
+
 ### `racer`
 
 - Layers: `controller`, `services`, `types`
