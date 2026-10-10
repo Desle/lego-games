@@ -189,3 +189,15 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 - Layers: `controller`, `types`
 - Public API (`index.ts`): `createBoxRigidBody`, `getBoxInertia`, `getWorldInverseInertia`, `getAngularVelocity`, `addForce`, `addTorqueOfForceAtPoint`, `removeAngularMomentumAlongAxis`, `integrateRigidBody`, `getRaceTimeStep`, `getPhysicsSubSteps`, `MAXIMUM_PHYSICS_SUB_STEP_MILLISECONDS`, `updateRacePhysics`, `stepRaceSubStepNotYetPorted`, and the `RigidBody` types
 - Pure state transitions: each function takes frozen plain data and returns new frozen data. Depends on `simulation-math`.
+
+### `random-table`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `loadRandomTable`, `getPortableExecutableLayout`, `readPortableExecutableBytes`, `createRandomTable`, `decodeRandomTable`, `createRandomTablePosition`, `getNextRandomTablePosition`, `drawRandomValue`, `drawRandomRemainder`, `drawRandomLowByte`, `drawRandomScaledRange`, the `RANDOM_TABLE_*` constants, `PortableExecutableError`, `InvalidRandomTableError`, `RandomDivisorError`, and the `RandomTable`, `RandomTablePosition`, `RandomDraw`, `PortableExecutable*` types
+- The game's only randomness: 1,024 values at `0x004befec`, read from the player's `LEGORacers.exe`, and the global position `0x004c6ee4` as explicit state a server can synchronise.
+
+### `racer-ai`
+
+- Layers: `types`
+- Public API (`index.ts`): the route follower (`createRouteFollower`, `resetRouteFollower`, `startRouteFollowerAtLoop`, `advanceRouteFollower`, `setRouteFollowerSpeedFactor`), the sample decoders (`decodeRouteSample`, `getRouteSample*`), the speed code (`stepComputerSpeedFactor`, `getRampedTargetSpeedFactor`, `getReturnedLateralOffset`, `stepComputerBounce`, `getPushedSpeedState`, `getRestoredSpeedState`, `getReleasedSpeedState`, `CAR_BODY_*_FLAG`), rubber-banding (`createRubberBand`, `stepRubberBand`, `getRacerProgress`), personality (`getComputerPersonality`, `getComputerChance`, `PERSONALITY_SCALE`), power-up use (`updatePowerUpUse`, `decidePowerUpUse`, `PowerUpUseDecision`), taunts (`updateComputerTaunt`, `createComputerTimers`), `findNearestRacerInCone`, `getFloatToInteger`, `UnportableRouteError`, and their types
+- Computer racers play recorded routes back kinematically; they produce no control input. Depends on `simulation-math`, `random-table` and `computer-racer-route`.

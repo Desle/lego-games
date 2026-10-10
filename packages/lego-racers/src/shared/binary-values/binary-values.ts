@@ -5,6 +5,9 @@ export const getUnsignedShort = (value: number) => value & 0xffff
 
 export const getUnsignedByte = (value: number) => value & 0xff
 
+// MOVSX r32,byte ptr: the low 8 bits as a signed byte.
+export const getSignedByte = (value: number) => (value << 24) >> 24
+
 // float32 0.001 (GolDP.dll 0x10056a4c and 0x100570b8).
 const ONE_THOUSANDTH = Math.fround(0.001)
 const EXACT_PRODUCT_LIMIT = 2 ** 29
