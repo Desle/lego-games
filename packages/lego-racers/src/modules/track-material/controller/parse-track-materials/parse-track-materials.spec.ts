@@ -2,25 +2,23 @@ import {
   getIsOriginalJamPresent,
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
+import { floatTokens, LEFT_CURLY, RIGHT_CURLY } from '../../../../shared/testing/token-bytes.ts'
 import {
-  arrayHeaderTokens,
-  floatToken,
-  floatTokens,
-  integerToken,
-  LEFT_CURLY,
-  RIGHT_CURLY,
-  stringToken,
-} from '../../../../shared/testing/token-bytes.ts'
+  encodeArrayHeader,
+  encodeFloat,
+  encodeInteger,
+  encodeString,
+} from '../../../../shared/token-encoding/token-encoding.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import { TokenReaderFailure } from '../../../token-reader/index.ts'
 import { parseTrackMaterials } from './parse-track-materials.ts'
 
 const materialFile = (blocks: readonly (readonly number[])[]): Uint8Array =>
-  new Uint8Array([0x27, ...arrayHeaderTokens(blocks.length), ...blocks.flat(), RIGHT_CURLY])
+  new Uint8Array([0x27, ...encodeArrayHeader(blocks.length), ...blocks.flat(), RIGHT_CURLY])
 
 const materialBlock = (name: string, body: readonly number[]): readonly number[] => [
   0x27,
-  ...stringToken(name),
+  ...encodeString(name),
   LEFT_CURLY,
   ...body,
   RIGHT_CURLY,
@@ -32,11 +30,11 @@ describe('parseTrackMaterials', () => {
     const bytes = materialFile([
       materialBlock('grass', [
         0x2e,
-        ...integerToken(3006),
+        ...encodeInteger(3006),
         0x36,
-        ...floatToken(20),
+        ...encodeFloat(20),
         0x31,
-        ...stringToken('grassemt'),
+        ...encodeString('grassemt'),
         0x2c,
         ...floatTokens([1, 2, 3]),
         0x37,

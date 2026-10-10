@@ -1,3 +1,4 @@
+import { getSignedShort, getUnsignedByte } from '../../../../shared/binary-values/binary-values.ts'
 import {
   BinaryToken,
   createTokenReader,
@@ -12,20 +13,19 @@ import {
 } from '../../types/ghost-keyword/ghost-keyword.ts'
 import type { Ghost, GhostSample, Quaternion, Vector3 } from '../../types/ghost.types.ts'
 
-const toSignedShort = (value: number) => (value << 16) >> 16
-const toByte = (value: number) => value & 0xff
-
 // A mirrored ghost (ghost flags bit 0x20) negates the y short and orientation bytes 1 and 3.
 const readSample = (reader: TokenReader, isMirrored: boolean): GhostSample => {
-  const x = toSignedShort(reader.readInteger())
-  const y = toSignedShort(reader.readInteger())
-  const z = toSignedShort(reader.readInteger())
-  const bytes = Array.from({ length: SAMPLE_BYTE_COUNT }, () => toByte(reader.readInteger()))
+  const x = getSignedShort(reader.readInteger())
+  const y = getSignedShort(reader.readInteger())
+  const z = getSignedShort(reader.readInteger())
+  const bytes = Array.from({ length: SAMPLE_BYTE_COUNT }, () =>
+    getUnsignedByte(reader.readInteger())
+  )
   const [first = 0, second = 0, third = 0, fourth = 0] = bytes
   return Object.freeze({
-    position: Object.freeze([x, isMirrored ? toSignedShort(-y) : y, z] as const),
+    position: Object.freeze([x, isMirrored ? getSignedShort(-y) : y, z] as const),
     orientationBytes: Object.freeze(
-      isMirrored ? [first, toByte(-second), third, toByte(-fourth)] : bytes
+      isMirrored ? [first, getUnsignedByte(-second), third, getUnsignedByte(-fourth)] : bytes
     ),
   })
 }

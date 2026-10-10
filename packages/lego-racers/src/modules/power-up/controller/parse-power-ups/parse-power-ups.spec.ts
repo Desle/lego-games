@@ -2,21 +2,19 @@ import {
   getIsOriginalJamPresent,
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
+import { floatTokens, LEFT_CURLY, RIGHT_CURLY } from '../../../../shared/testing/token-bytes.ts'
 import {
-  arrayHeaderTokens,
-  floatTokens,
-  integerToken,
-  LEFT_CURLY,
-  RIGHT_CURLY,
-  stringToken,
-} from '../../../../shared/testing/token-bytes.ts'
+  encodeArrayHeader,
+  encodeInteger,
+  encodeString,
+} from '../../../../shared/token-encoding/token-encoding.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import { TokenReaderFailure } from '../../../token-reader/index.ts'
 import { parsePowerUps } from './parse-power-ups.ts'
 
 const list = (keyword: number, blocks: readonly (readonly number[])[]): readonly number[] => [
   keyword,
-  ...arrayHeaderTokens(blocks.length),
+  ...encodeArrayHeader(blocks.length),
   ...blocks.flat(),
   RIGHT_CURLY,
 ]
@@ -37,12 +35,12 @@ describe('parsePowerUps', () => {
         block(0x27, [
           0x2b,
           0x2e,
-          ...integerToken(5),
+          ...encodeInteger(5),
           0x30,
-          ...stringToken('name'),
-          ...integerToken(9),
+          ...encodeString('name'),
+          ...encodeInteger(9),
         ]),
-        block(0x27, [0x2c, 0x31, ...integerToken(4)]),
+        block(0x27, [0x2c, 0x31, ...encodeInteger(4)]),
         block(0x27, []),
       ]),
       0x50,

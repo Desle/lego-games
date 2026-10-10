@@ -12,7 +12,12 @@ import {
   NO_LINK,
   UNASSIGNED_PROGRESS,
 } from '../../types/checkpoint-keyword/checkpoint-keyword.ts'
-import type { CheckpointBlock, CheckpointList, Plane, Vector3 } from '../../types/checkpoint.types.ts'
+import type {
+  CheckpointBlock,
+  CheckpointList,
+  Plane,
+  Vector3,
+} from '../../types/checkpoint.types.ts'
 import { assignCheckpointProgress } from '../assign-checkpoint-progress/assign-checkpoint-progress.ts'
 
 const RESET_PLANE: Plane = Object.freeze([0, 0, 0, 0] as const)
@@ -20,10 +25,7 @@ const RESET_POINT: Vector3 = Object.freeze([0, 0, 0] as const)
 const RESET_LINKS: readonly number[] = Object.freeze([NO_LINK, NO_LINK, NO_LINK, NO_LINK])
 
 // 0x0041e640: `{ keywords }`; a mirrored track negates the plane's and the point's y.
-const readCheckpointBlock = (
-  reader: TokenReader,
-  isMirrored: boolean
-): CheckpointBlock => {
+const readCheckpointBlock = (reader: TokenReader, isMirrored: boolean): CheckpointBlock => {
   reader.expectLeftCurly()
   let plane = RESET_PLANE
   let point = RESET_POINT

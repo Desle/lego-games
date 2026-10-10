@@ -2,23 +2,21 @@ import {
   getIsOriginalJamPresent,
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
+import { floatTokens, LEFT_CURLY, RIGHT_CURLY } from '../../../../shared/testing/token-bytes.ts'
 import {
-  arrayHeaderTokens,
-  floatTokens,
-  integerToken,
-  LEFT_CURLY,
-  RIGHT_CURLY,
-} from '../../../../shared/testing/token-bytes.ts'
+  encodeArrayHeader,
+  encodeInteger,
+} from '../../../../shared/token-encoding/token-encoding.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import { TokenReaderFailure } from '../../../token-reader/index.ts'
 import { parseStartPositions } from './parse-start-positions.ts'
 
 const startPositionFile = (blocks: readonly (readonly number[])[]): Uint8Array =>
-  new Uint8Array([0x27, ...arrayHeaderTokens(blocks.length), ...blocks.flat(), RIGHT_CURLY])
+  new Uint8Array([0x27, ...encodeArrayHeader(blocks.length), ...blocks.flat(), RIGHT_CURLY])
 
 const FULL_BLOCK = [
   0x27,
-  ...integerToken(2),
+  ...encodeInteger(2),
   LEFT_CURLY,
   0x28,
   ...floatTokens([379.5, 210.5, 0.25]),
@@ -32,7 +30,7 @@ describe('parseStartPositions', () => {
     // Arrange
     const bytes = startPositionFile([
       FULL_BLOCK,
-      [0x27, ...integerToken(4), LEFT_CURLY, RIGHT_CURLY],
+      [0x27, ...encodeInteger(4), LEFT_CURLY, RIGHT_CURLY],
     ])
 
     // Act
@@ -66,7 +64,7 @@ describe('parseStartPositions', () => {
 
   it('rejects an unknown keyword inside a block as a syntax error', () => {
     // Arrange
-    const bytes = startPositionFile([[0x27, ...integerToken(0), LEFT_CURLY, 0x2a, RIGHT_CURLY]])
+    const bytes = startPositionFile([[0x27, ...encodeInteger(0), LEFT_CURLY, 0x2a, RIGHT_CURLY]])
 
     // Act
     const parse = () => parseStartPositions(bytes, false)

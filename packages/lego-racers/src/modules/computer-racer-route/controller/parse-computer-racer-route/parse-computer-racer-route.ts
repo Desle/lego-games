@@ -1,3 +1,4 @@
+import { getSignedShort, getUnsignedByte } from '../../../../shared/binary-values/binary-values.ts'
 import {
   createTokenReader,
   TokenReaderFailure,
@@ -13,9 +14,6 @@ import type {
   Quaternion,
   Vector3,
 } from '../../types/computer-racer-route.types.ts'
-
-const toSignedShort = (value: number) => (value << 16) >> 16
-const toByte = (value: number) => value & 0xff
 
 const readVector = (reader: TokenReader, isMirrored: boolean): Vector3 => {
   const x = reader.readFloat()
@@ -35,21 +33,23 @@ const readQuaternion = (reader: TokenReader, isMirrored: boolean): Quaternion =>
 
 // 0x004a5e10: a mirrored sample negates the second int16 and bytes 2 and 4, and swaps bytes 5 and 6.
 const readSample = (reader: TokenReader, isMirrored: boolean): ComputerRacerRouteSample => {
-  const first = toSignedShort(reader.readInteger())
-  const second = toSignedShort(reader.readInteger())
-  const bytes = Array.from({ length: SAMPLE_BYTE_COUNT }, () => toByte(reader.readInteger()))
+  const first = getSignedShort(reader.readInteger())
+  const second = getSignedShort(reader.readInteger())
+  const bytes = Array.from({ length: SAMPLE_BYTE_COUNT }, () =>
+    getUnsignedByte(reader.readInteger())
+  )
   if (!isMirrored) return Object.freeze({ first, second, bytes: Object.freeze(bytes) })
   const [byte0 = 0, byte1 = 0, byte2 = 0, byte3 = 0, byte4 = 0, byte5 = 0, byte6 = 0, byte7 = 0] =
     bytes
   return Object.freeze({
     first,
-    second: toSignedShort(-second),
+    second: getSignedShort(-second),
     bytes: Object.freeze([
       byte0,
       byte1,
-      toByte(-byte2),
+      getUnsignedByte(-byte2),
       byte3,
-      toByte(-byte4),
+      getUnsignedByte(-byte4),
       byte6,
       byte5,
       byte7,

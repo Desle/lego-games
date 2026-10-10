@@ -2,18 +2,17 @@ import {
   getIsOriginalJamPresent,
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
+import { LEFT_CURLY, RIGHT_CURLY } from '../../../../shared/testing/token-bytes.ts'
 import {
-  arrayHeaderTokens,
-  integerToken,
-  LEFT_CURLY,
-  RIGHT_CURLY,
-} from '../../../../shared/testing/token-bytes.ts'
+  encodeArrayHeader,
+  encodeInteger,
+} from '../../../../shared/token-encoding/token-encoding.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import { TokenReaderFailure } from '../../../token-reader/index.ts'
 import { parseTimers } from './parse-timers.ts'
 
 const timerFile = (blocks: readonly (readonly number[])[]): Uint8Array =>
-  new Uint8Array([0x27, ...arrayHeaderTokens(blocks.length), ...blocks.flat(), RIGHT_CURLY])
+  new Uint8Array([0x27, ...encodeArrayHeader(blocks.length), ...blocks.flat(), RIGHT_CURLY])
 
 describe('parseTimers', () => {
   it('reads plain and marked values, the identifier and the third value', () => {
@@ -24,23 +23,23 @@ describe('parseTimers', () => {
         LEFT_CURLY,
         0x28,
         0x2b,
-        ...integerToken(1200),
+        ...encodeInteger(1200),
         0x29,
         0x2b,
-        ...integerToken(8000),
+        ...encodeInteger(8000),
         0x2a,
-        ...integerToken(50),
+        ...encodeInteger(50),
         RIGHT_CURLY,
       ],
       [
         0x27,
         LEFT_CURLY,
         0x28,
-        ...integerToken(1666),
+        ...encodeInteger(1666),
         0x29,
-        ...integerToken(3334),
+        ...encodeInteger(3334),
         0x2d,
-        ...integerToken(3600),
+        ...encodeInteger(3600),
         RIGHT_CURLY,
       ],
     ])

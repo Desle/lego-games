@@ -3,13 +3,15 @@ import {
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
 import {
-  arrayHeaderTokens,
   floatTokens,
-  integerToken,
   integerTokens,
   LEFT_CURLY,
   RIGHT_CURLY,
 } from '../../../../shared/testing/token-bytes.ts'
+import {
+  encodeArrayHeader,
+  encodeInteger,
+} from '../../../../shared/token-encoding/token-encoding.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import { TokenReaderFailure } from '../../../token-reader/index.ts'
 import { TooManyGhostSamplesError } from '../../types/ghost-errors/ghost-errors.ts'
@@ -26,9 +28,9 @@ const BODY = [
   0x29,
   ...floatTokens([0, 0.5, 0, 0.5]),
   0x2b,
-  ...integerToken(7),
+  ...encodeInteger(7),
   0x27,
-  ...arrayHeaderTokens(1),
+  ...encodeArrayHeader(1),
   ...integerTokens([11423, 6762, 0x18000, 251, 5, 167, 90]),
   RIGHT_CURLY,
 ]
@@ -69,7 +71,7 @@ describe('parseGhost', () => {
 
   it('refuses more samples than the original buffer holds', () => {
     // Arrange
-    const bytes = ghostFile([0x27, ...arrayHeaderTokens(0x3c2)])
+    const bytes = ghostFile([0x27, ...encodeArrayHeader(0x3c2)])
 
     // Act
     const parse = () => parseGhost(bytes, false)

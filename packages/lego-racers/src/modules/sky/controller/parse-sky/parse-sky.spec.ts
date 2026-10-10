@@ -2,24 +2,22 @@ import {
   getIsOriginalJamPresent,
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
+import { integerTokens, LEFT_CURLY, RIGHT_CURLY } from '../../../../shared/testing/token-bytes.ts'
 import {
-  floatToken,
-  integerToken,
-  integerTokens,
-  LEFT_CURLY,
-  RIGHT_CURLY,
-  stringToken,
-} from '../../../../shared/testing/token-bytes.ts'
+  encodeFloat,
+  encodeInteger,
+  encodeString,
+} from '../../../../shared/token-encoding/token-encoding.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import { TokenReaderFailure } from '../../../token-reader/index.ts'
 import { parseSky } from './parse-sky.ts'
 
-const bracketedCount = (count: number): readonly number[] => [0x07, ...integerToken(count), 0x08]
+const bracketedCount = (count: number): readonly number[] => [0x07, ...encodeInteger(count), 0x08]
 
 const setting = (name: string, keyframes: readonly (readonly number[])[]): readonly number[] => [
   0x27,
   ...bracketedCount(keyframes.length),
-  ...stringToken(name),
+  ...encodeString(name),
   LEFT_CURLY,
   ...keyframes.flatMap((body) => [0x27, LEFT_CURLY, ...body, RIGHT_CURLY]),
   RIGHT_CURLY,
@@ -43,7 +41,7 @@ describe('parseSky', () => {
         setting('openair', [
           [
             0x28,
-            ...integerToken(5000),
+            ...encodeInteger(5000),
             0x29,
             ...integerTokens([250, 250, 0x178]),
             0x2b,
@@ -52,7 +50,7 @@ describe('parseSky', () => {
         ]),
         setting('castle', [[]]),
       ],
-      [0x2d, ...stringToken('openair'), 0x2e, ...floatToken(0.5)]
+      [0x2d, ...encodeString('openair'), 0x2e, ...encodeFloat(0.5)]
     )
 
     // Act
@@ -92,7 +90,7 @@ describe('parseSky', () => {
 
   it('drops the token after the settings when it is not 0x2d', () => {
     // Arrange
-    const bytes = skyFile([], [0x30, 0x2e, ...floatToken(2)])
+    const bytes = skyFile([], [0x30, 0x2e, ...encodeFloat(2)])
 
     // Act
     const parsed = parseSky(bytes)

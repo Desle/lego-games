@@ -3,12 +3,12 @@ import {
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
 import {
-  arrayHeaderTokens,
   floatTokens,
   integerTokens,
   LEFT_CURLY,
   RIGHT_CURLY,
 } from '../../../../shared/testing/token-bytes.ts'
+import { encodeArrayHeader } from '../../../../shared/token-encoding/token-encoding.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import { TokenReaderFailure } from '../../../token-reader/index.ts'
 import { TooManyCheckpointsError } from '../../types/checkpoint-errors/checkpoint-errors.ts'
@@ -27,7 +27,7 @@ const checkpointBlock = (next: number, y: number): readonly number[] => [
 ]
 
 const checkpointFile = (blocks: readonly (readonly number[])[]): Uint8Array =>
-  new Uint8Array([0x27, ...arrayHeaderTokens(blocks.length), ...blocks.flat(), RIGHT_CURLY])
+  new Uint8Array([0x27, ...encodeArrayHeader(blocks.length), ...blocks.flat(), RIGHT_CURLY])
 
 describe('parseCheckpoints', () => {
   it('reads each checkpoint and assigns progress along the loop', () => {
@@ -63,7 +63,7 @@ describe('parseCheckpoints', () => {
 
   it('rejects more than 254 checkpoints', () => {
     // Arrange
-    const bytes = new Uint8Array([0x27, ...arrayHeaderTokens(255)])
+    const bytes = new Uint8Array([0x27, ...encodeArrayHeader(255)])
 
     // Act
     const parse = () => parseCheckpoints(bytes, false)

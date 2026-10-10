@@ -2,19 +2,17 @@ import {
   getIsOriginalJamPresent,
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
+import { floatTokens, LEFT_CURLY, RIGHT_CURLY } from '../../../../shared/testing/token-bytes.ts'
 import {
-  arrayHeaderTokens,
-  floatTokens,
-  integerToken,
-  LEFT_CURLY,
-  RIGHT_CURLY,
-} from '../../../../shared/testing/token-bytes.ts'
+  encodeArrayHeader,
+  encodeInteger,
+} from '../../../../shared/token-encoding/token-encoding.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import { TokenReaderFailure } from '../../../token-reader/index.ts'
 import { parseTaggedPositions } from './parse-tagged-positions.ts'
 
 const taggedPositionFile = (blocks: readonly (readonly number[])[]): Uint8Array =>
-  new Uint8Array([0x27, ...arrayHeaderTokens(blocks.length), ...blocks.flat(), RIGHT_CURLY])
+  new Uint8Array([0x27, ...encodeArrayHeader(blocks.length), ...blocks.flat(), RIGHT_CURLY])
 
 const BLOCK = [
   0x27,
@@ -22,7 +20,7 @@ const BLOCK = [
   0x28,
   ...floatTokens([-407.5, 514.25, 65.5]),
   0x29,
-  ...integerToken(7),
+  ...encodeInteger(7),
   RIGHT_CURLY,
 ]
 

@@ -2,22 +2,20 @@ import {
   getIsOriginalJamPresent,
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
+import { floatTokens, LEFT_CURLY, RIGHT_CURLY } from '../../../../shared/testing/token-bytes.ts'
 import {
-  arrayHeaderTokens,
-  floatToken,
-  floatTokens,
-  integerToken,
-  LEFT_CURLY,
-  RIGHT_CURLY,
-  stringToken,
-} from '../../../../shared/testing/token-bytes.ts'
+  encodeArrayHeader,
+  encodeFloat,
+  encodeInteger,
+  encodeString,
+} from '../../../../shared/token-encoding/token-encoding.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import { TokenReaderFailure } from '../../../token-reader/index.ts'
 import { TriggerFileKind } from '../../types/trigger-keyword/trigger-keyword.ts'
 import { parseTriggers } from './parse-triggers.ts'
 
 const triggerFile = (blocks: readonly (readonly number[])[]): Uint8Array =>
-  new Uint8Array([0x27, ...arrayHeaderTokens(blocks.length), ...blocks.flat(), RIGHT_CURLY])
+  new Uint8Array([0x27, ...encodeArrayHeader(blocks.length), ...blocks.flat(), RIGHT_CURLY])
 
 const SHARED_BLOCK = [
   0x27,
@@ -25,9 +23,9 @@ const SHARED_BLOCK = [
   0x29,
   ...floatTokens([-46.5, -689.5, 23.75]),
   0x2a,
-  ...floatToken(218.25),
+  ...encodeFloat(218.25),
   0x2b,
-  ...integerToken(18),
+  ...encodeInteger(18),
   0x2f,
   RIGHT_CURLY,
 ]
@@ -37,9 +35,9 @@ const MAIN_BLOCK = [
   LEFT_CURLY,
   0x2c,
   0x2d,
-  ...stringToken('startfin'),
+  ...encodeString('startfin'),
   0x2e,
-  ...integerToken(1),
+  ...encodeInteger(1),
   RIGHT_CURLY,
 ]
 

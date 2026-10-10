@@ -2,14 +2,12 @@ import {
   getIsOriginalJamPresent,
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
+import { floatTokens, LEFT_CURLY, RIGHT_CURLY } from '../../../../shared/testing/token-bytes.ts'
 import {
-  arrayHeaderTokens,
-  floatTokens,
-  integerToken,
-  LEFT_CURLY,
-  RIGHT_CURLY,
-  stringToken,
-} from '../../../../shared/testing/token-bytes.ts'
+  encodeArrayHeader,
+  encodeInteger,
+  encodeString,
+} from '../../../../shared/token-encoding/token-encoding.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import { parseLoadScreen } from './parse-load-screen.ts'
 
@@ -20,12 +18,12 @@ describe('parseLoadScreen', () => {
       0x27,
       LEFT_CURLY,
       0x28,
-      ...stringToken('rkr'),
+      ...encodeString('rkr'),
       0x2a,
-      ...integerToken(3),
+      ...encodeInteger(3),
       0x40,
       0x29,
-      ...arrayHeaderTokens(2),
+      ...encodeArrayHeader(2),
       ...floatTokens([0.125, 0.875, 0.25, 0.875]),
       RIGHT_CURLY,
       RIGHT_CURLY,

@@ -2,13 +2,11 @@ import {
   getIsOriginalJamPresent,
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
+import { floatTokens, integerTokens, RIGHT_CURLY } from '../../../../shared/testing/token-bytes.ts'
 import {
-  arrayHeaderTokens,
-  floatTokens,
-  integerToken,
-  integerTokens,
-  RIGHT_CURLY,
-} from '../../../../shared/testing/token-bytes.ts'
+  encodeArrayHeader,
+  encodeInteger,
+} from '../../../../shared/token-encoding/token-encoding.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import { TokenReaderFailure } from '../../../token-reader/index.ts'
 import { parseComputerRacerRoute } from './parse-computer-racer-route.ts'
@@ -26,12 +24,12 @@ const route = (sampleIndex: number): Uint8Array =>
     0x2b,
     ...floatTokens([0.5, 0, 0.5, 0]),
     0x2c,
-    ...integerToken(77536),
+    ...encodeInteger(77536),
     0x2d,
-    ...integerToken(sampleIndex),
+    ...encodeInteger(sampleIndex),
     0x50,
     0x27,
-    ...arrayHeaderTokens(1),
+    ...encodeArrayHeader(1),
     ...integerTokens(SAMPLE),
     RIGHT_CURLY,
   ])
@@ -75,7 +73,7 @@ describe('parseComputerRacerRoute', () => {
 
   it('starts from the reset values when a keyword is absent', () => {
     // Arrange
-    const bytes = new Uint8Array([0x27, ...arrayHeaderTokens(1), ...integerTokens(SAMPLE), 0x06])
+    const bytes = new Uint8Array([0x27, ...encodeArrayHeader(1), ...integerTokens(SAMPLE), 0x06])
 
     // Act
     const parsed = parseComputerRacerRoute(bytes, false)

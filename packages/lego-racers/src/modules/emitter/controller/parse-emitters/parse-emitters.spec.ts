@@ -2,25 +2,23 @@ import {
   getIsOriginalJamPresent,
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
+import { floatTokens, LEFT_CURLY, RIGHT_CURLY } from '../../../../shared/testing/token-bytes.ts'
 import {
-  arrayHeaderTokens,
-  floatToken,
-  floatTokens,
-  integerToken,
-  LEFT_CURLY,
-  RIGHT_CURLY,
-  stringToken,
-} from '../../../../shared/testing/token-bytes.ts'
+  encodeArrayHeader,
+  encodeFloat,
+  encodeInteger,
+  encodeString,
+} from '../../../../shared/token-encoding/token-encoding.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import { TokenReaderFailure } from '../../../token-reader/index.ts'
 import { parseEmitters } from './parse-emitters.ts'
 
 const emitterFile = (blocks: readonly (readonly number[])[]): Uint8Array =>
-  new Uint8Array([0x27, ...arrayHeaderTokens(blocks.length), ...blocks.flat(), RIGHT_CURLY])
+  new Uint8Array([0x27, ...encodeArrayHeader(blocks.length), ...blocks.flat(), RIGHT_CURLY])
 
 const emitterBlock = (name: string, body: readonly number[]): readonly number[] => [
   0x27,
-  ...stringToken(name),
+  ...encodeString(name),
   LEFT_CURLY,
   ...body,
   RIGHT_CURLY,
@@ -32,38 +30,38 @@ describe('parseEmitters', () => {
     const bytes = emitterFile([
       emitterBlock('grassemt', [
         0x28,
-        ...floatToken(9.75),
+        ...encodeFloat(9.75),
         0x29,
-        ...floatToken(-300.5),
+        ...encodeFloat(-300.5),
         0x2c,
-        ...floatToken(1.5),
+        ...encodeFloat(1.5),
         0x2d,
-        ...floatToken(2.5),
+        ...encodeFloat(2.5),
         0x31,
-        ...floatToken(4),
+        ...encodeFloat(4),
         0x32,
-        ...floatToken(5),
+        ...encodeFloat(5),
         0x33,
-        ...floatToken(100),
+        ...encodeFloat(100),
         0x2f,
-        ...integerToken(700),
+        ...encodeInteger(700),
         0x30,
-        ...integerToken(250),
+        ...encodeInteger(250),
         0x2a,
         ...floatTokens([0, 0, -52.25]),
         0x2b,
         0x07,
-        ...integerToken(2),
+        ...encodeInteger(2),
         0x08,
         LEFT_CURLY,
         ...floatTokens([0, 0, 22, 0.5, 2, 20]),
         RIGHT_CURLY,
         0x35,
-        ...integerToken(0x114),
+        ...encodeInteger(0x114),
         0x2e,
-        ...integerToken(1),
+        ...encodeInteger(1),
         0x34,
-        ...stringToken('graspart'),
+        ...encodeString('graspart'),
       ]),
     ])
 
