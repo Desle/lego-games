@@ -1,4 +1,10 @@
-import type { FrontEndInput } from '../../types/front-end.types.ts'
+import { getUnlockedCircuitRunLength } from '../../../save-data/index.ts'
+import {
+  MAIN_MENU_FIGURE_DRIVER_INDICES,
+  MAIN_MENU_FIGURE_FORWARD,
+  MAIN_MENU_FIGURE_POSITION,
+} from '../../types/menu-figure/menu-figure.ts'
+import type { DriverPreview, FrontEndInput } from '../../types/front-end.types.ts'
 import type { FrontEndWidget } from '../../types/front-end-widget.types.ts'
 import { FrontEndScreen, FrontEndText } from '../../types/front-end-screen/front-end-screen.ts'
 import type { MainMenuButton } from '../../types/front-end-screen.types.ts'
@@ -50,6 +56,20 @@ const BUTTONS: readonly MainMenuButton[] = Object.freeze([
   { itemName: 'quit', labelId: FrontEndText.QUIT, targetScreenId: 0, versusFlag: 'keep' },
 ])
 
+// 0x00481000: the figure of the platform is the driver `DAT_004c214c[run]` shows (see MAIN_MENU_FIGURE_DRIVER_INDICES).
+const getFigure = (runtime: ScreenRuntime): DriverPreview | null => {
+  const { saveFile } = runtime.settings
+  const run = saveFile === null ? 0 : getUnlockedCircuitRunLength(saveFile.profile)
+  const index = MAIN_MENU_FIGURE_DRIVER_INDICES[run] ?? MAIN_MENU_FIGURE_DRIVER_INDICES[0] ?? 0
+  const driver = runtime.resources.getDriverDatabase().drivers[index]
+  if (driver === undefined) return null
+  return {
+    partBytes: driver.unreadBytes,
+    position: MAIN_MENU_FIGURE_POSITION,
+    forward: MAIN_MENU_FIGURE_FORWARD,
+  }
+}
+
 const MENU_FONT_STYLE = 'menufont'
 const FOCUSED_COLOR = 0xff03fe09
 const IDLE_COLOR = 0xff4b4b4b
@@ -97,7 +117,7 @@ const getWidgets = (runtime: ScreenRuntime): readonly FrontEndWidget[] => {
   const widgets: FrontEndWidget[] = [
     { kind: 'image', itemName: 'backdrp', imageName: 'backdrp' },
     { kind: 'image', itemName: 'racers', imageName: 'racers' },
-    { kind: 'viewport', itemName: 'platform' },
+    { kind: 'viewport', itemName: 'platform', driver: getFigure(runtime) },
     ...BUTTONS.map((button, index): FrontEndWidget => ({
       kind: 'button',
       itemName: button.itemName,

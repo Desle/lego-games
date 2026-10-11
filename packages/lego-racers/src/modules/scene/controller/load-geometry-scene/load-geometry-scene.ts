@@ -48,10 +48,14 @@ export const loadGeometryScene = (
     files.bones === null || boneSource === null
       ? []
       : linkSkeletons(boneSource, [files.bones.skeletonName])
+  const animationSource =
+    files.bones?.animationDirectory === undefined
+      ? boneSource
+      : Object.freeze({ archive, directory: files.bones.animationDirectory })
   const animations =
-    files.bones === null || boneSource === null
+    files.bones === null || animationSource === null
       ? []
-      : linkAnimations(boneSource, [files.bones.animationName])
+      : linkAnimations(animationSource, [files.bones.animationName])
   const isSkeletal = skeletons.length > 0 && animations.length > 0
   const mesh: SceneMesh = Object.freeze({
     name: MESH_NAME,

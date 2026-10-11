@@ -16,3 +16,16 @@ const MENU_WORLD_PATHS: ReadonlyMap<string, string> = new Map([
 
 export const getMenuWorldPath = (modelName: string): string | null =>
   MENU_WORLD_PATHS.get(modelName.toLowerCase()) ?? null
+
+// The menu worlds whose own camera (`Camera01`: position, forward, up, near plane, far plane and vertical field of view,
+// world keywords 0x45 to 0x47) the original draws with: the projection matrices of its draws of the main menu (`tt`), the
+// racer showcase (`racer`) and the race cinema (`pst`, not drawn by the port yet) have exactly that eye and field of view, and not the nine floats
+// of the MIB item. The other worlds are open (hypothesis: the same). The 3D area of a framed viewport is the item's
+// rectangle inset by the frame's thickness (the racer showcase: 16 pixels, measured; the main menu's has none).
+const WORLD_CAMERA_INSETS: ReadonlyMap<string, number> = new Map([
+  ['tt', 0],
+  ['racer', 16],
+])
+
+export const getWorldCameraInset = (modelName: string): number | null =>
+  WORLD_CAMERA_INSETS.get(modelName.toLowerCase()) ?? null

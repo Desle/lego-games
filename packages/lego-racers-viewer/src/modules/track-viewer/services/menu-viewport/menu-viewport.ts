@@ -2,27 +2,19 @@ import {
   getBuilderCamera,
   getMenuCamera,
   getMenuWorldPath,
+  getWorldCameraInset,
+  getWorldMenuCamera,
 } from '@lego-games/lego-racers/front-end'
+import type { FrontEndViewportCommand, MenuCamera } from '@lego-games/lego-racers/front-end'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import { loadScene } from '@lego-games/lego-racers/scene'
-import {
-  LinearSRGBColorSpace,
-  PerspectiveCamera,
-  Scene as ThreeScene,
-  Vector3,
-  WebGLRenderer,
-} from 'three'
+import { LinearSRGBColorSpace, PerspectiveCamera, Scene as ThreeScene, WebGLRenderer } from 'three'
 import { createBuilderCarView } from '../builder-car-view/builder-car-view.ts'
 import type { BuilderCarView } from '../builder-car-view/builder-car-view.types.ts'
 import { createDriverView } from '../driver-view/driver-view.ts'
 import type { DriverView } from '../driver-view/driver-view.types.ts'
 import { createSceneObject } from '../scene-object/scene-object.ts'
 import type { MenuViewport, MenuWorld } from './menu-viewport.types.ts'
-
-// The engine's worlds are Z-up (default instance up (0, 0, 1), GolDP.dll 0x1002cc30).
-const WORLD_UP = new Vector3(0, 0, 1)
-// The editor's camera looks at the middle of the figure; his feet are this far below (**hypothesis**: the model is 3 units tall).
-const DRIVER_FEET_BELOW_TARGET = 1.5
 
 export const createMenuViewport = (archive: JamArchive): MenuViewport => {
   const renderer = new WebGLRenderer({ antialias: true, alpha: true })
@@ -31,12 +23,12 @@ export const createMenuViewport = (archive: JamArchive): MenuViewport => {
   renderer.setClearColor(0x000000, 0)
   renderer.setPixelRatio(1)
   const camera = new PerspectiveCamera()
-  camera.up.copy(WORLD_UP)
   const worlds = new Map<string, MenuWorld | null>()
 
   const createWorld = (path: string): MenuWorld | null => {
     try {
-      const object = createSceneObject(loadScene(archive, [path]), {
+      const scene = loadScene(archive, [path])
+      const object = createSceneObject(scene, {
         includeInstance: () => true,
         isBackground: false,
       })
@@ -51,6 +43,7 @@ export const createMenuViewport = (archive: JamArchive): MenuViewport => {
         },
         three,
         object,
+        camera: scene.cameras[0] ?? null,
         carView: () => {
           carView ??= createBuilderCarView(archive, three)
           return carView
@@ -66,26 +59,37 @@ export const createMenuViewport = (archive: JamArchive): MenuViewport => {
     return worlds.get(path) ?? null
   }
 
+  const getCamera = (command: FrontEndViewportCommand, world: MenuWorld): MenuCamera => {
+    if (command.builder !== null) return getBuilderCamera(command.builder)
+    const isWorldCameraUsed = getWorldCameraInset(command.modelName) !== null
+    return isWorldCameraUsed && world.camera !== null
+      ? getWorldMenuCamera(world.camera)
+      : getMenuCamera(command.camera)
+  }
+
   const draw: MenuViewport['draw'] = (context, command, deltaMilliseconds) => {
     const path = getMenuWorldPath(command.modelName)
     const world = path === null ? null : getWorld(path)
-    const { left, top, right, bottom } = command.rectangle
-    const width = right - left
-    const height = bottom - top
+    const inset = getWorldCameraInset(command.modelName) ?? 0
+    const left = command.rectangle.left + inset
+    const top = command.rectangle.top + inset
+    const width = command.rectangle.right - inset - left
+    const height = command.rectangle.bottom - inset - top
     if (world === null || width <= 0 || height <= 0) return false
     if (command.builder !== null) world.carView().show(command.builder)
     if (command.driver !== null) {
-      const [x, y, z] = getMenuCamera(command.camera).target
-      world.driverView().show(command.driver, [x, y, z - DRIVER_FEET_BELOW_TARGET])
+      const driverView = world.driverView()
+      driverView.show(command.driver)
+      driverView.animate(deltaMilliseconds)
     }
-    const menuCamera =
-      command.builder === null ? getMenuCamera(command.camera) : getBuilderCamera(command.builder)
+    const menuCamera = getCamera(command, world)
     renderer.setSize(width, height, false)
     camera.fov = menuCamera.fieldOfViewDegrees
-    camera.aspect = width / height
+    camera.aspect = menuCamera.aspectRatio ?? width / height
     camera.near = menuCamera.nearPlane
     camera.far = menuCamera.farPlane
     camera.position.set(...menuCamera.position)
+    camera.up.set(...menuCamera.up)
     camera.lookAt(...menuCamera.target)
     camera.updateProjectionMatrix()
     world.object.animate(deltaMilliseconds)

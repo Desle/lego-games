@@ -105,3 +105,9 @@ export const mixDriver = (
     },
     { session, randomPosition }
   )
+
+// 0x0049db90: the menu's body model is chosen by the torso's and the legs' types (a hook torso is type 1, peg legs are
+// type 1): `torso type + legs type * 2` indexes the catalogue's body models `rr hr rp hp`.
+export const getBodyModelIndex = (catalog: BodyPartCatalog, partBytes: readonly number[]): number =>
+  (catalog.torsos.entries[partBytes[2] ?? 0]?.type ?? 0) +
+  (catalog.legs.entries[partBytes[3] ?? 0]?.type ?? 0) * 2
