@@ -43,6 +43,7 @@
     "./race-presentation": "./src/modules/race-presentation/index.ts",
     "./racer": "./src/modules/racer/index.ts",
     "./racer-ai": "./src/modules/racer-ai/index.ts",
+    "./racer-appearance": "./src/modules/racer-appearance/index.ts",
     "./racer-collision": "./src/modules/racer-collision/index.ts",
     "./racer-physics": "./src/modules/racer-physics/index.ts",
     "./racer-setup": "./src/modules/racer-setup/index.ts",

@@ -44,6 +44,74 @@ describe('loadRaceDefinition', () => {
   )
 
   it.skipIf(!getIsGamePresent())(
+    'draws each computer racer from its champion body, chassis wheels and own driver, and the player from bricks',
+    () => {
+      // Arrange
+      const jam = readOriginalJam()
+      const executable = readOriginalExecutable()
+
+      // Act
+      const definition = loadRaceDefinition(jam, executable)
+
+      // Assert
+      const [player, king] = definition.racers
+      expect(player?.appearance.bodyModel).toBeNull()
+      expect(player?.appearance.driverModel).toBeNull()
+      expect(player?.appearance.wheelModel.modelName).toBe('dajmw')
+      expect(king?.appearance.bodyModel?.modelName).toBe('kkcm')
+      expect(king?.appearance.wheelModel).toMatchObject({
+        modelName: 'kkjmw',
+        skeletonName: 'kkjmw',
+        animationName: 'kkjmw',
+      })
+      expect(king?.appearance.driverModel).toMatchObject({
+        modelName: 'kkpelvis',
+        skeletonName: 'pelvis',
+        animationName: 'pelvis',
+      })
+      expect(king?.appearance.seatPoint.z).toBeCloseTo(2.12, 2)
+      expect(king?.appearance.shadowImageName).toBe('carshad1')
+    }
+  )
+
+  it.skipIf(!getIsGamePresent())(
+    'binds the wheels to their two animations and the driver to his 18, as the vehicle set-up leaves them',
+    () => {
+      // Arrange
+      const jam = readOriginalJam()
+      const executable = readOriginalExecutable()
+
+      // Act
+      const definition = loadRaceDefinition(jam, executable)
+
+      // Assert
+      const king = definition.racers[1]
+      expect(king?.figures.wheels.animations).toHaveLength(2)
+      expect(king?.figures.wheels).toMatchObject({ currentId: 0, flags: 0x50000 })
+      expect(king?.figures.driver.animations).toHaveLength(18)
+      expect(king?.figures.driver).toMatchObject({ currentId: 9, flags: 0x50000 })
+      expect(king?.figures.wheels.child?.radiusScale).toBe(0.015625)
+    }
+  )
+
+  it.skipIf(!getIsGamePresent())(
+    'takes the ground probe radius from the wheels animation bounds times the model scale',
+    () => {
+      // Arrange
+      const jam = readOriginalJam()
+      const executable = readOriginalExecutable()
+
+      // Act
+      const definition = loadRaceDefinition(jam, executable)
+
+      // Assert
+      const [player, king] = definition.racers
+      expect(player?.carBody.rigidBody.displayBoundingRadius).toBeCloseTo(329.1226 / 64, 3)
+      expect(king?.carBody.rigidBody.displayBoundingRadius).toBeCloseTo(349.77008 / 64, 3)
+    }
+  )
+
+  it.skipIf(!getIsGamePresent())(
     'builds each car body from its chassis: the champion mass and the three rating scales',
     () => {
       // Arrange

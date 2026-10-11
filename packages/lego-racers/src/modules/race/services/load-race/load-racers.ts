@@ -4,6 +4,11 @@ import { parseCircuitDatabase } from '../../../circuit-database/index.ts'
 import { parseDriverDatabase } from '../../../driver-database/index.ts'
 import { findNamedRecord } from '../../../named-record/index.ts'
 import { parseRaceCatalog } from '../../../race-catalog/index.ts'
+import {
+  getBuiltRacerAppearance,
+  getChampionRacerAppearance,
+} from '../../../racer-appearance/index.ts'
+import type { RacerAppearance } from '../../../racer-appearance/index.ts'
 import { describeBuiltRacer, describeChampionRacer } from '../../../racer-setup/index.ts'
 import type { RacerDatabases, RacerDescription } from '../../../racer-setup/index.ts'
 import { UnknownRaceError } from './load-race-errors.ts'
@@ -53,4 +58,19 @@ export const describeRacers = (request: RacerDescriptionRequest): readonly Racer
     const code = request.racerCodes[index]
     if (code === undefined) throw new RangeError(`No driver code for racer ${String(index)}`)
     return describeChampionRacer(request.databases, code)
+  })
+
+// The files each racer's car and driver are drawn from, for the racers of 0x0043b480.
+export const describeAppearances = (request: RacerDescriptionRequest): readonly RacerAppearance[] =>
+  Array.from({ length: request.racerCount }, (_, index) => {
+    if (index < request.localPlayerCount) {
+      return getBuiltRacerAppearance(
+        request.databases,
+        (request.playerCars[index] ?? request.defaultPlayerCar).chassisName,
+        index
+      )
+    }
+    const code = request.racerCodes[index]
+    if (code === undefined) throw new RangeError(`No driver code for racer ${String(index)}`)
+    return getChampionRacerAppearance(request.databases, code, index)
   })

@@ -11,6 +11,7 @@ import {
   createPlayerController,
   createRacer,
   createRacerSet,
+  createVehicle,
 } from '../../../racer/index.ts'
 import type { Racer, RacerSet } from '../../../racer/index.ts'
 import { drawRandomValue } from '../../../random-table/index.ts'
@@ -38,6 +39,9 @@ const DEMONSTRATION_FLAG = 0x800000
 // float32 0.05 at 0x004b07f0, the rubber band's bias on a mirrored track (0x00433773).
 const MIRRORED_RUBBER_BAND_BIAS = Math.fround(0.05)
 
+// 0x0043d7a0 draws `% 2000` for the vehicle's +0x388, the time before the driver may look at another racer.
+const VEHICLE_LOOK_MILLISECONDS = 2000
+
 // 0x00436df0 and 0x004371c0 for one racer, then 0x004374c0: the computer racer's chances and its two timers
 // (two random table draws, even for a player), the vehicle's animation timer (0x0043d7a0, a third draw), the
 // place on the grid, the route placement and the reset.
@@ -56,7 +60,8 @@ const createRacerFromDefinition = (
   const base = createRacer(
     racerDefinition.route === null
       ? carBody
-      : placeCarBodyOnRoute(arithmetic, carBody, racerDefinition.route)
+      : placeCarBodyOnRoute(arithmetic, carBody, racerDefinition.route),
+    racerDefinition.figures.wheels
   )
   const racer: Racer = Object.freeze({
     ...base,
@@ -64,6 +69,11 @@ const createRacerFromDefinition = (
     powerUpChances: personality.chances,
     proximityCheckMilliseconds: timers.tauntMilliseconds,
     voiceMilliseconds: timers.voiceMilliseconds,
+    vehicle: createVehicle(
+      racerDefinition.figures.driver,
+      racerDefinition.appearance.seatPoint,
+      vehicleDraw.value % VEHICLE_LOOK_MILLISECONDS
+    ),
     flags: getRaceModeRacerFlags(definition.raceModeFlags),
     controllerKind: racerDefinition.controllerKind,
     racePosition: racerIndex + 1,

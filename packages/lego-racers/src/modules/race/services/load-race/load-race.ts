@@ -13,7 +13,8 @@ import { openJamArchive } from '../../../jam-archive/index.ts'
 import { parsePowerUps } from '../../../power-up/index.ts'
 import { createRandomTablePosition, drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
-import { readRacerTables } from '../../../racer/index.ts'
+import { getFigureBounds, readRacerTables } from '../../../racer/index.ts'
+import { createRacerFigures, loadRacerFigureSources } from '../../../racer-appearance/index.ts'
 import {
   createCarBodySetup,
   getIsCarBodyFlagged,
@@ -32,7 +33,12 @@ import {
 import type { RaceDefinition, RaceRacerDefinition } from '../../types/race.types.ts'
 import { getStartFrame } from '../../types/start-frame/start-frame.ts'
 import type { LoadRaceOptions, RouteDraws, RouteDrawer, RouteFiles } from './load-race.types.ts'
-import { describeRacers, getCircuitRacerCodes, readRacerDatabases } from './load-racers.ts'
+import {
+  describeAppearances,
+  describeRacers,
+  getCircuitRacerCodes,
+  readRacerDatabases,
+} from './load-racers.ts'
 
 const JAM_SEPARATOR = '\\'
 const DEFAULT_RACE_FOLDER = 'RACEC0R0'
@@ -46,9 +52,10 @@ const DEFAULT_PLAYER_CAR: BuiltCar = Object.freeze({
   centreOffsetX: 0,
   centreOffsetY: 0,
 })
-// The car model frame's bounding radius (frame +0x10, 0x0040e0b0) comes from the model's bounding sphere, which
-// the model module does not compute yet; this is the rigid body specs' stand-in.
-const PROVISIONAL_DISPLAY_BOUNDING_RADIUS = 5
+// The scale of the model the figure builder makes for a car built from bricks' driver: the pelvis models of the
+// game's drivers use 1/64 (GDB keyword 0x33). The figure builder (0x0042dfa0) is not ported, so this is a
+// hypothesis for the built driver.
+const BUILT_DRIVER_MODEL_SCALE = 0.015625
 
 // The RAB names the text files (.cpf, .sps); the loaders read the binary twin, whose extension ends in b.
 const getJamFileName = (name: string): string => `${name.slice(0, -1)}b`.toUpperCase()
@@ -136,7 +143,7 @@ export const loadRaceDefinition = (
       : readFile(`${description.firstCollisionObject.toUpperCase()}.BVB`)
   const startPositions =
     startPositionBytes === null ? [] : parseStartPositions(startPositionBytes, false).startPositions
-  const descriptions = describeRacers({
+  const request = {
     arithmetic,
     databases: readRacerDatabases(archive.readFile),
     racerCount,
@@ -144,12 +151,23 @@ export const loadRaceDefinition = (
     playerCars: options.playerCars ?? [],
     defaultPlayerCar: DEFAULT_PLAYER_CAR,
     racerCodes,
-  })
+  }
+  const descriptions = describeRacers(request)
+  const appearances = describeAppearances(request)
+  const figures = appearances.map((appearance) =>
+    createRacerFigures(
+      loadRacerFigureSources(archive.readFile, appearance, BUILT_DRIVER_MODEL_SCALE)
+    )
+  )
   const isMultiplayer = localPlayerCount >= 2
   const racers: readonly RaceRacerDefinition[] = kinds.map((controllerKind, index) => {
     const route = routeDraws.routes[index] ?? null
     const description = descriptions[index]
-    if (description === undefined) throw new RangeError(`No description for racer ${String(index)}`)
+    const appearance = appearances[index]
+    const racerFigures = figures[index]
+    if (description === undefined || appearance === undefined || racerFigures === undefined) {
+      throw new RangeError(`No description for racer ${String(index)}`)
+    }
     return {
       controllerKind,
       carBody: createCarBodySetup(arithmetic, description.car, {
@@ -159,7 +177,7 @@ export const loadRaceDefinition = (
           getStartSlot(index, isMultiplayer),
           route
         ),
-        displayBoundingRadius: PROVISIONAL_DISPLAY_BOUNDING_RADIUS,
+        displayBoundingRadius: getFigureBounds(arithmetic, racerFigures.wheels)?.radius ?? 0,
         isRaceModeFlagged: getIsCarBodyFlagged(raceModeFlags),
       }),
       route,
@@ -167,6 +185,8 @@ export const loadRaceDefinition = (
       preferredPowerUpKind: description.preferredPowerUpKind,
       preferredPowerUpLevel: description.preferredPowerUpLevel,
       voiceBase: description.voiceBase,
+      appearance,
+      figures: racerFigures,
     }
   })
   return Object.freeze({

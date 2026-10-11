@@ -20,3 +20,14 @@ export type VehicleLean = {
   readonly sideLean: number
   readonly driverPosition: Vector3
 }
+
+// One spring of 0x0043e740: the signed distance it is pulled by, the step as a float, the car body's mass, the
+// stiffness and damping constants, and the velocity it had.
+export type VehicleSpringRequest = {
+  readonly distance: number
+  readonly stepFloat: number
+  readonly mass: number
+  readonly stiffness: number
+  readonly damping: number
+  readonly previous: number
+}

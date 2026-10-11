@@ -1,31 +1,22 @@
 import {
+  getDotProduct,
   getFloatFromBits,
   getFrameTransformedPoint,
   getRotationFromFirstAndSecondAxes,
+  getStoredCrossProduct,
 } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Frame, Matrix3, Vector3 } from '../../../simulation-math/index.ts'
-import type { VehicleLean, VehicleLeanRequest } from './vehicle-lean.types.ts'
+import type { VehicleLean, VehicleLeanRequest, VehicleSpringRequest } from './vehicle-lean.types.ts'
 
 const FORWARD_STIFFNESS = 30 // 0x004b0b28
 const FORWARD_DAMPING = getFloatFromBits(0x3c23d70a) // 0x004b0b30, 0.01
 const SIDE_STIFFNESS = 100 // 0x004b0b2c
 const SIDE_DAMPING = getFloatFromBits(0x3cf5c28f) // 0x004b0b34, 0.03
 
-const getRow = (rotation: Matrix3, row: number): Vector3 =>
-  Object.freeze({
-    x: rotation[row * 3] ?? 0,
-    y: rotation[row * 3 + 1] ?? 0,
-    z: rotation[row * 3 + 2] ?? 0,
-  })
-
-// The vector product `first × second` the way 0x0043e740 stores it: every component is stored.
-const getStoredCross = (arithmetic: FloatArithmetic, first: Vector3, second: Vector3): Vector3 => {
-  const { subtract, multiply, storeFloat } = arithmetic
-  return Object.freeze({
-    x: storeFloat(subtract(multiply(first.y, second.z), multiply(first.z, second.y))),
-    y: storeFloat(subtract(multiply(first.z, second.x), multiply(first.x, second.z))),
-    z: storeFloat(subtract(multiply(first.x, second.y), multiply(first.y, second.x))),
-  })
+// Row `row` of a frame's rotation: the image of one of the model's axes.
+const getRow = (rotation: Matrix3, row: number): Vector3 => {
+  const [x = 0, y = 0, z = 0] = rotation.slice(row * 3, row * 3 + 3)
+  return Object.freeze({ x, y, z })
 }
 
 // The length of `target − source` as 0x0043e740 sums it: (z² + y²) + x², unrounded until the square root.
@@ -37,28 +28,13 @@ const getDistance = (arithmetic: FloatArithmetic, source: Vector3, target: Vecto
   return getSquareRoot(add(add(multiply(z, z), multiply(y, y)), multiply(x, x)))
 }
 
-// (z · up.z + y · up.y) + x · up.x < 0: the distance counts negative when the pull points against the up axis.
-const getIsAgainstUp = (arithmetic: FloatArithmetic, pull: Vector3, up: Vector3): boolean => {
-  const { add, multiply, getIsBelow } = arithmetic
-  return getIsBelow(
-    add(add(multiply(pull.z, up.z), multiply(pull.y, up.y)), multiply(pull.x, up.x)),
-    0
-  )
-}
+// The distance counts negative when the pull points against the up axis: (z · up.z + y · up.y) + x · up.x < 0.
+const getIsAgainstUp = (arithmetic: FloatArithmetic, pull: Vector3, up: Vector3): boolean =>
+  arithmetic.getIsBelow(getDotProduct(arithmetic, pull, up), 0)
 
 // One spring of 0x0043e740: the velocity `−stiffness · distance · step / mass + previous` (stored), then damped by
 // `step · damping · velocity` while that moves it towards 0 from either side; otherwise it stops.
-const getSpring = (
-  arithmetic: FloatArithmetic,
-  request: {
-    readonly distance: number
-    readonly stepFloat: number
-    readonly mass: number
-    readonly stiffness: number
-    readonly damping: number
-    readonly previous: number
-  }
-): number => {
+const getSpring = (arithmetic: FloatArithmetic, request: VehicleSpringRequest): number => {
   const { add, subtract, multiply, divide, storeFloat, getIsBelow } = arithmetic
   const velocity = storeFloat(
     add(
@@ -109,7 +85,7 @@ export const getVehicleLean = (request: VehicleLeanRequest): VehicleLean => {
   const side = getRow(displayFrame.rotation, 1)
   const up = getRow(displayFrame.rotation, 2)
   const bodyUp = getRow(bodyRotation, 2)
-  const forwardPull = getStoredCross(arithmetic, side, bodyUp)
+  const forwardPull = getStoredCrossProduct(arithmetic, side, bodyUp)
   // The first distance goes through memory (FSTP, FLD [ESP+0x10]); the second stays on the FPU stack.
   const forwardDistance = arithmetic.storeFloat(getDistance(arithmetic, forward, forwardPull))
   const forwardSpring = getSpring(arithmetic, {
@@ -120,7 +96,7 @@ export const getVehicleLean = (request: VehicleLeanRequest): VehicleLean => {
     damping: FORWARD_DAMPING,
     previous: request.forwardLean,
   })
-  const sidePull = getStoredCross(arithmetic, bodyUp, forward)
+  const sidePull = getStoredCrossProduct(arithmetic, bodyUp, forward)
   const sideDistance = getDistance(arithmetic, side, sidePull)
   const sideSpring = getSpring(arithmetic, {
     distance: getIsAgainstUp(arithmetic, sidePull, up) ? -sideDistance : sideDistance,

@@ -23,6 +23,7 @@ import type {
   RacerPowerUpAbilities,
 } from '../../power-ups/index.ts'
 import type { PowerUpPlacements } from '../../power-up/index.ts'
+import type { RacerAppearance, RacerFigures } from '../../racer-appearance/index.ts'
 import type {
   DebrisAnimations,
   ProjectileEvent,
@@ -54,6 +55,9 @@ export type RaceRacerDefinition = {
   readonly preferredPowerUpLevel: number
   // Description +0x74 → racer +0xd40.
   readonly voiceBase: number
+  // The files the car is drawn from, and the figures (wheels, driver) that 0x0043d7a0 binds to them.
+  readonly appearance: RacerAppearance
+  readonly figures: RacerFigures
 }
 
 // Everything the race is built from; the parsed files and the settings Race_LoadRaceDescription reads.
