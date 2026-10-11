@@ -14,6 +14,7 @@ import type { DriverView } from './driver-view.types.ts'
 export const createDriverView = (archive: JamArchive, scene: ThreeScene): DriverView => {
   const slot = createModelSlot(scene)
   let shown: ModelObject | null = null
+  let isFollowingScreen = false
   return Object.freeze({
     show: (preview: DriverPreview) => {
       shown = slot.show(preview.partBytes.join(':'), () =>
@@ -24,8 +25,16 @@ export const createDriverView = (archive: JamArchive, scene: ThreeScene): Driver
         .copy(new Matrix4().makeRotationZ(Math.atan2(preview.forward[1], preview.forward[0])))
         .setPosition(x, y, z)
       shown.group.matrixWorldNeedsUpdate = true
+      if (preview.animation !== null) {
+        shown.object.setAnimationState(preview.animation)
+        isFollowingScreen = true
+      } else {
+        isFollowingScreen = false
+      }
     },
-    animate: (deltaMilliseconds: number) => shown?.object.animate(deltaMilliseconds),
+    animate: (deltaMilliseconds: number) => {
+      if (!isFollowingScreen) shown?.object.animate(deltaMilliseconds)
+    },
     dispose: slot.dispose,
   })
 }
