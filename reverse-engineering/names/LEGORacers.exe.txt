@@ -802,3 +802,10 @@
 0048da10 HazardLava_Update
 0048dcd0 HazardLava_OnRacerTouch
 0048e050 HazardCapture_OnRacerTouch
+00427310 RaceMenu_SetItems
+00427420 RaceMenu_UpdateBlink
+00427440 RaceMenu_Draw
+004276c0 RaceMenu_DrawDimmer
+00427810 RaceMenu_HandleKey
+004272c0 RaceMenu_Initialize
+00435920 Race_DrawPauseMenu

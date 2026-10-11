@@ -80,7 +80,18 @@ export type HudImageCommand = {
   readonly color: number | null
 }
 
-export type HudCommand = HudTextCommand | HudImageCommand
+// A translucent rectangle (the pause menu's dimmer, 0x004276c0).
+export type HudFillCommand = {
+  readonly kind: 'fill'
+  readonly x: number
+  readonly y: number
+  readonly width: number
+  readonly height: number
+  // 0xAARRGGBB.
+  readonly color: number
+}
+
+export type HudCommand = HudTextCommand | HudImageCommand | HudFillCommand
 
 // What the HUD object remembers between frames.
 export type HudState = {

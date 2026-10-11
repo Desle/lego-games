@@ -110,3 +110,29 @@ exports[`RaceHudOverlay > renders the lap row texts with the font colour white 1
   </div>
 </div>
 `;
+
+exports[`RaceHudOverlay > renders the pause menu: its dimmer is drawn on the canvas, its lines as accessible text 1`] = `
+<div>
+  <div
+    class="pointer-events-none absolute inset-0"
+    data-testid="race-hud"
+  >
+    <canvas
+      aria-hidden="true"
+      class="absolute inset-0"
+      height="600"
+      width="800"
+    />
+    <span
+      class="sr-only"
+    >
+      GAME PAUSED
+    </span>
+    <span
+      class="absolute right-2 bottom-2 rounded bg-black/60 px-2 py-1 text-xs text-slate-200"
+    >
+      racing
+    </span>
+  </div>
+</div>
+`;

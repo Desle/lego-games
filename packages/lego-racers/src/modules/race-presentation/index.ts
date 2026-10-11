@@ -1,4 +1,5 @@
 export { getEffectViews } from './controller/get-effect-views/get-effect-views.ts'
+export { getPauseMenuCommands } from './controller/get-pause-menu-commands/get-pause-menu-commands.ts'
 export { getRacerPoses } from './controller/get-racer-poses/get-racer-poses.ts'
 export {
   createRacePresentation,

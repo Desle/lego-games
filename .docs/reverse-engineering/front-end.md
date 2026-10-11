@@ -52,4 +52,4 @@ Button styles (MSB `0x3e`): six images, six fonts and 13 colours (`0x2a`: one, t
 - The animated 3D backdrops (`TT.WDB`, racer showcase) and the cinemas (`.CDB`): the viewer draws a dim panel; draw commands carry the model name, rectangle and camera floats.
 - Menu sounds: the original plays ids of `GENC0R0.SBK` through `0x0046e970` (`base - 1 + id`) from the styles' sound tables; the port plays `hilight1`, `ok`, `cancel`, `cantdo2` by role (hypothesis).
 - Mouse input (the original's menus take device events `0x10000014` ...); the port takes keyboard and gamepad.
-- Splash and introductions (screens 1, 0x26, 0x28, 0x29, 0x2b), save/load profile screens (0x2d..0x31), pause menu, results screens.
+- Splash and introductions (screens 1, 0x26, 0x28, 0x29, 0x2b), save/load profile screens (0x2d..0x31). The in-race pause menu is in [pause-menu.md](pause-menu.md).
