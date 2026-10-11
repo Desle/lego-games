@@ -62,7 +62,8 @@
     "./token-reader": "./src/modules/token-reader/index.ts",
     "./track-material": "./src/modules/track-material/index.ts",
     "./trigger": "./src/modules/trigger/index.ts",
-    "./world": "./src/modules/world/index.ts"
+    "./world": "./src/modules/world/index.ts",
+    "./world-animation": "./src/modules/world-animation/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

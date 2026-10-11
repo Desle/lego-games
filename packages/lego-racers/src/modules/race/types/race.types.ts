@@ -4,7 +4,8 @@ import type { CollisionObject } from '../../collision/index.ts'
 import type { ComputerRacerRoute } from '../../computer-racer-route/index.ts'
 import type { EventSet } from '../../event/index.ts'
 import type { HazardList } from '../../hazard/index.ts'
-import type { TrackEffect, TrackLogicState } from '../../track-logic/index.ts'
+import type { TrackEffect, TrackEmitters, TrackLogicState } from '../../track-logic/index.ts'
+import type { RaceWorlds } from '../../world-animation/index.ts'
 import type {
   CarBodyDefinition,
   PlayerController,
@@ -81,6 +82,10 @@ export type RaceDefinition = {
   readonly mainTriggers: TriggerList | null
   readonly environmentTriggers: TriggerList | null
   readonly hazards: HazardList | null
+  // The worlds the race animates (race +0x390, +0x398, +0x3a4) and the two emitter pools (race +0x2150, +0x248c); a
+  // definition without them has worlds and pools that hold nothing.
+  readonly worlds?: RaceWorlds
+  readonly emitters?: TrackEmitters
   // The random table position (0x004c6ee4) after the loaders that ran before RacerSet_Setup.
   readonly randomPosition: RandomTablePosition
   // The track world's line query 0x0041f4d0 (world module); null answers every query with a miss.

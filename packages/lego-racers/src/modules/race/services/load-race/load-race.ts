@@ -32,6 +32,7 @@ import {
 import type { RaceDefinition, RaceRacerDefinition } from '../../types/race.types.ts'
 import { getStartFrame } from '../../types/start-frame/start-frame.ts'
 import type { LoadRaceOptions, RouteDraws, RouteDrawer, RouteFiles } from './load-race.types.ts'
+import { loadRaceEmitters, loadRaceWorlds } from './load-race-worlds.ts'
 import { describeRacers, getCircuitRacerCodes, readRacerDatabases } from './load-racers.ts'
 
 const JAM_SEPARATOR = '\\'
@@ -102,6 +103,8 @@ export const loadRaceDefinition = (
     archive.readFile(
       folder.length > 0 ? `GAMEDATA${JAM_SEPARATOR}${folder}${JAM_SEPARATOR}${name}` : name
     )
+  const raceDirectory = `GAMEDATA${JAM_SEPARATOR}${folder}`
+  const readArchiveFile = (path: string): Uint8Array => archive.readFile(path)
   const paths = new Set(archive.getFilePaths())
   const getIsPresent = (path: string): boolean => paths.has(`GAMEDATA${JAM_SEPARATOR}${path}`)
   const description = parseRaceDescription(readFile(`${folder}.RAB`), false)
@@ -200,6 +203,8 @@ export const loadRaceDefinition = (
         ? null
         : parseTriggers(environmentTriggerBytes, TriggerFileKind.ENVIRONMENT, false),
     hazards: hazardBytes === null ? null : parseHazards(hazardBytes, false),
+    worlds: loadRaceWorlds(readArchiveFile, raceDirectory, description),
+    emitters: loadRaceEmitters(readArchiveFile, raceDirectory, description),
     randomPosition: routeDraws.position,
     getGroundPoint: null,
     trackTargets: [],

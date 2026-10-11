@@ -3,6 +3,7 @@ export {
   runTrackLogic,
   STATIC_TRACK_WORLD,
   tickTrackTimeEntries,
+  updateTrackHazardsAfterRacers,
   updateTrackLogicFrame,
   updateTrackEvents,
 } from './controller/run-track-logic/run-track-logic.ts'
@@ -19,6 +20,7 @@ export type {
   TrackEventBase,
   TrackEventSet,
   TrackLogicContext,
+  TrackEmitters,
   TrackLogicInput,
   TrackLogicState,
   TrackLogicStep,

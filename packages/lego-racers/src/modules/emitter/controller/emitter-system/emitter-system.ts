@@ -1,6 +1,7 @@
+import { getMaterialAnimationRow } from '../../../material-animation/index.ts'
 import type { MaterialAnimation } from '../../../material-animation/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
-import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
+import { getTruncatedInteger, ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import type { EmitterSystem, Particle } from '../../types/emitter-pool.types.ts'
 import type { Emitter } from '../../types/emitter.types.ts'
 
@@ -131,21 +132,20 @@ export const getEmitterSystemWithBirth = (
   })
 }
 
-// 0x00410560: the entry's rate times the age, truncated, modulo the entry's length picks the last table row,
-// within the entry's rows, that has started.
-const getTableIndex = (animation: MaterialAnimation, entryIndex: number, age: number): number => {
-  const entry = animation.entries[entryIndex]
-  if (entry === undefined) return 0
-  const [first, count] = entry.keyword27Values
-  const length = entry.keyword29Value
-  const time = Math.trunc(Math.fround(entry.keyword2aValue * age)) % length
-  const last = first + count - 1
-  for (let index = last; index >= first; index -= 1) {
-    const row = animation.materials[index]
-    if (row !== undefined && time >= row.value) return index
-  }
-  return last
-}
+// 0x00410560: the entry's rate times the age (an x87 product), truncated, selects the table row.
+const getTableIndex = (
+  arithmetic: FloatArithmetic,
+  animation: MaterialAnimation,
+  entryIndex: number,
+  age: number
+): number =>
+  getMaterialAnimationRow(
+    animation,
+    entryIndex,
+    getTruncatedInteger(
+      arithmetic.multiply(animation.entries[entryIndex]?.keyword2aValue ?? 0, age)
+    )
+  )
 
 // 0x00414600: position and velocity of one particle after `seconds` under the acceleration.
 const getMovedParticle = (
@@ -197,7 +197,7 @@ export const getAdvancedEmitterSystem = (
       tableIndex:
         system.entryIndex === null || animation === null
           ? null
-          : getTableIndex(animation, system.entryIndex, ageMilliseconds),
+          : getTableIndex(arithmetic, animation, system.entryIndex, ageMilliseconds),
     })
     return [getMovedParticle(arithmetic, aged, seconds, system.acceleration)]
   })

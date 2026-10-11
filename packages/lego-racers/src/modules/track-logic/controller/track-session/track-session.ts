@@ -1,5 +1,20 @@
-import { drawRandomScaledRange, drawRandomValue } from '../../../random-table/index.ts'
+import { updateEmitterPool } from '../../../emitter/index.ts'
+import type { EmitterPool } from '../../../emitter/index.ts'
 import type { Vector3 } from '../../../event/index.ts'
+import {
+  fireHazardTrigger,
+  fireReleaseHazardTrigger,
+  forceEndHazards,
+  releaseHazardTrigger,
+  startHazardSignal,
+  startStopHazardSignal,
+  stopHazardSignal,
+  updateHazards,
+  updateHazardsAfterRacers,
+} from '../../../hazard/index.ts'
+import type { HazardSession, HazardStore } from '../../../hazard/index.ts'
+import { drawRandomScaledRange, drawRandomValue } from '../../../random-table/index.ts'
+import { advanceWorldAnimation } from '../../../world-animation/index.ts'
 import {
   EVENT_HELD_FLAG,
   EVENT_PULSE_FLAG,
@@ -81,6 +96,9 @@ export const createTrackSession = (
   let position = state.random.position
   let timers = state.timers
   let triggers = state.triggers
+  let worlds = state.worlds
+  let hazards = state.hazards
+  let emitters = state.emitters
   const effects: TrackEffect[] = []
 
   const getEvents = (kind: string): readonly TrackEvent[] => events[kind] ?? []
@@ -109,6 +127,38 @@ export const createTrackSession = (
   const getSession = (): TrackSession => {
     if (sessionRef.current === null) throw new Error('The track session is not ready')
     return sessionRef.current
+  }
+
+  const getHazardRacer = (racerIndex: number | null) =>
+    racerIndex === null ? null : (context.getHazardRacer?.(racerIndex) ?? null)
+
+  // The hazards are walked by the bus (the last step of every signal) and by Hazards_Update; what they do to the
+  // worlds, the emitters, the random table and the bus goes through this view of the session.
+  const hazardStore: HazardStore = {
+    get: () => hazards,
+    set: (next) => {
+      hazards = next
+    },
+  }
+  const hazardSession: HazardSession = {
+    arithmetic: context.arithmetic,
+    drawRandomValue: () => getSession().drawRandomValue(),
+    startSignal: (identifier, parameter) => getSession().startSignal(identifier, parameter),
+    startStopSignal: (startIdentifier, stopIdentifier, parameter) =>
+      getSession().startStopSignal(startIdentifier, stopIdentifier, parameter),
+    stopSignal: (identifier, parameter) => getSession().stopSignal(identifier, parameter),
+    getWorld: (key) => worlds[key],
+    setWorld: (key, world) => {
+      worlds = { ...worlds, [key]: world }
+    },
+    getEmitters: () => emitters.track,
+    setEmitters: (pool) => {
+      emitters = { ...emitters, track: pool }
+    },
+    getRacer: (racerIndex) => getHazardRacer(racerIndex),
+    getTableCosine: (index) => context.getTableCosine?.(index) ?? 1,
+    probe: (start, end) => context.probe?.(start, end) ?? null,
+    emit: (effect) => void effects.push(effect),
   }
 
   // 0x0045ee50
@@ -171,12 +221,14 @@ export const createTrackSession = (
     return event.kind === TrackEventKind.KIND_59 ? event.record.keyword4cInteger : NO_IDENTIFIER
   }
 
-  const forceEnd = (identifier: number): void =>
+  const forceEnd = (identifier: number): void => {
     forEach(UPDATE_ORDER, (kind, index) =>
       apply(kind, index, (event) =>
         event.identifier === identifier ? { ...event, state: TrackEventState.END_REQUESTED } : event
       )
     )
+    forceEndHazards(hazardStore, identifier)
+  }
 
   const startSignal = (identifier: number, parameter: Vector3 | null): void => {
     forEach(BUS_ORDER, (kind, index) => {
@@ -197,6 +249,7 @@ export const createTrackSession = (
         setSignalHeld(kind, index, true)
       }
     })
+    startHazardSignal(hazardStore, hazardSession, identifier, parameter)
   }
 
   const startStopSignal = (
@@ -237,6 +290,7 @@ export const createTrackSession = (
         setSignalHeld(kind, index, false)
       }
     })
+    startStopHazardSignal(hazardStore, hazardSession, startIdentifier, stopIdentifier, parameter)
   }
 
   const stopSignal = (identifier: number, parameter: Vector3 | null): void => {
@@ -255,6 +309,7 @@ export const createTrackSession = (
         setSignalHeld(kind, index, false)
       }
     })
+    stopHazardSignal(hazardStore, hazardSession, identifier)
   }
 
   const announceTransition = (event: TrackEvent, from: number, to: number): void => {
@@ -268,19 +323,22 @@ export const createTrackSession = (
   }
 
   // 0x004628c0: a trigger fired the events that carry its identifier.
-  const fireTrigger = (identifier: number, racerIndex: number | null): void =>
+  const fireTrigger = (identifier: number, racerIndex: number | null): void => {
     forEach(TRIGGER_ORDER, (kind, index) => {
       if (getEvents(kind)[index]?.identifier === identifier) {
         fireIfAllowed(kind, index, racerIndex)
       }
     })
+    const racer = getHazardRacer(racerIndex)
+    if (racer !== null) fireHazardTrigger(hazardStore, hazardSession, identifier, racer)
+  }
 
   // 0x00462ae0: a surface starts one identifier and stops another for a racer.
   const fireReleaseTrigger = (
     fireIdentifier: number,
     releaseIdentifier: number,
     racerIndex: number | null
-  ): void =>
+  ): void => {
     forEach(TRIGGER_ORDER, (kind, index) => {
       if (getEvents(kind)[index]?.identifier === fireIdentifier) {
         fireIfAllowed(kind, index, racerIndex)
@@ -289,14 +347,22 @@ export const createTrackSession = (
         releaseIfAllowed(kind, index, racerIndex)
       }
     })
+    const racer = getHazardRacer(racerIndex)
+    if (racer !== null) {
+      fireReleaseHazardTrigger(hazardStore, hazardSession, fireIdentifier, releaseIdentifier, racer)
+    }
+  }
 
   // 0x004629d0: a racer left what it was touching.
-  const releaseTrigger = (identifier: number, racerIndex: number | null): void =>
+  const releaseTrigger = (identifier: number, racerIndex: number | null): void => {
     forEach(TRIGGER_ORDER, (kind, index) => {
       if (getEvents(kind)[index]?.identifier === identifier) {
         releaseIfAllowed(kind, index, racerIndex)
       }
     })
+    const racer = getHazardRacer(racerIndex)
+    if (racer !== null) releaseHazardTrigger(hazardStore, hazardSession, identifier, racer)
+  }
 
   // Events_Update 0x00461cc0.
   const updateEvents = (milliseconds: number): void =>
@@ -305,6 +371,23 @@ export const createTrackSession = (
         getEventHandlers(kind).update(event, getSession(), milliseconds)
       )
     )
+
+  // Emitters_Update 0x00489fa0 for race +0x2150 and then +0x248c; their births draw from the random table.
+  const updateEmitterPools = (milliseconds: number): void => {
+    const update = (pool: EmitterPool | null): EmitterPool | null => {
+      if (pool === null) return null
+      const step = updateEmitterPool(
+        context.arithmetic,
+        pool,
+        { table: state.random.table, position },
+        milliseconds
+      )
+      position = step.position
+      return step.pool
+    }
+    const common = update(emitters.common)
+    emitters = { common, track: update(emitters.track) }
+  }
 
   const session: TrackSession = {
     context,
@@ -329,6 +412,17 @@ export const createTrackSession = (
     fireReleaseTrigger,
     releaseTrigger,
     updateEvents,
+    advanceWorlds: (milliseconds) => {
+      worlds = {
+        track: advanceWorldAnimation(worlds.track, milliseconds),
+        local: advanceWorldAnimation(worlds.local, milliseconds),
+        blended: advanceWorldAnimation(worlds.blended, milliseconds),
+      }
+    },
+    updateEmitters: updateEmitterPools,
+    updateHazards: (milliseconds) => updateHazards(hazardStore, hazardSession, milliseconds),
+    updateHazardsAfterRacers: (cameraPositions) =>
+      updateHazardsAfterRacers(hazardStore, hazardSession, cameraPositions),
     updateTimers: (milliseconds) => {
       timers = updateTimers(timers, session, milliseconds)
     },
@@ -353,6 +447,9 @@ export const createTrackSession = (
           events: Object.freeze(events),
           timers,
           triggers,
+          worlds: Object.freeze(worlds),
+          hazards,
+          emitters: Object.freeze(emitters),
           random: Object.freeze({ table: state.random.table, position }),
         }),
         effects: Object.freeze([...effects]),

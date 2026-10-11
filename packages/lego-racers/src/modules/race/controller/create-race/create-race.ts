@@ -124,6 +124,10 @@ export const createRace = (definition: RaceDefinition): RaceState => {
       timerList: definition.timers,
       mainTriggers: definition.mainTriggers,
       environmentTriggers: definition.environmentTriggers,
+      hazardList: definition.hazards,
+      isMirrored: definition.isMirrored,
+      ...(definition.worlds === undefined ? {} : { worlds: definition.worlds }),
+      ...(definition.emitters === undefined ? {} : { emitters: definition.emitters }),
     },
     definition.arithmetic,
     { table: definition.tables.randomTable, position: afterRacers }

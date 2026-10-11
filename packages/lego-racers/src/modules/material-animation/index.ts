@@ -1,3 +1,4 @@
+export { getMaterialAnimationRow } from './controller/get-material-animation-row/get-material-animation-row.ts'
 export { parseMaterialAnimation } from './controller/parse-material-animation/parse-material-animation.ts'
 export {
   DEFAULT_KEYWORD_27_VALUES,
