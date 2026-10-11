@@ -140,7 +140,13 @@ export type FrontEndMemory = Pick<
   'playerCar' | 'randomPosition' | 'saveFile' | 'racerIndex'
 >
 
-export type FrontEndOutcome = 'running' | 'race' | 'quit'
+// `demonstration`: the main menu waited 60 seconds (0x00481450) and the game starts the attract-mode race.
+export type FrontEndOutcome = 'running' | 'race' | 'quit' | 'demonstration'
+
+// What the front end hands over when its idle timer runs out: where the shared random cursor stands.
+export type FrontEndDemonstrationRequest = {
+  readonly randomPosition: number
+}
 
 export type FrontEndSelection = {
   readonly focusIndex: number

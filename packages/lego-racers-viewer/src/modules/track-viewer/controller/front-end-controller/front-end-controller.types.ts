@@ -1,4 +1,5 @@
 import type {
+  FrontEndDemonstrationRequest,
   FrontEndMemory,
   FrontEndRaceRequest,
   FrontEndStandingRow,
@@ -21,6 +22,8 @@ export type FrontEndControllerOptions = {
   readonly onMenuMemoryChanged: (memory: FrontEndMemory) => void
   // A race was chosen: what the menus left in the game settings.
   readonly onRaceRequested: (request: FrontEndRaceRequest) => void
+  // The main menu waited for 60 seconds: the game starts a demonstration race.
+  readonly onDemonstrationRequested: (request: FrontEndDemonstrationRequest) => void
   // The quit question was answered with yes.
   readonly onQuit: () => void
 }

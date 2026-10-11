@@ -1,4 +1,5 @@
 import type {
+  FrontEndDemonstrationRequest,
   FrontEndMemory,
   FrontEndRaceRequest,
   FrontEndStandingRow,
@@ -17,5 +18,6 @@ export type FrontEndViewProps = {
   readonly standingRows: readonly FrontEndStandingRow[]
   readonly onMenuMemoryChanged: (memory: FrontEndMemory) => void
   readonly onRaceRequested: (request: FrontEndRaceRequest) => void
+  readonly onDemonstrationRequested: (request: FrontEndDemonstrationRequest) => void
   readonly onQuit: () => void
 }
