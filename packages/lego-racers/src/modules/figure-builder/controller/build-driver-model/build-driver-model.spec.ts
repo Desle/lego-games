@@ -44,7 +44,7 @@ describe.skipIf(!isAvailable)('buildDriverModel', () => {
     ])
   })
 
-  it("puts the texture the right way up: the bat helmet's face patch lies in the middle of the face texture", () => {
+  it("keeps v as the engine reads it (the short over 4096, 0x00408280): the bat helmet's face patch lies at v 0.425 to 0.655, the middle of the face texture whose surface starts at its bottom row", () => {
     // Arrange
     const archive = openJamArchive(new Uint8Array(readFileSync(JAM_PATH)))
     const geometry = parsePartGeometry(archive.readFile('MENUDATA\\PARTDB\\GAMEPART\\ICB_CHAR.GCB'))
@@ -58,7 +58,7 @@ describe.skipIf(!isAvailable)('buildDriverModel', () => {
     )
 
     // Assert
-    expect(Math.min(...verticalCoordinates)).toBeCloseTo(1 - 0.655, 2)
-    expect(Math.max(...verticalCoordinates)).toBeCloseTo(1 - 0.425, 2)
+    expect(Math.min(...verticalCoordinates)).toBeCloseTo(0.425, 2)
+    expect(Math.max(...verticalCoordinates)).toBeCloseTo(0.655, 2)
   })
 })
