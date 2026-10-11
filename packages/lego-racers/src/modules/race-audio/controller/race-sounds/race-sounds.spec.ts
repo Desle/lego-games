@@ -80,7 +80,7 @@ describe('getRaceEventSounds', () => {
     const spun = (strength: number) =>
       ({
         type: 'race.power_up',
-        event: { type: 'power_ups.racer_spun_out', racer: 0, strength },
+        event: { type: 'power_ups.racer_spun_out', racer: 0, strength, spinTime: 0 },
       }) as const
 
     // Act
@@ -100,7 +100,7 @@ describe('getRaceEventSounds', () => {
     } as const
     const released = {
       type: 'race.power_up',
-      event: { type: 'power_ups.grapple_released', effect: 3 },
+      event: { type: 'power_ups.grapple_released', effect: 3, victim: 1, owner: 0 },
     } as const
 
     // Act

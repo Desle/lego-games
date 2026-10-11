@@ -70,6 +70,7 @@ const getScenario = (
     circuitName: RACE_CIRCUITS[raceFolder] ?? 'c1',
     precision: 'auto',
     frames: holdBindings(frameCount, []),
+    powerUpGrants: [],
   }
 }
 

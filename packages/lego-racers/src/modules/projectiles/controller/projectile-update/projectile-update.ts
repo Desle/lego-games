@@ -1,5 +1,7 @@
 import {
   advancePowerUpEffect,
+  checkEffectEmitter,
+  startEffectEmitter,
   EffectState,
   getEffect,
   getStepWithEffect,
@@ -48,6 +50,10 @@ import {
 const MAGNET_PLACEMENT_TIMER = 20000
 // 0x0045ce20: the early end only applies while less than 4500 ms (0x1194) are left.
 const TURBO_EARLY_END_TIMER_LIMIT = 4500
+// 0x0045ce20: the smoke needs a level 2 turbo with less than 800 ms left and no bit 2 in the race mode flags.
+const TURBO_SMOKE_LEVEL = 2
+const TURBO_SMOKE_TIMER_LIMIT = 800
+const TURBO_SMOKE_BLOCKING_MODE_FLAG = 2
 
 const getWithBallisticMotion = (
   world: ProjectileWorld,
@@ -59,7 +65,7 @@ const getWithBallisticMotion = (
 // 0x00451b50 (cannon vtable slot 2): the countdown first, which calls the advance (0x00451f50) when the timer runs
 // out; the advance launches the ball when the cannon leaves state 2, and the ball flies on in the same call with the
 // time left after the countdown.
-const updateCannon: EffectUpdate = (step, world, context, before, stepMilliseconds) => {
+const flyCannon: EffectUpdate = (step, world, context, before, stepMilliseconds) => {
   const counted = updatePowerUpEffect(step, context.powerUps, before.id, stepMilliseconds)
   const after = getEffect(counted, before.id)
   const flightMilliseconds =
@@ -81,6 +87,12 @@ const updateCannon: EffectUpdate = (step, world, context, before, stepMillisecon
     advance.flight,
     advance.result
   )
+}
+
+// The tail of 0x00451b50: the smoke is let go once its emitter has born enough particles.
+const updateCannon: EffectUpdate = (step, world, context, before, stepMilliseconds) => {
+  const flown = flyCannon(step, world, context, before, stepMilliseconds)
+  return Object.freeze({ step: checkEffectEmitter(flown.step, before.id), world: flown.world })
 }
 
 // 0x00452ff0 (barrel vtable slot 2): the flight first, then the countdown (0x004513a0), whose advance (0x00453240)
@@ -168,9 +180,31 @@ const updateMagnet: EffectUpdate = (step, world, context, before, stepMillisecon
   })
 }
 
+// 0x0045ce20: the last 800 ms of a level 2 turbo trail smoke, unless the race mode keeps turbos endless.
+const getStepWithTurboSmoke = (
+  step: PowerUpStep,
+  context: ProjectileContext,
+  effectId: number
+): PowerUpStep => {
+  const effect = getEffect(step, effectId)
+  const isSmoking =
+    effect.level === TURBO_SMOKE_LEVEL &&
+    effect.state === EffectState.ACTIVE &&
+    effect.emitterHandleIndex === null &&
+    effect.timerMilliseconds < TURBO_SMOKE_TIMER_LIMIT &&
+    (context.powerUps.raceModeFlags & TURBO_SMOKE_BLOCKING_MODE_FLAG) === 0
+  return isSmoking
+    ? startEffectEmitter(step, context.powerUps.arithmetic, effectId, 'trbsmke')
+    : step
+}
+
 // 0x0045ce20 (turbo vtable slot 2): after the countdown, a tumbling racer who has stopped ends the turbo early.
 const updateTurbo: EffectUpdate = (step, world, context, before, stepMilliseconds) => {
-  const counted = updatePowerUpEffect(step, context.powerUps, before.id, stepMilliseconds)
+  const counted = getStepWithTurboSmoke(
+    updatePowerUpEffect(step, context.powerUps, before.id, stepMilliseconds),
+    context,
+    before.id
+  )
   const after = getEffect(counted, before.id)
   const owner = after.ownerRacer === null ? undefined : context.racers[after.ownerRacer]
   const status = after.ownerRacer === null ? undefined : context.powerUps.racers[after.ownerRacer]
@@ -197,6 +231,14 @@ const getWorldWithFinishedMotionCleared = (
     ? getWorldWithMotion(world, effectId, null)
     : world
 
+// The tail of 0x00453ef0 (a finished grapple does nothing).
+const updateGrappleWithSmoke: EffectUpdate = (step, world, context, before, stepMilliseconds) => {
+  const flown = updateGrapple(step, world, context, before, stepMilliseconds)
+  return before.state === EffectState.FINISHED
+    ? flown
+    : Object.freeze({ step: checkEffectEmitter(flown.step, before.id), world: flown.world })
+}
+
 const updateWithPowerUps: EffectUpdate = (step, world, context, before, stepMilliseconds) =>
   Object.freeze({
     step: updatePowerUpEffect(step, context.powerUps, before.id, stepMilliseconds),
@@ -211,7 +253,7 @@ const EFFECT_UPDATES: Readonly<Partial<Record<PowerUpEffect['kind'], EffectUpdat
     [PowerUpEffectKind.ROCKET]: updateRocket,
     [PowerUpEffectKind.WARP]: updateWarp,
     [PowerUpEffectKind.WAND]: updateWand,
-    [PowerUpEffectKind.GRAPPLE]: updateGrapple,
+    [PowerUpEffectKind.GRAPPLE]: updateGrappleWithSmoke,
     [PowerUpEffectKind.MAGNET]: updateMagnet,
     [PowerUpEffectKind.TURBO]: updateTurbo,
   })

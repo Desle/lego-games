@@ -215,6 +215,22 @@ export const getRecycledPool = (pool: ExplosionPool): ExplosionPool =>
     })
   }, pool)
 
+// The impulse for car body slot 0x1c that throws a racer along its heading axis: 0x00421c00 scales it by the blast's
+// power, 0x00455440 (the wand) by 1.
+export const getThrowImpulse = (
+  arithmetic: FloatArithmetic,
+  axis: Vector3,
+  power: number
+): Vector3 => {
+  const { add, multiply, storeFloat } = arithmetic
+  const push = multiply(BLAST_PUSH, power)
+  return Object.freeze({
+    x: add(0, storeFloat(multiply(axis.x, push))),
+    y: add(0, storeFloat(multiply(axis.y, push))),
+    z: storeFloat(add(multiply(power, BLAST_LIFT), storeFloat(multiply(axis.z, push)))),
+  })
+}
+
 // 0x00421c00 (the touch callback, kind 2): the explosion throws a racer it touches away. Returns the vector for car
 // body slot 0x1c (0x00429a70), or null when the racer is not hurt. The racer's velocity is cleared and car body slot
 // 0x38 (0x004397a0) called first.
@@ -224,7 +240,7 @@ export const getBlastImpulse = (
   racer: number,
   target: BlastTarget
 ): Vector3 | null => {
-  const { add, multiply, divide, storeFloat, getIsBelowOrEqual, getIsBelow } = arithmetic
+  const { add, divide, getIsBelowOrEqual, getIsBelow } = arithmetic
   if (explosion.parameters.blastKind === 0 || racer === explosion.owner || target.isShielded) {
     return null
   }
@@ -236,10 +252,5 @@ export const getBlastImpulse = (
     const doubled = add(quotient, quotient)
     if (getIsBelowOrEqual(doubled, 1)) power = getIsBelow(doubled, 0) ? 0 : doubled
   }
-  const push = multiply(BLAST_PUSH, power)
-  return Object.freeze({
-    x: add(0, storeFloat(multiply(target.axis.x, push))),
-    y: add(0, storeFloat(multiply(target.axis.y, push))),
-    z: storeFloat(add(multiply(power, BLAST_LIFT), storeFloat(multiply(target.axis.z, push)))),
-  })
+  return getThrowImpulse(arithmetic, target.axis, power)
 }

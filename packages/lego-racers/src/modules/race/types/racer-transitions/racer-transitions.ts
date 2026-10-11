@@ -1,18 +1,24 @@
 import type { PowerUpEvent } from '../../../power-ups/index.ts'
 import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
 import {
+  addCarBodyVelocity,
   assignDriverRoute,
+  clearCarBodyVelocity,
   endCarBodyBoost,
+  endCarBodyFlaggedState,
   endCarBodySpin,
   getDriven,
   setCarBodyHeadingFromFrame,
   setCarBodyTwoPointMode,
   setDriven,
   startCarBodyBoost,
+  startCarBodyFlaggedState,
   startCarBodyFlip,
+  startCarBodySpin,
 } from '../../../racer/index.ts'
+import { getThrowImpulse } from '../../../projectiles/index.ts'
 import type { Racer } from '../../../racer/index.ts'
-import { FLOAT32_MAXIMUM } from '../../../simulation-math/index.ts'
+import { FLOAT32_MAXIMUM, getFloatFromBits } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 
 export const COMPUTER_CONTROLLER = 2
@@ -28,6 +34,8 @@ const DRIVER_NO_ROUTE_FLAG = 0x80
 const LAP_GAP_COUNTDOWN_MILLISECONDS = 2000
 const RACER_TUMBLING_FLAG = 0x8
 const TUMBLING_TURBO_LEVEL = 2
+const SPIN_RATE = getFloatFromBits(0x3be56042) // 0x004575db, 0x00457002: the spin of a slick or a rocket
+const WAND_THROW_POWER = 1 // 0x00455440 throws a struck racer like a blast at full power
 
 // 0x004374c0, the racer fields: flag 0x2 set and 0x1000..0x4000 cleared, no checkpoint, zone history 0, 2, 1, no lap.
 // The route placement (0x0042a670, car body +0xb30 = 1) is done by the scripted car body code.
@@ -242,6 +250,22 @@ export const getRacerAfterTurboEnd = (arithmetic: FloatArithmetic, racer: Racer)
     carBody: endCarBodyBoost(arithmetic, racer.carBody),
   })
 
+// 0x004397a0 (car body slot 14), the racer's velocity cleared, then slot 7 (0x00429a70) with the impulse: the racer is
+// thrown (a blast 0x00421c00, the wand 0x00455440).
+export const getRacerThrown = (
+  arithmetic: FloatArithmetic,
+  racer: Racer,
+  impulse: Vector3
+): Racer =>
+  Object.freeze({
+    ...racer,
+    carBody: addCarBodyVelocity(
+      arithmetic,
+      clearCarBodyVelocity(startCarBodyFlaggedState(racer.carBody)),
+      impulse
+    ),
+  })
+
 const getRacerWithFlags = (racer: Racer, flags: number): Racer =>
   Object.freeze({ ...racer, flags: flags >>> 0 })
 
@@ -282,6 +306,30 @@ export const getRacerAfterPowerUpEvent = (
       return getRacerWithFlags(racer, racer.flags & ~0x10)
     case 'power_ups.racer_magnetized':
       return getRacerWithFlags(racer, racer.flags | 0x100000)
+    case 'power_ups.racer_spun_out':
+      return Object.freeze({
+        ...racer,
+        carBody: startCarBodySpin(
+          arithmetic,
+          racer.carBody,
+          event.strength,
+          SPIN_RATE,
+          event.spinTime
+        ),
+      })
+    case 'power_ups.racer_flipped':
+      return Object.freeze({
+        ...racer,
+        carBody: startCarBodyFlip(arithmetic, racer.carBody, event.rate, event.milliseconds),
+      })
+    case 'power_ups.racer_struck_by_lightning':
+      return getRacerThrown(
+        arithmetic,
+        racer,
+        getThrowImpulse(arithmetic, racer.carBody.rigidBody.heading, WAND_THROW_POWER)
+      )
+    case 'power_ups.racer_released_by_lightning':
+      return Object.freeze({ ...racer, carBody: endCarBodyFlaggedState(racer.carBody) })
     default:
       return racer
   }

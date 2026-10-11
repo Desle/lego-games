@@ -17,6 +17,7 @@ import type {
   PowerUpEffectKind as PowerUpEffectKindValue,
   PowerUpEffects,
 } from '../../types/power-ups.types.ts'
+import { releaseEffectEmitter } from '../effect-emitters/effect-emitters.ts'
 import { getEffect, getStepWithEffect, getStepWithEvents } from '../power-up-step/power-up-step.ts'
 import type { PowerUpStep } from '../power-up-step/power-up-step.types.ts'
 import type {
@@ -27,7 +28,7 @@ import type {
 } from './power-up-effects.types.ts'
 
 // The order 0x004590f0 links the pools in.
-const POOL_ORDER: readonly PowerUpEffectKindValue[] = Object.freeze([
+export const POWER_UP_EFFECT_POOL_ORDER: readonly PowerUpEffectKindValue[] = Object.freeze([
   PowerUpEffectKind.MAGNET,
   PowerUpEffectKind.OIL_SLICK,
   PowerUpEffectKind.BARREL,
@@ -68,17 +69,17 @@ const createIdleEffect = (id: number, kind: PowerUpEffectKindValue): PowerUpEffe
     jitterMilliseconds: 0,
     sparkMilliseconds: 0,
     heldMilliseconds: 0,
-    isBubbleEmitterActive: false,
+    emitterHandleIndex: null,
   })
 
 // 0x00457cf0 → 0x00457d30 (pool sizes) and 0x004590f0 (free lists, first object at the head).
 export const createPowerUpEffects = (isSplitScreen: boolean): PowerUpEffects => {
-  const kinds = POOL_ORDER.flatMap((kind) =>
+  const kinds = POWER_UP_EFFECT_POOL_ORDER.flatMap((kind) =>
     Array.from({ length: POWER_UP_EFFECT_POOL_SIZES[kind][isSplitScreen ? 0 : 1] }, () => kind)
   )
   const effects = Object.freeze(kinds.map((kind, id) => createIdleEffect(id, kind)))
   const freeEffectIds = Object.fromEntries(
-    POOL_ORDER.map((kind) => [
+    POWER_UP_EFFECT_POOL_ORDER.map((kind) => [
       kind,
       Object.freeze(effects.filter((effect) => effect.kind === kind).map((effect) => effect.id)),
     ])
@@ -97,6 +98,14 @@ const getStepWithEffects = (step: PowerUpStep, effects: PowerUpEffects): PowerUp
     world: Object.freeze({ ...step.world, effects: Object.freeze(effects) }),
   })
 
+// The classes whose reset lets their emitter vanish at once (0x00489f00); the others let the particles finish
+// (0x00489f30).
+const IMMEDIATE_EMITTER_RELEASE_KINDS: readonly PowerUpEffectKindValue[] = Object.freeze([
+  PowerUpEffectKind.CANNON,
+  PowerUpEffectKind.GRAPPLE,
+  PowerUpEffectKind.TURBO,
+])
+
 // The racer-side calls each class's reset (vtable slot 7) makes.
 const getResetEvents = (effect: PowerUpEffect): readonly PowerUpEvent[] => {
   if (effect.kind === PowerUpEffectKind.TURBO && effect.ownerRacer !== null) {
@@ -112,7 +121,15 @@ const getResetEvents = (effect: PowerUpEffect): readonly PowerUpEvent[] => {
 }
 
 // Vtable slot 7 (0x00451ad0, 0x00452970, 0x00452f90, 0x00453e90, 0x00454d10, 0x00455a90, 0x004568a0, 0x00457250, 0x0045c060, 0x0045d360).
-export const resetPowerUpEffect = (step: PowerUpStep, effectId: number): PowerUpStep => {
+export const resetPowerUpEffect = (
+  stepBeforeRelease: PowerUpStep,
+  effectId: number
+): PowerUpStep => {
+  const step = releaseEffectEmitter(
+    stepBeforeRelease,
+    effectId,
+    IMMEDIATE_EMITTER_RELEASE_KINDS.includes(getEffect(stepBeforeRelease, effectId).kind)
+  )
   const effect = getEffect(step, effectId)
   const attachmentSlots = effect.attachmentSlotIndices.reduce(
     freeAttachmentSlot,
@@ -131,7 +148,7 @@ export const resetPowerUpEffect = (step: PowerUpStep, effectId: number): PowerUp
       targetRacer: null,
       targetTrackPoint: null,
       attachmentSlotIndices: Object.freeze([]),
-      isBubbleEmitterActive: false,
+      emitterHandleIndex: null,
     }),
     getResetEvents(effect)
   )

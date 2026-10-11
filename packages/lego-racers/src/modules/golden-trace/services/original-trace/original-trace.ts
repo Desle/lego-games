@@ -31,6 +31,7 @@ const getScenarioForEmulator = (scenario: GoldenTraceScenario) => ({
   circuit: scenario.circuitName,
   isMirrored: scenario.isMirrored,
   fpu: scenario.precision,
+  powerUpGrants: scenario.powerUpGrants,
   frames: scenario.frames.map((frame) => ({ dt: frame.milliseconds, keys: frame.scanCodes })),
 })
 
