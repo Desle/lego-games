@@ -24,9 +24,21 @@ The projection matrix also exposes the planes: `far / (far - near)` and `-near *
 
 Verified by `front-end-render-trace.trace.spec.ts` (main menu case): the port's figure position times the original's camera matrix equals the translation of one of the original's draws, and `TT.WDB`'s eye is the point the original's camera matrix sends to zero.
 
+## The main menu figure's behaviour (`MainMenu_Update` `0x00481450`)
+
+The screen's update (vtable `+0x78`) runs every frame with the elapsed milliseconds; the figure (`+0x2438` = the figure widget's figure) has the exe's own animation player (`Figure_PlayFrom` `0x0040dae0`, `Figure_Blend` `0x0040db80`, `Figure_Update` `0x0040dd60`, `Animation_GetIsFinished` `0x0040e360`; the flags are those of `skeletal-animation`). `MENUDATA\LEGOMAN.ADB` has three clips: 0 `start` (329 frames), 1 `begin` (103) and 2 `wait` (395), all 0.03 frames per millisecond.
+
+- The constructor's timers (`MainMenu_ResetTimers` `0x00480e10`): `+0x2444` = 60,000 ms (idle), `+0x2448` = 30,000 ms (wait).
+- Entering the screen (`MainMenu_Enter` `0x00481000`; the figure is built from the driver of the profile): `Figure_Play(0)`, flag `0x10000` set, flag `0x40000` cleared: `start` plays **once**.
+- Each update both timers go down by the elapsed time (to 0). While the figure shows `wait` (the blend's target while blending), the tap on the glass sounds once when the clip passes frame 208 (`0x004b3770` = 208.0): `MenuSound_Play` `0x0046e970` with id `0x1d` = the 29th entry of `GENC0R0.SBK` = `glasstap.pcm` (`+0x243c` is the played flag; it clears while the clip is before frame 208).
+- When the wait timer is 0: `Figure_Blend(2, 200 ms, start 0.0, current stops, target stops, target does not loop)`, timer = 30,000. Else, when the first clip has ended (`0x0040e360`: flag `0x80000`, or not looping and on its last frame): `Figure_Blend(1, 200, 0.0, 0, 0, target loops)`. A blend to the clip already shown does nothing, so `begin` then loops until the next 30 seconds are over; `wait` plays through once (13 seconds) and returns to `begin`. Both clips are frozen during the 200 ms blend. No random draw is involved.
+- When the idle timer is 0 the update sets the screen's done flag (`+0x364`) with no target: the screen stack empties and the front end returns with the race flag set; the game starts a demonstration race (the trace shows a race frame 1,975 after the scenario began, 60,000 ms after the menu opened at frame 154; HUD, lap counter and a car viewed from behind). Not ported.
+
+Verified (`front-end-figure-animation.trace.spec.ts`, 33 ms frames): the part frames the original draws (each frame's world position from `model matrix x inverse(camera matrix)`) are matched by the port's bone positions within 3 cm for at least 70 percent (about 80 percent over 340 frames; the rest are part frames that are not bone origins) at frames 300 and 500 (`start`), 900 (`begin`), 1100 and 1250 (the blend and `wait` of the 30 s timer) and 1400; the menu opens at frame 154 and the figure is gone between frames 1970 and 1975 (154 + 60,000 / 33 = 1,973). The clip phases fit best one frame earlier (frame 153) than the timers (154): the first frame's timer decrement seems to be skipped; not modelled (hypothesis).
+
 ## Open
 
-- The pose: the original plays an idle animation chosen by timers (`0x0040dad0` `Figure_Play` after `FigureWidget_BuildFigure`; flags `+0x5c` bits `0x10000`/`0x40000`); the port plays the first clip of `LEGOMAN.ADB` from the start. Which clip, and when it changes, is not recovered.
+- The idle timeout: after 60 seconds of the main menu the original leaves the front end for a demonstration race (see the figure's behaviour); the port keeps the timer at zero and does nothing.
 - The driver editor's figure position `(-5.359, -3.15, 0.026)` (widget of `0x0047d230`) is read from the code but not traced.
 - The racer showcase of the race select and of the garage: the original places the racer's car and driver on `RACER.WDB`'s platform (`carp`; the driver's root near `(-0.9, -0.9, 0)`); not ported. The world's `bground` swirl is drawn dark by the port.
 - The cinemas (`0x45` items: the circuit and single race previews `SINGRACE\PST.WDB`, the circuit and award screens): `PST.WDB` holds every race's track and the figure `guy1`; which instances show for a race, the camera paths and the events are in `.CDB`/`.CEB` (`Cinema_Load` `0x00406980`, `CinemaEvents_Load` `0x004a0730`). Not ported: the circuit and single race screens keep a dark panel.
