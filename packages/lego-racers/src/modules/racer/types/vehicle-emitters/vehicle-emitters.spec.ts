@@ -39,7 +39,12 @@ const createPool = (names: readonly string[]): EmitterPool =>
   })
 
 const createRacerSetWithPools = (pools: EmitterPools, change: Partial<Racer> = {}): RacerSet =>
-  createRacerSet([{ ...createRacer(createTestCarBody()), controllerKind: 0, ...change }], 0, 0, pools)
+  createRacerSet(
+    [{ ...createRacer(createTestCarBody()), controllerKind: 0, ...change }],
+    0,
+    0,
+    pools
+  )
 
 const COMMON_NAMES = ['dust', 'carsmke', 'tiresmk', 'carland', 'grassemt'] as const
 const context = createTestContext()

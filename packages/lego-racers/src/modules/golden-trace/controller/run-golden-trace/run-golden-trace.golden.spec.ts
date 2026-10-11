@@ -136,8 +136,7 @@ describe('golden trace: the original race and the port, frame for frame', () => 
       for (const { scenario, expected: expectation } of getCases()) {
         const result = await runGoldenTrace(scenario, jam, executable)
         const first = result.comparison.firstDivergence
-        actual[scenario.name] =
-          first === null ? null : { frame: first.frame, field: first.field }
+        actual[scenario.name] = first === null ? null : { frame: first.frame, field: first.field }
         expected[scenario.name] = expectation
         reports.push(
           `${scenario.name}: ${String(result.comparison.frameCount)} frames, control word 0x${result.controlWord.toString(16)}, frame times ${result.isFrameTimeKept ? 'kept' : 'CHANGED'}, ` +

@@ -229,11 +229,7 @@ export const changePowerUps: RaceWorldChange = (context, racerSet, change) => {
       })
     ),
   })
-  return getRacerSetAfterEvents(
-    context,
-    withRacers,
-    changed.events.slice(step.events.length)
-  )
+  return getRacerSetAfterEvents(context, withRacers, changed.events.slice(step.events.length))
 }
 
 const NO_LINE_HIT: LineProbe = () => null

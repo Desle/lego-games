@@ -199,9 +199,11 @@ const getEmitterPoolFields = (name: string, pool: EmitterPool | null): TraceFiel
               ? undefined
               : pool.list.emitters[instance.definitionIndex]
           return [
-            (instance.system.isActive ? ACTIVE_FLAG : 0) | (instance.system.isDying ? DYING_FLAG : 0),
+            (instance.system.isActive ? ACTIVE_FLAG : 0) |
+              (instance.system.isDying ? DYING_FLAG : 0),
             (definition?.firstTruncatedValue ?? 0) >>> 0,
-            ((definition?.secondTruncatedValue ?? 0) | ((definition?.thirdInteger ?? 0) << 8)) >>> 0,
+            ((definition?.secondTruncatedValue ?? 0) | ((definition?.thirdInteger ?? 0) << 8)) >>>
+              0,
             instance.millisecondsSinceBirth >>> 0,
             instance.ageMilliseconds >>> 0,
             instance.system.bornCount >>> 0,
@@ -211,7 +213,7 @@ const getEmitterPoolFields = (name: string, pool: EmitterPool | null): TraceFiel
     (pool?.handles ?? []).reduce(
       (word, handle, handleIndex) =>
         handle.isTaken && Math.floor(handleIndex / EMITTER_HANDLES_PER_WORD) === wordIndex
-          ? (word | (1 << handleIndex % EMITTER_HANDLES_PER_WORD)) >>> 0
+          ? (word | (1 << (handleIndex % EMITTER_HANDLES_PER_WORD))) >>> 0
           : word,
       0
     )
@@ -252,7 +254,10 @@ export const TRACE_FIELD_PROVIDERS: readonly TraceFieldProvider[] = [
 ]
 
 export const getTraceFields = (raceState: RaceState, localPlayerCount: number): TraceFields =>
-  Object.assign({}, ...TRACE_FIELD_PROVIDERS.map((provider) => provider(raceState, localPlayerCount)))
+  TRACE_FIELD_PROVIDERS.reduce<TraceFields>(
+    (fields, provider) => ({ ...fields, ...provider(raceState, localPlayerCount) }),
+    {}
+  )
 
 const SCAN_CODE_KEYS = new Map(
   DEFAULT_KEYBOARD_BINDINGS.map((binding) => [

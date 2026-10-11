@@ -1,10 +1,6 @@
 import type { EmitterReference } from '../../../emitter/index.ts'
 import { TrackEventKind, TrackEventState } from '../../types/track-event-state/track-event-state.ts'
-import type {
-  TrackEvent,
-  TrackEventHandlers,
-  TrackSession,
-} from '../../types/track-logic.types.ts'
+import type { TrackEvent, TrackEventHandlers, TrackSession } from '../../types/track-logic.types.ts'
 import {
   announceAndSet,
   emitAction,

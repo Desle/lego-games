@@ -18,11 +18,7 @@ import type {
   ObjectReference,
   Vector3,
 } from '../../event/index.ts'
-import type {
-  EmitterPlacement,
-  EmitterPools,
-  EmitterReference,
-} from '../../emitter/index.ts'
+import type { EmitterPlacement, EmitterPools, EmitterReference } from '../../emitter/index.ts'
 import type {
   HazardBus,
   HazardEffect,

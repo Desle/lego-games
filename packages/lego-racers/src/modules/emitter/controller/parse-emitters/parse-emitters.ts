@@ -36,7 +36,9 @@ const applyKeyword = (reader: TokenReader, keyword: number, emitter: Emitter): E
     case EmitterKeyword.FIRST_TRUNCATED_VALUE:
       return {
         ...emitter,
-        firstTruncatedValue: truncateToInteger(Math.fround(BIRTHS_PER_SECOND_NUMERATOR / reader.readFloat())),
+        firstTruncatedValue: truncateToInteger(
+          Math.fround(BIRTHS_PER_SECOND_NUMERATOR / reader.readFloat())
+        ),
       }
     case EmitterKeyword.SECOND_TRUNCATED_VALUE:
       return {
