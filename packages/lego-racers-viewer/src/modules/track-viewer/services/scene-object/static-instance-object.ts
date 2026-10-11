@@ -5,6 +5,7 @@ import {
   getBatchMaterial,
   getSharedBatchGeometry,
 } from './instance-batches.ts'
+import { batchFirstCommands } from './bsp-visibility.ts'
 import type { InstanceLevelMesh, InstanceObject, SceneObjectContext } from './scene-object.types.ts'
 
 // A mesh or BSP tree instance: one mesh per draw batch of its nearest level, sharing geometry and materials
@@ -19,7 +20,9 @@ export const createStaticInstanceObject = (
     const batchMaterial = getBatchMaterial(context, levelMesh, batch)
     if (batchMaterial === null) continue
     const geometry = getSharedBatchGeometry(context, levelMesh, batchIndex, batch, batchMaterial)
-    group.add(createBatchMesh(context, geometry, batchMaterial.material))
+    const mesh = createBatchMesh(context, geometry, batchMaterial.material)
+    batchFirstCommands.set(mesh, batch.firstCommand)
+    group.add(mesh)
   }
   return Object.freeze({ group, animate: null, setState: null })
 }

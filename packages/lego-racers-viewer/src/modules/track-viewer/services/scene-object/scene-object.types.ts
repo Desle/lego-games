@@ -6,7 +6,11 @@ import type {
   SceneMesh,
 } from '@lego-games/lego-racers/scene'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
-import type { ColourShiftLike, Vector3Like } from '../race-viewport/race-viewport.types.ts'
+import type {
+  ColourShiftLike,
+  FrustumView,
+  Vector3Like,
+} from '../race-viewport/race-viewport.types.ts'
 import type {
   Box3,
   BufferGeometry,
@@ -25,6 +29,9 @@ export type SceneObject = {
   // Shows, for every instance with several levels, the level the squared distance to this camera position selects
   // (GolDP.dll 0x10027cc0), and none past the last.
   readonly selectLevels: (camera: Vector3Like) => void
+  // Shows, for every BSP tree instance, only the leaves the camera's visibility list names and the frustum does not
+  // reject (GolDP.dll 0x100092a0).
+  readonly selectVisibleLeaves: (view: FrustumView) => void
   // Puts the skeleton instance with this name in the given clip state (the race simulation drives its clips).
   readonly setSkeletonState: (name: string, state: SkeletonAnimationState) => void
   // The instances' world-space bounds, for framing the camera.
@@ -96,4 +103,9 @@ export type SkeletonBatch = {
 export type SkeletonBatchMesh = {
   readonly batch: SkeletonBatch
   readonly mesh: Mesh
+}
+
+// The meshes of one level of a BSP tree instance, one per draw batch.
+export type BspLevelMeshes = {
+  readonly meshes: readonly Mesh[]
 }

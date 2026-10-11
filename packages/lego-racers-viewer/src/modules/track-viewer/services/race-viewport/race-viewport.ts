@@ -11,6 +11,7 @@ import {
 } from 'three'
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
 import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
+import { getCameraFrustum, ORIGINAL_FIELD_OF_VIEW_DEGREES } from './camera-frustum.ts'
 import { createRaceParticles } from '../race-particles/race-particles.ts'
 import { createRaceEffects } from '../race-effects/race-effects.ts'
 import { createModelObject } from '../model-object/model-object.ts'
@@ -26,8 +27,6 @@ import type {
   Vector3Like,
 } from './race-viewport.types.ts'
 
-// The Direct3D camera's field of view is not traced yet; the track viewer's 60 degrees stand in for it.
-const FIELD_OF_VIEW_DEGREES = 60
 const BACKGROUND_COLOR = 0x101820
 const NEAR_PLANE = 0.5
 const FAR_PLANE = 20000
@@ -61,7 +60,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   const trackScene = new ThreeScene()
   const backgroundScene = new ThreeScene()
   const camera = new PerspectiveCamera(
-    FIELD_OF_VIEW_DEGREES,
+    ORIGINAL_FIELD_OF_VIEW_DEGREES,
     size.width / size.height,
     NEAR_PLANE,
     FAR_PLANE
@@ -123,6 +122,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     camera.up.set(-up.x, -up.y, -up.z)
     camera.lookAt(position.x + forward.x, position.y + forward.y, position.z + forward.z)
     shown.track.selectLevels(camera.position)
+    shown.track.selectVisibleLeaves(getCameraFrustum(camera))
     const placement = shown.sky?.place(camera.position)
     if (shown.backdrop !== null) {
       const point = placement?.backdrop ?? camera.position

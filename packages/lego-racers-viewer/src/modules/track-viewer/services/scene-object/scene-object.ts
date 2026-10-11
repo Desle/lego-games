@@ -1,10 +1,15 @@
 import type { Scene, SceneInstance } from '@lego-games/lego-racers/scene'
 import { SceneInstanceKind } from '@lego-games/lego-racers/scene'
-import { Box3, Group } from 'three'
-import type { BufferGeometry, Material } from 'three'
+import { Box3, Group, Mesh } from 'three'
+import type { BufferGeometry, Material, Matrix4 } from 'three'
 import { applyColourShift, getMeshGeometries } from './colour-shift.ts'
-import type { ColourShiftLike, Vector3Like } from '../race-viewport/race-viewport.types.ts'
+import type {
+  ColourShiftLike,
+  FrustumView,
+  Vector3Like,
+} from '../race-viewport/race-viewport.types.ts'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
+import { getLocalVisibilityQuery, showVisibleLeaves } from './bsp-visibility.ts'
 import { createSkeletonInstanceObject } from './skeleton-instance-object.ts'
 import { createStaticInstanceObject } from './static-instance-object.ts'
 import type {
@@ -67,6 +72,7 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
   const animators: ((deltaMilliseconds: number) => void)[] = []
   const stateSetters = new Map<string, NonNullable<InstanceObject['setState']>>()
   const levelSelectors: ((camera: Vector3Like) => void)[] = []
+  const leafSelectors: ((view: FrustumView, worldToLocal: Matrix4) => void)[] = []
   for (const instance of scene.instances.filter(options.includeInstance)) {
     const levelObjects = instance.levels.flatMap((_level, levelIndex) => {
       const levelMesh = getInstanceLevelMesh(scene, instance, levelIndex)
@@ -87,6 +93,19 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
       stateSetters.set(instance.name, (state) => {
         for (const setState of setters) setState(state)
       })
+    }
+    const bspLevels = levelObjects.flatMap(({ levelIndex, instanceObject }) => {
+      const tree = scene.bspTrees[instance.levels[levelIndex]?.bspTreeIndex ?? -1]
+      const meshes = instanceObject.group.children.filter(
+        (child): child is Mesh => child instanceof Mesh
+      )
+      return tree === undefined ? [] : [{ tree: tree.tree, meshes }]
+    })
+    const bspTree = bspLevels[0]?.tree
+    if (bspTree !== undefined) {
+      leafSelectors.push((view, worldToLocal) =>
+        showVisibleLeaves(bspTree, bspLevels, getLocalVisibilityQuery(view, worldToLocal))
+      )
     }
     if (levelObjects.length > 1 && !options.isBackground) {
       const distances = instance.levels.map((level) => level.squaredDistance)
@@ -123,6 +142,12 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
     },
     selectLevels: (camera: Vector3Like) => {
       for (const select of levelSelectors) select(camera)
+    },
+    selectVisibleLeaves: (view: FrustumView) => {
+      if (leafSelectors.length === 0) return
+      group.updateWorldMatrix(true, false)
+      const worldToLocal = group.matrixWorld.clone().invert()
+      for (const select of leafSelectors) select(view, worldToLocal)
     },
     setSkeletonState: (name: string, state: SkeletonAnimationState) =>
       stateSetters.get(name)?.(state),

@@ -1,3 +1,4 @@
+import type { BspPlane } from '@lego-games/lego-racers/bsp-tree'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
 import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
@@ -40,6 +41,12 @@ export type Vector3Like = {
   readonly x: number
   readonly y: number
   readonly z: number
+}
+
+// The camera as the BSP draw needs it: its position and the six planes of its frustum, in world space.
+export type FrustumView = {
+  readonly eye: Vector3Like
+  readonly planes: readonly BspPlane[]
 }
 
 // The three parts of a racer's car: the wheels (a skeleton instance in the display frame), the car model and the
