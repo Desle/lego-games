@@ -12,17 +12,19 @@ import {
 } from './race-world.ts'
 
 describe('projectile events on racers', () => {
-  it('sets the tumbling flag when a projectile starts a racer tumbling (0x00439570)', () => {
+  it('makes a racer tumble when a projectile starts it (0x00439570: flag 0x8, spin ended, two-point mode)', () => {
     // Arrange
-    const racerSet = getRaceRacerSet(createFixtureRace(), NO_RACE_CONTACTS)
+    const race = createFixtureRace()
+    const racerSet = getRaceRacerSet(race, NO_RACE_CONTACTS)
 
     // Act
-    const changed = getRacerSetAfterProjectileEvents(racerSet, [
+    const changed = getRacerSetAfterProjectileEvents(race.context.arithmetic, racerSet, [
       { type: 'projectiles.racer_tumbling_started', racer: 1 },
     ])
 
     // Assert
     expect(getRacer(changed, 1).flags & 0x8).toBe(0x8)
+    expect(getRacer(changed, 1).carBody.rigidBody.flags & 0x8).toBe(0x8)
     expect(getRacer(changed, 0).flags & 0x8).toBe(0)
   })
 

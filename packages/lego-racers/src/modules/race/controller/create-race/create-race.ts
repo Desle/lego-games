@@ -12,12 +12,15 @@ import {
   createRacer,
   createRacerSet,
   createVehicle,
+  getVehicleLeanAtReset,
 } from '../../../racer/index.ts'
 import type { Racer, RacerSet } from '../../../racer/index.ts'
 import { drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
 import { createSkyState } from '../../../sky/index.ts'
+import { NO_EMITTER_POOLS } from '../../../emitter/index.ts'
 import { createTrackLogic } from '../../../track-logic/index.ts'
+import type { TrackLogicState } from '../../../track-logic/index.ts'
 import { CLOSED_PAUSE_MENU } from '../../types/pause-menu/pause-menu.ts'
 import { createPointsRecord } from '../../types/points-record/points-record.ts'
 import { RaceExit } from '../../types/race-exit/race-exit.ts'
@@ -66,6 +69,12 @@ const createRacerFromDefinition = (
   const timers = createComputerTimers(tables.randomTable, position)
   const vehicleDraw = drawRandomValue(tables.randomTable, timers.position)
   const carBody = createCarBody(racerDefinition.carBody)
+  const vehicle = createVehicle(
+    racerDefinition.figures.driver,
+    racerDefinition.appearance.seatPoint,
+    vehicleDraw.value % VEHICLE_LOOK_MILLISECONDS,
+    racerDefinition.figures.bodyBounds
+  )
   const base = createRacer(
     racerDefinition.route === null
       ? carBody
@@ -79,11 +88,14 @@ const createRacerFromDefinition = (
     powerUpChances: personality.chances,
     proximityCheckMilliseconds: timers.tauntMilliseconds,
     voiceMilliseconds: timers.voiceMilliseconds,
-    vehicle: createVehicle(
-      racerDefinition.figures.driver,
-      racerDefinition.appearance.seatPoint,
-      vehicleDraw.value % VEHICLE_LOOK_MILLISECONDS
-    ),
+    vehicle: Object.freeze({
+      ...vehicle,
+      ...getVehicleLeanAtReset(
+        arithmetic,
+        base.carBody.rigidBody.displayFrame,
+        racerDefinition.appearance.seatPoint
+      ),
+    }),
     flags: getRaceModeRacerFlags(definition.raceModeFlags),
     controllerKind: racerDefinition.controllerKind,
     racePosition: racerIndex + 1,
@@ -139,7 +151,7 @@ export const createRace = (definition: RaceDefinition): RaceState => {
       : made.racer
   )
   const afterRacers = setups.at(-1)?.position ?? definition.randomPosition
-  const trackLogic = createTrackLogic(
+  const createdTrackLogic = createTrackLogic(
     {
       eventSet: definition.events,
       timerList: definition.timers,
@@ -153,10 +165,17 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     definition.arithmetic,
     { table: definition.tables.randomTable, position: afterRacers }
   )
+  // The pools belong to the racer set: vehicles spawn into them as well. The track logic gets them back whenever it
+  // runs (changeTrackLogic).
+  const trackLogic: TrackLogicState = Object.freeze({
+    ...createdTrackLogic,
+    emitters: NO_EMITTER_POOLS,
+  })
   const racerSet: RacerSet = createRacerSet(
     racers,
     trackLogic.random.position,
-    definition.isMirrored ? MIRRORED_RUBBER_BAND_BIAS : 0
+    definition.isMirrored ? MIRRORED_RUBBER_BAND_BIAS : 0,
+    createdTrackLogic.emitters
   )
   const powerUps = createPowerUpWorld({
     bricks: definition.powerUps.bricks,

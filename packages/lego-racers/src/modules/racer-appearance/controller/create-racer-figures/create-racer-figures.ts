@@ -52,6 +52,7 @@ const getPlayingFigure = (source: FigureSource, animationId: number): Figure => 
 // chassis has one) in animation 0, the driver in animation 9.
 export const createRacerFigures = (sources: RacerFigureSources): RacerFigures =>
   Object.freeze({
+    bodyBounds: sources.bodyBounds,
     wheels: getPlayingFigure(sources.wheels, WHEELS_STARTING_ANIMATION),
     secondWheels:
       sources.secondWheels === null

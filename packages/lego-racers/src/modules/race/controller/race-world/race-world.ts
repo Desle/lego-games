@@ -8,6 +8,7 @@ import type {
   RacerPowerUpStatus,
 } from '../../../power-ups/index.ts'
 import type { FloatArithmetic } from '../../../simulation-math/index.ts'
+import { NO_EMITTER_POOLS } from '../../../emitter/index.ts'
 import { STATIC_TRACK_WORLD } from '../../../track-logic/index.ts'
 import type { TrackEffect, TrackLogicContext, TrackLogicStep } from '../../../track-logic/index.ts'
 import { createTrackLineProbe } from '../../../projectiles/index.ts'
@@ -17,7 +18,14 @@ import type {
   ProjectileContext,
   ProjectileEvent,
 } from '../../../projectiles/index.ts'
-import { getRacer, getTableCosine, setCarBodyPush, setRacer } from '../../../racer/index.ts'
+import {
+  getRacer,
+  getTableCosine,
+  setCarBodyPush,
+  setRacer,
+  startVehicleTurboEffects,
+  stopVehicleTireSmoke,
+} from '../../../racer/index.ts'
 import type { Racer, RacerControls, RacerSet, RacerSetContext } from '../../../racer/index.ts'
 import type { RaceContacts, RaceRacerSet, RaceState } from '../../types/race.types.ts'
 import { getLapGapMilliseconds } from '../../types/lap-gap/lap-gap.ts'
@@ -27,6 +35,7 @@ import {
   enterZoneTwo,
   enterZoneZero,
   getRacerAfterPowerUpEvent,
+  getRacerTumbling,
 } from '../../types/racer-transitions/racer-transitions.ts'
 import type { RaceWorldChange } from './race-world.types.ts'
 
@@ -96,6 +105,7 @@ export const getRacerSetOf = (racerSet: RaceRacerSet): RacerSet =>
     collisionOrder: racerSet.collisionOrder,
     registryEntries: racerSet.registryEntries,
     registryContacts: racerSet.registryContacts,
+    emitters: racerSet.emitters,
   })
 
 // What a racer tells the power-ups about itself (the flags at racer +0xd04, car body +0x6c0 and driver +0x14).
@@ -154,20 +164,39 @@ const getRacerWithPowerUpRacer = (racer: Racer, powerUpRacer: RacerPowerUps): Ra
     voiceBase: powerUpRacer.voiceSoundBase,
   })
 
+// What a power-up event does to the racer's vehicle (0x0043fd30 before 0x004396c0 records the level, 0x0043fd70 from
+// 0x00439730): the dust, smoke and tire smoke.
+const getRacerSetAfterVehicleEffects = (
+  context: RacerSetContext,
+  racerSet: RaceRacerSet,
+  racerIndex: number,
+  event: PowerUpEvent
+): RaceRacerSet => {
+  if (event.type === 'power_ups.racer_turbo_started') {
+    return getRaceRacerSetOf(startVehicleTurboEffects(context, racerSet, racerIndex))
+  }
+  if (event.type === 'power_ups.racer_turbo_ended') {
+    return getRaceRacerSetOf(stopVehicleTireSmoke(racerSet, racerIndex))
+  }
+  return racerSet
+}
+
 const getRacerSetAfterEvents = (
-  arithmetic: FloatArithmetic,
+  context: RacerSetContext,
   racerSet: RaceRacerSet,
   events: readonly PowerUpEvent[]
 ): RaceRacerSet =>
   events.reduce((current, event) => {
+    const { arithmetic } = context
     const racerIndex = 'racer' in event ? event.racer : -1
     if (current.racers[racerIndex] === undefined) return current
+    const effected = getRacerSetAfterVehicleEffects(context, current, racerIndex, event)
     return Object.freeze({
-      ...current,
+      ...effected,
       ...setRacer(
-        current,
+        effected,
         racerIndex,
-        getRacerAfterPowerUpEvent(arithmetic, getRacer(current, racerIndex), event)
+        getRacerAfterPowerUpEvent(arithmetic, getRacer(effected, racerIndex), event)
       ),
     })
   }, racerSet)
@@ -200,11 +229,7 @@ export const changePowerUps: RaceWorldChange = (context, racerSet, change) => {
       })
     ),
   })
-  return getRacerSetAfterEvents(
-    context.arithmetic,
-    withRacers,
-    changed.events.slice(step.events.length)
-  )
+  return getRacerSetAfterEvents(context, withRacers, changed.events.slice(step.events.length))
 }
 
 const NO_LINE_HIT: LineProbe = () => null
@@ -260,16 +285,17 @@ export const getProjectileContext = (
   })
 }
 
-const TUMBLING_STARTED_FLAG = 0x8
-
-// 0x00439570 sets racer flag 0x8; the other events call car body slots that are not ported (they stay in the
+// 0x00439570 makes the racer tumble; the other events call car body slots that are not ported (they stay in the
 // events the race reports).
-export const getRacerAfterProjectileEvent = (racer: Racer, event: ProjectileEvent): Racer =>
-  event.type === 'projectiles.racer_tumbling_started'
-    ? Object.freeze({ ...racer, flags: (racer.flags | TUMBLING_STARTED_FLAG) >>> 0 })
-    : racer
+export const getRacerAfterProjectileEvent = (
+  arithmetic: FloatArithmetic,
+  racer: Racer,
+  event: ProjectileEvent
+): Racer =>
+  event.type === 'projectiles.racer_tumbling_started' ? getRacerTumbling(arithmetic, racer) : racer
 
 export const getRacerSetAfterProjectileEvents = (
+  arithmetic: FloatArithmetic,
   racerSet: RaceRacerSet,
   events: readonly ProjectileEvent[]
 ): RaceRacerSet =>
@@ -280,7 +306,7 @@ export const getRacerSetAfterProjectileEvents = (
       ...setRacer(
         current,
         event.racer,
-        getRacerAfterProjectileEvent(getRacer(current, event.racer), event)
+        getRacerAfterProjectileEvent(arithmetic, getRacer(current, event.racer), event)
       ),
     })
   }, racerSet)
@@ -496,6 +522,7 @@ export const changeTrackLogic = (
   const synced = {
     ...racerSet.trackLogic,
     random: { table: racerSet.trackLogic.random.table, position: racerSet.randomPosition },
+    emitters: racerSet.emitters,
   }
   const track = context.collisionObjects[0]
   const step = run(synced, {
@@ -510,7 +537,8 @@ export const changeTrackLogic = (
   })
   const changed: RaceRacerSet = Object.freeze({
     ...racerSet,
-    trackLogic: step.state,
+    trackLogic: Object.freeze({ ...step.state, emitters: NO_EMITTER_POOLS }),
+    emitters: step.state.emitters,
     randomPosition: step.state.random.position,
     trackEffects: Object.freeze([...racerSet.trackEffects, ...step.effects]),
   })

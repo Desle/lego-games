@@ -6,6 +6,7 @@ import {
   enterZoneTwo,
   enterZoneZero,
   getRacerAfterCheckpointTouch,
+  getRacerAfterTurboStart,
   releaseRacerAtStart,
   resetRacerForRace,
 } from './racer-transitions.ts'
@@ -131,5 +132,21 @@ describe('racer transitions', () => {
     // Assert
     expect(converted.controllerKind).toBe(2)
     expect(converted.driver.flags & 0x80).toBe(0x80)
+  })
+
+  it('records the turbo level and tumbles on level 2 only (0x004396c0, 0x00439570)', () => {
+    // Arrange
+    const racer = getRacer()
+
+    // Act
+    const plain = getRacerAfterTurboStart(FIXTURE_ARITHMETIC, racer, 400, 1)
+    const tumbling = getRacerAfterTurboStart(FIXTURE_ARITHMETIC, racer, 400, 2)
+
+    // Assert
+    expect(plain.turboLevel).toBe(1)
+    expect(plain.flags & 0x8).toBe(0)
+    expect(tumbling.turboLevel).toBe(2)
+    expect(tumbling.flags & 0x8).toBe(0x8)
+    expect(tumbling.carBody.rigidBody.flags & 0x8).toBe(0x8)
   })
 })
