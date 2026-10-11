@@ -185,30 +185,25 @@ const getRacerSetAfterVehicleEffects = (
 }
 
 // 0x00454690: car body slot 0x44 on the latched racer and 0x4c on the owner end the tow.
-const getRacerSetAfterTowEnded = (
+const getRacerSetWithTowEnded = (
   arithmetic: FloatArithmetic,
   racerSet: RaceRacerSet,
-  event: Extract<PowerUpEvent, { readonly type: 'power_ups.grapple_released' }>
+  target: number | null,
+  slot: 'extraForceA' | 'extraForceB'
 ): RaceRacerSet => {
-  const ended = (target: number | null, slot: 'extraForceA' | 'extraForceB') => {
-    const racer = target === null ? undefined : racerSet.racers[target]
-    return target === null || racer === undefined
-      ? undefined
-      : {
-          index: target,
-          racer: { ...racer, carBody: setCarBodyPush(arithmetic, racer.carBody, slot, undefined) },
-        }
-  }
-  return [ended(event.victim, 'extraForceA'), ended(event.owner, 'extraForceB')].reduce(
-    (current, change) =>
-      change === undefined
-        ? current
-        : Object.freeze({
-            ...current,
-            ...setRacer(current, change.index, Object.freeze(change.racer)),
-          }),
-    racerSet
-  )
+  const racer = target === null ? undefined : racerSet.racers[target]
+  if (target === null || racer === undefined) return racerSet
+  return Object.freeze({
+    ...racerSet,
+    ...setRacer(
+      racerSet,
+      target,
+      Object.freeze({
+        ...racer,
+        carBody: setCarBodyPush(arithmetic, racer.carBody, slot, undefined),
+      })
+    ),
+  })
 }
 
 const getRacerSetAfterEvents = (
@@ -219,7 +214,12 @@ const getRacerSetAfterEvents = (
   events.reduce((current, event) => {
     const { arithmetic } = context
     if (event.type === 'power_ups.grapple_released') {
-      return getRacerSetAfterTowEnded(arithmetic, current, event)
+      return getRacerSetWithTowEnded(
+        arithmetic,
+        getRacerSetWithTowEnded(arithmetic, current, event.victim, 'extraForceA'),
+        event.owner,
+        'extraForceB'
+      )
     }
     const racerIndex = 'racer' in event ? event.racer : -1
     if (current.racers[racerIndex] === undefined) return current
