@@ -34,6 +34,8 @@ export type EffectModels = {
   // The power-up brick in the colour of each kind (projectile, shield, turbo, hazard).
   readonly powerUpBricks: Readonly<Record<string, ModelScene>>
   readonly enhancementBrick: ModelScene
+  // The warp's tunnel (TURBO3.WDB lists `dbricks` and `dtube`; 0x0045d940 draws them).
+  readonly warpTunnel: Scene
 }
 
 export type RaceAssets = {

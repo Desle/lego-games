@@ -6,6 +6,12 @@ export type TraceScenarioRequest = {
   readonly isSteering?: boolean
   readonly recordFrames?: readonly number[]
   readonly isRenderRecorded?: boolean
+  // A warp: the player is handed a level 3 turbo at `grantFrame`, accelerates from 175 and presses use at `useFrame`.
+  readonly warp?: {
+    readonly grantFrame: number
+    readonly useFrame: number
+    readonly frameCount: number
+  }
 }
 
 // A scenario of the audio trace and the sound ids the port still lacks in it.

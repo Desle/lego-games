@@ -18,6 +18,12 @@ const RENDER_CASES: readonly TraceScenarioRequest[] = [
     isMirrored: true,
     recordFrames: RECORD_FRAMES,
   },
+  {
+    name: 'Royal Knights, warp',
+    raceFolder: 'RACEC0R0',
+    recordFrames: [310, 320, 330, 345, 360, 375],
+    warp: { grantFrame: 300, useFrame: 305, frameCount: 380 },
+  },
   { name: 'RACEC0R1', raceFolder: 'RACEC0R1', recordFrames: RECORD_FRAMES },
   { name: 'RACEC0R2', raceFolder: 'RACEC0R2', recordFrames: RECORD_FRAMES },
   { name: 'RACEC0R3', raceFolder: 'RACEC0R3', recordFrames: RECORD_FRAMES },
@@ -56,10 +62,22 @@ describe.skipIf(!isGamePresent())('render trace', () => {
         )
         .join('\n')
     )
+    if (process.env['RENDER_TRACE_GROUPS'] !== undefined) {
+      console.log(
+        JSON.stringify(result.totals),
+        result.groups
+          .slice(0, 40)
+          .map(
+            (group) =>
+              `${group.kind} ${group.source} x${String(group.count)} frames ${group.frames.join(',')}: ${group.firstDetail}`
+          )
+          .join('\n')
+      )
+    }
     const lowest = Math.min(
       ...result.totals.map((total) => total.matchedCount / total.originalCount)
     )
-    expect(result.totals.length).toBe(RECORD_FRAMES.length)
+    expect(result.totals.length).toBe(renderCase.recordFrames?.length)
     expect(lowest).toBeGreaterThan(MINIMUM_MATCHED_SHARE)
   })
 })

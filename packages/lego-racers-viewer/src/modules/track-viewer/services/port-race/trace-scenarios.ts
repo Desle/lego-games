@@ -2,8 +2,9 @@ import {
   createTraceScenario,
   getIdleFrames,
   getSteeringSweepFrames,
+  holdBindings,
 } from '@lego-games/lego-racers/golden-trace'
-import type { GoldenTraceScenario } from '@lego-games/lego-racers/golden-trace'
+import type { GoldenTraceScenario, TraceFrameInput } from '@lego-games/lego-racers/golden-trace'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import { getCircuitRacerCodes } from '@lego-games/lego-racers/race'
 import type { PresentationScenario } from '@lego-games/lego-racers/presentation-trace'
@@ -15,7 +16,8 @@ const AUDIO_FRAME_COUNT = 330
 const getPresentationScenario = (
   golden: GoldenTraceScenario,
   recordFrames: readonly number[] | null,
-  isRenderRecorded: boolean
+  isRenderRecorded: boolean,
+  powerUpGrants: NonNullable<PresentationScenario['powerUpGrants']>
 ): PresentationScenario =>
   Object.freeze({
     name: golden.name,
@@ -28,7 +30,31 @@ const getPresentationScenario = (
     frames: golden.frames,
     recordFrames,
     isRenderRecorded,
+    powerUpGrants,
   })
+
+const TURBO_KIND = 3
+const WARP_LEVEL = 3
+const WARP_ACCELERATE_FRAME = 175
+const USE_FRAME_COUNT = 3
+
+// Idling, the steering sweep, or a drive with a warp: accelerate from frame 175 and press the use key from the use frame.
+const getRequestFrames = (request: TraceScenarioRequest): readonly TraceFrameInput[] => {
+  if (request.warp !== undefined) {
+    const { useFrame, frameCount } = request.warp
+    return Array.from({ length: frameCount }, (_, frame) => ({
+      milliseconds: 33,
+      scanCodes:
+        holdBindings(1, [
+          ...(frame >= WARP_ACCELERATE_FRAME ? ['accelerate' as const] : []),
+          ...(frame >= useFrame && frame < useFrame + USE_FRAME_COUNT
+            ? ['use_power_up' as const]
+            : []),
+        ])[0]?.scanCodes ?? [],
+    }))
+  }
+  return request.isSteering === true ? getSteeringSweepFrames() : getIdleFrames(AUDIO_FRAME_COUNT)
+}
 
 // The scenario of a race: the circuit's drivers, the player idle through the introduction and the countdown, then
 // driving. `recordFrames` are the frames whose draws are recorded.
@@ -42,12 +68,14 @@ export const createPresentationScenario = (
     raceFolder: request.raceFolder,
     racerCodes: getCircuitRacerCodes(archive.readFile, request.raceFolder),
     isMirrored: request.isMirrored ?? false,
-    frames:
-      request.isSteering === true ? getSteeringSweepFrames() : getIdleFrames(AUDIO_FRAME_COUNT),
+    frames: getRequestFrames(request),
   })
   return getPresentationScenario(
     golden,
     request.recordFrames ?? null,
-    request.isRenderRecorded ?? false
+    request.isRenderRecorded ?? false,
+    request.warp === undefined
+      ? []
+      : [{ frame: request.warp.grantFrame, racer: 0, kind: TURBO_KIND, level: WARP_LEVEL }]
   )
 }
