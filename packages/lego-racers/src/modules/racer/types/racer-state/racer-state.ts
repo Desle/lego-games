@@ -98,6 +98,7 @@ export const createRacerSet = (
     registryEntries: Object.freeze([]),
     registryContacts: Object.freeze([]),
     emitters,
+    sounds: Object.freeze([]),
   })
 
 export const getRacer = (racerSet: RacerSet, racerIndex: number): Racer => {

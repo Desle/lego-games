@@ -451,6 +451,15 @@ export type RacerSet = {
   // The race's emitter pools (race +0x2150 and +0x248c): vehicles and power-ups spawn into the common one, the
   // track logic into both. Whoever updates the emitters (Emitters_Update) works on this state.
   readonly emitters: EmitterPools
+  // The sounds the racers' passes played this frame (through the race's sound player 0x00443b80), which the race
+  // reports with its other events and clears.
+  readonly sounds: readonly RacerSound[]
+}
+
+// A sound id of GENERAL.SBK and the return address of the call that plays it.
+export type RacerSound = {
+  readonly soundId: number
+  readonly address: string
 }
 
 // Constant inputs of a race step.

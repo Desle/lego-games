@@ -112,8 +112,16 @@ const advanceTurbo = (
       ? getWithState(step, effect, EffectState.ACTIVE, 5000)
       : getWithState(step, effect, EffectState.ENDING, 700)
   }
+  // 0x0045d200 state 4: the turbo's end sound, 0x4b for level 2 and 0x28 for the others.
   return effect.state === EffectState.ENDING
-    ? getWithState(step, effect, EffectState.FINISHED, effect.timerMilliseconds)
+    ? getStepWithEvents(
+        getWithState(step, effect, EffectState.FINISHED, effect.timerMilliseconds),
+        [
+          effect.level === TURBO_LEVEL_TWO
+            ? { type: 'power_ups.sound_played', soundId: 0x4b, address: '0x0045d267' }
+            : { type: 'power_ups.sound_played', soundId: 0x28, address: '0x0045d2a3' },
+        ]
+      )
     : step
 }
 
@@ -209,8 +217,11 @@ const advanceProjectile = (
       EffectState.ACTIVE,
       effect.kind === PowerUpEffectKind.CANNON ? 3000 : 0x157c
     )
+    // 0x00451f50 state 2 ends with the launch sound.
     return effect.kind === PowerUpEffectKind.CANNON
-      ? startEffectEmitter(started, context.arithmetic, effect.id, 'cannsmk')
+      ? getStepWithEvents(startEffectEmitter(started, context.arithmetic, effect.id, 'cannsmk'), [
+          { type: 'power_ups.sound_played', soundId: 6, address: '0x00452367' },
+        ])
       : started
   }
   return getWithState(step, effect, EffectState.FINISHED, 0)

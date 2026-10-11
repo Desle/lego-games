@@ -14,10 +14,8 @@ export type TraceScenarioRequest = {
   }
 }
 
-// A scenario of the audio trace and the sound ids the port still lacks in it.
-export type AudioTraceCase = TraceScenarioRequest & {
-  readonly gapSoundIds: readonly number[]
-}
+// A scenario of the audio trace.
+export type AudioTraceCase = TraceScenarioRequest
 
 // A scripted visit to the menus: the keys tapped one after the other once the main menu shows.
 export type FrontEndAudioCase = {
