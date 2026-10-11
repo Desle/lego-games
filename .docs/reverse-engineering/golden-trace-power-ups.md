@@ -51,6 +51,17 @@ Fields (`power_up_trace.py`, `power-up-trace.ts`): `powerUps.bricks` (state `+0x
 
 With every racer holding the brick (`POWER_UP_COMPUTERS=1`, before the hit reaction and curse fixes): shield all match; cannon and turbo 0 and 1 differ only in computers' volume spheres; magnet and curse thrown at the player differ from frames 181 to 185; the warp is open.
 
+## The warp's bounds quirk (findings, not yet ported)
+
+Probed in the emulator (RACEC0R0, turbo level 3 fired at frame 165):
+
+- `0x00440160(vehicle, 1.0)` (called at the start of the warp, `0x0045dc90` state 2) writes `-1.0` into the radius (`+0x10`) of the vehicle's four parts (`+0x3c` car model, `+0x40`, `+0x44` wheels figure = the display frame, `+0x48` driver) and `1.0` into `+0x58`. A negative radius means dirty: the getters `0x00411c60` (centre) and `0x00411ca0` (radius) call the object's slot 0 first (for a figure `0x004113c0`, slot `0x4c`).
+- `Vehicle_Update` (`0x0043e070`) returns right after its first calls when racer flag `0x10` is set: the part updates, the 750 ms look timers and the emitters after `0x0043fdb0` do not run while the racer is off the track. `0x00437740` still sets the wheels' clock rate (`+0xb8`) every frame.
+- The raw radii stay `-1` from frame 172 on. Part `+0x3c` is later refreshed (r 5.862) but its position reads `(0, 0, 0)`, `+0x48` is refreshed (r 3.489) with a position off its seat, `+0x44` stays `-1` until about frame 230, when all three are valid again. The composite volume (`racer +0x1c`) keeps its radius (7.579) and its centre follows the display frame during the warp, so it is not recomputed from the dirty radii.
+- The ground probe (`0x00445dc0`, `0x004465c0`) reads the display frame's radius through the getter; the port keeps a constant `displayBoundingRadius` from load. At frame 173 the original's probe start is 0.0039 lower than the port's (`body.wheelProbes[2]`), which is the first physics difference.
+
+Porting this needs the parts' dirty flag and refresh rules (which reader refreshes which part, and the part positions the refresh produces); until then the trace fields `display.sphere`, `volume.body`, `volume.driver`, `volume.sphere[1]` and the later body differences stay open for the warp.
+
 ## Open
 
 - Shape centres: the hook's bounds centre is placed with a hypothesis (the frame faces along the horizontal velocity); the barrel's spin and the missile's animated figure bounds (its first registered centre is about 6 units off the owner) are not ported.
