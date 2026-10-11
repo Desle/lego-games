@@ -62,6 +62,8 @@ RACER_FIELDS = (
     ("racer.lapNumber", 0xD18, 1),
     ("racer.powerUpChances", 0xD1C, 1),
     ("racer.checkpointSide", 0xCC8, 1),
+    ("racer.heldPowerUp", 0xCCC, 1),
+    ("racer.powerUpThink", 0xCD8, 2),
 )
 CONTROLLER_FIELDS = (
     ("controller.bindings", 0x5C, 1),

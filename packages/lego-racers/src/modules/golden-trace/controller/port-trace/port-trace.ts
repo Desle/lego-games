@@ -81,6 +81,11 @@ const getRacerFields = (racer: Racer, index: number): TraceFields => {
     [`${prefix}.racer.lapNumber`]: getIntegerWords(racer.lap),
     [`${prefix}.racer.powerUpChances`]: getPackedBytes(racer.powerUpChances.slice(0, 4)),
     [`${prefix}.racer.checkpointSide`]: getIntegerWords(racer.checkpointSide),
+    [`${prefix}.racer.heldPowerUp`]: getIntegerWords(racer.heldPowerUp),
+    [`${prefix}.racer.powerUpThink`]: [
+      racer.powerUpThinkMilliseconds >>> 0,
+      racer.powerUpThinkIntervalMilliseconds >>> 0,
+    ],
     [`${prefix}.display.position`]: getVectorWords(rigidBody.displayFrame.position),
     [`${prefix}.display.rotation`]: getMatrixWords(rigidBody.displayFrame.rotation),
   }

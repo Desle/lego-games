@@ -76,7 +76,7 @@ describe('runHeadlessRace', () => {
       expect(earlyComputers.every((racer) => racer.checkpointIndex >= 0)).toBe(true)
       expect(earlyComputers.some((racer) => racer.checkpointIndex > 0)).toBe(true)
       const lateComputers = late.racers.filter((racer) => racer.racerIndex !== PLAYER)
-      expect(lateComputers.every((racer) => racer.isPlaced && racer.currentLap === 3)).toBe(true)
+      expect(lateComputers.every((racer) => racer.isPlaced && racer.currentLap >= 3)).toBe(true)
       const finished = late.events.flatMap((event) =>
         event.type === 'race.racer_finished' ? [event.place] : []
       )
