@@ -104,6 +104,8 @@ const getEffectModels = (archive: JamArchive): EffectModels =>
     barrel: loadEffectModel(archive, 'BARREL', false),
     magnet: loadEffectModel(archive, 'MAGNET04', true),
     spikedExplosion: loadEffectModel(archive, 'SPIKEXP', false),
+    powerUpBrick: loadEffectModel(archive, 'PUBRICKY', true),
+    enhancementBrick: loadEffectModel(archive, 'ENHABRIK', true),
   })
 
 const getHudImage = (archive: JamArchive, definition: ImageDefinition): HudImage | null => {

@@ -1,3 +1,4 @@
+import type { BrickBase } from '../../power-ups/index.ts'
 import type { CameraState, CameraView } from '../../race-camera/index.ts'
 import type { MusicCue, SoundRequest } from '../../race-audio/index.ts'
 import type {
@@ -95,7 +96,22 @@ export type ExplosionView = {
   readonly isFading: boolean
 }
 
+// A brick on the track: where, how large it is drawn (the state machine's scale: growing in, shrinking after a collect)
+// and which kind it is. The bricks all turn about the vertical axis by the power-up system's spin angle.
+export type BrickView = {
+  readonly isEnhancement: boolean
+  // The power-up brick's kind (1 projectile, 2 shield, 3 turbo, 4 hazard); null for an enhancement brick.
+  readonly kind: string | null
+  readonly position: Vector3
+  readonly scale: number
+}
+
+// What the drawing of a brick reads of either brick class.
+export type DrawnBrick = BrickBase & { readonly kind?: string }
+
 export type EffectViews = {
+  readonly bricks: readonly BrickView[]
+  readonly spinAngle: number
   readonly effects: readonly EffectView[]
   readonly explosions: readonly ExplosionView[]
 }
