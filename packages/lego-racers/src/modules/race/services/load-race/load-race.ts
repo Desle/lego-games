@@ -14,15 +14,19 @@ import { openJamArchive } from '../../../jam-archive/index.ts'
 import { parsePowerUps } from '../../../power-up/index.ts'
 import { createRandomTablePosition, drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
-import { readRacerTables } from '../../../racer/index.ts'
+import { getFigureBounds, readRacerTables } from '../../../racer/index.ts'
+import { createRacerFigures, loadRacerFigureSources } from '../../../racer-appearance/index.ts'
 import {
   createCarBodySetup,
   getIsCarBodyFlagged,
   getStartSlot,
 } from '../../../racer-setup/index.ts'
 import type { BuiltCar } from '../../../racer-setup/index.ts'
+import { DEFAULT_SAVE_PATH, getCarWeight, loadSavedCars } from '../../../car-builder/index.ts'
+import type { SavedCar } from '../../../car-builder/index.ts'
 import { parseRaceDescription } from '../../../race-description/index.ts'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
+import type { FloatArithmetic } from '../../../simulation-math/index.ts'
 import { parseStartPositions } from '../../../start-position/index.ts'
 import { parseTimers } from '../../../timer/index.ts'
 import { parseTriggers, TriggerFileKind } from '../../../trigger/index.ts'
@@ -33,26 +37,35 @@ import {
 import type { RaceDefinition, RaceRacerDefinition } from '../../types/race.types.ts'
 import { getStartFrame } from '../../types/start-frame/start-frame.ts'
 import type { LoadRaceOptions, RouteDraws, RouteDrawer, RouteFiles } from './load-race.types.ts'
-import { describeRacers, getCircuitRacerCodes, readRacerDatabases } from './load-racers.ts'
+import {
+  describeAppearances,
+  describeRacers,
+  getCircuitRacerCodes,
+  readRacerDatabases,
+} from './load-racers.ts'
 
 const JAM_SEPARATOR = '\\'
 const DEFAULT_RACE_FOLDER = 'RACEC0R0'
 const DEFAULT_RACER_COUNT = 6
 const DEFAULT_LAP_COUNT = 3
-// The first chassis of CMB and the first racer of DEFAULT.LRS: a car without bricks. The car builder
-// (0x0049c6a0, not ported) would compute the weight and its centre offsets from the design.
-const DEFAULT_PLAYER_CAR: BuiltCar = Object.freeze({
-  chassisName: 'dachas0',
-  weight: 0,
-  centreOffsetX: 0,
-  centreOffsetY: 0,
-})
-// The car model frame's bounding radius (frame +0x10, 0x0040e0b0) comes from the model's bounding sphere, which
-// the model module does not compute yet; this is the rigid body specs' stand-in.
-const PROVISIONAL_DISPLAY_BOUNDING_RADIUS = 5
+// The driver of a car built from bricks is made on `LEG_BOX` (GDB scale 1/64), which sets the scale of his model.
+const BUILT_DRIVER_MODEL_SCALE = 0.015625
 
 // The RAB names the text files (.cpf, .sps); the loaders read the binary twin, whose extension ends in b.
 const getJamFileName = (name: string): string => `${name.slice(0, -1)}b`.toUpperCase()
+
+// 0x0042d730 → 0x0042dcb0: the front end takes each local player's car from its racer save (`default.lrs` when the player
+// has not saved one): the chassis, and the weight and centre offsets of the design on the grid (0x0049c6a0).
+const getBuiltCar = (arithmetic: FloatArithmetic, saved: SavedCar): BuiltCar | null => {
+  if (saved.design === null) return null
+  const { weight, centreOffsetX, centreOffsetY } = getCarWeight(arithmetic, saved.design)
+  return Object.freeze({
+    chassisName: saved.record.chassisName,
+    weight,
+    centreOffsetX,
+    centreOffsetY,
+  })
+}
 
 // Race_LoadAiRoutes 0x00433190: each computer racer draws its route variant from the random table.
 const loadRoutes = (
@@ -141,21 +154,41 @@ export const loadRaceDefinition = (
     startPositionBytes === null
       ? []
       : parseStartPositions(startPositionBytes, isMirrored).startPositions
-  const descriptions = describeRacers({
+  const defaultCars = loadSavedCars(archive.readFile, DEFAULT_SAVE_PATH)
+  const chosenCars = options.playerCars ?? []
+  // A session that chose no car drives the save's racers (the front end loaded at least `default.lrs`).
+  const playerCars =
+    chosenCars.length > 0
+      ? chosenCars
+      : defaultCars.flatMap((saved) => {
+          const car = getBuiltCar(arithmetic, saved)
+          return car === null ? [] : [car]
+        })
+  const request = {
     arithmetic,
     databases: readRacerDatabases(archive.readFile),
     racerCount,
     localPlayerCount,
-    playerCars: options.playerCars ?? [],
-    defaultPlayerCar: DEFAULT_PLAYER_CAR,
+    playerCars,
     racerCodes,
     isPlayerChampionCar: options.isPlayerChampionCar ?? false,
-  })
+  }
+  const descriptions = describeRacers(request)
+  const appearances = describeAppearances(request)
+  const figures = appearances.map((appearance) =>
+    createRacerFigures(
+      loadRacerFigureSources(archive.readFile, appearance, BUILT_DRIVER_MODEL_SCALE)
+    )
+  )
   const isMultiplayer = localPlayerCount >= 2
   const racers: readonly RaceRacerDefinition[] = kinds.map((controllerKind, index) => {
     const route = routeDraws.routes[index] ?? null
     const description = descriptions[index]
-    if (description === undefined) throw new RangeError(`No description for racer ${String(index)}`)
+    const appearance = appearances[index]
+    const racerFigures = figures[index]
+    if (description === undefined || appearance === undefined || racerFigures === undefined) {
+      throw new RangeError(`No description for racer ${String(index)}`)
+    }
     return {
       controllerKind,
       carBody: createCarBodySetup(arithmetic, description.car, {
@@ -165,7 +198,7 @@ export const loadRaceDefinition = (
           getStartSlot(index, isMultiplayer),
           route
         ),
-        displayBoundingRadius: PROVISIONAL_DISPLAY_BOUNDING_RADIUS,
+        displayBoundingRadius: getFigureBounds(arithmetic, racerFigures.wheels)?.radius ?? 0,
         isRaceModeFlagged: getIsCarBodyFlagged(raceModeFlags),
       }),
       route,
@@ -173,6 +206,10 @@ export const loadRaceDefinition = (
       preferredPowerUpKind: description.preferredPowerUpKind,
       preferredPowerUpLevel: description.preferredPowerUpLevel,
       voiceBase: description.voiceBase,
+      appearance,
+      figures: racerFigures,
+      // A local player's car is the save's racer of its slot (the first when the save has fewer).
+      savedCar: index < localPlayerCount ? (defaultCars[index] ?? defaultCars[0] ?? null) : null,
     }
   })
   return Object.freeze({

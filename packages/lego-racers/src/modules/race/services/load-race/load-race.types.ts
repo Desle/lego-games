@@ -21,7 +21,7 @@ export type LoadRaceOptions = {
   // The random table position (0x004c6ee4) when the race loads; the menus advance it before.
   readonly randomPosition?: number
   // The car builder's answer for each local player (the racer slot's chassis, weight and centre offsets); a player
-  // without one gets a car of the first chassis with no weight.
+  // without one drives the first racer of `default.lrs`.
   readonly playerCars?: readonly BuiltCar[]
   // The driver code of each racer slot, instead of the codes of the race's circuit in LEGORACE.CRB.
   readonly racerCodes?: readonly string[]
@@ -62,7 +62,6 @@ export type RacerDescriptionRequest = {
   // Racers 0 to count − 1 drive cars built from bricks (an empty name in the racer slot).
   readonly localPlayerCount: number
   readonly playerCars: readonly BuiltCar[]
-  readonly defaultPlayerCar: BuiltCar
   // The driver code of every racer slot (0x0042d730 fills slot i with code i; the players overwrite theirs).
   readonly racerCodes: readonly string[]
   readonly isPlayerChampionCar: boolean

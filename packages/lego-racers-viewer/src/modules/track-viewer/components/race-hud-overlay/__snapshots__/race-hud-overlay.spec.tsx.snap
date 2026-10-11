@@ -5,19 +5,36 @@ exports[`RaceHudOverlay > renders default snapshot 1`] = `
   <div
     class="pointer-events-none absolute inset-0"
     data-testid="race-hud"
-  />
+  >
+    <canvas
+      aria-hidden="true"
+      class="absolute inset-0"
+      height="600"
+      width="800"
+    />
+    <span
+      class="absolute right-2 bottom-2 rounded bg-black/60 px-2 py-1 text-xs text-slate-200"
+    >
+      racing
+    </span>
+  </div>
 </div>
 `;
 
-exports[`RaceHudOverlay > renders the countdown numeral in cyan at its position and scale 1`] = `
+exports[`RaceHudOverlay > renders the countdown numeral as accessible text beside the font canvas 1`] = `
 <div>
   <div
     class="pointer-events-none absolute inset-0"
     data-testid="race-hud"
   >
+    <canvas
+      aria-hidden="true"
+      class="absolute inset-0"
+      height="600"
+      width="800"
+    />
     <span
-      class="absolute whitespace-pre leading-none"
-      style="left: 380px; top: 250px; transform: scale(1.8, 1.8); transform-origin: 0 0; font-family: Impact, "Arial Black", sans-serif; font-size: 80px; color: rgb(0, 255, 255); text-shadow: 2px 2px 0 #000;"
+      class="sr-only"
     >
       3
     </span>
@@ -36,6 +53,12 @@ exports[`RaceHudOverlay > renders the held power-up holder and icon from the ima
     class="pointer-events-none absolute inset-0"
     data-testid="race-hud"
   >
+    <canvas
+      aria-hidden="true"
+      class="absolute inset-0"
+      height="600"
+      width="800"
+    />
     <img
       alt="HOLDER"
       class="absolute max-w-none"
@@ -63,15 +86,19 @@ exports[`RaceHudOverlay > renders the lap row texts with the font colour white 1
     class="pointer-events-none absolute inset-0"
     data-testid="race-hud"
   >
+    <canvas
+      aria-hidden="true"
+      class="absolute inset-0"
+      height="600"
+      width="800"
+    />
     <span
-      class="absolute whitespace-pre leading-none"
-      style="left: 400px; top: 7px; transform: scale(1, 1); transform-origin: 0 0; font-family: Impact, "Arial Black", sans-serif; font-size: 16px; color: rgb(255, 255, 255); text-shadow: 2px 2px 0 #000;"
+      class="sr-only"
     >
       LAP
     </span>
     <span
-      class="absolute whitespace-pre leading-none"
-      style="left: 450px; top: 7px; transform: scale(1, 1); transform-origin: 0 0; font-family: Impact, "Arial Black", sans-serif; font-size: 16px; color: rgb(255, 255, 255); text-shadow: 2px 2px 0 #000;"
+      class="sr-only"
     >
       1
     </span>

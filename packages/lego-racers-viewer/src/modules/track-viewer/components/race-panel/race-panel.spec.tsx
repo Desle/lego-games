@@ -7,7 +7,7 @@ const getProps = (overrides: Partial<RacePanelProps> = {}): RacePanelProps => ({
   status: RaceStatus.IDLE,
   errorMessage: null,
   isDevelopmentFilesAvailable: true,
-  onDevelopmentRaceRequested: vi.fn(),
+  onDevelopmentGameRequested: vi.fn(),
   onGameFilesChosen: vi.fn(),
   onRaceStopped: vi.fn(),
   ...overrides,
@@ -39,6 +39,14 @@ describe('RacePanel', () => {
     // Assert
     expect(container).toMatchSnapshot()
     expect(screen.getByRole('button', { name: /development files/ })).toBeDisabled()
+  })
+
+  it('renders the menus state with the keys of the menus', () => {
+    // Arrange / Act
+    const { container } = render(<RacePanel {...getProps({ status: RaceStatus.MENU })} />)
+
+    // Assert
+    expect(container).toMatchSnapshot()
   })
 
   it('renders a running race with a stop button', () => {
@@ -74,7 +82,7 @@ describe('RacePanel', () => {
     })
 
     // Assert
-    expect(props.onDevelopmentRaceRequested).toHaveBeenCalledTimes(1)
+    expect(props.onDevelopmentGameRequested).toHaveBeenCalledTimes(1)
     expect(props.onRaceStopped).toHaveBeenCalledTimes(1)
     expect(props.onGameFilesChosen).toHaveBeenCalledWith([file])
   })

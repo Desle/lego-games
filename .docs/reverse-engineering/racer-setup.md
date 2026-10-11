@@ -38,7 +38,7 @@ The slot's start position index is `racer set +0x26c + 4·i` = `i`; with two or 
 4. `0x00441190`: centre of mass. `0x00446e60`: anchor = second wheel point, **track width = point 3 y − point 2 y**, **wheelbase = point 1 x − point 3 x** (indices from 0; stored as float32). This reproduces all four wheel points of the data.
 5. `0x00446ea0` ×4: hull points `(+hx, −hy, 3.5)`, `(+hx, +hy, 3.5)`, `(−hx, −hy, 3.5)`, `(−hx, +hy, 3.5)` with `hy = chassis hull extent 0 · 0.5` and `hx = extent 1 · 0.5` (`0x004af58c`; 3.5 = `0x004b09a8`). With the data's 8 × 9: `hx` = 4.5, `hy` = 4.
 
-The model frame's bounding radius (`frame +0x10`, used as the ground probe height) comes from `0x0040e0b0`: model bounding sphere times the frame scale, widened by the skeleton frame. **Not ported**: the port uses 5.
+The model frame's bounding radius (`frame +0x10`, used as the ground probe height) comes from `0x0040e0b0`: model bounding sphere times the frame scale, widened by the skeleton frame. The port now takes it from the wheel figure's bounds ([car-builder.md](car-builder.md)).
 
 ## `Racer_Setup` (`0x00436df0`) additions
 
@@ -52,7 +52,7 @@ The weight of a built car is computed by the front end when it prepares the race
 
 - slot `+0x14` = float(`W`), `+0x18` = Σx / W − 4.5, `+0x1c` = Σy / W − 2.5, `+0x20` = Σz / W (`0x004b4944`, `0x004b4940`).
 
-So **the chassis type** fixes the wheels, hull, base mass 2,500 and base ratings; **the number and size of the bricks** enter only through `W`, which adds one mass unit per cell, nudges the centre of mass by a quarter of the cell centroid's offset, and moves the ratings by `ftol(W · 0.05)` points (steering and top speed up, throttle down). Brick colour and shape do not matter beyond their cells. The builder (design loading `0x0049fb30`, the brick database `LEB`, placement checks) is **not ported**: the port takes `BuiltCar { chassisName, weight, centreOffsetX, centreOffsetY }` as input, and `loadRaceDefinition` defaults to the first chassis, `dachas0`, with no weight.
+So **the chassis type** fixes the wheels, hull, base mass 2,500 and base ratings; **the number and size of the bricks** enter only through `W`, which adds one mass unit per cell, nudges the centre of mass by a quarter of the cell centroid's offset, and moves the ratings by `ftol(W · 0.05)` points (steering and top speed up, throttle down). Brick colour and shape do not matter beyond their cells. The builder (design loading `0x0049fb30`, the brick database `LEB`, placement checks) is ported in `car-builder` ([car-builder.md](car-builder.md)): the port takes `BuiltCar { chassisName, weight, centreOffsetX, centreOffsetY }` as input, and `loadRaceDefinition` defaults to the first racer of `DEFAULT.LRS` (`dachas0`, weight 214).
 
 ## Ported
 
@@ -60,4 +60,4 @@ So **the chassis type** fixes the wheels, hull, base mass 2,500 and base ratings
 
 ## Not ported
 
-The car builder and `LEB` (weight and centre of built cars), the model bounding radius, the display name and the model/skeleton instances (`0x00420ef0`, `0x0041e360`), the vehicle set-up beyond its draw, the ghost grid slots, the checkpoint object in the collision list and its contact filter `0x0042a830`.
+The figure builder (the driver of a built car), the display name, the vehicle set-up beyond its figures (see [car-builder.md](car-builder.md)), the ghost grid slots, the checkpoint object in the collision list and its contact filter `0x0042a830`.
