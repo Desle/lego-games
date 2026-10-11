@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot  # noqa: E402
 import golden_trace  # noqa: E402
 import race_session  # noqa: E402
+from audio_trace import AudioRecorder  # noqa: E402
 from render_trace import RenderRecorder  # noqa: E402
 
 
@@ -43,7 +44,7 @@ class PresentationRun(golden_trace.TraceRun):
         frame = self.pump_count - 1
         for recorder in self.recorders:
             recorder.begin_frame(frame)
-            recorder.is_recording = self.record_frames is None or frame in self.record_frames
+            recorder.is_recording = getattr(recorder, "is_always_recording", False) or self.record_frames is None or frame in self.record_frames
 
 
 def run_scenario(scenario: dict) -> None:
@@ -52,10 +53,12 @@ def run_scenario(scenario: dict) -> None:
     if scenario.get("isRenderRecorded", True):
         render = RenderRecorder(machine, emit)
         recorders.append(render)
-    boot.boot_to_front_end(machine)
-    machine.apply_fpu_option()
+    if scenario.get("isAudioRecorded", True):
+        recorders.append(AudioRecorder(machine, emit))
     for recorder in recorders:
         recorder.install()
+    boot.boot_to_front_end(machine)
+    machine.apply_fpu_option()
     race = race_session.begin_race(machine, scenario)
     machine.apply_fpu_option()
     run = PresentationRun(machine, race, scenario, recorders)
