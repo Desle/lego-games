@@ -1,3 +1,4 @@
+import { appendFileSync } from 'node:fs'
 import {
   compareAudioCalls,
   getIsOriginalPresentationAvailable,
@@ -29,7 +30,7 @@ const AUDIO_CASES: readonly AudioTraceCase[] = [
     name: 'Royal Knights, steering',
     raceFolder: 'RACEC0R0',
     isSteering: true,
-    gapSoundIds: [11, 14, 25, 40, 49, 56, 72, 3004],
+    gapSoundIds: [11, 14, 25, 40, 49, 56, 72],
   },
   {
     name: 'Royal Knights, mirrored',
@@ -37,10 +38,10 @@ const AUDIO_CASES: readonly AudioTraceCase[] = [
     isMirrored: true,
     gapSoundIds: [11, 14, 40, 49, 72],
   },
-  { name: 'RACEC0R1', raceFolder: 'RACEC0R1', gapSoundIds: [40, 49, 3006] },
+  { name: 'RACEC0R1', raceFolder: 'RACEC0R1', gapSoundIds: [40, 49] },
   { name: 'RACEC0R2', raceFolder: 'RACEC0R2', gapSoundIds: [5, 6, 14, 40, 49] },
-  { name: 'RACEC0R3', raceFolder: 'RACEC0R3', gapSoundIds: [40, 49, 3003] },
-  { name: 'RACEC1R0', raceFolder: 'RACEC1R0', gapSoundIds: [40, 3000] },
+  { name: 'RACEC0R3', raceFolder: 'RACEC0R3', gapSoundIds: [40, 49] },
+  { name: 'RACEC1R0', raceFolder: 'RACEC1R0', gapSoundIds: [40] },
   { name: 'RACEC3R0', raceFolder: 'RACEC3R0', gapSoundIds: [11, 12, 14, 40, 49] },
 ]
 
@@ -88,6 +89,14 @@ describe.skipIf(!isGamePresent())('audio trace', () => {
       { frame: -1, calls: [loadCall] },
       ...portFrames,
     ])
+
+    if (process.env['AUDIO_TRACE_REPORT'] !== undefined) {
+      const differing = comparison.sounds.filter((sound) => sound.originalCount !== sound.portCount)
+      appendFileSync(
+        process.env['AUDIO_TRACE_REPORT'],
+        `${audioCase.name}\n${differing.map((sound) => JSON.stringify(sound)).join('\n')}\n`
+      )
+    }
 
     // Assert
     expect(comparison.musicDifferences).toEqual([])

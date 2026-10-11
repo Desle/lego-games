@@ -82,6 +82,10 @@ const getPowerUpEventSounds = (event: PowerUpEvent): readonly SoundRequest[] => 
 // (0x00439404 plays the start sound); the power-up events play the sounds of the functions that raise them.
 export const getRaceEventSounds = (event: RaceEvent): readonly SoundRequest[] => {
   if (event.type === 'race.power_up') return getPowerUpEventSounds(event.event)
+  // 0x004642c0 and 0x004643e0: a track event (2A) plays its sound from the track bank (the id is the event's own, 3000 and up).
+  if (event.type === 'race.track_effect' && event.effect.type === 'track.sound_played') {
+    return [createRequest(event.effect.soundNumber, '0x004644aa')]
+  }
   if (
     event.type === 'race.phase_changed' &&
     event.from === RacePhase.INTRODUCTION &&
