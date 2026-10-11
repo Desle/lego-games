@@ -1,3 +1,4 @@
+import type { ModelBounds } from '../../model/index.ts'
 import type { EnumValues } from '../../../shared/types/enum.types.ts'
 import type { Checkpoint } from '../../checkpoint/index.ts'
 import type { CollisionObject } from '../../collision/index.ts'
@@ -134,6 +135,9 @@ export type RaceDefinition = {
 
 // Model and route data the moving power-up effects read and the port does not parse yet (projectiles.md).
 export type ProjectileModelData = {
+  // The bounding spheres of the models the registered shapes take (0x00411510): the grapple hook, the barrel and the
+  // missile, in the model's own axes with its scale applied.
+  readonly shapeBounds: Readonly<Record<'grapple' | 'barrel' | 'rocket', ModelBounds>>
   // Racer set +0x10: the route a warping racer follows.
   readonly routeNodes: readonly RouteNode[]
   readonly rocketLaunchMilliseconds: readonly number[]
@@ -243,12 +247,19 @@ export type RegistryObject =
   | { readonly type: 'environment_trigger'; readonly index: number }
   | { readonly type: 'power_up_brick'; readonly index: number }
   | { readonly type: 'enhancement_brick'; readonly index: number }
+  // The moving power-up objects register when they launch (0x00431450's 0x004314d0, 0x004573a0, 0x004560b0,
+  // 0x00452ae0, 0x00421520) and end their entry (+0x24 = 0) when they finish.
+  | { readonly type: 'effect_flight'; readonly effectId: number }
+  | { readonly type: 'effect_hazard'; readonly effectId: number }
+  | { readonly type: 'explosion'; readonly isSpiked: boolean; readonly index: number }
 
 // What the registry's volumes are read from: the objects, the triggers' state and the bricks.
 export type RegistrySource = {
   readonly registryObjects: readonly RegistryObject[]
   readonly trackLogic: TrackLogicState
   readonly powerUpStep: PowerUpStep
+  readonly projectileWorld: ProjectileWorld
+  readonly projectileModelData: ProjectileModelData
 }
 
 // A racer's car touched a checkpoint's collision object (0x0042a830 → 0x00439fc0).
@@ -326,6 +337,8 @@ export type RaceRacerSet = RacerSet &
     | 'collisionObjectNames'
     | 'taggedPositionMilliseconds'
     | 'registryObjects'
+    | 'projectileWorld'
+    | 'projectileModelData'
     | 'trackLogic'
     | 'trackEffects'
   > & {

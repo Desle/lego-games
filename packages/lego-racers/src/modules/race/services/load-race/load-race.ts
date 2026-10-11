@@ -1,4 +1,4 @@
-import { EMPTY_PROJECTILE_MODEL_DATA } from '../../types/projectile-model-data/projectile-model-data.ts'
+import { loadProjectileModelData } from './load-projectile-model-data.ts'
 import { parseCheckpoints } from '../../../checkpoint/index.ts'
 import {
   chooseComputerRacerRoute,
@@ -287,6 +287,6 @@ export const loadRaceDefinition = (
     randomPosition: routeDraws.position,
     getGroundPoint: null,
     trackTargets: [],
-    projectileModelData: EMPTY_PROJECTILE_MODEL_DATA,
+    projectileModelData: loadProjectileModelData(arithmetic, readArchiveFile),
   })
 }

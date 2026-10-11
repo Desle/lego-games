@@ -4,7 +4,8 @@ import {
   releaseCarBody,
 } from '../../types/car-body-commands/car-body-commands.ts'
 import { getRacer, setRacer } from '../../types/racer-state/racer-state.ts'
-import type { RacerBoundary, RacerSet, RacerSetContext } from '../../types/racer.types.ts'
+import type { FloatArithmetic } from '../../../simulation-math/index.ts'
+import type { Racer, RacerBoundary, RacerSet, RacerSetContext } from '../../types/racer.types.ts'
 
 // Racer +0xd04 bit 0x800: the racer carries a timed effect.
 const RACER_TIMED_EFFECT_FLAG = 0x800
@@ -13,6 +14,29 @@ const DRIVER_TIMED_EFFECT_FLAG = 0x10
 // Racer +0x39c (the vehicle's +0x384): reaction 2, a hit.
 const VEHICLE_HIT_REACTION = 2
 const TIMED_EFFECT_CHARGE = 1000
+
+// The receiver's side of 0x00439900: it carries the timed effect for the milliseconds, and its driver, vehicle and car
+// body react.
+export const getRacerWithTimedEffect = (
+  arithmetic: FloatArithmetic,
+  receiver: Racer,
+  milliseconds: number
+): Racer =>
+  Object.freeze({
+    ...receiver,
+    timedEffectMilliseconds: milliseconds,
+    timedEffectCharge: TIMED_EFFECT_CHARGE,
+    flags: receiver.flags | RACER_TIMED_EFFECT_FLAG,
+    driver: Object.freeze({
+      ...receiver.driver,
+      flags: receiver.driver.flags | DRIVER_TIMED_EFFECT_FLAG,
+    }),
+    vehicle: Object.freeze({
+      ...receiver.vehicle,
+      reactionFlags: receiver.vehicle.reactionFlags | VEHICLE_HIT_REACTION,
+    }),
+    carBody: holdCarBody(arithmetic, receiver.carBody),
+  })
 
 // 0x00439900 (thiscall on the receiver: the giver's figure, the giver's +0xd7c): the receiver takes over the timed
 // effect with the milliseconds the giver had left, and can pass it on in turn. Its driver and vehicle react, and its
@@ -23,29 +47,16 @@ export const transferTimedEffect = (
   racerSet: RacerSet,
   receiverIndex: number,
   giverIndex: number
-): RacerSet => {
-  const giver = getRacer(racerSet, giverIndex)
-  const receiver = getRacer(racerSet, receiverIndex)
-  return setRacer(
+): RacerSet =>
+  setRacer(
     racerSet,
     receiverIndex,
-    Object.freeze({
-      ...receiver,
-      timedEffectMilliseconds: giver.timedEffectMilliseconds,
-      timedEffectCharge: TIMED_EFFECT_CHARGE,
-      flags: receiver.flags | RACER_TIMED_EFFECT_FLAG,
-      driver: Object.freeze({
-        ...receiver.driver,
-        flags: receiver.driver.flags | DRIVER_TIMED_EFFECT_FLAG,
-      }),
-      vehicle: Object.freeze({
-        ...receiver.vehicle,
-        reactionFlags: receiver.vehicle.reactionFlags | VEHICLE_HIT_REACTION,
-      }),
-      carBody: holdCarBody(context.arithmetic, receiver.carBody),
-    })
+    getRacerWithTimedEffect(
+      context.arithmetic,
+      getRacer(racerSet, receiverIndex),
+      getRacer(racerSet, giverIndex).timedEffectMilliseconds
+    )
   )
-}
 
 // 0x00439b00 (fastcall): the timed effect ends. The effect object is released and the figure and the vehicle return
 // to their own look (presentation, not modelled); the countdown, the racer and driver flags and the car body's hold

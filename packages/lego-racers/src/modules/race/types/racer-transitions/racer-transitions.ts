@@ -3,11 +3,13 @@ import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
 import {
   addCarBodyVelocity,
   assignDriverRoute,
+  clearCarBodyTwoPointMode,
   clearCarBodyVelocity,
   endCarBodyBoost,
   endCarBodyFlaggedState,
   endCarBodySpin,
   getDriven,
+  getRacerWithTimedEffect,
   setCarBodyHeadingFromFrame,
   setCarBodyTwoPointMode,
   setDriven,
@@ -35,6 +37,7 @@ const LAP_GAP_COUNTDOWN_MILLISECONDS = 2000
 const RACER_TUMBLING_FLAG = 0x8
 const TUMBLING_TURBO_LEVEL = 2
 const SPIN_RATE = getFloatFromBits(0x3be56042) // 0x004575db, 0x00457002: the spin of a slick or a rocket
+const VEHICLE_HIT_REACTION = 2
 const WAND_THROW_POWER = 1 // 0x00455440 throws a struck racer like a blast at full power
 
 // 0x004374c0, the racer fields: flag 0x2 set and 0x1000..0x4000 cleared, no checkpoint, zone history 0, 2, 1, no lap.
@@ -214,6 +217,16 @@ export const getRacerTumbling = (arithmetic: FloatArithmetic, racer: Racer): Rac
         carBody: setCarBodyTwoPointMode(arithmetic, endCarBodySpin(arithmetic, racer.carBody)),
       })
 
+// 0x004395a0: a tumbling racer (flag 0x8) stops tumbling and its car body leaves two-point mode (slot 13).
+export const getRacerFromTumbling = (racer: Racer): Racer =>
+  (racer.flags & RACER_TUMBLING_FLAG) === 0
+    ? racer
+    : Object.freeze({
+        ...racer,
+        flags: (racer.flags & ~RACER_TUMBLING_FLAG) >>> 0,
+        carBody: clearCarBodyTwoPointMode(racer.carBody),
+      })
+
 // 0x0045cd70 → 0x00429cf0 on the car body, then 0x004396c0: racer flag 0x40, the driver at full throttle (driver
 // flag 0x1 set, 0x100 cleared), the heading from the frame (0x00446fa0), the boost (0x004292e0) and racer +0xd68, the
 // level; level 2 ends with the tumble (0x00439570). The vehicle's effects are not applied here.
@@ -240,15 +253,18 @@ export const getRacerAfterTurboStart = (
 // 0x00439730 (then 0x004395a0, which acts on racer flag 0x8): racer flag 0x40 and driver flags 0x101 cleared, and
 // the boost ends (0x00429330).
 export const getRacerAfterTurboEnd = (arithmetic: FloatArithmetic, racer: Racer): Racer =>
-  Object.freeze({
-    ...racer,
-    flags: (racer.flags & ~RACER_TURBO_FLAG) >>> 0,
-    driver: Object.freeze({
-      ...racer.driver,
-      flags: racer.driver.flags & ~(DRIVER_FULL_THROTTLE_FLAG | DRIVER_FULL_THROTTLE_TOUCHING_FLAG),
-    }),
-    carBody: endCarBodyBoost(arithmetic, racer.carBody),
-  })
+  getRacerFromTumbling(
+    Object.freeze({
+      ...racer,
+      flags: (racer.flags & ~RACER_TURBO_FLAG) >>> 0,
+      driver: Object.freeze({
+        ...racer.driver,
+        flags:
+          racer.driver.flags & ~(DRIVER_FULL_THROTTLE_FLAG | DRIVER_FULL_THROTTLE_TOUCHING_FLAG),
+      }),
+      carBody: endCarBodyBoost(arithmetic, racer.carBody),
+    })
+  )
 
 // 0x004397a0 (car body slot 14), the racer's velocity cleared, then slot 7 (0x00429a70) with the impulse: the racer is
 // thrown (a blast 0x00421c00, the wand 0x00455440).
@@ -288,16 +304,15 @@ export const getRacerAfterPowerUpEvent = (
       return Object.freeze({
         ...getRacerWithFlags(racer, racer.flags | 0x1),
         shieldLevel: event.level,
+        // Racer +0xd6c is both the shield level and what the shield does to a racer it hits (0x00438560).
+        attackKind: event.level,
       })
     case 'power_ups.racer_shield_lowered':
       return getRacerWithFlags(racer, racer.flags & ~0x1)
     case 'power_ups.racer_shield_struck':
       return Object.freeze({ ...racer, unidentifiedCountdownD74Milliseconds: 500 })
     case 'power_ups.racer_cursed':
-      return Object.freeze({
-        ...getRacerWithFlags(racer, racer.flags | 0x800),
-        timedEffectMilliseconds: event.durationMilliseconds,
-      })
+      return getRacerWithTimedEffect(arithmetic, racer, event.durationMilliseconds)
     case 'power_ups.racer_warp_pending':
       return getRacerWithFlags(racer, racer.flags | 0x200000)
     case 'power_ups.racer_warp_started':
@@ -316,6 +331,15 @@ export const getRacerAfterPowerUpEvent = (
           SPIN_RATE,
           event.spinTime
         ),
+      })
+    case 'power_ups.racer_hit':
+      // Racer +0x39c (vehicle +0x384) |= 2: the driver and the car play the hit reaction.
+      return Object.freeze({
+        ...racer,
+        vehicle: Object.freeze({
+          ...racer.vehicle,
+          reactionFlags: racer.vehicle.reactionFlags | VEHICLE_HIT_REACTION,
+        }),
       })
     case 'power_ups.racer_flipped':
       return Object.freeze({

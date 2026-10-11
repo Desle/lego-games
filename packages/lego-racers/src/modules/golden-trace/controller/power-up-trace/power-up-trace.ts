@@ -10,6 +10,9 @@ import type {
   PowerUpStep,
   RacerPowerUps,
 } from '../../../power-ups/index.ts'
+import { getVectorWords, getFloatWords } from '../trace-words/trace-words.ts'
+import { getProjectileRegistrySphere } from '../../../race/index.ts'
+import { PowerUpEffectKind } from '../../../power-ups/index.ts'
 import { ExplosionState } from '../../../projectiles/index.ts'
 import type { ExplosionPool } from '../../../projectiles/index.ts'
 import type { RaceState } from '../../../race/index.ts'
@@ -82,6 +85,37 @@ const getExplosionPoolWords = (pool: ExplosionPool): readonly number[] => [
   END_OF_LIST,
 ]
 
+const REGISTRY_TAGS: Readonly<Partial<Record<string, number>>> = Object.freeze({
+  [PowerUpEffectKind.OIL_SLICK]: 1,
+  [PowerUpEffectKind.MAGNET]: 2,
+  [PowerUpEffectKind.CURSE]: 3,
+  [PowerUpEffectKind.CANNON]: 4,
+  [PowerUpEffectKind.BARREL]: 4,
+  [PowerUpEffectKind.GRAPPLE]: 5,
+  [PowerUpEffectKind.ROCKET]: 6,
+})
+const EXPLOSION_TAG = 7
+
+// The active entries of the moving power-up objects in list order: tag, shape centre and radius.
+const getRegistryWords = (raceState: RaceState): readonly number[] =>
+  raceState.racerSet.registryEntries.flatMap((entry) => {
+    const object = raceState.registryObjects[entry.id]
+    if (!entry.isActive || object === undefined) return []
+    const source = { ...raceState, powerUpStep: raceState.powerUpStep }
+    if (object.type === 'explosion') {
+      const sphere = getProjectileRegistrySphere(source, object)
+      return [EXPLOSION_TAG, ...getVectorWords(sphere.centre), ...getFloatWords([sphere.radius])]
+    }
+    if (object.type !== 'effect_flight' && object.type !== 'effect_hazard') return []
+    const effect = raceState.powerUpStep.world.effects.effects[object.effectId]
+    const sphere = getProjectileRegistrySphere(source, object)
+    return [
+      effect === undefined ? 0 : (REGISTRY_TAGS[effect.kind] ?? 0),
+      ...getVectorWords(sphere.centre),
+      ...getFloatWords([sphere.radius]),
+    ]
+  })
+
 const getHeldLevelWords = (racers: readonly RacerPowerUps[]): TraceFields =>
   Object.fromEntries(
     racers.map((racer, index) => [`racer${String(index)}.powerUps.level`, [racer.enhancementLevel]])
@@ -94,6 +128,7 @@ export const getPowerUpTraceFields = (raceState: RaceState): TraceFields => {
     'powerUps.bricks': world.bricks.flatMap(getBrickWords),
     'powerUps.enhancementBricks': world.enhancementBricks.flatMap(getEnhancementBrickWords),
     'powerUps.effects': getEffectWords(raceState.powerUpStep),
+    'powerUps.registry': getRegistryWords(raceState),
     'powerUps.explosions': [
       ...getExplosionPoolWords(raceState.projectileWorld.explosions),
       ...getExplosionPoolWords(raceState.projectileWorld.spikedExplosions),
