@@ -68,14 +68,15 @@ def read_triggers(machine, race: int, fields: dict) -> None:
     main_array = machine.read_u32(main + 0x14)
     words = []
     for index in range(main_count):
-        words += read_words(machine, main_array + 0x58 * index + 0x38, 3)
+        flags, current, previous = read_words(machine, main_array + 0x58 * index + 0x38, 3)
+        words += [flags & 3, current, previous]
     fields["track.triggers.main"] = words
     environment = race + ENVIRONMENT_TRIGGERS_OFFSET
     environment_count = machine.read_u32(environment + 0xC)
     environment_array = machine.read_u32(environment + 0x10)
     words = []
     for index in range(environment_count):
-        words += read_words(machine, environment_array + 0x3C * index + 0x38, 1)
+        words += [machine.read_u32(environment_array + 0x3C * index + 0x38) & 3]
     fields["track.triggers.environment"] = words
 
 

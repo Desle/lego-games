@@ -25,6 +25,8 @@ import { advanceSkeletonInstance } from '../skeleton-instance/skeleton-instance.
 const LARGEST_FLOAT = 3.4028234663852886e38
 const LEVEL_COUNT = 3
 // The world's keywords 0x42 and 0x4c set flags 2 and 4 of the instance (0x1002e640).
+// 0x10023490 (the instance's level set-up) ORs 1 into +0x5c for every level the loader sets up.
+const FLAG_LEVEL_SET_UP = 1
 const FLAG_KEYWORD_42 = 2
 const FLAG_KEYWORD_4C = 4
 // The skeleton name table keys on eight characters (0x100283e0).
@@ -105,7 +107,7 @@ const createSkeletonInstance = (
     animation,
     clip,
     isAnimated: clip !== null,
-    otherFlags: getFlags(instance),
+    otherFlags: getFlags(instance) | (used.length > 0 ? FLAG_LEVEL_SET_UP : 0),
     position: Object.freeze([
       instance.position.x,
       instance.position.y,

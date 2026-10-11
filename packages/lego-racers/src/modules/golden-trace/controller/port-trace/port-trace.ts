@@ -11,6 +11,7 @@ import { DEFAULT_KEYBOARD_BINDINGS, getRacerControls } from '../../../race-input
 import { getRacerSphere } from '../../../racer/index.ts'
 import type { Racer, RacerSetContext } from '../../../racer/index.ts'
 import type { Matrix3, Vector3 } from '../../../simulation-math/index.ts'
+import { getTrackFields } from '../track-trace/track-trace.ts'
 import type {
   GoldenTraceScenario,
   TraceFields,
@@ -144,6 +145,7 @@ export const getTraceFields = (raceState: RaceState, localPlayerCount: number): 
   'race.phase': getIntegerWords(RACE_PHASE_STATE_NUMBERS[raceState.phase]),
   'race.phaseMilliseconds': getIntegerWords(raceState.phaseMilliseconds),
   'race.randomPosition': getIntegerWords(raceState.racerSet.randomPosition),
+  ...getTrackFields(raceState),
 })
 
 const SCAN_CODE_KEYS = new Map(
