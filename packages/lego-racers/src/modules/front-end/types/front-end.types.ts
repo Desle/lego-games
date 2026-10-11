@@ -42,6 +42,8 @@ export type FrontEndEnvironment = {
   readonly unlockedCircuitMask: number
   // The racers the player has built (the garage and the save files are another module); each is a driver code.
   readonly playerRacerNames: readonly string[]
+  // The circuit just played, best first: what the circuit result screens (0x16..0x19) list. Empty otherwise.
+  readonly standingRows: readonly FrontEndStandingRow[]
 }
 
 export type FrontEndInput = 'up' | 'down' | 'left' | 'right' | 'accept' | 'back'
@@ -178,4 +180,12 @@ export type FrontEndStep = {
 export type FrontEndFontEntry = {
   readonly font: BitmapFont
   readonly image: FrontEndImage
+}
+
+// One line of a circuit's final standings (the points record of CircuitRunner +4).
+export type FrontEndStandingRow = {
+  readonly rank: number
+  readonly racerName: string
+  readonly points: number
+  readonly isPlayer: boolean
 }

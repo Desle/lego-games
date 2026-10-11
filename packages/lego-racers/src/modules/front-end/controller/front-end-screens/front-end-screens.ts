@@ -9,6 +9,7 @@ import {
   SINGLE_RACE_SCREEN,
   TIME_TRIAL_SCREEN,
 } from '../screens/race-selection-screens.ts'
+import { createCircuitResultScreen } from '../screens/circuit-result-screen.ts'
 import { createStaticScreen } from '../screens/static-screen.ts'
 
 const IMPLEMENTED_SCREENS: readonly ScreenDefinition[] = Object.freeze([
@@ -29,6 +30,12 @@ const PICK_RACER_IDS: readonly number[] = [
 
 export const getScreenDefinition = (screenId: number): ScreenDefinition => {
   if (PICK_RACER_IDS.includes(screenId)) return { ...PICK_RACER_SCREEN, screenId }
+  if (
+    screenId >= FrontEndScreen.CIRCUIT_AWARD_ONE &&
+    screenId <= FrontEndScreen.CIRCUIT_AWARD_FOUR
+  ) {
+    return createCircuitResultScreen(screenId)
+  }
   return (
     IMPLEMENTED_SCREENS.find((screen) => screen.screenId === screenId) ??
     createStaticScreen(screenId)

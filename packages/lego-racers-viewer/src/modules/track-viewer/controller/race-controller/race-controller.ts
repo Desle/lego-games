@@ -1,11 +1,25 @@
+import {
+  FrontEndScreen,
+  getSessionSettings,
+  getStandingRows,
+} from '@lego-games/lego-racers/front-end'
+import type { FrontEndRaceRequest } from '@lego-games/lego-racers/front-end'
 import { advanceFrameClock, createFrameClock } from '@lego-games/lego-racers/frame-clock'
+import {
+  createGameSession,
+  finishRace,
+  loadGameResources,
+  recordRaceStep,
+  startNextRace,
+} from '@lego-games/lego-racers/game-session'
+import type { GameResources, GameSession } from '@lego-games/lego-racers/game-session'
 import {
   createRace,
   IDLE_RACER_CONTROLS,
   NO_RACE_CONTACTS,
   stepRace,
 } from '@lego-games/lego-racers/race'
-import type { LoadRaceOptions, RaceState } from '@lego-games/lego-racers/race'
+import type { RaceState } from '@lego-games/lego-racers/race'
 import { getHudLayout } from '@lego-games/lego-racers/race-hud'
 import { getRacerControls } from '@lego-games/lego-racers/race-input'
 import {
@@ -44,6 +58,8 @@ const INITIAL_SCREEN: RaceScreen = Object.freeze({
   hudImageUrls: new Map(),
   hudFonts: null,
   lapCount: 0,
+  menuScreenId: FrontEndScreen.MAIN_MENU,
+  standingRows: [],
 })
 
 const getErrorMessage = (error: unknown): string =>
@@ -120,6 +136,12 @@ export const useRaceController = (): RaceController => {
   const [screen, setScreen] = useState<RaceScreen>(INITIAL_SCREEN)
   const [assets, setAssets] = useState<RaceAssets | null>(null)
   const [gameFiles, setGameFiles] = useState<LoadedGameFiles | null>(null)
+  const [gameResources, setGameResources] = useState<GameResources | null>(null)
+  // The session the race that runs belongs to: a circuit's four races, or the one race of a single race.
+  const sessionReference = useRef<GameSession | null>(null)
+  const advanceReference = useRef<(session: GameSession, racerCount: number) => void>(
+    () => undefined
+  )
 
   // The game's files are opened first: the front end shows its menus from them, and they stay open for every race.
   const openGame = useCallback((getFiles: () => Promise<LoadedGameFiles>) => {
@@ -127,6 +149,7 @@ export const useRaceController = (): RaceController => {
     setScreen({ ...INITIAL_SCREEN, status: RaceStatus.LOADING })
     getFiles()
       .then((files) => {
+        setGameResources(loadGameResources(files.jam, files.files.executable))
         setGameFiles(files)
         setScreen({ ...INITIAL_SCREEN, status: RaceStatus.MENU })
       })
@@ -139,25 +162,74 @@ export const useRaceController = (): RaceController => {
       )
   }, [])
 
-  // The menus chose a race: its assets load with the options the menus produced.
-  const startRace = useCallback(
-    (options: LoadRaceOptions) => {
+  const showFailure = useCallback(
+    (error: unknown) =>
+      setScreen({
+        ...INITIAL_SCREEN,
+        status: RaceStatus.FAILED,
+        errorMessage: getErrorMessage(error),
+      }),
+    []
+  )
+
+  // The session has ended: the menus open on the screen it names (2, the main menu, or a circuit's result screen).
+  const returnToMenu = useCallback((session: GameSession, racerCount: number) => {
+    sessionReference.current = null
+    setAssets(null)
+    setScreen({
+      ...INITIAL_SCREEN,
+      status: RaceStatus.MENU,
+      menuScreenId: session.resultScreen,
+      standingRows: getStandingRows(session, racerCount),
+    })
+  }, [])
+
+  // RaceSession_Play 0x0042c330: the session says which race is next, or that it is over.
+  const advanceSession = useCallback(
+    (session: GameSession, racerCount: number) => {
       if (gameFiles === null) return
+      const next = startNextRace(session)
+      if (next.kind === 'finished') {
+        returnToMenu(next.session, racerCount)
+        return
+      }
+      sessionReference.current = next.session
       setScreen({ ...INITIAL_SCREEN, status: RaceStatus.LOADING })
       // Lets the loading state paint before the synchronous load.
       window.setTimeout(() => {
         try {
-          setAssets(loadRaceAssets(gameFiles.jam, gameFiles.files, options))
+          setAssets(
+            loadRaceAssets(
+              gameFiles.jam,
+              gameFiles.files,
+              { raceFolder: next.race.folder },
+              next.definition
+            )
+          )
         } catch (error) {
-          setScreen({
-            ...INITIAL_SCREEN,
-            status: RaceStatus.FAILED,
-            errorMessage: getErrorMessage(error),
-          })
+          showFailure(error)
         }
       }, 0)
     },
-    [gameFiles]
+    [gameFiles, returnToMenu, showFailure]
+  )
+  advanceReference.current = advanceSession
+
+  // The menus chose a race, a circuit or a time trial: the game session plays it.
+  const startRace = useCallback(
+    (request: FrontEndRaceRequest) => {
+      if (gameResources === null) return
+      try {
+        const session = createGameSession(
+          gameResources,
+          getSessionSettings(gameResources, request, 0)
+        )
+        advanceSession(session, request.racerCount)
+      } catch (error) {
+        showFailure(error)
+      }
+    },
+    [advanceSession, gameResources, showFailure]
   )
 
   useEffect(() => {
@@ -197,6 +269,9 @@ export const useRaceController = (): RaceController => {
           advance.frameMilliseconds
         )
         raceState = step.raceState
+        if (sessionReference.current !== null) {
+          sessionReference.current = recordRaceStep(sessionReference.current, step)
+        }
         const frame = stepRacePresentation(
           presentation,
           step,
@@ -214,6 +289,14 @@ export const useRaceController = (): RaceController => {
           phase: raceState.phase,
           hudCommands: frame.hudFrame?.commands ?? [],
         }))
+        if (!raceState.isRunning && sessionReference.current !== null) {
+          // finishRace and the next turn of the session's loop (Race_RunLoop 0x00432540 ends, PlayCircuit continues).
+          const finished = finishRace(sessionReference.current, raceState)
+          sessionReference.current = null
+          cancelAnimationFrame(animationFrame)
+          advanceReference.current(finished, raceState.racerSet.racers.length)
+          return
+        }
       }
       viewport.render()
     }
@@ -244,6 +327,7 @@ export const useRaceController = (): RaceController => {
       setScreen(INITIAL_SCREEN)
     },
     onRaceStopped: () => {
+      sessionReference.current = null
       setAssets(null)
       setScreen({
         ...INITIAL_SCREEN,

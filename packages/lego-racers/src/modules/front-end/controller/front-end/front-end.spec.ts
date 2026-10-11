@@ -69,6 +69,7 @@ const environment: FrontEndEnvironment = {
   controllerCount: 0,
   unlockedCircuitMask: 0x7f,
   playerRacerNames: ['ALICE', 'BOB'],
+  standingRows: [],
 }
 
 const play = (

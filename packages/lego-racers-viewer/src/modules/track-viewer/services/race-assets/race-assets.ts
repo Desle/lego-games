@@ -7,7 +7,7 @@ import type { ImageDefinition } from '@lego-games/lego-racers/image-database'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import { loadRaceDefinition } from '@lego-games/lego-racers/race'
-import type { LoadRaceOptions } from '@lego-games/lego-racers/race'
+import type { LoadRaceOptions, RaceDefinition } from '@lego-games/lego-racers/race'
 import { parseRaceDescription } from '@lego-games/lego-racers/race-description'
 import {
   COMMON_DIRECTORY,
@@ -110,7 +110,8 @@ const loadHudFonts = (archive: JamArchive): HudFonts => {
 export const loadRaceAssets = (
   jam: Uint8Array,
   files: RaceGameFiles,
-  options: LoadRaceOptions = {}
+  options: LoadRaceOptions = {},
+  sessionDefinition: RaceDefinition | null = null
 ): RaceAssets => {
   const archive = openJamArchive(jam)
   const raceFolder = options.raceFolder ?? DEFAULT_RACE_FOLDER
@@ -119,7 +120,7 @@ export const loadRaceAssets = (
     archive.readFile(`${raceDirectory}\\${raceFolder}.RAB`),
     false
   )
-  const definition = loadRaceDefinition(jam, files.executable, options)
+  const definition = sessionDefinition ?? loadRaceDefinition(jam, files.executable, options)
   const scene = loadScene(archive, [
     ...getRaceWorldPaths(raceDirectory, description),
     ...(getRaceBackgroundWorldPath(raceDirectory, description) === null

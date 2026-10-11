@@ -44,7 +44,7 @@ Button styles (MSB `0x3e`): six images, six fonts and 13 colours (`0x2a`: one, t
 
 ## Hooks for other work
 
-`FrontEndEnvironment`: `unlockedCircuitMask` (progression: the original asks `0x0042f1f0`), `playerRacerNames` (the garage and save files), `controllerCount`. The garage (3), car builder (0xe), driver and car editors, awards, credits and introductions are static placeholders. A circuit race starts its first race; the four-race sequence reads `circuitRaces`. The circuit introduction cinema (`0x1f + circuit`, pushed by `0x004850a0`) is skipped.
+`FrontEndEnvironment`: `unlockedCircuitMask` (progression: the original asks `0x0042f1f0`), `playerRacerNames` (the garage and save files), `controllerCount`. The garage (3), car builder (0xe), driver and car editors, awards, credits and introductions are static placeholders. A circuit, a single race and a time trial go through the game session of [game-progression.md](game-progression.md): `getSessionSettings` turns the menus' request into `SessionSettings`, the viewer runs `startNextRace`, `recordRaceStep` and `finishRace` for each race, and a circuit plays its four races with the points record. When the session ends the menus open on `session.resultScreen`: 2 is the main menu, 0x16..0x19 are the circuit result screens, which the port draws as the page's backdrop with the standings from `getStandingRows` (the award cinemas are not ported). A race's scene is not mirrored for a flagged race (hypothesis: the viewer's scene loader has no mirror option yet). The circuit introduction cinema (`0x1f + circuit`, pushed by `0x004850a0`) is skipped.
 
 ## Not ported / open
 

@@ -3,6 +3,7 @@ import type {
   FrontEndSelection,
   FrontEndSettings,
 } from '../../types/front-end.types.ts'
+import type { FrontEndWidget } from '../../types/front-end-widget.types.ts'
 import type { ScreenResult, ScreenRuntime } from '../../types/front-end-screen.types.ts'
 
 // MENUDATA\SOUNDS files. The original plays them by the ids of GENC0R0.SBK through 0x0046e970 and the style's sound
@@ -89,3 +90,18 @@ export const getThreeWidgetFocusResult = (
     soundNames: focusIndex === selection.focusIndex ? [] : [MenuSound.HIGHLIGHT],
   })
 }
+
+// The page of a screen this port does not run in full: its backdrop and its name.
+export const getPageWidgets = (
+  runtime: ScreenRuntime,
+  screenId: number
+): readonly FrontEndWidget[] => [
+  { kind: 'image', itemName: 'backdrp', imageName: 'backdrp' },
+  {
+    kind: 'text',
+    itemName: 'banner',
+    text: (runtime.resources.menuNames[screenId] ?? '').toUpperCase(),
+    styleName: 'banner',
+    alignment: 'left',
+  },
+]

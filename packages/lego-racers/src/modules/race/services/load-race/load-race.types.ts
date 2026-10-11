@@ -13,8 +13,6 @@ export type LoadRaceOptions = {
   readonly raceModeFlags?: number
   // Game settings +0x32c. The first racers, as many as there are local players, drive cars built from bricks.
   readonly localPlayerCount?: number
-  // The laps of a versus race (the options screen's choice); the original's default is three.
-  readonly multiplayerLapCount?: number
   // The random table position (0x004c6ee4) when the race loads; the menus advance it before.
   readonly randomPosition?: number
   // The car builder's answer for each local player (the racer slot's chassis, weight and centre offsets); a player

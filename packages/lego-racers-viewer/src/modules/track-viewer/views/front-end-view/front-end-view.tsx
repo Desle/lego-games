@@ -3,8 +3,22 @@ import { useFrontEndController } from '../../controller/front-end-controller/fro
 import type { FrontEndViewProps } from './front-end-view.types.ts'
 
 // The menus of the game over the stage: they choose the race and the racers, then the race starts.
-const FrontEndView = ({ jam, width, height, onRaceRequested, onQuit }: FrontEndViewProps) => {
-  const frontEnd = useFrontEndController({ jam, onRaceRequested, onQuit })
+const FrontEndView = ({
+  jam,
+  width,
+  height,
+  firstScreenId,
+  standingRows,
+  onRaceRequested,
+  onQuit,
+}: FrontEndViewProps) => {
+  const frontEnd = useFrontEndController({
+    jam,
+    firstScreenId,
+    standingRows,
+    onRaceRequested,
+    onQuit,
+  })
   return (
     <FrontEndStage
       canvasReference={frontEnd.canvasReference}

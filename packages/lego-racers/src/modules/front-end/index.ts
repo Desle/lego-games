@@ -5,6 +5,8 @@ export {
   stepFrontEnd,
 } from './controller/front-end/front-end.ts'
 export { getRaceLoadOptions } from './controller/race-launch/get-race-load-options.ts'
+export { getSessionSettings } from './controller/race-launch/get-session-settings.ts'
+export { getStandingRows } from './controller/race-launch/get-standing-rows.ts'
 export { loadFrontEndResources } from './services/load-front-end-resources/load-front-end-resources.ts'
 export { MENU_SURFACE } from './controller/widget-commands/widget-commands.ts'
 export {
@@ -30,6 +32,7 @@ export type {
   FrontEndScreenFiles,
   FrontEndSelection,
   FrontEndSettings,
+  FrontEndStandingRow,
   FrontEndState,
   FrontEndStep,
   FrontEndTextCommand,

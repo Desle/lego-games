@@ -2,7 +2,6 @@ import {
   createFrontEnd,
   getFrontEndFrame,
   getFrontEndRaceRequest,
-  getRaceLoadOptions,
   loadFrontEndResources,
   stepFrontEnd,
 } from '@lego-games/lego-racers/front-end'
@@ -45,8 +44,13 @@ export const useFrontEndController = (options: FrontEndControllerOptions): Front
         controllerCount: input.getControllerCount(),
         unlockedCircuitMask: ALL_CIRCUITS_OPEN,
         playerRacerNames: [],
+        standingRows: callbacksReference.current.standingRows,
       })
-      let state = createFrontEnd(resources, getEnvironment())
+      let state = createFrontEnd(
+        resources,
+        getEnvironment(),
+        callbacksReference.current.firstScreenId
+      )
       let lastTime: number | null = null
       const onFrame = (time: number) => {
         animationFrame = requestAnimationFrame(onFrame)
@@ -71,7 +75,7 @@ export const useFrontEndController = (options: FrontEndControllerOptions): Front
         const request = getFrontEndRaceRequest(state)
         if (request !== null) {
           cancelAnimationFrame(animationFrame)
-          callbacksReference.current.onRaceRequested(getRaceLoadOptions(request))
+          callbacksReference.current.onRaceRequested(request)
         } else if (state.outcome === 'quit') {
           cancelAnimationFrame(animationFrame)
           callbacksReference.current.onQuit()
