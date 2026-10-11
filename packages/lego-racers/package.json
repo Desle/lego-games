@@ -20,6 +20,7 @@
     "./emitter": "./src/modules/emitter/index.ts",
     "./event": "./src/modules/event/index.ts",
     "./font-database": "./src/modules/font-database/index.ts",
+    "./font-rendering": "./src/modules/font-rendering/index.ts",
     "./frame-clock": "./src/modules/frame-clock/index.ts",
     "./ghost": "./src/modules/ghost/index.ts",
     "./hazard": "./src/modules/hazard/index.ts",
