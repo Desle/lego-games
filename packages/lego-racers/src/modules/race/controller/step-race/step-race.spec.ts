@@ -119,7 +119,7 @@ describe('stepRace', () => {
     // Assert
     expect(step.raceState.isRunning).toBe(false)
     expect(step.raceState.placements).toEqual([1, 2])
-    expect(step.events.at(-1)).toEqual({ type: 'race.ended' })
+    expect(step.events.at(-1)).toEqual({ type: 'race.ended', exit: 'finished' })
   })
 
   it('does nothing once the race has ended', () => {

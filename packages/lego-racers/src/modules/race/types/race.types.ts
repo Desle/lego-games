@@ -36,9 +36,13 @@ import type { TimerList } from '../../timer/index.ts'
 import type { TrackMaterial } from '../../track-material/index.ts'
 import type { TriggerList } from '../../trigger/index.ts'
 import type { SurfaceMaterials } from './surface-materials/surface-materials.types.ts'
+import type { PauseMenu, RaceMenuInput } from './pause-menu/pause-menu.types.ts'
+import type { PointsRecord } from './points-record/points-record.types.ts'
+import type { RaceExit as RaceExitValues } from './race-exit/race-exit.ts'
 import type { RacePhase as RacePhaseValues } from './race-phase/race-phase.ts'
 
 export type RacePhase = EnumValues<typeof RacePhaseValues>
+export type RaceExit = EnumValues<typeof RaceExitValues>
 
 // One racer of the race: what Race_LoadTrackContent 0x00433480 and RacerSet_Setup 0x0043b190 take from the
 // game settings (+0x100 count, +0x114 + 0x5c·i kind) and the driver, champion and chassis databases (0x0043b480).
@@ -90,6 +94,10 @@ export type RaceDefinition = {
   readonly mainTriggers: TriggerList | null
   readonly environmentTriggers: TriggerList | null
   readonly hazards: HazardList | null
+  // Race +0x18: the circuit's points record, null for a single race.
+  readonly pointsRecord: PointsRecord | null
+  // Game settings +0x1e & 0x40 (meaning not traced): a restart inside a circuit then runs in place.
+  readonly isSettingsFlag40Set: boolean
   // The random table position (0x004c6ee4) after the loaders that ran before RacerSet_Setup.
   readonly randomPosition: RandomTablePosition
   // The track world's line query 0x0041f4d0 (world module); null answers every query with a miss.
@@ -119,6 +127,14 @@ export type RaceState = {
   readonly phaseMilliseconds: number
   // Race +0x3334: Race_RunLoop runs while it is non-zero.
   readonly isRunning: boolean
+  // Why the loop ended (race +0x3334 became 0 and the settings flags say what the front end does next).
+  readonly exit: RaceExit
+  // Race +0x30c0, +0x3058.. and +0x3360: the pause menu.
+  readonly pauseMenu: PauseMenu
+  // Race +0x18, written when racers get their places and ticked in the results.
+  readonly pointsRecord: PointsRecord | null
+  // Game settings +0x1e & 0x40.
+  readonly isSettingsFlag40Set: boolean
   // Race +0x3330: how many racers have been given a final place.
   readonly finishedRacerCount: number
   // Race +0x3348 (byte): the laps to race.
@@ -217,6 +233,8 @@ export type RaceInputs = {
   // One per local player, in the order of RaceState.playerRacerIndices.
   readonly controls: readonly RacerControls[]
   readonly contacts: RaceContacts
+  // The menu keys of the frame; none when absent.
+  readonly menu?: RaceMenuInput
 }
 
 export type RaceEvent =
@@ -236,7 +254,10 @@ export type RaceEvent =
       readonly lap: number
     }
   // Race +0x3334 became 0.
-  | { readonly type: 'race.ended' }
+  | { readonly type: 'race.ended'; readonly exit: RaceExit }
+  // 0x00436010 opened a menu and 0x00436160 closed one.
+  | { readonly type: 'race.paused' }
+  | { readonly type: 'race.resumed' }
   | { readonly type: 'race.power_up'; readonly event: PowerUpEvent }
   | { readonly type: 'race.projectile'; readonly event: ProjectileEvent }
   | { readonly type: 'race.track_effect'; readonly effect: TrackEffect }

@@ -18,6 +18,8 @@ import { drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
 import { createTrackLogic } from '../../../track-logic/index.ts'
 import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
+import { CLOSED_PAUSE_MENU } from '../../types/pause-menu/pause-menu.ts'
+import { RaceExit } from '../../types/race-exit/race-exit.ts'
 import { RacePhase } from '../../types/race-phase/race-phase.ts'
 import type {
   RaceDefinition,
@@ -177,6 +179,10 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     phase: RacePhase.INTRODUCTION,
     phaseMilliseconds: 0,
     isRunning: true,
+    exit: RaceExit.NONE,
+    pauseMenu: CLOSED_PAUSE_MENU,
+    pointsRecord: definition.pointsRecord,
+    isSettingsFlag40Set: definition.isSettingsFlag40Set,
     finishedRacerCount: 0,
     lapCount,
     isMultiplayer,

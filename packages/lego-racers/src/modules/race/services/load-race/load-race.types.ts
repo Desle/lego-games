@@ -1,4 +1,5 @@
 import type { CollisionObject } from '../../../collision/index.ts'
+import type { PointsRecord } from '../../types/points-record/points-record.types.ts'
 import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
 import type { RandomDraw, RandomTablePosition } from '../../../random-table/index.ts'
 import type { BuiltCar, RacerDatabases } from '../../../racer-setup/index.ts'
@@ -20,6 +21,10 @@ export type LoadRaceOptions = {
   readonly playerCars?: readonly BuiltCar[]
   // The driver code of each racer slot, instead of the codes of the race's circuit in LEGORACE.CRB.
   readonly racerCodes?: readonly string[]
+  // Race +0x18: the circuit's points record when the race is part of a circuit.
+  readonly pointsRecord?: PointsRecord
+  // Game settings +0x1e & 0x40.
+  readonly isSettingsFlag40Set?: boolean
 }
 
 // The routes chosen so far (null for a racer without one) and the table position after their draws.

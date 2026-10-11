@@ -5,6 +5,7 @@ import {
   createRouteFollower,
   getRampedTargetSpeedFactor,
   getReturnedLateralOffset,
+  moveRouteFollower,
   resetRouteFollower,
   setRouteFollowerSpeedFactor,
   stepComputerBounce,
@@ -78,7 +79,7 @@ export const placeCarBodyOnRoute = (
 
 // 0x0042a570: the frame follows the route, shifted along rotation row 1 by the sideways offset and up by the flip,
 // the bounce and the two-point height; the centre of mass follows the frame.
-const getBodyAtFollower = (
+export const getBodyAtFollower = (
   arithmetic: FloatArithmetic,
   carBody: CarBody,
   follower: RouteFollower,
@@ -263,4 +264,49 @@ export const stepScriptedCarBody = (
     }
   } while (current.rigidBody.contactCount !== 0)
   return current
+}
+
+// 0x00429680 (thiscall: displacement) for a scripted body: the follower is moved along the route by the displacement
+// (0x004a5750), the frame takes the orientation again (0x0042a290 with no time), the sideways offset is the part of
+// what is left of the displacement along rotation row 1, held to the route's lateral room, and the frame is placed
+// (0x0042a570).
+export const getScriptedBodySeparated = (
+  arithmetic: FloatArithmetic,
+  carBody: CarBody,
+  displacement: Vector3
+): CarBody => {
+  const { routeFollower } = carBody
+  if (routeFollower === null) return carBody
+  const { add, multiply, storeFloat, getIsBelow, getIsBelowOrEqual } = arithmetic
+  const moved = moveRouteFollower(arithmetic, routeFollower, displacement)
+  const oriented = getScriptedBodyOriented(
+    arithmetic,
+    Object.freeze({ ...carBody, routeFollower: moved.follower }),
+    0
+  )
+  const { rotation } = oriented.rigidBody.displayFrame
+  const left = moved.displacement
+  const offset = add(
+    add(multiply(left.z, rotation[5]), multiply(left.y, rotation[4])),
+    multiply(left.x, rotation[3])
+  )
+  const { negativeLateralLimit, positiveLateralLimit } = moved.follower
+  const lateralOffset = getIsBelowOrEqual(offset, 0)
+    ? getIsBelow(negativeLateralLimit, -offset)
+      ? -negativeLateralLimit
+      : storeFloat(offset)
+    : getIsBelow(positiveLateralLimit, offset)
+      ? positiveLateralLimit
+      : storeFloat(offset)
+  return Object.freeze({
+    ...oriented,
+    lateralOffset,
+    rigidBody: getBodyAtFollower(
+      arithmetic,
+      oriented,
+      moved.follower,
+      lateralOffset,
+      oriented.bounceHeight
+    ),
+  })
 }

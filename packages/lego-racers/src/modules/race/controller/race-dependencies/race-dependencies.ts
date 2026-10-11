@@ -40,6 +40,8 @@ import {
   NO_RACE_CONTACTS,
 } from '../race-world/race-world.ts'
 import {
+  separateFreeRacerBody,
+  separateScriptedRacerBody,
   stepRacerRigidBodyWithContacts,
   stepRacerScriptWithContacts,
 } from '../racer-contacts/racer-contacts.ts'
@@ -63,7 +65,8 @@ const RACE_COLLISION_DEPENDENCIES: RacerPassDependencies = Object.freeze({
       )
     )
   },
-  separateScriptedCarBody: keepRacerSetNotYetPorted,
+  separateScriptedCarBody: separateScriptedRacerBody,
+  separateFreeCarBody: separateFreeRacerBody,
   transferTimedEffect: keepRacerSetNotYetPorted,
   endTimedEffect: keepRacerSetNotYetPorted,
 })

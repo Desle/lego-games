@@ -221,7 +221,7 @@ export const resetCarBodyRoute = (arithmetic: FloatArithmetic, body: CarBody): C
             arithmetic,
             setRouteFollowerSpeedFactor(body.routeFollower, 1),
             ZERO_VECTOR3
-          ),
+          ).follower,
     defaultTargetSpeedFactor: 1,
     bounceHeight: 0,
     lateralOffset: 0,

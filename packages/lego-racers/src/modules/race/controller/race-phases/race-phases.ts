@@ -1,6 +1,7 @@
 import {
   activatePowerUp,
   BrickKind,
+  getStepWithRacerWarpsFinished,
   rollComputerStartTurbo,
   setBrickSoundsEnabled,
 } from '../../../power-ups/index.ts'
@@ -11,8 +12,11 @@ import {
   FINISHING_MILLISECONDS,
   INTRODUCTION_MILLISECONDS,
   RacePhase,
+  RESULTS_MILLISECONDS,
   SKIPPED_COUNTDOWN_FINISHING_START_MILLISECONDS,
 } from '../../types/race-phase/race-phase.ts'
+import { recordPlace, tickPointsRecord } from '../../types/points-record/points-record.ts'
+import { RaceExit } from '../../types/race-exit/race-exit.ts'
 import type {
   RaceEvent,
   RacePhase as RacePhaseValue,
@@ -106,7 +110,16 @@ const placeRacer = (
       )
     : raceState.racerSet
   const counted = setRacePlace(
-    Object.freeze({ ...raceState, racerSet: flagged, finishedRacerCount: place }),
+    Object.freeze({
+      ...raceState,
+      racerSet: flagged,
+      finishedRacerCount: place,
+      // 0x004402c0 takes the count before this racer.
+      pointsRecord:
+        raceState.pointsRecord === null
+          ? null
+          : recordPlace(raceState.pointsRecord, racerIndex, raceState.finishedRacerCount),
+    }),
     racerIndex,
     place
   )
@@ -150,6 +163,17 @@ const disablePlayerControls = (raceState: RaceState, racerIndex: number): RaceSt
   })
 }
 
+// What a finishing human racer gets in states 3 and 4: its controls are disabled (0x00430760) and its warps end
+// (0x0045b740).
+const finishHumanRacer = (raceState: RaceState, racerIndex: number): RaceState => {
+  const disabled = disablePlayerControls(raceState, racerIndex)
+  return changeRaceWorld(disabled, (racerSet) =>
+    changePowerUps(disabled.context, racerSet, (step) =>
+      getStepWithRacerWarpsFinished(step, racerIndex)
+    )
+  )
+}
+
 // 0x00430710: the controller leaves its before-start state; a start boost held since the countdown fires now.
 const releasePlayerController = (
   raceState: RaceState,
@@ -188,15 +212,36 @@ const releasePlayerController = (
     : withController
 }
 
-// Race_UpdateState5 0x00435180 without the points record (race +0x18): the loop ends at once.
-const stepResults = (step: RaceStepResult): RaceStepResult =>
-  getStepWith(step, Object.freeze({ ...step.raceState, phaseMilliseconds: 0, isRunning: false }), [
-    { type: 'race.ended' },
-  ])
+// Race_UpdateState5 0x00435180: with a points record the results stay for 5 s (the record's ticker runs on the frame
+// time); without one, or after that, the state timer is cleared and the loop ends. (From 4 s the original also
+// fades the screen out, 0x00494eb0, which is presentation.)
+const stepResults = (step: RaceStepResult, frameMilliseconds: number): RaceStepResult => {
+  const { raceState } = step
+  if (raceState.pointsRecord !== null && raceState.phaseMilliseconds < RESULTS_MILLISECONDS) {
+    return getStepWith(
+      step,
+      Object.freeze({
+        ...raceState,
+        pointsRecord: tickPointsRecord(raceState.pointsRecord, frameMilliseconds),
+      }),
+      []
+    )
+  }
+  return getStepWith(
+    step,
+    Object.freeze({
+      ...raceState,
+      phaseMilliseconds: 0,
+      isRunning: false,
+      exit: RaceExit.FINISHED,
+    }),
+    [{ type: 'race.ended', exit: RaceExit.FINISHED }]
+  )
+}
 
 // Race_UpdateState4 0x00434eb0 (without a ghost): after 10 s the racers still running are given the next places
 // in racer order and every racer's place is recorded; before that, racers that finished their laps are placed.
-const stepFinishing = (step: RaceStepResult): RaceStepResult => {
+const stepFinishing = (step: RaceStepResult, frameMilliseconds: number): RaceStepResult => {
   const { raceState } = step
   const racerCount = raceState.racerSet.racers.length
   const indices = Array.from({ length: racerCount }, (_, index) => index)
@@ -219,22 +264,35 @@ const stepFinishing = (step: RaceStepResult): RaceStepResult => {
           ),
         }),
         []
-      )
+      ),
+      frameMilliseconds
     )
   }
-  return indices.reduce((current, index) => {
+  const finished = indices.reduce((current, index) => {
     const racer = getRacer(current.raceState.racerSet, index)
     if (!getHasFinishedLaps(current.raceState, racer)) return current
     const placed = placeRacer(current, index, true)
     return racer.controllerKind === COMPUTER_CONTROLLER
       ? placed
-      : getStepWith(placed, disablePlayerControls(placed.raceState, index), [])
+      : getStepWith(placed, finishHumanRacer(placed.raceState, index), [])
   }, step)
+  // After 5 s of the finishing state the points record's ticker runs (0x00440330).
+  const { pointsRecord } = finished.raceState
+  return pointsRecord !== null && raceState.phaseMilliseconds > RESULTS_MILLISECONDS
+    ? getStepWith(
+        finished,
+        Object.freeze({
+          ...finished.raceState,
+          pointsRecord: tickPointsRecord(pointsRecord, frameMilliseconds),
+        }),
+        []
+      )
+    : finished
 }
 
 // Race_UpdateState3 0x00434c80: racers that finished their laps are placed; when a human (or the
 // demonstration's racer 0) finishes, the finishing state starts and its function runs at once.
-const stepRacing = (step: RaceStepResult): RaceStepResult => {
+const stepRacing = (step: RaceStepResult, frameMilliseconds: number): RaceStepResult => {
   const racerCount = step.raceState.racerSet.racers.length
   const indices = Array.from({ length: racerCount }, (_, index) => index)
   const result = indices.reduce<FinishingProgress>(
@@ -252,18 +310,18 @@ const stepRacing = (step: RaceStepResult): RaceStepResult => {
         RacePhase.FINISHING,
         placed.raceState.isCountdownSkipped ? SKIPPED_COUNTDOWN_FINISHING_START_MILLISECONDS : 0
       )
-      const disabled = disablePlayerControls(change.raceState, index)
+      const disabled = finishHumanRacer(change.raceState, index)
       return { step: getStepWith(placed, disabled, [change.event]), isFinishing: true }
     },
     { step, isFinishing: false }
   )
-  return result.isFinishing ? stepFinishing(result.step) : result.step
+  return result.isFinishing ? stepFinishing(result.step, frameMilliseconds) : result.step
 }
 
 // Race_UpdateState2 0x00434b00: after 3 s (or at once when the countdown is skipped) the racers are released
 // (0x0043ccb0 → 0x00439340), the players' controls are released (0x00430710), the bricks may play sounds
 // (0x0045b900), and the racing state's function runs at once.
-const stepCountdown = (step: RaceStepResult): RaceStepResult => {
+const stepCountdown = (step: RaceStepResult, frameMilliseconds: number): RaceStepResult => {
   const { raceState } = step
   if (raceState.phaseMilliseconds < COUNTDOWN_MILLISECONDS && !raceState.isCountdownSkipped)
     return step
@@ -299,13 +357,16 @@ const stepCountdown = (step: RaceStepResult): RaceStepResult => {
     finishedRacerCount: 0,
     powerUpStep: setBrickSoundsEnabled(controlled.powerUpStep, true),
   })
-  return stepRacing(getStepWith(step, sounding, [change.event, { type: 'race.controls_enabled' }]))
+  return stepRacing(
+    getStepWith(step, sounding, [change.event, { type: 'race.controls_enabled' }]),
+    frameMilliseconds
+  )
 }
 
 // Race_UpdateState1 0x004349a0: after 2 s each local player's racer is marked as starting (0x004393d0, flag
 // 0x400) and the countdown's function runs at once. The track's introduction camera (race +0x3ac) can hold the
 // state longer in the original; it is not modelled.
-const stepIntroduction = (step: RaceStepResult): RaceStepResult => {
+const stepIntroduction = (step: RaceStepResult, frameMilliseconds: number): RaceStepResult => {
   const { raceState } = step
   if (raceState.phaseMilliseconds < INTRODUCTION_MILLISECONDS) return step
   const change = getPhaseChange(raceState, RacePhase.COUNTDOWN, 0)
@@ -322,22 +383,23 @@ const stepIntroduction = (step: RaceStepResult): RaceStepResult => {
     raceState.racerSet
   )
   return stepCountdown(
-    getStepWith(step, Object.freeze({ ...change.raceState, racerSet: marked }), [change.event])
+    getStepWith(step, Object.freeze({ ...change.raceState, racerSet: marked }), [change.event]),
+    frameMilliseconds
   )
 }
 
 // Race_RunLoop 0x00432540: the state function for the current state.
-export const stepRacePhase = (step: RaceStepResult): RaceStepResult => {
+export const stepRacePhase = (step: RaceStepResult, frameMilliseconds: number): RaceStepResult => {
   switch (step.raceState.phase) {
     case RacePhase.INTRODUCTION:
-      return stepIntroduction(step)
+      return stepIntroduction(step, frameMilliseconds)
     case RacePhase.COUNTDOWN:
-      return stepCountdown(step)
+      return stepCountdown(step, frameMilliseconds)
     case RacePhase.RACING:
-      return stepRacing(step)
+      return stepRacing(step, frameMilliseconds)
     case RacePhase.FINISHING:
-      return stepFinishing(step)
+      return stepFinishing(step, frameMilliseconds)
     default:
-      return stepResults(step)
+      return stepResults(step, frameMilliseconds)
   }
 }

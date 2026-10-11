@@ -269,3 +269,16 @@ export const getStepWithRacerEffectsFinished = (
       ownerRacer: isOwnerCleared ? null : effect.ownerRacer,
     })
   }, step)
+
+// 0x0045b740 (thiscall: racer), the effects of a finishing racer: a warp of the racer that is still starting is
+// finished at once, and one that is running has its time set to 0, so it ends at the next update.
+export const getStepWithRacerWarpsFinished = (step: PowerUpStep, racer: number): PowerUpStep =>
+  step.world.effects.effects.reduce((current, effect) => {
+    if (effect.kind !== PowerUpEffectKind.WARP || effect.ownerRacer !== racer) return current
+    if (effect.state === EffectState.STARTING) {
+      return getStepWithEffect(current, { ...effect, state: EffectState.FINISHED })
+    }
+    return effect.state === EffectState.ACTIVE
+      ? getStepWithEffect(current, { ...effect, timerMilliseconds: 0 })
+      : current
+  }, step)

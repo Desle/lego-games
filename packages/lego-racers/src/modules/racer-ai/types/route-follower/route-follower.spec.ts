@@ -1,6 +1,6 @@
 import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
-import { createFloatArithmetic, FpuPrecision } from '../../../simulation-math/index.ts'
 import { UnportableRouteError } from '../racer-ai-errors/racer-ai-errors.ts'
+import { createFloatArithmetic, FpuPrecision } from '../../../simulation-math/index.ts'
 import {
   advanceRouteFollower,
   createRouteFollower,
@@ -137,12 +137,13 @@ describe('moveRouteFollower, 0x004a5750', () => {
     const follower = createStarted()
 
     // Act
-    const moved = moveRouteFollower(SINGLE, follower, ZERO)
+    const { follower: moved, displacement } = moveRouteFollower(SINGLE, follower, ZERO)
 
     // Assert
     expect(moved.time).toBe(32)
     expect(moved.position).toEqual({ x: 10, y: 0, z: 0 })
     expect(moved.previousRotation).toEqual({ x: 0, y: 0, z: 0, w: 1 })
+    expect(displacement).toEqual(ZERO)
   })
 
   it('moves along the segment by the part of the displacement in its direction', () => {
@@ -150,24 +151,49 @@ describe('moveRouteFollower, 0x004a5750', () => {
     const follower = createStarted()
 
     // Act
-    const moved = moveRouteFollower(SINGLE, follower, { x: 1, y: 5, z: 0 })
+    const { follower: moved, displacement } = moveRouteFollower(SINGLE, follower, {
+      x: 1,
+      y: 5,
+      z: 0,
+    })
 
     // Assert
     expect(moved.time).toBe(64)
     expect(moved.position).toEqual({ x: 11, y: 0, z: 0 })
+    expect(displacement).toEqual({ x: 1, y: 5, z: 0 })
   })
 
-  it('refuses a displacement that passes the end of the segment or goes backwards', () => {
+  it('moves back along the segment for a displacement against its direction', () => {
+    // Arrange
+    const follower = advanceRouteFollower(SINGLE, createStarted(), 32)
+
+    // Act
+    const { follower: moved, displacement } = moveRouteFollower(SINGLE, follower, {
+      x: -0.5,
+      y: 0,
+      z: 0,
+    })
+
+    // Assert
+    expect(follower.position).toEqual({ x: 11, y: 0, z: 0 })
+    expect(moved.position).toEqual({ x: 10.5, y: 0, z: 0 })
+    expect(displacement).toEqual({ x: -0.5, y: 0, z: 0 })
+  })
+
+  it('leaves the follower and shortens the displacement when the route ends before the move does', () => {
     // Arrange
     const follower = createStarted()
 
     // Act
-    const past = (): unknown => moveRouteFollower(SINGLE, follower, { x: 5, y: 0, z: 0 })
-    const back = (): unknown => moveRouteFollower(SINGLE, follower, { x: -1, y: 0, z: 0 })
+    const { follower: moved, displacement } = moveRouteFollower(SINGLE, follower, {
+      x: 500,
+      y: 0,
+      z: 0,
+    })
 
     // Assert
-    expect(past).toThrow(UnportableRouteError)
-    expect(back).toThrow(UnportableRouteError)
+    expect(moved).toBe(follower)
+    expect(displacement.x).toBeLessThan(500)
   })
 
   it('leaves a follower without a route alone', () => {
@@ -175,7 +201,7 @@ describe('moveRouteFollower, 0x004a5750', () => {
     const follower = createRouteFollower(null, 1)
 
     // Act
-    const moved = moveRouteFollower(SINGLE, follower, ZERO)
+    const { follower: moved } = moveRouteFollower(SINGLE, follower, ZERO)
 
     // Assert
     expect(moved).toBe(follower)

@@ -19,7 +19,6 @@ import type {
 } from '../../../computer-racer-route/index.ts'
 import { createFloatArithmetic } from '../../../simulation-math/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
-import { UnportableRouteError } from '../racer-ai-errors/racer-ai-errors.ts'
 import type { RouteFollower } from '../racer-ai.types.ts'
 import { getRouteSampleOffset } from '../route-sample/route-sample.ts'
 import { createRouteFollower, moveRouteFollower } from './route-follower.ts'
@@ -178,7 +177,7 @@ const getEmulatorCall = (precision: EmulatorPrecision, item: MoveCase): Emulator
     {
       name: 'displacement',
       words: [item.displacement.x, item.displacement.y, item.displacement.z].map(getBitsFromFloat),
-      isRead: false,
+      isRead: true,
     },
   ],
 })
@@ -193,26 +192,26 @@ const expectMatchesOriginal = async (precision: EmulatorPrecision): Promise<void
   // Act
   const results = await session.callBatch(cases.map((item) => getEmulatorCall(precision, item)))
   await session.close()
-  const outcomes = cases.map((item, index) => {
-    try {
-      const moved = moveRouteFollower(arithmetic, item.follower, item.displacement)
-      const original = results[index]?.buffers['follower'] ?? []
-      const portWords = getPortWords(moved)
-      const isSame = portWords.every((word, wordIndex) =>
+  const mismatches = cases.flatMap((item, index) => {
+    const moved = moveRouteFollower(arithmetic, item.follower, item.displacement)
+    const original = results[index]?.buffers['follower'] ?? []
+    const originalDisplacement = results[index]?.buffers['displacement'] ?? []
+    const portWords = getPortWords(moved.follower)
+    const portDisplacement = [moved.displacement.x, moved.displacement.y, moved.displacement.z].map(
+      getBitsFromFloat
+    )
+    const isSame =
+      portWords.every((word, wordIndex) =>
         wordIndex === 10 ? true : getIsSameFloatBits(original[wordIndex] ?? 0, word)
+      ) &&
+      portDisplacement.every((word, wordIndex) =>
+        getIsSameFloatBits(originalDisplacement[wordIndex] ?? 0, word)
       )
-      return isSame ? 'same' : `different ${String(index)}`
-    } catch (error) {
-      if (error instanceof UnportableRouteError) return 'refused'
-      throw error
-    }
+    return isSame ? [] : [index]
   })
-  const mismatches = outcomes.filter((outcome) => outcome.startsWith('different'))
-  const comparedCount = outcomes.filter((outcome) => outcome === 'same').length
 
   // Assert
   expect(mismatches).toEqual([])
-  expect(comparedCount).toBeGreaterThan(CASE_COUNT / 4)
 }
 
 describe.skipIf(!getIsEmulatorAvailable())('the route follower move against the original', () =>

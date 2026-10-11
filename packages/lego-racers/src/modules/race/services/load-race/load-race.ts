@@ -201,6 +201,8 @@ export const loadRaceDefinition = (
       ...getCollisionObjectIndex(description.firstCollisionObject),
       ...getCollisionObjectIndex(description.checkpointObject),
     ],
+    pointsRecord: options.pointsRecord ?? null,
+    isSettingsFlag40Set: options.isSettingsFlag40Set ?? false,
     trackMaterials:
       trackMaterialBytes === null
         ? []

@@ -1,12 +1,15 @@
 import { runTrackLogic } from '../../../track-logic/index.ts'
 import type { TrackSession } from '../../../track-logic/index.ts'
-import { stepCarRigidBody } from '../../../racer-physics/index.ts'
-import { getRacer, setRacer } from '../../../racer/index.ts'
-import type { RacerBoundary, RacerSetContext } from '../../../racer/index.ts'
+import { moveOutOfContact, stepCarRigidBody } from '../../../racer-physics/index.ts'
+import { getRacer, getRacerCollisionObjects, setRacer } from '../../../racer/index.ts'
+import type { RacerBoundary, RacerSetContext, RacerSet } from '../../../racer/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
 import { createCarBodyContactHooks } from '../../types/car-body-contacts/car-body-contacts.ts'
 import { getRacerAfterCheckpointContact } from '../../types/checkpoint-touch/checkpoint-touch.ts'
-import { stepScriptedCarBody } from '../../types/scripted-car-body/scripted-car-body.ts'
+import {
+  getScriptedBodySeparated,
+  stepScriptedCarBody,
+} from '../../types/scripted-car-body/scripted-car-body.ts'
 import type { RaceRacerSet } from '../../types/race.types.ts'
 import type { CarBodyContact } from '../../types/surface-materials/surface-materials.types.ts'
 import { changeRacer, changeTrackLogic, getRaceRacerSetOf } from '../race-world/race-world.ts'
@@ -120,4 +123,47 @@ export const stepRacerScriptWithContacts: RacerBoundary = (
     setRacer(raced, racerIndex, Object.freeze({ ...racer, carBody }))
   )
   return applyCarBodyContacts(context, stepped, racerIndex, contacts)
+}
+
+// 0x00429680 on a scripted body: the route follower is moved by the displacement (0x004a5750).
+export const separateScriptedRacerBody = (
+  context: RacerSetContext,
+  racerSet: RacerSet,
+  racerIndex: number,
+  displacement: Vector3
+): RacerSet => {
+  const raced = getRaceRacerSetOf(racerSet)
+  return changeRacer(raced, racerIndex, (racer) =>
+    Object.freeze({
+      ...racer,
+      carBody: getScriptedBodySeparated(context.arithmetic, racer.carBody, displacement),
+    })
+  )
+}
+
+// 0x00429680 on a free body is 0x004490b0: the body moves out of contact, with the car body's contact filter.
+export const separateFreeRacerBody = (
+  context: RacerSetContext,
+  racerSet: RacerSet,
+  racerIndex: number,
+  displacement: Vector3
+): RacerSet => {
+  const raced = getRaceRacerSetOf(racerSet)
+  const racer = getRacer(raced, racerIndex)
+  const contacts: CarBodyContact[] = []
+  const rigidBody = moveOutOfContact(
+    context.arithmetic,
+    racer.carBody.rigidBody,
+    displacement,
+    getRacerCollisionObjects(context, racer),
+    createCarBodyContactHooks(raced.surfaces, (contact) => void contacts.push(contact))
+  )
+  const moved = getRaceRacerSetOf(
+    setRacer(
+      raced,
+      racerIndex,
+      Object.freeze({ ...racer, carBody: Object.freeze({ ...racer.carBody, rigidBody }) })
+    )
+  )
+  return applyCarBodyContacts(context, moved, racerIndex, contacts)
 }
