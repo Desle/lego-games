@@ -52,10 +52,7 @@ const getComputerRacerFields = (racer: Racer, index: number): TraceFields => {
       carBody.isScripted ? 1 : 0,
       carBody.isRouteHeld ? 1 : 0
     ),
-    [`${prefix}.scripted.speed`]: [
-      ...getFloatWords([carBody.speedFactor]),
-      ...getFloatWords([carBody.rampMilliseconds]),
-    ],
+    [`${prefix}.scripted.speed`]: getFloatWords([carBody.speedFactor]),
     [`${prefix}.scripted.motion`]: getFloatWords([
       carBody.bounceHeight,
       carBody.lateralOffset,

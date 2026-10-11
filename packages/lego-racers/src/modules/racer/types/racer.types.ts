@@ -159,8 +159,6 @@ export type CarBody = {
   readonly routeFollower: RouteFollower | null
   // +0x748: non-zero holds a scripted body still (0x004374c0 sets it, 0x00439340 clears it at the start).
   readonly isRouteHeld: boolean
-  // +0x77c: float32 time of the ramped target (flag 0x10000); nothing in the ported code writes it.
-  readonly rampMilliseconds: number
   // +0x7cc: float32 sideways offset from the route, returning to 0.
   readonly lateralOffset: number
   // +0x7c8, +0x7d0: float32 bounce height above the route and its vertical speed.

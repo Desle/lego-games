@@ -51,6 +51,21 @@ describe('golden trace: the computer racers', () => {
           circuitName: entry.circuitName,
           isMirrored: entry.isFlagged,
         })
+        if (process.env['COMPUTER_DUMP'] !== undefined)
+          writeFileSync(
+            `${process.env['COMPUTER_DUMP']}/${entry.name}.json`,
+            JSON.stringify({
+              raceFolder: scenario.raceFolder,
+              racerCodes: scenario.racerCodes,
+              racerCount: scenario.racerCount,
+              localPlayerCount: 1,
+              randomPosition: 0,
+              circuit: scenario.circuitName,
+              isMirrored: scenario.isMirrored,
+              fpu: 'auto',
+              frames: scenario.frames.map((frame) => ({ dt: frame.milliseconds, keys: [] })),
+            })
+          )
         const result = await runGoldenTrace(scenario, jam, readOriginalExecutable())
         const computers = result.comparison.divergenceByField
           .filter((divergence) => /^racer[1-9]\./u.test(divergence.field))

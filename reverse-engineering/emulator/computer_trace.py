@@ -11,7 +11,7 @@ COMPUTER_RACER_FIELDS = (
     ("follower.pose", FOLLOWER_OFFSET + 0x00, 10),
     ("follower.playback", FOLLOWER_OFFSET + 0x2C, 19),
     ("scripted.state", CAR_BODY_OFFSET + 0x744, 2),
-    ("scripted.speed", CAR_BODY_OFFSET + 0x778, 2),
+    ("scripted.speed", CAR_BODY_OFFSET + 0x778, 1),
     ("scripted.motion", CAR_BODY_OFFSET + 0x7C8, 10),
     ("ai.personality", 0xD1C, 2),
     ("ai.timers", 0xD34, 1),
