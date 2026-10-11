@@ -36,8 +36,7 @@ export const getBrickColorMaterialIndices = (
   Object.freeze(
     colors.map((color) =>
       materialNames.findIndex(
-        (name) =>
-          name.slice(0, MATERIAL_NAME_LENGTH) === color.name.slice(0, MATERIAL_NAME_LENGTH)
+        (name) => name.slice(0, MATERIAL_NAME_LENGTH) === color.name.slice(0, MATERIAL_NAME_LENGTH)
       )
     )
   )

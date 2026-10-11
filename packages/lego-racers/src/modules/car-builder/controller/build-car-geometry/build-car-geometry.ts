@@ -185,10 +185,7 @@ export const getBrickFaces = (
 // first brick gives its origin vertex (the car's origin is that vertex: x and y negated, z times -0.4 so that after the
 // brick height scale it lies at 0). Any other first brick is centred on the middle of its extent in x and y and rests
 // on z = 0.
-const getOrigin = (
-  database: BrickDatabase,
-  design: CarDesign
-): Vector3 => {
+const getOrigin = (database: BrickDatabase, design: CarDesign): Vector3 => {
   const first = design.bricks[0]
   if (first === undefined) return { x: 0, y: 0, z: 0 }
   const { piece } = first

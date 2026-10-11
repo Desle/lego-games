@@ -9,6 +9,7 @@ The data side of the build-a-car menu, as the original's builder does it (`0x004
 - Read the files: `parseBrickDatabase`, `parseBrickColors`, `parseCarSetFileNames`, `parseCarSet`, `parseSaveFile`; or `loadSavedCars(readFile, path)` for a save with every design loaded.
 - Ask whether a brick may go somewhere: `getPlacement(grid, footprint, x, y, orientation, isAutoHeight)` (the height it rests at, or not placeable); put it there: `getGridWithBrick`.
 - Load a design: `loadCarDesign(bytes, database)` places the bricks of a save in order and drops any the rules refuse.
+- Draw it: `buildCarGeometry(database, design, colorMaterialIndices)` gives the triangles by material.
 - Weigh it: `getCarWeight(arithmetic, design)` gives the weight (unit cells of the builder's own bricks) and the centre offsets the racer slot carries.
 
 ## Invariants
@@ -19,4 +20,4 @@ The data side of the build-a-car menu, as the original's builder does it (`0x004
 
 ## Out of scope
 
-The car's mesh (`buildCarModel`, once ported), the figure builder, the menu screens, saving a design.
+The coplanar-face clipping and vertex-cache passes of the mesh builder, the figure builder, the menu screens, saving a design.
