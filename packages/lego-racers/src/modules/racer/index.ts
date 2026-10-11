@@ -4,7 +4,17 @@ export {
   getRacerSphere,
   RACER_COLLISION_DEPENDENCIES_NOT_YET_PORTED,
 } from './controller/collide-racers/collide-racers.ts'
-export { getRacerVolume, getRacerVolumeParts } from './types/racer-volume/racer-volume.ts'
+export {
+  getRacerAfterWarpDraw,
+  getRacerWithPartsMarked,
+  getWarpFadeScale,
+} from './types/vehicle-bounds/vehicle-bounds.ts'
+export {
+  getFreshRacerVolumeParts,
+  getRacerReadVolumeParts,
+  getRacerVolume,
+  getRacerVolumeParts,
+} from './types/racer-volume/racer-volume.ts'
 export { endRacerKick, respondToRacerContact } from './controller/racer-contact/racer-contact.ts'
 export { followDriverRoute } from './controller/follow-driver-route/follow-driver-route.ts'
 export { notifyRacerContact } from './controller/notify-racer-contact/notify-racer-contact.ts'

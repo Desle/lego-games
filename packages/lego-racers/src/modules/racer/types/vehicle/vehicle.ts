@@ -101,6 +101,8 @@ export const createVehicle = (
     bodyRotation: IDENTITY_MATRIX3,
     forwardLean: 0,
     driverPosition: ZERO_VECTOR3,
+    bodyScale: 1,
+    boundsCaches: null,
   })
 
 // 0x0043cbb0 (thiscall on the racer set: position, minimum and maximum squared distance): the nearest racer inside the
@@ -407,6 +409,7 @@ export const updateVehicle: RacerBoundary = (context, racerSet, racerIndex, step
       vehicle: Object.freeze({
         ...drivenRacer.vehicle,
         volume: getRacerVolume(arithmetic, drivenRacer),
+        boundsCaches: null,
       }),
     })
   )

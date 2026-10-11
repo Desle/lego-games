@@ -305,6 +305,19 @@ export type Vehicle = {
   readonly forwardLean: number
   // The driver figure's world position, the seat point carried by the car model frame (0x0043e740 ends with it).
   readonly driverPosition: Vector3
+  // +0x3c's +0x58: the scale of the car model part, which 0x00440160 sets together with the figures' (`Figure.scale`).
+  readonly bodyScale: number
+  // The bounding caches (+0x04..+0x10) of the four parts, where they differ from a fresh refresh: 0x00440160 and the
+  // warp's draw (0x0045d940) leave a part's radius at -1 or its sphere at the origin until the next update refreshes
+  // it (0x00411ef0 reads every part through the getters 0x00411c60 and 0x00411ca0). null parts are fresh.
+  readonly boundsCaches: VehicleBoundsCaches | null
+}
+
+export type VehicleBoundsCaches = {
+  readonly body: BoundingSphere | null
+  readonly second: BoundingSphere | null
+  readonly wheels: BoundingSphere | null
+  readonly driver: BoundingSphere | null
 }
 
 // The racer (0xe34 bytes; constructor 0x00436990, field reset 0x00436bd0). Only the fields the ported passes touch.

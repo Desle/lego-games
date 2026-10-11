@@ -9,7 +9,7 @@ import {
 import { getRaceStateWithGrants } from '../../../race/index.ts'
 import type { RaceDefinition, RaceState } from '../../../race/index.ts'
 import { DEFAULT_KEYBOARD_BINDINGS, getRacerControls } from '../../../race-input/index.ts'
-import { getRacerSphere, getRacerVolume, getRacerVolumeParts } from '../../../racer/index.ts'
+import { getRacerVolume, getRacerVolumeParts } from '../../../racer/index.ts'
 import type { BoundingSphere } from '../../../racer-collision/index.ts'
 import type { EmitterPool } from '../../../emitter/index.ts'
 import type { Racer, RacerSetContext } from '../../../racer/index.ts'
@@ -88,9 +88,9 @@ const getComputerFields = (racer: Racer, prefix: string): TraceFields => {
 
 const getRacerFields = (racer: Racer, index: number, context: RacerSetContext): TraceFields => {
   const { rigidBody } = racer.carBody
-  const sphere = getRacerSphere(context, racer)
   const volume = racer.vehicle.volume ?? getRacerVolume(context.arithmetic, racer)
   const parts = getRacerVolumeParts(context.arithmetic, racer)
+  const sphere = parts.wheels
   const prefix = `racer${String(index)}`
   return {
     ...getComputerFields(racer, prefix),

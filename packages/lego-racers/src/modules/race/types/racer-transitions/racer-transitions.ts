@@ -11,6 +11,7 @@ import {
   endCarBodySpin,
   getDriven,
   getRacerWithoutTimedEffect,
+  getRacerWithPartsMarked,
   getRacerWithTimedEffect,
   setCarBodyHeadingFromFrame,
   setCarBodyPush,
@@ -306,7 +307,7 @@ const getRacerWarpStarted = (arithmetic: FloatArithmetic, racer: Racer): Racer =
     'extraForceB',
     undefined
   )
-  return Object.freeze({
+  const started = Object.freeze({
     ...ended,
     flags: ((ended.flags & ~WARP_PENDING_FLAG) | WARP_DISABLED_FLAG) >>> 0,
     carBody: untowed.isScripted
@@ -319,6 +320,8 @@ const getRacerWarpStarted = (arithmetic: FloatArithmetic, racer: Racer): Racer =
           }),
         }),
   })
+  // 0x00440160(1.0), the last call of 0x0045dc90's first branch.
+  return getRacerWithPartsMarked(arithmetic, started, 1)
 }
 
 // 0x00439660: the racer is back on the track.
