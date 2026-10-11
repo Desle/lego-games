@@ -1,8 +1,9 @@
-import { getEffect, PowerUpEffectKind } from '../../../power-ups/index.ts'
+import { getEffect, PowerUpEffectKind, startStepEmitter } from '../../../power-ups/index.ts'
 import type { PowerUpEffect, PowerUpStep } from '../../../power-ups/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
 import { getThrownDebris, getUpdatedDebris } from '../../types/debris/debris.ts'
 import {
+  ExplosionState,
   getPoolWithExplosion,
   getRecycledPool,
   getUpdatedExplosion,
@@ -33,15 +34,28 @@ const getExplosionBase = (
   return null
 }
 
-const getWorldWithExplosion = (
+// 0x00421520 starts the explosion's "explode" emitter at its position unless it lies outside the world.
+const getStepWithExplosionEmitter = (
+  step: PowerUpStep,
+  context: ProjectileContext,
+  pool: ExplosionPool,
+  position: Vector3
+): PowerUpStep => {
+  const started = pool.explosions[pool.activeIndices[0] ?? -1]
+  return started === undefined || started.state === ExplosionState.IDLE
+    ? step
+    : startStepEmitter(step, context.powerUps.arithmetic, 'explode', position)
+}
+
+const getStepWithExplosion = (
   step: PowerUpStep,
   world: ProjectileWorld,
   context: ProjectileContext,
   event: ExplosionEvent
-): ProjectileWorld => {
+): ProjectileStep => {
   const effect = getEffect(step, event.effect)
   const base = getExplosionBase(getMotion(world, event.effect), effect.kind)
-  if (base === null) return world
+  if (base === null) return Object.freeze({ step, world })
   const { add } = context.powerUps.arithmetic
   const position = Object.freeze({
     x: effect.kind === PowerUpEffectKind.BARREL ? add(event.offset.x, base.x) : base.x,
@@ -56,9 +70,12 @@ const getWorldWithExplosion = (
     event.isGroundHit,
     effect.ownerRacer
   )
-  return Object.freeze(
-    event.isSpiked ? { ...world, spikedExplosions: spawned } : { ...world, explosions: spawned }
-  )
+  return Object.freeze({
+    step: getStepWithExplosionEmitter(step, context, spawned, position),
+    world: Object.freeze(
+      event.isSpiked ? { ...world, spikedExplosions: spawned } : { ...world, explosions: spawned }
+    ),
+  })
 }
 
 // What the power-ups events of one effect's update start in the projectiles' world: its explosions
@@ -70,10 +87,7 @@ export const getStepWithConsequences = (
 ): ProjectileStep =>
   current.step.events.slice(previousEventCount).reduce<ProjectileStep>((state, event) => {
     if (event.type === 'power_ups.explosion') {
-      return Object.freeze({
-        step: state.step,
-        world: getWorldWithExplosion(state.step, state.world, context, event),
-      })
+      return getStepWithExplosion(state.step, state.world, context, event)
     }
     if (event.type !== 'power_ups.debris_thrown') return state
     return event.directions.reduce<ProjectileStep>((thrown, _direction) => {

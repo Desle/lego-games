@@ -8,6 +8,12 @@ export {
   rollComputerStartTurbo,
 } from './controller/computer-power-up-use/computer-power-up-use.ts'
 export {
+  checkEffectEmitter,
+  releaseEffectEmitter,
+  startEffectEmitter,
+  startStepEmitter,
+} from './controller/effect-emitters/effect-emitters.ts'
+export {
   endProjectileFlight,
   hitRacerWithProjectile,
   touchHazardEffect,

@@ -4,6 +4,7 @@ import {
   PowerUpEffectKind,
 } from '../../types/power-up-effect-kind/power-up-effect-kind.ts'
 import type { PowerUpEffect, RacerPowerUpStatus } from '../../types/power-ups.types.ts'
+import { releaseEffectEmitter, startEffectEmitter } from '../effect-emitters/effect-emitters.ts'
 import {
   advancePowerUpEffect,
   retractGrapple,
@@ -183,11 +184,18 @@ const hitWithWand = (
     effect,
     victim
   )
-  return getStepWithEffect(struck, {
+  const held = getStepWithEffect(struck, {
     ...getEffect(struck, effect.id),
     heldMilliseconds: 0,
     targetRacer: victim,
   })
+  // The sparks of an earlier strike are let go before the new ones start.
+  return startEffectEmitter(
+    releaseEffectEmitter(held, effect.id, false),
+    context.arithmetic,
+    effect.id,
+    'lghthit'
+  )
 }
 
 // A projectile in flight (state 3) reached a racer; reported by the projectile code, which is not ported.
@@ -300,11 +308,16 @@ export const endProjectileFlight = (
     },
   ])
   if (isBarrel) {
-    return getStepWithEffect(exploded, {
-      ...effect,
-      state: EffectState.ENDING,
-      timerMilliseconds: 500,
-    })
+    // 0x00452ff0 lets the barrel's sparks go as it explodes.
+    return releaseEffectEmitter(
+      getStepWithEffect(exploded, {
+        ...effect,
+        state: EffectState.ENDING,
+        timerMilliseconds: 500,
+      }),
+      effectId,
+      false
+    )
   }
   return advancePowerUpEffect(exploded, context, effectId)
 }

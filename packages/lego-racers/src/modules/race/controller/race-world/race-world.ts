@@ -215,6 +215,7 @@ export const changePowerUps: RaceWorldChange = (context, racerSet, change) => {
         )
       ),
       random: Object.freeze({ table: step.world.random.table, position: racerSet.randomPosition }),
+      emitters: racerSet.emitters,
     }),
   })
   const changed = change(synced, getPowerUpContext(context, racerSet))
@@ -222,6 +223,7 @@ export const changePowerUps: RaceWorldChange = (context, racerSet, change) => {
     ...racerSet,
     powerUpStep: changed,
     randomPosition: changed.world.random.position,
+    emitters: changed.world.emitters,
     racers: Object.freeze(
       racerSet.racers.map((racer, index) => {
         const powerUpRacer = changed.world.racers[index]

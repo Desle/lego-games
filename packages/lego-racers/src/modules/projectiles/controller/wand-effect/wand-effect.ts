@@ -1,5 +1,6 @@
 import {
   EffectState,
+  releaseEffectEmitter,
   getEffect,
   getNextInCone,
   hitRacerWithProjectile,
@@ -89,8 +90,9 @@ const getStepWithBeam = (
     struck: struck === undefined ? null : { center: struck.position, radius: struck.beamRadius },
   })
   if (effect.targetRacer !== null) return { step, beam }
+  // 0x00455660: with no racer held the sparks of the last strike are let go.
   return {
-    step: getStepWithBeamHits(step, context, effect, beam, {
+    step: getStepWithBeamHits(releaseEffectEmitter(step, effectId, false), context, effect, beam, {
       origin: beam.origin,
       direction: owner.muzzleDirection,
       window: WAND_WINDOW,
