@@ -1,0 +1,96 @@
+// What the player sees and hears, as the original produces it in the emulator (reverse-engineering/emulator/presentation_trace.py).
+
+export type PresentationFrameInput = {
+  readonly milliseconds: number
+  readonly scanCodes: readonly number[]
+}
+
+export type PresentationScenario = {
+  readonly name: string
+  readonly raceFolder: string
+  readonly racerCodes: readonly string[]
+  readonly racerCount: number
+  readonly localPlayerCount: number
+  readonly circuitName: string
+  readonly isMirrored: boolean
+  readonly frames: readonly PresentationFrameInput[]
+  // The frames whose draws are recorded (draws are large); null records every frame.
+  readonly recordFrames: readonly number[] | null
+  readonly isRenderRecorded: boolean
+}
+
+// DDPIXELFORMAT masks of a texture surface (red, green, blue, alpha) and its raw rows.
+export type OriginalTexture = {
+  readonly hash: string
+  readonly width: number
+  readonly height: number
+  readonly pitch: number
+  readonly bitsPerPixel: number
+  readonly masks: readonly number[]
+  readonly pixels: Uint8Array
+}
+
+// One vertex as Direct3D received it (FVF 0x1c4): the screen position, 1/w, the colours and the texture coordinates.
+export type OriginalVertex = {
+  readonly x: number
+  readonly y: number
+  readonly depth: number
+  readonly reciprocalW: number
+  readonly diffuse: number
+  readonly specular: number
+  readonly u: number
+  readonly v: number
+}
+
+export type OriginalRenderState = {
+  // D3DRENDERSTATETYPE number -> value
+  readonly render: Readonly<Record<string, number>>
+  // "stage.D3DTEXTURESTAGESTATETYPE" -> value
+  readonly stage: Readonly<Record<string, number>>
+}
+
+export type OriginalDraw = {
+  readonly primitive: number
+  readonly fvf: number
+  readonly stateIndex: number
+  readonly textureHash: string | null
+  readonly vertices: readonly OriginalVertex[]
+  // Triangle list indices into `vertices`; null for a non-indexed draw.
+  readonly indices: readonly number[] | null
+  // GolDP's model-to-clip matrix of the draw (device +0xc8490, row vectors) and its viewport scale; empty when unknown.
+  readonly clipMatrix: readonly number[]
+  readonly modelMatrix: readonly number[]
+}
+
+export type OriginalViewport = {
+  readonly x: number
+  readonly y: number
+  readonly width: number
+  readonly height: number
+}
+
+export type OriginalRenderFrame = {
+  readonly frame: number
+  readonly viewport: OriginalViewport | null
+  readonly states: readonly OriginalRenderState[]
+  readonly draws: readonly OriginalDraw[]
+}
+
+export type OriginalAudioEvent = {
+  readonly kind: string
+  readonly values: Readonly<Record<string, unknown>>
+}
+
+export type OriginalAudioFrame = {
+  // -1 is the race's loading, before the first frame.
+  readonly frame: number
+  readonly events: readonly OriginalAudioEvent[]
+}
+
+export type OriginalPresentation = {
+  readonly textures: ReadonlyMap<string, OriginalTexture>
+  readonly renderFrames: readonly OriginalRenderFrame[]
+  readonly audioFrames: readonly OriginalAudioFrame[]
+  readonly introductionCameraLimit: number
+  readonly introductionCameraRate: number
+}

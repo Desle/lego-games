@@ -20,7 +20,6 @@ import {
   stepRace,
 } from '@lego-games/lego-racers/race'
 import type { RaceState } from '@lego-games/lego-racers/race'
-import { getHudLayout } from '@lego-games/lego-racers/race-hud'
 import { getRacerControls } from '@lego-games/lego-racers/race-input'
 import {
   createRacePresentation,
@@ -28,13 +27,10 @@ import {
   getRacerPoses,
   stepRacePresentation,
 } from '@lego-games/lego-racers/race-presentation'
-import type { HudContext, RacePresentation } from '@lego-games/lego-racers/race-presentation'
+import type { RacePresentation } from '@lego-games/lego-racers/race-presentation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { DEVELOPMENT_GAME_FILE_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
-import {
-  createHudImageUrls,
-  createHudTextMeasure,
-} from '../../services/hud-resources/hud-resources.ts'
+import { createHudImageUrls, getHudContext } from '../../services/hud-resources/hud-resources.ts'
 import { getDevelopmentJam } from '../../services/jam-file/jam-file.ts'
 import { createRaceAudioPlayer } from '../../services/race-audio-player/race-audio-player.ts'
 import { loadRaceAssets } from '../../services/race-assets/race-assets.ts'
@@ -48,8 +44,6 @@ import type { RaceController, RaceScreen } from './race-controller.types.ts'
 export const RACE_STAGE_SIZE = Object.freeze({ width: 800, height: 600 })
 const EXECUTABLE_NAME = 'LEGORacers.exe'
 const JAM_NAME = 'LEGO.JAM'
-const HOLDER_IMAGE_NAME = 'HOLDER'
-const FALLBACK_HOLDER_SIZE = Object.freeze({ width: 64, height: 64 })
 
 const INITIAL_SCREEN: RaceScreen = Object.freeze({
   status: RaceStatus.IDLE,
@@ -108,25 +102,6 @@ const getChosenGameFiles = async (files: readonly File[]): Promise<LoadedGameFil
       executable: new Uint8Array(await executableFile.arrayBuffer()),
       tunes: new Map(tunes),
     },
-  }
-}
-
-const getHudContext = (assets: RaceAssets): HudContext => {
-  const measureText = createHudTextMeasure(assets.hudFonts)
-  const getString = (stringId: number) => assets.getString(stringId)
-  const holder = assets.hudImages.get(HOLDER_IMAGE_NAME) ?? FALLBACK_HOLDER_SIZE
-  return {
-    layout: getHudLayout({
-      screenWidth: RACE_STAGE_SIZE.width,
-      screenHeight: RACE_STAGE_SIZE.height,
-      measureText,
-      getString,
-      holderSize: { width: holder.width, height: holder.height },
-    }),
-    getString,
-    imageNames: assets.imageNames,
-    getImageSize: (name) => assets.hudImages.get(name.toUpperCase()) ?? null,
-    measureText,
   }
 }
 
@@ -239,7 +214,7 @@ export const useRaceController = (): RaceController => {
     const viewport = createRaceViewport(container, assets, RACE_STAGE_SIZE)
     const input = createRaceInputSource()
     const audio = createRaceAudioPlayer(assets)
-    const hudContext = getHudContext(assets)
+    const hudContext = getHudContext(assets, RACE_STAGE_SIZE)
     const hudImageUrls = createHudImageUrls(assets.hudImages)
     const resumeAudio = () => audio.resume()
     window.addEventListener('keydown', resumeAudio)

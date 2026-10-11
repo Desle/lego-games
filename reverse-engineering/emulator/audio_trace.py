@@ -55,7 +55,7 @@ class AudioRecorder:
         machine.add_address_hook(MUSIC_LIST_OPEN, self.on_music_open)
         machine.add_address_hook(SOUND_LOAD, self.on_sound_load)
         machine.add_address_hook(STREAM_PLAY, self.on_stream_play)
-        machine.add_address_hook(STREAM_STOP, lambda: self.add({"k": "streamStop", "stream": self.stream_name()}))
+        machine.add_address_hook(STREAM_STOP, lambda: self.add({"kind": "streamStop", "stream": self.stream_name()}))
         machine.add_address_hook(STREAM_VOLUME, self.on_stream_volume)
 
     # Frames ---------------------------------------------------------------------------------------------------------
@@ -80,34 +80,39 @@ class AudioRecorder:
 
         return self.machine.read_u32(self.machine.uc.reg_read(UC_X86_REG_ESP) + 4 + 4 * index)
 
+    def caller(self) -> str:
+        from unicorn.x86_const import UC_X86_REG_ESP
+
+        return hex(self.machine.read_u32(self.machine.uc.reg_read(UC_X86_REG_ESP)))
+
     def this(self) -> int:
         return self.machine.uc.reg_read(UC_X86_REG_ECX)
 
     def on_play_at(self) -> None:
-        self.add({"k": "soundPlayAt", "id": self.argument(0), "arguments": [self.argument(index) for index in range(1, 6)]})
+        self.add({"kind": "soundPlayAt", "from": self.caller(), "id": self.argument(0), "arguments": [self.argument(index) for index in range(1, 6)]})
 
     def on_play(self) -> None:
-        self.add({"k": "soundPlay", "id": self.argument(0)})
+        self.add({"kind": "soundPlay", "from": self.caller(), "id": self.argument(0)})
 
     def on_sound_load(self) -> None:
         self.pending_sound_name = self.machine.read_c_string(self.argument(0))
-        self.add({"k": "soundLoad", "name": self.pending_sound_name})
+        self.add({"kind": "soundLoad", "name": self.pending_sound_name})
 
     def on_music_open(self) -> None:
         list_object = self.this()
         index = self.argument(0)
         names = self.machine.read_u32(list_object + MUSIC_NAME_TABLE_OFFSET)
         name = self.machine.read_c_string(names + index * MUSIC_NAME_STRIDE) if names else ""
-        self.add({"k": "musicOpen", "index": index, "name": name})
+        self.add({"kind": "musicOpen", "index": index, "name": name})
 
     def stream_name(self) -> str:
         return self.machine.read_c_string(self.this() + STREAM_NAME_OFFSET)
 
     def on_stream_play(self) -> None:
-        self.add({"k": "streamPlay", "stream": self.stream_name(), "isLooping": self.argument(0) != 0})
+        self.add({"kind": "streamPlay", "stream": self.stream_name(), "isLooping": self.argument(0) != 0})
 
     def on_stream_volume(self) -> None:
-        self.add({"k": "streamVolume", "stream": self.stream_name(), "volume": struct.unpack("<f", struct.pack("<I", self.argument(0)))[0]})
+        self.add({"kind": "streamVolume", "stream": self.stream_name(), "volume": struct.unpack("<f", struct.pack("<I", self.argument(0)))[0]})
 
     # DirectSound ---------------------------------------------------------------------------------------------------
 
@@ -148,7 +153,7 @@ class AudioRecorder:
         )
         self.next_buffer_number += 1
         self.machine.write_u32(argument(2), buffer)
-        self.add({"k": "bufferCreate", "buffer": self.machine.com.object_kinds[buffer]["number"], "flags": flags, "bytes": byte_count, "channels": format_fields[1], "rate": format_fields[2], "bits": format_fields[5]})
+        self.add({"kind": "bufferCreate", "buffer": self.machine.com.object_kinds[buffer]["number"], "flags": flags, "bytes": byte_count, "channels": format_fields[1], "rate": format_fields[2], "bits": format_fields[5]})
         return 0
 
     def on_sound_DuplicateSoundBuffer(self, this, record, argument):
@@ -156,7 +161,7 @@ class AudioRecorder:
         buffer = self.machine.com.create("DirectSoundBuffer", **{key: value for key, value in source.items() if key not in ("kind", "references", "number")}, number=self.next_buffer_number)
         self.next_buffer_number += 1
         self.machine.write_u32(argument(2), buffer)
-        self.add({"k": "bufferDuplicate", "buffer": self.next_buffer_number - 1, "source": source["number"]})
+        self.add({"kind": "bufferDuplicate", "buffer": self.next_buffer_number - 1, "source": source["number"]})
         return 0
 
     def memory(self, record) -> int:
@@ -219,7 +224,7 @@ class AudioRecorder:
         record["started_at"] = self.machine.operating_system.now_milliseconds
         self.add(
             {
-                "k": "bufferPlay",
+                "kind": "bufferPlay",
                 "buffer": record["number"],
                 "isLooping": record["is_looping"],
                 "isPrimary": bool(record["flags"] & DSBCAPS_PRIMARYBUFFER),
@@ -235,22 +240,22 @@ class AudioRecorder:
     def on_buffer_Stop(self, this, record, argument):
         record["position"] = self.play_position(record)
         record["is_playing"] = False
-        self.add({"k": "bufferStop", "buffer": record["number"]})
+        self.add({"kind": "bufferStop", "buffer": record["number"]})
         return 0
 
     def on_buffer_SetVolume(self, this, record, argument):
         record["volume"] = struct.unpack("<i", struct.pack("<I", argument(1)))[0]
-        self.add({"k": "bufferVolume", "buffer": record["number"], "volume": record["volume"]})
+        self.add({"kind": "bufferVolume", "buffer": record["number"], "volume": record["volume"]})
         return 0
 
     def on_buffer_SetPan(self, this, record, argument):
         record["pan"] = struct.unpack("<i", struct.pack("<I", argument(1)))[0]
-        self.add({"k": "bufferPan", "buffer": record["number"], "pan": record["pan"]})
+        self.add({"kind": "bufferPan", "buffer": record["number"], "pan": record["pan"]})
         return 0
 
     def on_buffer_SetFrequency(self, this, record, argument):
         record["frequency"] = argument(1)
-        self.add({"k": "bufferFrequency", "buffer": record["number"], "frequency": record["frequency"]})
+        self.add({"kind": "bufferFrequency", "buffer": record["number"], "frequency": record["frequency"]})
         return 0
 
     def on_buffer_SetCurrentPosition(self, this, record, argument):

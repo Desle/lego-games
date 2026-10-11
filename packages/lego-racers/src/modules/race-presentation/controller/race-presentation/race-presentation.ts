@@ -14,11 +14,10 @@ import {
 import type { CameraState } from '../../../race-camera/index.ts'
 import {
   getCountdownSound,
-  getFinishMusic,
   getIntroductionMusic,
   getPowerSlideSound,
   getRaceEventSounds,
-  getRacingMusic,
+  getTuneMusic,
 } from '../../../race-audio/index.ts'
 import type { SoundRequest } from '../../../race-audio/index.ts'
 import {
@@ -30,7 +29,6 @@ import {
 import type { HudFrame, HudRacerView } from '../../../race-hud/index.ts'
 import { RacePhase } from '../../../race/index.ts'
 import type { RaceState, RaceStepResult } from '../../../race/index.ts'
-import { drawRandomValue } from '../../../random-table/index.ts'
 import { getRacer } from '../../../racer/index.ts'
 import type { Racer, RacerControls } from '../../../racer/index.ts'
 import type {
@@ -122,14 +120,8 @@ const getEditsForEvents = (
           isCameraSwitchEnabled: true,
         }
       }
-      if (event.type === 'race.phase_changed' && event.to === RacePhase.RACING) {
-        const racing = getRacingMusic(
-          presentation.musicListCount,
-          () =>
-            drawRandomValue(raceState.context.tables.randomTable, raceState.racerSet.randomPosition)
-              .value
-        )
-        return { ...edits, music: racing }
+      if (event.type === 'race.tune_changed') {
+        return { ...edits, music: getTuneMusic(event.tuneIndex) }
       }
       if (
         event.type === 'race.racer_finished' &&
@@ -140,7 +132,6 @@ const getEditsForEvents = (
           camera: setCameraPreset(edits.camera, FINISH_CAMERA_NUMBER, raceState.isMultiplayer),
           hud: finishHud(edits.hud, event.place),
           isCameraSwitchEnabled: false,
-          music: getFinishMusic(event.place),
         }
       }
       return edits

@@ -102,12 +102,12 @@ class RenderRecorder:
     def on_SetViewport2(self, this, record, argument):
         values = struct.unpack("<5I6f", self.machine.read_bytes(argument(1), 44))
         if self.is_recording:
-            self.events.append({"k": "viewport", "x": values[1], "y": values[2], "width": values[3], "height": values[4], "clip": list(values[5:])})
+            self.events.append({"kind": "viewport", "x": values[1], "y": values[2], "width": values[3], "height": values[4], "clip": list(values[5:])})
         return 0
 
     def on_Clear2(self, this, record, argument):
         if self.is_recording:
-            self.events.append({"k": "clear", "flags": argument(2), "color": argument(3), "depth": struct.unpack("<f", struct.pack("<I", argument(4)))[0]})
+            self.events.append({"kind": "clear", "flags": argument(2), "color": argument(3), "depth": struct.unpack("<f", struct.pack("<I", argument(4)))[0]})
         return 0
 
     def on_SetTexture(self, this, record, argument):
@@ -166,7 +166,7 @@ class RenderRecorder:
             return
         primitive, fvf, vertices, vertex_count = argument(1), argument(2), argument(3), argument(4)
         event = {
-            "k": "draw",
+            "kind": "draw",
             "primitive": primitive,
             "fvf": fvf,
             "state": self.current_state(),

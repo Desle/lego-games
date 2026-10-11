@@ -1,8 +1,7 @@
 export { getSoundLocation } from './controller/get-sound-location/get-sound-location.ts'
 export {
-  getFinishMusic,
   getIntroductionMusic,
-  getRacingMusic,
+  getTuneMusic,
   RACE_MUSIC_VOLUME,
 } from './controller/race-music/race-music.ts'
 export {
