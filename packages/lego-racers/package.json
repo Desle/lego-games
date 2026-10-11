@@ -29,6 +29,7 @@
     "./load-screen": "./src/modules/load-screen/index.ts",
     "./material": "./src/modules/material/index.ts",
     "./material-animation": "./src/modules/material-animation/index.ts",
+    "./menu-file": "./src/modules/menu-file/index.ts",
     "./model": "./src/modules/model/index.ts",
     "./named-record": "./src/modules/named-record/index.ts",
     "./power-up": "./src/modules/power-up/index.ts",
