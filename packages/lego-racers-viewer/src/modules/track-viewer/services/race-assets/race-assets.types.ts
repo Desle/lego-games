@@ -21,6 +21,16 @@ export type RacerModels = {
   readonly driver: ModelScene | null
 }
 
+// The models of the effects the race draws (GAMEDATA\COMMON): the rocket and the magnet have bones, the barrel and the
+// spiked explosion are plain. The cannon ball, the grapple hook, the wand's beam and the plain explosion are not drawn:
+// the files that give them their look are not traced (projectiles.md).
+export type EffectModels = {
+  readonly rocket: ModelScene
+  readonly barrel: ModelScene
+  readonly magnet: ModelScene
+  readonly spikedExplosion: ModelScene
+}
+
 export type HudImage = {
   readonly name: string
   readonly width: number
@@ -35,6 +45,7 @@ export type RaceAssets = {
   readonly scene: Scene
   readonly background: SceneBackground
   readonly racerModels: readonly RacerModels[]
+  readonly effectModels: EffectModels
   readonly getString: (stringId: number) => string
   readonly imageNames: readonly string[]
   readonly hudImages: ReadonlyMap<string, HudImage>

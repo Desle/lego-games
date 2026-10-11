@@ -77,3 +77,25 @@ export type RacePresentationStart = {
   readonly presentation: RacePresentation
   readonly music: MusicCue
 }
+
+// What the race draws of a moving effect: which one, where, and the way it points (null when it has no direction).
+export type EffectView = {
+  // The power-up effect kind: `rocket`, `barrel`, `cannon`, `grapple`, `magnet`, ...
+  readonly kind: string
+  readonly position: Vector3
+  readonly heading: Vector3 | null
+}
+
+// An explosion pool member that is growing or fading: where, and the frame scale the engine gives it (0x00410f10).
+export type ExplosionView = {
+  readonly isSpiked: boolean
+  readonly position: Vector3
+  readonly scale: number
+  // Whether it is a ground burst's scar fading rather than the blast growing.
+  readonly isFading: boolean
+}
+
+export type EffectViews = {
+  readonly effects: readonly EffectView[]
+  readonly explosions: readonly ExplosionView[]
+}

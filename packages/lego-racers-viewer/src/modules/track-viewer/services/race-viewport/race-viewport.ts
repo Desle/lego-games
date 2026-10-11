@@ -1,27 +1,21 @@
-import type { RacerPose } from '@lego-games/lego-racers/race-presentation'
+import type { EffectViews, RacerPose } from '@lego-games/lego-racers/race-presentation'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
-import type { ModelScene } from '@lego-games/lego-racers/scene'
 import type { Matrix3 } from '@lego-games/lego-racers/simulation-math'
 import {
   Color,
-  Group,
   LinearSRGBColorSpace,
   Matrix4,
   PerspectiveCamera,
   Scene as ThreeScene,
   WebGLRenderer,
 } from 'three'
-import { createSceneObject } from '../scene-object/scene-object.ts'
+import { createRaceEffects } from '../race-effects/race-effects.ts'
+import { createModelObject } from '../model-object/model-object.ts'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import { showSceneObjects } from '../scene-viewport/scene-viewport.ts'
 import type { ShownScene } from '../scene-viewport/scene-viewport.types.ts'
-import type {
-  ModelObject,
-  RaceStageSize,
-  RaceViewport,
-  RacerRig,
-  Vector3Like,
-} from './race-viewport.types.ts'
+import type { ModelObject } from '../model-object/model-object.types.ts'
+import type { RaceStageSize, RaceViewport, RacerRig, Vector3Like } from './race-viewport.types.ts'
 
 // The Direct3D camera's field of view is not traced yet; the track viewer's 60 degrees stand in for it.
 const FIELD_OF_VIEW_DEGREES = 60
@@ -50,22 +44,6 @@ const getFrameMatrix = (rotation: Matrix3, position: Vector3Like): Matrix4 => {
     0,
     1
   )
-}
-
-// A model as three.js objects, scaled by the model's scale (GDB keyword 0x33) inside a group whose matrix the race
-// sets every frame.
-const createModelObject = (model: ModelScene): ModelObject => {
-  const object = createSceneObject(model.scene, {
-    includeInstance: () => true,
-    isBackground: false,
-  })
-  const group = new Group()
-  group.matrixAutoUpdate = false
-  const scaled = new Group()
-  scaled.scale.setScalar(model.meshScales[0] ?? 1)
-  scaled.add(object.group)
-  group.add(scaled)
-  return { group, object }
 }
 
 // The race drawn as the engine does (LEGORacers.exe 0x004357b0): the sky and the backdrop first without the depth
@@ -109,7 +87,13 @@ export const createRaceViewport = (
 
   // The wheels sit in the display frame; the car model at its position with the leaned rotation of the model frame
   // (vehicle +0x3c); the driver at the seat carried by that frame (LEGORacers.exe 0x0043e740).
-  const update = (poses: readonly RacerPose[], cameraView: CameraView) => {
+  const effects = createRaceEffects(trackScene, assets.effectModels)
+  const update = (
+    poses: readonly RacerPose[],
+    cameraView: CameraView,
+    effectViews: EffectViews
+  ) => {
+    effects.update(effectViews)
     for (const pose of poses) {
       const racerRig = racerRigs[pose.racerIndex]
       if (racerRig === undefined) continue
@@ -154,6 +138,7 @@ export const createRaceViewport = (
       shown.track.dispose()
       shown.backdrop?.dispose()
       shown.sky?.dispose()
+      effects.dispose()
       for (const { objects } of racerRigs) for (const object of objects) object.dispose()
       renderer.dispose()
       renderer.domElement.remove()

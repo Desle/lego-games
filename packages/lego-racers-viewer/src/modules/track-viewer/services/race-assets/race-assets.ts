@@ -20,7 +20,13 @@ import {
 import { parseSky } from '@lego-games/lego-racers/sky'
 import { getString, parseStringTable } from '@lego-games/lego-racers/string-table'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
-import type { HudImage, RaceAssets, RaceGameFiles, RacerModels } from './race-assets.types.ts'
+import type {
+  EffectModels,
+  HudImage,
+  RaceAssets,
+  RaceGameFiles,
+  RacerModels,
+} from './race-assets.types.ts'
 
 const RACE_DIRECTORY = 'GAMEDATA\\RACEC0R0'
 const RACE_DESCRIPTION_PATH = `${RACE_DIRECTORY}\\RACEC0R0.RAB`
@@ -56,6 +62,28 @@ const getRacerModels = (archive: JamArchive, racer: RaceRacerDefinition): RacerM
       appearance.driverModel === null ? null : loadResourceModel(archive, appearance.driverModel),
   })
 }
+
+// The effect models name materials the power-up libraries hold (GAMEDATA\COMMON POWERUP, GRAPPLE, BARREL, DBRICKS).
+const EFFECT_TEXTURE_LIBRARIES = ['POWERUP', 'BARREL', 'DBRICKS']
+const EFFECT_MATERIAL_LIBRARIES = ['POWERUP', 'GRAPPLE', 'BARREL', 'DBRICKS']
+
+const loadEffectModel = (archive: JamArchive, name: string, isSkeletal: boolean): ModelScene =>
+  loadModelScene(archive, {
+    directory: RACER_FILE_DIRECTORY,
+    textureNames: EFFECT_TEXTURE_LIBRARIES,
+    materialNames: EFFECT_MATERIAL_LIBRARIES,
+    meshNames: [name],
+    skeletonName: isSkeletal ? name : null,
+    animationName: isSkeletal ? name : null,
+  })
+
+const getEffectModels = (archive: JamArchive): EffectModels =>
+  Object.freeze({
+    rocket: loadEffectModel(archive, 'DMISSILE', true),
+    barrel: loadEffectModel(archive, 'BARREL', false),
+    magnet: loadEffectModel(archive, 'MAGNET04', true),
+    spikedExplosion: loadEffectModel(archive, 'SPIKEXP', false),
+  })
 
 const getHudImage = (archive: JamArchive, definition: ImageDefinition): HudImage | null => {
   const path = `${COMMON_DIRECTORY}${SEPARATOR}${definition.name.toUpperCase()}.BMP`
@@ -112,6 +140,7 @@ export const loadRaceAssets = (jam: Uint8Array, files: RaceGameFiles): RaceAsset
       backgroundWorldPath: getRaceBackgroundWorldPath(RACE_DIRECTORY, description),
     }),
     racerModels: Object.freeze(definition.racers.map((racer) => getRacerModels(archive, racer))),
+    effectModels: getEffectModels(archive),
     getString: (stringId: number) => getString(table, stringId) ?? '',
     imageNames: Object.freeze(imageDatabase.images.map((image) => image.name.toUpperCase())),
     hudImages: new Map(
