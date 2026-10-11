@@ -34,3 +34,26 @@ export type BspTree = {
   readonly keyword2bValues: readonly number[]
   readonly readByteCount: number
 }
+
+// A plane as four floats: the normal and the offset; a point is inside when normal . point + offset is not negative.
+export type BspPlane = readonly [number, number, number, number]
+
+// A leaf's bounding volume (keyword 0x2a): the smallest corner, then the largest.
+export type BspBoundingVolume = BspTreeSixFloats
+
+export type BspVolumeVisibility = 'outside' | 'partly_inside' | 'inside'
+
+// The camera as the BSP draw sees it (GolDP.dll 0x100092a0): its position and the six planes of its frustum.
+export type BspVisibilityQuery = {
+  readonly eye: readonly [number, number, number]
+  readonly planes: readonly BspPlane[]
+}
+
+// A leaf to draw: the run of the mesh's draw commands it covers, and whether the frustum cuts it (the engine then
+// draws it through the clipping path).
+export type VisibleBspLeaf = {
+  readonly nodeIndex: number
+  readonly firstCommand: number
+  readonly commandCount: number
+  readonly isClipped: boolean
+}

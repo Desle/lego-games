@@ -39,6 +39,8 @@ export type RaceController = RaceScreen & {
   readonly onDevelopmentGameRequested: () => void
   readonly onGameFilesChosen: (files: readonly File[]) => void
   // The menus chose a race, a circuit or a time trial: play it through the game session.
+  // The menus changed what they keep (the car, the racer, the save); the controller stores it and writes the save.
+  readonly onMenuMemoryChanged: (memory: FrontEndMemory) => void
   readonly onRaceRequested: (request: FrontEndRaceRequest) => void
   // The menus were left (the quit question answered yes): back to the file choice.
   readonly onGameClosed: () => void

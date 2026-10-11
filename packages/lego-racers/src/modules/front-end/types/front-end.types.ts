@@ -8,9 +8,9 @@ import type {
 import type { BodyPartCatalog, DriverSession } from '../../figure-builder/index.ts'
 import type { CircuitDatabase } from '../../circuit-database/index.ts'
 import type { MenuFile } from '../../menu-file/index.ts'
+import type { SaveFile, SaveRacer } from '../../save-data/index.ts'
 import type { RaceCatalog } from '../../race-catalog/index.ts'
 import type { RandomTable } from '../../random-table/index.ts'
-import type { SaveRacer } from '../../save-data/index.ts'
 
 // A decoded menu image (MENUDATA\<name>.BMP) with the image database's colour key applied.
 export type FrontEndImage = {
@@ -122,10 +122,16 @@ export type FrontEndSettings = {
   readonly playerCar: SavedCar | null
   // The game's shared random position (0x004c6ee4) as the menus leave it (the mix button advances it).
   readonly randomPosition: number
+  // The loaded save file (null without one: the session's own defaults apply) and the racer of it who plays.
+  readonly saveFile: SaveFile | null
+  readonly racerIndex: number
 }
 
 // What survives from one visit of the menus to the next.
-export type FrontEndMemory = Pick<FrontEndSettings, 'playerCar' | 'randomPosition'>
+export type FrontEndMemory = Pick<
+  FrontEndSettings,
+  'playerCar' | 'randomPosition' | 'saveFile' | 'racerIndex'
+>
 
 export type FrontEndOutcome = 'running' | 'race' | 'quit'
 
@@ -136,6 +142,8 @@ export type FrontEndSelection = {
   readonly racerIndex: number
   readonly tabIndex: number
   readonly isDialogOpen: boolean
+  // The text a screen is editing (the new racer's name).
+  readonly text: string
 }
 
 export type FrontEndScreenState = {

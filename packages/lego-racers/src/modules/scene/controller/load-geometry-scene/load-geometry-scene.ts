@@ -66,6 +66,7 @@ export const loadGeometryScene = (
       geometry.batches.map((batch, materialSlot) =>
         Object.freeze({
           materialSlot,
+          firstCommand: 0,
           vertexIndices: batch.vertexIndices,
           transformIndices: batch.transformIndices ?? new Uint8Array(batch.vertexIndices.length),
         })
@@ -83,6 +84,7 @@ export const loadGeometryScene = (
         skeletonIndex: isSkeletal ? 0 : null,
         animationIndex: isSkeletal ? 0 : null,
         materialAssignmentIndex: null,
+        bspTreeIndex: null,
         squaredDistance: LARGEST_FLOAT,
       }),
     ]),
@@ -95,6 +97,7 @@ export const loadGeometryScene = (
     materials: Object.freeze(sceneMaterials),
     meshes: Object.freeze([mesh]),
     materialAssignments: Object.freeze([]),
+    bspTrees: Object.freeze([]),
     skeletons: Object.freeze(skeletons),
     animations: Object.freeze(animations),
     instances: Object.freeze([instance]),

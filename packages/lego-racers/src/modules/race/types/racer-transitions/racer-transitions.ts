@@ -21,6 +21,10 @@ import {
   startCarBodyFlaggedState,
   startCarBodyFlip,
   startCarBodySpin,
+  getRacerWithColourShiftOverride,
+  WAND_COLOUR_SHIFT,
+  WAND_COLOUR_SHIFT_MILLISECONDS,
+  POWER_UP_EFFECT_FIGURE_DISTANCE,
 } from '../../../racer/index.ts'
 import { getThrowImpulse } from '../../../projectiles/index.ts'
 import type { Racer } from '../../../racer/index.ts'
@@ -420,7 +424,12 @@ export const getRacerAfterPowerUpEvent = (
     case 'power_ups.racer_shield_struck':
       return Object.freeze({ ...racer, unidentifiedCountdownD74Milliseconds: 500 })
     case 'power_ups.racer_cursed':
-      return getRacerWithTimedEffect(arithmetic, racer, event.durationMilliseconds)
+      return getRacerWithTimedEffect(
+        arithmetic,
+        racer,
+        event.durationMilliseconds,
+        POWER_UP_EFFECT_FIGURE_DISTANCE
+      )
     case 'power_ups.racer_warp_pending':
       return getRacerWithFlags(racer, racer.flags | 0x200000)
     case 'power_ups.racer_curse_lifted':
@@ -457,10 +466,14 @@ export const getRacerAfterPowerUpEvent = (
         carBody: startCarBodyFlip(arithmetic, racer.carBody, event.rate, event.milliseconds),
       })
     case 'power_ups.racer_struck_by_lightning':
-      return getRacerThrown(
-        arithmetic,
-        racer,
-        getThrowImpulse(arithmetic, racer.carBody.rigidBody.heading, WAND_THROW_POWER)
+      return getRacerWithColourShiftOverride(
+        getRacerThrown(
+          arithmetic,
+          racer,
+          getThrowImpulse(arithmetic, racer.carBody.rigidBody.heading, WAND_THROW_POWER)
+        ),
+        WAND_COLOUR_SHIFT,
+        WAND_COLOUR_SHIFT_MILLISECONDS
       )
     case 'power_ups.racer_released_by_lightning':
       return Object.freeze({ ...racer, carBody: endCarBodyFlaggedState(racer.carBody) })

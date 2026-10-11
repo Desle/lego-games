@@ -39,6 +39,7 @@ export type {
   SceneAmbientLight,
   SceneAnimation,
   SceneBitmap,
+  SceneBspTree,
   SceneCamera,
   SceneDirectionalLight,
   SceneDrawBatch,

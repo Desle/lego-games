@@ -17,6 +17,8 @@ export type FrontEndControllerOptions = {
   // The screen the menus open on, and the standings a circuit result screen lists.
   readonly firstScreenId: number
   readonly standingRows: readonly FrontEndStandingRow[]
+  // The menus changed what they keep between visits (the car, the racer, the save file, the random position).
+  readonly onMenuMemoryChanged: (memory: FrontEndMemory) => void
   // A race was chosen: what the menus left in the game settings.
   readonly onRaceRequested: (request: FrontEndRaceRequest) => void
   // The quit question was answered with yes.

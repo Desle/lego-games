@@ -2,6 +2,9 @@ import type { EffectViews, EffectView } from '@lego-games/lego-racers/race-prese
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import type { Scene as ThreeScene } from 'three'
 import { Matrix4 } from 'three'
+import { BRICK_LEVEL_DISTANCE } from '@lego-games/lego-racers/race-presentation'
+import type { Vector3Like } from '../race-viewport/race-viewport.types.ts'
+import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
 import { createModelObject } from '../model-object/model-object.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
 import type { EffectModels } from '../race-assets/race-assets.types.ts'
@@ -85,7 +88,7 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
     enhancementBrick: createPool(scene, models.enhancementBrick),
   }
   return Object.freeze({
-    update: (views: EffectViews) => {
+    update: (views: EffectViews, eye: Vector3Like) => {
       for (const pool of [...Object.values(pools), ...brickPools.values()]) pool.reset()
       for (const view of views.effects) {
         const pool =
@@ -100,6 +103,7 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
         pool.use().group.matrix.copy(getHeadingMatrix(view.heading, view.position))
       }
       for (const brick of views.bricks) {
+        if (!getIsWithinLevelDistance(brick.position, eye, BRICK_LEVEL_DISTANCE)) continue
         const pool = brick.isEnhancement ? pools.enhancementBrick : brickPools.get(brick.kind ?? '')
         if (pool === undefined) continue
         const copy = pool.use()

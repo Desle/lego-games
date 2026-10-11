@@ -11,7 +11,11 @@ import {
 } from '../../../save-data/index.ts'
 import type { SaveFile, SaveProfile } from '../../../save-data/index.ts'
 import type { GameSession } from '../../types/game-session.types.ts'
-import type { CircuitResultApplication, TimeRecordApplication } from './session-outcome.types.ts'
+import type {
+  CircuitResultApplication,
+  SessionSaveOutcome,
+  TimeRecordApplication,
+} from './session-outcome.types.ts'
 
 const FIRST_PLACE_SCREEN = 0x16
 const SECOND_PLACE_SCREEN = 0x17
@@ -122,4 +126,18 @@ export const applyCircuitResultToSave = (
     isTrophyAwarded,
     unlockedCircuitName: unlocked?.name ?? null,
   })
+}
+
+// What the front end does when a session ends (0x0042e490, 0x0042e680, then the result screen's 0x004767b0): the best times,
+// the beaten champion, the circuit's place, trophy and unlock go into the save, and the screen to open may change (0x1c).
+export const applySessionOutcomeToSave = (
+  session: GameSession,
+  saveFile: SaveFile,
+  racerRecordIndex: number
+): SessionSaveOutcome => {
+  const times = applySessionTimesToProfile(session, saveFile.profile)
+  const resultScreen = times.resultScreen ?? session.resultScreen
+  const timed: SaveFile = Object.freeze({ ...saveFile, profile: times.profile })
+  const circuit = applyCircuitResultToSave(session, timed, resultScreen, racerRecordIndex)
+  return Object.freeze({ saveFile: circuit.saveFile, resultScreen })
 }

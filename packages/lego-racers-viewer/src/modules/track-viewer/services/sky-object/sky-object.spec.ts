@@ -41,6 +41,7 @@ const SCENE: Scene = {
   materials: [SKY_MATERIAL],
   meshes: [],
   materialAssignments: [],
+  bspTrees: [],
   skeletons: [],
   animations: [],
   instances: [],

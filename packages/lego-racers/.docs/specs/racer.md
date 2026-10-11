@@ -20,6 +20,7 @@ One racer's update for a physics sub-step, `RacerSet_Step` (`0x0043c030`), and t
 - Randomness only comes from the game's random table through `RacerSet.randomPosition` (the global `0x004c6ee4`, `random-table`), in the original's draw order; every dependency receives and returns the whole racer set so it can draw too.
 - Float rules come from the disassembly and go through `FloatArithmetic` (`simulation-math`): every x87 store is a `storeFloat`, every comparison uses the x87 unordered rules.
 - Sound, visual effects, the camera and the HUD are never simulated here; they are dependencies.
+- A racer carries a colour shift override (vehicle `+0x3c4` / `+0x3c8`, `0x00440100`, `0x00440130`): the wand flashes it for 100 ms, the timed effect tints it until the effect ends, and `Vehicle_Update` counts it down; while it lasts the racer's displayed shift is the override's, whatever the track events do.
 
 ## Out of scope
 

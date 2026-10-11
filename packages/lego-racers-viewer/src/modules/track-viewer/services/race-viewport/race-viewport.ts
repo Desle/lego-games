@@ -13,6 +13,8 @@ import {
 } from 'three'
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
 import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
+import { getCameraFrustum, ORIGINAL_FIELD_OF_VIEW_DEGREES } from './camera-frustum.ts'
+import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
 import { createRaceParticles } from '../race-particles/race-particles.ts'
 import { createRaceEffects } from '../race-effects/race-effects.ts'
 import { createSceneObject } from '../scene-object/scene-object.ts'
@@ -31,8 +33,6 @@ import type {
   Vector3Like,
 } from './race-viewport.types.ts'
 
-// The Direct3D camera's field of view is not traced yet; the track viewer's 60 degrees stand in for it.
-const FIELD_OF_VIEW_DEGREES = 60
 const BACKGROUND_COLOR = 0x101820
 const MILLISECONDS_PER_SECOND = 1000
 // The scroll the original adds stays below 1 (it wraps).
@@ -69,7 +69,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   const trackScene = new ThreeScene()
   const backgroundScene = new ThreeScene()
   const camera = new PerspectiveCamera(
-    FIELD_OF_VIEW_DEGREES,
+    ORIGINAL_FIELD_OF_VIEW_DEGREES,
     size.width / size.height,
     NEAR_PLANE,
     FAR_PLANE
@@ -158,7 +158,8 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
           )
     const cameraView = warpView === null ? allCameraView : warpView.cameraView
     effects.update(
-      warpView === null ? effectViews : { ...effectViews, effects: [], bricks: [], explosions: [] }
+      warpView === null ? effectViews : { ...effectViews, effects: [], bricks: [], explosions: [] },
+      cameraView.position
     )
     for (const rig of racerRigs) {
       const isShown = warpView === null || rig === racerRigs[warpView.pose.racerIndex]
@@ -172,6 +173,19 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
       if (colourShiftKeys.get(pose.racerIndex) !== shiftKey) {
         colourShiftKeys.set(pose.racerIndex, shiftKey)
         for (const object of racerRig.objects) object.setColourShift(pose.colourShift)
+      }
+      const isRigShown = warpView === null || pose.racerIndex === warpView.pose.racerIndex
+      const centres = pose.partCentres
+      const eye = cameraView.position
+      racerRig.wheels.group.visible =
+        isRigShown && getIsWithinLevelDistance(centres?.wheels ?? null, eye)
+      if (racerRig.body !== null) {
+        racerRig.body.group.visible =
+          isRigShown && getIsWithinLevelDistance(centres?.body ?? null, eye)
+      }
+      if (racerRig.driver !== null) {
+        racerRig.driver.group.visible =
+          isRigShown && getIsWithinLevelDistance(centres?.driver ?? null, eye)
       }
       racerRig.wheels.group.matrix.copy(getFrameMatrix(pose.rotation, pose.position))
       racerRig.wheels.group.matrixWorldNeedsUpdate = true
@@ -192,6 +206,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     camera.up.set(-up.x, -up.y, -up.z)
     camera.lookAt(position.x + forward.x, position.y + forward.y, position.z + forward.z)
     shown.track.selectLevels(camera.position)
+    shown.track.selectVisibleLeaves(getCameraFrustum(camera))
     const placement = shown.sky?.place(camera.position)
     if (shown.backdrop !== null) {
       const point = placement?.backdrop ?? camera.position

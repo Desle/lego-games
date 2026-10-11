@@ -5,7 +5,11 @@ import {
   loadFrontEndResources,
   stepFrontEnd,
 } from '@lego-games/lego-racers/front-end'
-import type { FrontEndEnvironment } from '@lego-games/lego-racers/front-end'
+import type {
+  FrontEndEnvironment,
+  FrontEndMemory,
+  FrontEndState,
+} from '@lego-games/lego-racers/front-end'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import { useEffect, useRef, useState } from 'react'
 import { createFrontEndAudioPlayer } from '../../services/front-end-audio-player/front-end-audio-player.ts'
@@ -19,6 +23,19 @@ const MAXIMUM_FRAME_MILLISECONDS = 100
 const ALL_CIRCUITS_OPEN = 0x7f
 // Progression hook: every driver part is offered until the save files exist (no trophies are recorded yet).
 const isEveryPartOpen = true
+
+const getMemory = (state: FrontEndState): FrontEndMemory => ({
+  playerCar: state.settings.playerCar,
+  randomPosition: state.settings.randomPosition,
+  saveFile: state.settings.saveFile,
+  racerIndex: state.settings.racerIndex,
+})
+
+const getIsMemoryChanged = (previous: FrontEndMemory, current: FrontEndMemory): boolean =>
+  previous.playerCar !== current.playerCar ||
+  previous.randomPosition !== current.randomPosition ||
+  previous.saveFile !== current.saveFile ||
+  previous.racerIndex !== current.racerIndex
 
 // The menus of the game: reads the keyboard and the gamepad, steps the front end, draws its commands on the canvas
 // and plays its sounds; a race the menus chose, or the answer yes to the quit question, ends it.
@@ -57,6 +74,7 @@ export const useFrontEndController = (options: FrontEndControllerOptions): Front
         callbacksReference.current.memory
       )
       audio.playMusic(state.musicListIndex)
+      let reportedMemory = getMemory(state)
       let lastTime: number | null = null
       const onFrame = (time: number) => {
         animationFrame = requestAnimationFrame(onFrame)
@@ -78,6 +96,11 @@ export const useFrontEndController = (options: FrontEndControllerOptions): Front
           for (const soundName of result.soundNames) audio.playSound(soundName)
           if (result.musicListIndex !== null) audio.playMusic(result.musicListIndex)
         })
+        const memory = getMemory(state)
+        if (getIsMemoryChanged(reportedMemory, memory)) {
+          reportedMemory = memory
+          callbacksReference.current.onMenuMemoryChanged(memory)
+        }
         renderer.draw(getFrontEndFrame(state, resources, environment).commands)
         const request = getFrontEndRaceRequest(state)
         if (request !== null) {
