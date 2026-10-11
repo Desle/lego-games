@@ -50,6 +50,8 @@ const JAM_SEPARATOR = '\\'
 const DEFAULT_RACE_FOLDER = 'RACEC0R0'
 const DEFAULT_RACER_COUNT = 6
 const DEFAULT_LAP_COUNT = 3
+// Hypothesis: 30 ticks per second (the introduction camera's rate is model data, 0x10027f40).
+const DEFAULT_INTRODUCTION_CAMERA_RATE = 0.03
 // The driver of a car built from bricks is made on `LEG_BOX` (GDB scale 1/64), which sets the scale of his model.
 const BUILT_DRIVER_MODEL_SCALE = 0.015625
 
@@ -242,6 +244,7 @@ export const loadRaceDefinition = (
     isPointsRecordPresent: options.isPointsRecordPresent ?? false,
     ghost: options.ghost ?? null,
     introductionCameraLimit: options.introductionCameraLimit ?? null,
+    introductionCameraRate: options.introductionCameraRate ?? DEFAULT_INTRODUCTION_CAMERA_RATE,
     musicTuneCount:
       options.musicTuneCount ??
       (description.musicList === null

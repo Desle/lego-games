@@ -41,6 +41,8 @@ export type OriginalTrace = {
   readonly controlWord: number
   // The introduction camera animation's length minus one, or -1 without one.
   readonly introductionCameraLimit: number
+  // The camera animation's clock rate in ticks per millisecond (skeleton instance +0xb8).
+  readonly introductionCameraRate: number
 }
 
 export type FieldDivergence = {

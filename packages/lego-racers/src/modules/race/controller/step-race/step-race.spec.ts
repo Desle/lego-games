@@ -66,6 +66,25 @@ describe('stepRace', () => {
     expect(getRacer(step.raceState.racerSet, PLAYER).flags & 0x400).toBe(0x400)
   })
 
+  it('keeps the introduction while the camera animation runs, then restarts the timer once (0x00434a55)', () => {
+    // Arrange
+    const state = {
+      ...createFixtureRace(),
+      introductionCameraLimit: 60,
+      introductionCameraRate: 0.03,
+    }
+
+    // Act
+    const held = stepRace(state, IDLE_INPUTS, INTRODUCTION_MILLISECONDS)
+    const finished = stepRace(held.raceState, IDLE_INPUTS, INTRODUCTION_MILLISECONDS)
+
+    // Assert
+    expect(held.raceState.phase).toBe(RacePhase.INTRODUCTION)
+    expect(finished.raceState.phase).toBe(RacePhase.INTRODUCTION)
+    expect(finished.raceState.introductionCameraLimit).toBeNull()
+    expect(finished.raceState.phaseMilliseconds).toBe(0)
+  })
+
   it('releases the racers and the players 3,000 ms into the countdown', () => {
     // Arrange
     const countdown = stepRace(createFixtureRace(), IDLE_INPUTS, INTRODUCTION_MILLISECONDS)

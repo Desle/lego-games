@@ -46,6 +46,7 @@ export const runGoldenTrace = async (
     musicTuneCount: 0,
     introductionCameraLimit:
       original.introductionCameraLimit < 0 ? null : original.introductionCameraLimit,
+    introductionCameraRate: original.introductionCameraRate,
   })
   const port = getPortTrace(scenario, definition)
   const first = original.frames[0]
