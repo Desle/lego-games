@@ -1,3 +1,4 @@
+import type { RacerShowcase } from './racer-showcase/racer-showcase.types.ts'
 import type { SkeletonAnimationState } from '../../skeletal-animation/index.ts'
 import type { BuilderSession } from '../../car-builder/index.ts'
 import type { DriverSession } from '../../figure-builder/index.ts'
@@ -23,6 +24,8 @@ export type ScreenRuntime = {
   readonly screenMilliseconds: number
   // The main menu figure's pose (null on the other screens and before it exists).
   readonly menuFigureAnimation: SkeletonAnimationState | null
+  // The race select's racer showcase (null on the other screens).
+  readonly showcase: RacerShowcase | null
 }
 
 // What a screen asks of the front end when it handles an input (the original's target screen, 0x360 of the screen,

@@ -8,7 +8,8 @@ const MENU_WORLD_PATHS: ReadonlyMap<string, string> = new Map([
   ['cam', 'MENUDATA\\CAM.WDB'],
   // Car builder and car editor (screens 0xe and 0x11): `MENUDATA\GARAGE` (0x00477050, 0x0047bfc0).
   ['garage', 'MENUDATA\\GARAGE\\GARAGE.WDB'],
-  // The racer showcase of the garage and the racer picks: `MENUDATA\RS_SET` (0x00485f70).
+  // The racer showcase of the garage and the racer picks: `MENUDATA\RS_SET` (0x00485f70); its second world holds the
+  // blended shadows (see MENU_WORLD_EXTRA_PATHS).
   ['racer', 'MENUDATA\\RS_SET\\RACER.WDB'],
   // The driver editor's platform (screen 0xf): `MENUDATA\CB_SET` (0x0047d230).
   ['cbset', 'MENUDATA\\CB_SET\\CBSET.WDB'],
@@ -16,6 +17,20 @@ const MENU_WORLD_PATHS: ReadonlyMap<string, string> = new Map([
 
 export const getMenuWorldPath = (modelName: string): string | null =>
   MENU_WORLD_PATHS.get(modelName.toLowerCase()) ?? null
+
+// Worlds loaded on top of a menu world, in order (the engine's world list: the second world links to the first one's
+// materials). `RS_SET\BLENDED.WDB` has the two skeleton instances `shadow` (under the driver) and `crsdow` (under the car).
+const MENU_WORLD_EXTRA_PATHS: ReadonlyMap<string, readonly string[]> = new Map([
+  ['racer', ['MENUDATA\\RS_SET\\BLENDED.WDB']],
+])
+
+// Every world file of a 3D item, the main one first.
+export const getMenuWorldPaths = (modelName: string): readonly string[] | null => {
+  const path = getMenuWorldPath(modelName)
+  return path === null
+    ? null
+    : [path, ...(MENU_WORLD_EXTRA_PATHS.get(modelName.toLowerCase()) ?? [])]
+}
 
 // The menu worlds whose own camera (`Camera01`: position, forward, up, near plane, far plane and vertical field of view,
 // world keywords 0x45 to 0x47) the original draws with: the projection matrices of its draws of the main menu (`tt`), the

@@ -20,7 +20,8 @@ const MENU_ANIMATION_NAME = 'LEGOMAN'
 // and its animations the menu's `LEGOMAN.ADB`.
 export const loadMenuDriverScene = (
   archive: JamArchive,
-  partBytes: readonly number[]
+  partBytes: readonly number[],
+  animationName: string = MENU_ANIMATION_NAME
 ): ModelScene => {
   const catalog = parseBodyPartCatalog(archive.readFile(CATALOG_PATH))
   const bodyName = (
@@ -35,7 +36,7 @@ export const loadMenuDriverScene = (
       bones: {
         directory: MENU_PART_DIRECTORY,
         skeletonName: bodyName,
-        animationName: MENU_ANIMATION_NAME,
+        animationName,
         animationDirectory: MENU_DIRECTORY,
       },
     },

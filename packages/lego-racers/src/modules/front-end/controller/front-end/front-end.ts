@@ -31,6 +31,10 @@ import type {
   MenuFigureAnimation,
   MenuFigureStep,
 } from '../../types/menu-figure/menu-figure-animation.types.ts'
+import {
+  getStateWithShowcaseOpened,
+  getStateWithShowcaseStep,
+} from '../front-end-showcase/front-end-showcase.ts'
 import { getFrontEndMusicIndex } from '../front-end-music/front-end-music.ts'
 import { getWidgetCommands } from '../widget-commands/widget-commands.ts'
 
@@ -50,6 +54,7 @@ const getRuntime = (
     driver: state.driver,
     screenMilliseconds: state.screenMilliseconds,
     menuFigureAnimation: state.menuFigure?.animation ?? null,
+    showcase: state.showcase,
   }
 }
 
@@ -81,7 +86,7 @@ export const createFrontEnd = (
   memory: FrontEndMemory = NO_FRONT_END_MEMORY
 ): FrontEndState => {
   const settings = getSettingsWithMemory(resources, createFrontEndSettings(), memory)
-  return Object.freeze({
+  const created: FrontEndState = {
     builder: getBuilderForScreen(firstScreenId, null, resources),
     driver: getDriverForScreen(firstScreenId, settings, resources, environment),
     screens: [
@@ -95,6 +100,7 @@ export const createFrontEnd = (
           driver: null,
           screenMilliseconds: 0,
           menuFigureAnimation: null,
+          showcase: null,
         }),
       },
     ],
@@ -106,7 +112,9 @@ export const createFrontEnd = (
       firstScreenId === FrontEndScreen.MAIN_MENU
         ? createMenuFigureAnimation(resources.getMenuFigureAnimation())
         : null,
-  })
+    showcase: null,
+  }
+  return Object.freeze(getStateWithShowcaseOpened(null, created, resources, environment, 0))
 }
 
 // The state after a screen opened: the music its opening starts, if any.
@@ -229,7 +237,7 @@ export const stepFrontEnd = (
 ): FrontEndStep => {
   const figureStep = getFigureStep(state, resources, frameMilliseconds)
   const advanced: FrontEndState = {
-    ...state,
+    ...getStateWithShowcaseStep(state, resources, environment, frameMilliseconds),
     screenMilliseconds: state.screenMilliseconds + frameMilliseconds,
     menuFigure: figureStep?.figure ?? state.menuFigure,
   }
@@ -242,14 +250,20 @@ export const stepFrontEnd = (
   ) {
     return { ...stepped, state: { ...stepped.state, outcome: 'demonstration' } }
   }
-  const entered: FrontEndState = {
-    ...stepped.state,
-    menuFigure:
-      stepped.state.screens.length === advanced.screens.length &&
-      stepped.state.screens.at(-1)?.screenId === advanced.screens.at(-1)?.screenId
-        ? stepped.state.menuFigure
-        : getEnteredFigure(stepped.state, resources),
-  }
+  const entered: FrontEndState = getStateWithShowcaseOpened(
+    advanced,
+    {
+      ...stepped.state,
+      menuFigure:
+        stepped.state.screens.length === advanced.screens.length &&
+        stepped.state.screens.at(-1)?.screenId === advanced.screens.at(-1)?.screenId
+          ? stepped.state.menuFigure
+          : getEnteredFigure(stepped.state, resources),
+    },
+    resources,
+    environment,
+    frameMilliseconds
+  )
   return { ...stepped, state: entered, soundNames: [...figureSounds, ...stepped.soundNames] }
 }
 

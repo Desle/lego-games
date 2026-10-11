@@ -4,6 +4,7 @@ import type {
   FrontEndRectangle,
   FrontEndResources,
   FrontEndScreenFiles,
+  RacerShowcaseView,
 } from './front-end.types.ts'
 
 // An image item: the style's image (MSB 0x32) at the item's rectangle.
@@ -55,6 +56,8 @@ export type ViewportWidget = {
   readonly builder?: BuilderPreview | null
   // The driver the editor shows in it.
   readonly driver?: DriverPreview | null
+  // The racer showcase of the race select: the racer's car on the turntable and his driver.
+  readonly showcase?: RacerShowcaseView | null
 }
 
 // A rectangle the screen computed itself (a list row, a chooser).
