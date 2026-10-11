@@ -70,6 +70,15 @@ export {
   playFigureAnimation,
   updateFigure,
 } from './types/figure/figure.ts'
+export {
+  clearVehicleWheelEmitter,
+  endVehiclePowerSlideEffects,
+  setVehicleWheelEmitter,
+  startVehicleBoostSmoke,
+  startVehiclePowerSlideEffects,
+  startVehicleTurboEffects,
+  stopVehicleTireSmoke,
+} from './types/vehicle-emitters/vehicle-emitters.ts'
 export { getVehicleLeanAtReset } from './types/vehicle/vehicle-lean.ts'
 export { createVehicle, updateVehicle, updateVehicleDriver } from './types/vehicle/vehicle.ts'
 export { COSINE_TABLE_ADDRESS, getTableCosine } from './types/cosine-table/cosine-table.ts'

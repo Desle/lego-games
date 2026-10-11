@@ -4,8 +4,10 @@ import { getFloatFromBits, ZERO_VECTOR3 } from '../../../simulation-math/index.t
 import type { TrackMaterial } from '../../../track-material/index.ts'
 import { getIsDigitName, getTrackMaterial } from '../surface-materials/surface-materials.ts'
 import type {
+  CarBodyContact,
   CarBodyContactRecorder,
   SurfaceMaterials,
+  WheelEmitterOptions,
 } from '../surface-materials/surface-materials.types.ts'
 
 // Bits of a track-material entry's flags (+0x08) that the car body reads; the keyword that sets each is in
@@ -67,17 +69,50 @@ const getWheelOnSurface = (
   })
 }
 
+// The speed above which a wheel's surface emitter runs (0x004b0468, 0.008) and the car body flags that stop it
+// (0x8 and 0x80).
+const WHEEL_EMITTER_MINIMUM_SPEED = getFloatFromBits(0x3c03126f)
+const WHEEL_EMITTER_BLOCKING_BODY_FLAGS = 0x88
+const EMITTER_NAME_FLAG = 0x400
+
+// What a wheel asks of its vehicle's surface emitter: 0x0042aad0 starts the emitter the material names while the
+// wheel is on the ground, the body goes faster than 0.008 and is neither in two-point mode nor flagged 0x80, and the
+// racer is not a computer; every other case (and 0x0042acb0) stops it.
+const getWheelEmitterContact = (
+  body: CarRigidBody,
+  wheelIndex: number,
+  property: TrackMaterial | undefined,
+  isComputer: boolean
+): CarBodyContact => {
+  const wheel = body.wheels[wheelIndex]
+  const isStarted =
+    property !== undefined &&
+    wheel !== undefined &&
+    wheel.isOnGround &&
+    getHasFlag(property, EMITTER_NAME_FLAG) &&
+    (body.flags & WHEEL_EMITTER_BLOCKING_BODY_FLAGS) === 0 &&
+    WHEEL_EMITTER_MINIMUM_SPEED < body.forwardSpeed &&
+    !isComputer
+  return isStarted
+    ? { type: 'wheel_emitter_started', wheelIndex, name: property.linkedName ?? '' }
+    : { type: 'wheel_emitter_stopped', wheelIndex }
+}
+
 // 0x0042a900's walk over the wheels. A wheel whose material changed announces the new one (0x0042aa30) and the old
 // one (0x0042aa70) unless another wheel is, or already was, on it.
 const getBodyWithSurfaces = (
   body: CarRigidBody,
   surfaces: SurfaceMaterials,
-  record: CarBodyContactRecorder
+  record: CarBodyContactRecorder,
+  wheelEmitters: WheelEmitterOptions | undefined
 ): CarRigidBody => {
   const isIgnored = (body.flags & SURFACE_IGNORED_BODY_FLAG) !== 0
   const wheels = body.wheels.map((wheel, wheelIndex) => {
     const current = getTrackMaterial(surfaces, wheel.material)
     const previous = getTrackMaterial(surfaces, wheel.previousMaterial)
+    if (wheelEmitters !== undefined) {
+      record(getWheelEmitterContact(body, wheelIndex, current, wheelEmitters.isComputer))
+    }
     const surfaced =
       current === undefined
         ? getWheelWithDefaultSurface(wheel)
@@ -126,7 +161,8 @@ const getBodyWithSurfaces = (
 // vehicle's surface emitter (0x0043dd50, 0x0043de90) and the force feedback (0x00421fe0) are presentation.
 export const createCarBodyContactHooks = (
   surfaces: SurfaceMaterials,
-  record: CarBodyContactRecorder
+  record: CarBodyContactRecorder,
+  wheelEmitters?: WheelEmitterOptions
 ): CarRigidBodyHooks =>
   Object.freeze({
     ...CAR_RIGID_BODY_HOOKS,
@@ -155,5 +191,5 @@ export const createCarBodyContactHooks = (
       }
       return { isAccepted: !getHasFlag(property, PASS_THROUGH_FLAG), body }
     },
-    afterPass: (body) => getBodyWithSurfaces(body, surfaces, record),
+    afterPass: (body) => getBodyWithSurfaces(body, surfaces, record, wheelEmitters),
   })

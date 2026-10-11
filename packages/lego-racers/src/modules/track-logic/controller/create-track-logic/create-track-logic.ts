@@ -8,6 +8,7 @@ import { NO_SIGNAL } from '../../../event/index.ts'
 import { createHazardRuntime, EMPTY_HAZARD_RUNTIME } from '../../../hazard/index.ts'
 import type { HazardSession } from '../../../hazard/index.ts'
 import { drawRandomValue } from '../../../random-table/index.ts'
+import { NO_EMITTER_POOLS } from '../../../emitter/index.ts'
 import { EMPTY_WORLD_ANIMATION } from '../../../world-animation/index.ts'
 import type { RaceWorlds } from '../../../world-animation/index.ts'
 import type { FloatArithmetic } from '../../../simulation-math/index.ts'
@@ -17,7 +18,6 @@ import type {
   TrackEvent,
   TrackEventBase,
   LoadedHazards,
-  TrackEmitters,
   TrackEventSet,
   TrackLogicInput,
   TrackLogicState,
@@ -270,7 +270,6 @@ const EMPTY_WORLDS: RaceWorlds = Object.freeze({
   blended: EMPTY_WORLD_ANIMATION,
   local: EMPTY_WORLD_ANIMATION,
 })
-const NO_EMITTERS: TrackEmitters = Object.freeze({ common: null, track: null })
 
 // Hazards_Load 0x0048a4d0: the loaders may change the worlds and draw (class 0x2d begins as it loads). Their
 // signals and effects have nobody to hear them yet.
@@ -328,7 +327,7 @@ export const createTrackLogic = (
     timers: timers.state,
     worlds: loadedHazards.worlds,
     hazards: loadedHazards.hazards,
-    emitters: input.emitters ?? NO_EMITTERS,
+    emitters: input.emitters ?? NO_EMITTER_POOLS,
     triggers: createTriggers(mainTriggers, environmentTriggers),
     random: Object.freeze({ table: random.table, position: timers.position }),
   })

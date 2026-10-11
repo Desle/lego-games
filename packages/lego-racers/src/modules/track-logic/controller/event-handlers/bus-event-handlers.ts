@@ -1,6 +1,6 @@
+import type { EmitterReference } from '../../../emitter/index.ts'
 import { TrackEventKind, TrackEventState } from '../../types/track-event-state/track-event-state.ts'
 import type {
-  TrackEmitterHandle,
   TrackEvent,
   TrackEventHandlers,
   TrackSession,
@@ -97,7 +97,7 @@ export const HANDLERS_29: TrackEventHandlers = Object.freeze({
 
 // The emitter 0x0045eaf0 and 0x0045ebe0 start: the name (event +0x28), the position (+0x3c) and the facing and up
 // directions (+0x48, +0x54).
-const getEmitterHandle = (event: TrackEvent, session: TrackSession): TrackEmitterHandle | null => {
+const getEmitterHandle = (event: TrackEvent, session: TrackSession): EmitterReference | null => {
   if (event.kind !== TrackEventKind.KIND_3D) return null
   const { orientation } = event.record
   return session.spawnEmitter(event.record.secondName, {

@@ -2,6 +2,7 @@ import type { Checkpoint } from '../../checkpoint/index.ts'
 import type { CollisionObject } from '../../collision/index.ts'
 import type { ComputerRacerRoute } from '../../computer-racer-route/index.ts'
 import type { RegistryContact, RegistryEntry } from '../../projectiles/index.ts'
+import type { EmitterPools, EmitterReference } from '../../emitter/index.ts'
 import type { RouteFollower, RubberBand } from '../../racer-ai/index.ts'
 import type { BoundingSphere } from '../../racer-collision/index.ts'
 import type { CarRigidBody } from '../../racer-physics/index.ts'
@@ -276,12 +277,19 @@ export type Vehicle = {
   readonly previousForwardSpeed: number
   // +0x380: index of the racer the driver looks at, or -1.
   readonly watchedRacerIndex: number
-  // +0x270, +0x274, +0x278: the effect emitters (smoke and dust) that exist, as the milliseconds they have lived
-  // (null when absent). Only the presentation layer creates them, so they stay null here; 0x0043e070 draws from the
-  // random table for the first two while they live.
-  readonly smokeEmitterAge: number | null
-  readonly dustEmitterAge: number | null
-  readonly boostEmitterAge: number | null
+  // +0x00: bit 0x8 the tire smoke runs, 0x100 the wheels spin (0x0043fd90), 0x200 the next landing counts; the others
+  // (0x2, 0x4, 0x10) are presentation. It starts at 6 (0x0043a780).
+  readonly flags: number
+  // +0x270, +0x274, +0x278: the dust, tire smoke and boost smoke emitters the vehicle holds (the handles of the common
+  // pool), or null. Where they sit and the sounds that go with them are presentation; the pool's births draw.
+  readonly dustEmitter: EmitterReference | null
+  readonly tireSmokeEmitter: EmitterReference | null
+  readonly boostEmitter: EmitterReference | null
+  // +0x230..+0x23c and +0x240..: the surface emitter of each wheel and the name it runs under (0x0043dd50).
+  readonly wheelEmitters: readonly (EmitterReference | null)[]
+  readonly wheelEmitterNames: readonly string[]
+  // +0x3cc: the wheels on the ground at the previous update, which a landing is measured against.
+  readonly previousGroundedWheelCount: number
   // +0x3c's model part (+0x78): the car body's bounding sphere in the model frame (0x100278c0), null while the
   // car body has no model the port knows (a car built from bricks).
   readonly bodyBounds: FigureBounds | null
@@ -403,6 +411,9 @@ export type RacerSet = {
   // contacts the last pass 4 found in it (0x0043d270); whoever registers an entry answers its contacts.
   readonly registryEntries: readonly RegistryEntry[]
   readonly registryContacts: readonly RegistryContact[]
+  // The race's emitter pools (race +0x2150 and +0x248c): vehicles and power-ups spawn into the common one, the
+  // track logic into both. Whoever updates the emitters (Emitters_Update) works on this state.
+  readonly emitters: EmitterPools
 }
 
 // Constant inputs of a race step.

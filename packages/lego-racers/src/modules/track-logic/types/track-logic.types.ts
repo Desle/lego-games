@@ -18,7 +18,11 @@ import type {
   ObjectReference,
   Vector3,
 } from '../../event/index.ts'
-import type { EmitterPlacement, EmitterPool } from '../../emitter/index.ts'
+import type {
+  EmitterPlacement,
+  EmitterPools,
+  EmitterReference,
+} from '../../emitter/index.ts'
 import type {
   HazardBus,
   HazardEffect,
@@ -37,12 +41,6 @@ import type { TrackEventKind as TrackEventKindValues } from './track-event-state
 export type TrackEventKind = EnumValues<typeof TrackEventKindValues>
 
 // One event object (base class 0x0045ed40 and the fields of the twelve classes that the port's behaviour reads).
-// A handle of one of the two emitter pools: the common one (event +0x20, flag +0x60 = 1) or the track's (+0x24).
-export type TrackEmitterHandle = {
-  readonly isCommonPool: boolean
-  readonly handleIndex: number
-}
-
 export type TrackEventBase<Kind extends TrackEventKind, Record> = {
   readonly kind: Kind
   // The parsed block the event was made from.
@@ -64,7 +62,7 @@ export type TrackEventBase<Kind extends TrackEventKind, Record> = {
   // 2A +0x20 (looped sound)
   readonly isHandleHeld: boolean
   // 3D +0x30 and +0x60: the emitter the event holds (flag +0x1c bit 5 while it does), or null
-  readonly emitterHandle: TrackEmitterHandle | null
+  readonly emitterHandle: EmitterReference | null
   // 4B byte +0x2c bit 0 and 59 byte +0x34 bit 0: set while the class's second signal is held
   readonly isSignalHeld: boolean
 }
@@ -160,12 +158,8 @@ export type TrackLogicContext = {
   readonly probe?: LineProbe
 }
 
-// The two emitter pools: the common one (race +0x2150, vehicles and power-ups spawn into it) and the track's (race
-// +0x248c, hazards and 3D events), each absent when the race has no emitter file.
-export type TrackEmitters = {
-  readonly common: EmitterPool | null
-  readonly track: EmitterPool | null
-}
+// The two emitter pools of the race (see the emitter module).
+export type TrackEmitters = EmitterPools
 
 // One timer (0x24 bytes, Timer_Setup 0x00464750): its parsed values and the state Timers_Update and the callback keep.
 export type TrackTimer = {
@@ -279,9 +273,9 @@ export type TrackSession = HazardBus & {
   readonly advanceWorlds: (milliseconds: number) => void
   // 0x0045eaf0's spawn: the emitter of this name from the common pool when it has one, else from the track's; null
   // when the race has none, nothing was free, or the emitter is a one-shot.
-  readonly spawnEmitter: (name: string, placement: EmitterPlacement) => TrackEmitterHandle | null
+  readonly spawnEmitter: (name: string, placement: EmitterPlacement) => EmitterReference | null
   // 0x00489f30: the owner lets go of its emitter.
-  readonly releaseEmitter: (handle: TrackEmitterHandle) => void
+  readonly releaseEmitter: (handle: EmitterReference) => void
   // Emitters_Update 0x00489fa0 for the common pool and then the track's.
   readonly updateEmitters: (milliseconds: number) => void
   // Hazards_Update 0x0048add0 and the hazards' camera update 0x0048ae00 after the racers.
