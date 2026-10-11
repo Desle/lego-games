@@ -100,6 +100,7 @@ export const createMenuViewport = (archive: JamArchive): MenuViewport => {
       for (const world of worlds.values()) world?.object.dispose()
       worlds.clear()
       renderer.dispose()
+      renderer.forceContextLoss()
     },
   })
 }

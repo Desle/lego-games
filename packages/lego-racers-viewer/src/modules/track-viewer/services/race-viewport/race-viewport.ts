@@ -239,6 +239,7 @@ export const createRaceViewport = (
     dispose: () => {
       stage.dispose()
       renderer.dispose()
+      renderer.forceContextLoss()
       renderer.domElement.remove()
     },
   })
