@@ -17,12 +17,26 @@ export type EmulatorBufferReference = {
 
 export type EmulatorArgument = number | EmulatorBufferReference
 
+// Bytes written to the loaded images before the call; reads return words of image memory after it.
+export type EmulatorPatch = {
+  readonly address: number
+  readonly bytes: readonly number[]
+}
+
+export type EmulatorRead = {
+  readonly name: string
+  readonly address: number
+  readonly count: number
+}
+
 export type EmulatorCall = {
   readonly address: number
   readonly convention: EmulatorConvention
   readonly precision: EmulatorPrecision
   readonly arguments: readonly EmulatorArgument[]
   readonly buffers: readonly EmulatorBuffer[]
+  readonly patches?: readonly EmulatorPatch[]
+  readonly reads?: readonly EmulatorRead[]
 }
 
 export type EmulatorCallResult = {

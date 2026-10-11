@@ -41,6 +41,8 @@ export const createCarBody = (definition: CarBodyDefinition): CarBody =>
     speedFactor: 1,
     defaultTargetSpeedFactor: 1,
     targetSpeedFactor: 1,
+    scriptedSpinPeriod: 0,
+    scriptedSpinTime: 0,
     routeFollower: null,
     isRouteHeld: false,
     rampMilliseconds: 0,

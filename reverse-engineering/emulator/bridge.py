@@ -5,6 +5,8 @@ Requests (all numbers are unsigned 32-bit integers, floats are passed as their I
    "arguments": [1, {"buffer": "input"}], "buffers": [{"name": "input", "words": [..], "isRead": true}, {"name": "out", "size": 12, "isRead": true}]}
   {"id": 2, "op": "batch", "calls": [<call>, ...]}   results come back in the same order
   {"id": 3, "op": "ping"}
+A call may carry "patches": [{"address": n, "bytes": [..]}], written to the images before the run (a global such as the random cursor, or a
+`ret n` over a presentation function the test does not model), and "reads": [{"name", "address", "count"}] to return words of image memory.
 Failures answer {"id": n, "error": "message"}.
 """
 
@@ -29,6 +31,7 @@ def run_call(emulator: Emulator, request: dict) -> dict:
         request.get("precision", "single"),
         request.get("buffers", []),
         request.get("reads", []),
+        request.get("patches", []),
     )
 
 

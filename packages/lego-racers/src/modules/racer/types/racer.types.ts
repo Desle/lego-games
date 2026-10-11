@@ -1,5 +1,7 @@
 import type { Checkpoint } from '../../checkpoint/index.ts'
 import type { CollisionObject } from '../../collision/index.ts'
+import type { ComputerRacerRoute } from '../../computer-racer-route/index.ts'
+import type { RegistryContact, RegistryEntry } from '../../projectiles/index.ts'
 import type { RouteFollower, RubberBand } from '../../racer-ai/index.ts'
 import type { CarRigidBody } from '../../racer-physics/index.ts'
 import type { RandomTable, RandomTablePosition } from '../../random-table/index.ts'
@@ -70,8 +72,8 @@ export type PlayerController = {
 
 // Racer driver (racer +0xc70, constructor 0x0041fb80): turns steering and throttle into car body commands.
 export type RacerDriver = {
-  // +0x04: route time (float32) when following a route (flag 0x40); not used by the ported code.
-  readonly routeTime: number
+  // +0x04: the route being followed (flag 0x40); 0x00420380 clears it when the car body takes over the script.
+  readonly route: ComputerRacerRoute | null
   // +0x08: float32 curvature of the previous step.
   readonly previousCurvature: number
   // +0x0c: float32 curvature asked for (1 / turning radius, signed).
@@ -93,6 +95,12 @@ export type RacerDriver = {
   readonly slideMilliseconds: number
   // +0x30: power slide direction passed to 0x00420260 (1 when braking).
   readonly slideDirection: number
+  // +0x34..+0x3c and +0x40..+0x4c: the target ahead of the car on the route, a copy of the follower's position and
+  // rotation (0x004202f0, 0x004203b0).
+  readonly targetPosition: Vector3
+  readonly targetRotation: Quaternion
+  // +0x50: the follower that places the target (created with the racer in the original; 0x004202f0 here).
+  readonly follower: RouteFollower | null
 }
 
 // The driver acts on its car body (driver +0x00 points to it), so its functions return both.
@@ -144,6 +152,9 @@ export type CarBody = {
   // +0x7e8, +0x7ec: float32 default and current target speed factors, set by the rubber band (pass 9).
   readonly defaultTargetSpeedFactor: number
   readonly targetSpeedFactor: number
+  // +0x7d4, +0x7d8: float32 length and elapsed time of a scripted body's spin (0x00429c40).
+  readonly scriptedSpinPeriod: number
+  readonly scriptedSpinTime: number
   // +0x74c: the route follower of a scripted body (0x78 bytes); null while the body has no route.
   readonly routeFollower: RouteFollower | null
   // +0x748: non-zero holds a scripted body still (0x004374c0 sets it, 0x00439340 clears it at the start).
@@ -157,6 +168,9 @@ export type CarBody = {
   readonly bounceVerticalSpeed: number
 }
 
+// The two forces a car body can carry (car rigid body +0x630 and +0x63c).
+export type CarBodyPushSlot = 'extraForceA' | 'extraForceB'
+
 // What the car body's attach (0x00429210 → 0x00444d90) sets up; the rest starts as 0x00429120 leaves it.
 export type CarBodyDefinition = {
   readonly rigidBody: CarRigidBody
@@ -165,10 +179,115 @@ export type CarBodyDefinition = {
   readonly topSpeedScale: number
 }
 
+// The force-feedback effect of a racer (racer +0x14, 0x00421f30): an output to the player's device that only
+// 0x00422100 and its siblings write in this module.
+export type ForceFeedbackEffect = {
+  // +0x00: non-zero when the player has a force-feedback device.
+  readonly isPresent: boolean
+  // +0x04 and +0x0c: the strength and the duration asked for (100 for 0x00422100, 150 for 0x004220e0).
+  readonly strength: number
+  readonly duration: number
+  // +0x10
+  readonly phase: number
+  // +0x18: 0 idle, 2 restart requested by 0x00421f30; +0x1c cleared by it.
+  readonly state: number
+  readonly elapsed: number
+}
+
+// One animation record of a figure's animation set (figure +0xa8 -> +0x2c, 0x28 bytes each).
+export type FigureAnimation = {
+  // +0x00: float32 playback rate per millisecond.
+  readonly rate: number
+  // +0x04..+0x0c: float32 vector the animation puts the figure's offset at.
+  readonly vector: Vector3
+  // +0x10..+0x18 and +0x1c: float32 centre and radius of the bounding sphere in this animation.
+  readonly boundsCentre: Vector3
+  readonly boundsRadius: number
+  // +0x24 and +0x26: uint16 frame count and the period times wrap at.
+  readonly frameCount: number
+  readonly period: number
+}
+
+// The model part a figure holds at +0x78 (its +0x28..+0x30 centre, +0x34 radius and +0x38 radius scale).
+export type FigureChild = {
+  readonly centre: Vector3
+  readonly radius: number
+  readonly radiusScale: number
+}
+
+// A figure (class 0x004af5ec, constructor 0x0040d530, 0xf4 bytes): a frame with an animation player. The racer's
+// display frame (racer +0x5c, vehicle +0x44) and the driver (vehicle +0x48) are figures.
+export type Figure = {
+  // +0x5c: 0x10000 plays, 0x20000 blends towards the target, 0x40000 loops, 0x80000 ended, 0x100000 chains to
+  // the target animation, 0x400000 the target loops, 0x2000000 wrapped this update.
+  readonly flags: number
+  // +0xbc and +0xd8: uint16 ids of the current and the target animation.
+  readonly currentId: number
+  readonly targetId: number
+  // +0xb4, +0xb8: float32 time (frames) and rate of the current animation; +0xd0, +0xd4 of the target.
+  readonly currentTime: number
+  readonly currentRate: number
+  readonly targetTime: number
+  readonly targetRate: number
+  // +0xec and +0xf0: float32 blend position in [0, 1] and its rate per millisecond.
+  readonly blend: number
+  readonly blendRate: number
+  // +0xcc and +0xe8: whether the current and the target animation advance while blending.
+  readonly isCurrentAdvancing: boolean
+  readonly isTargetAdvancing: boolean
+  // +0xc0..+0xc8, +0xdc..+0xe4 and +0x1c..+0x24: float32 vectors of the current animation, the target and the blend.
+  readonly currentVector: Vector3
+  readonly targetVector: Vector3
+  readonly outputVector: Vector3
+  // +0x58: float32 scale.
+  readonly scale: number
+  readonly animations: readonly FigureAnimation[]
+  readonly child: FigureChild | null
+}
+
+// 0x0040dd60's blend step: the figure after it and the milliseconds left for the plain advance.
+export type FigureBlend = {
+  readonly figure: Figure
+  readonly remainingMilliseconds: number
+}
+
+// A figure's bounding sphere in its own space (0x0040e0b0).
+export type FigureBounds = {
+  readonly centre: Vector3
+  readonly radius: number
+}
+
+// The vehicle (racer +0x18, constructor 0x0043d5a0, update 0x0043e070) as far as the ported code goes: the animated
+// driver and the state that decides which animation plays next. Its particle emitters and sounds are presentation.
+export type Vehicle = {
+  // +0x48: the driver figure (vehicle animations 0..0x11).
+  readonly driverFigure: Figure
+  // +0x40: the optional second chassis figure (racer +0x58), whose rate follows the wheels.
+  readonly secondFigure: Figure | null
+  // +0x384: reactions asked for since the last update (1 start boost, 2 hit); cleared by 0x0043ec10.
+  readonly reactionFlags: number
+  // +0x388: uint32 milliseconds until the driver may look at another racer again.
+  readonly lookMilliseconds: number
+  // +0x38c: float32 forward speed of the previous update.
+  readonly previousForwardSpeed: number
+  // +0x380: index of the racer the driver looks at, or -1.
+  readonly watchedRacerIndex: number
+  // +0x270, +0x274, +0x278: the effect emitters (smoke and dust) that exist, as the milliseconds they have lived
+  // (null when absent). Only the presentation layer creates them, so they stay null here; 0x0043e070 draws from the
+  // random table for the first two while they live.
+  readonly smokeEmitterAge: number | null
+  readonly dustEmitterAge: number | null
+  readonly boostEmitterAge: number | null
+}
+
 // The racer (0xe34 bytes; constructor 0x00436990, field reset 0x00436bd0). Only the fields the ported passes touch.
 export type Racer = {
   readonly carBody: CarBody
   readonly driver: RacerDriver
+  // +0x5c: the display figure (the car body's display frame, vehicle +0x44).
+  readonly figure: Figure
+  // +0x18: the vehicle.
+  readonly vehicle: Vehicle
   // +0x3b4 (vehicle +0x39c): float32 written by pass 3 (0x00437b50) while power sliding.
   readonly vehicleSlideAngle: number
   // +0xcc4: index of the current checkpoint in RacerSetContext.checkpoints, or -1 (a null pointer).
@@ -224,6 +343,18 @@ export type Racer = {
   readonly savedPosition: Vector3
   readonly savedVelocity: Vector3
   readonly savedForward: Vector3
+  // +0x14: the force-feedback effect.
+  readonly forceFeedback: ForceFeedbackEffect
+  // +0xd6c: what a racer with flag 0x1 does to the one it hits: 1 kicks it sideways, 2 and 3 spin it.
+  readonly attackKind: number
+  // +0xd70: 1 or 2 while the kick of 0x00438e60 runs (which car body command to undo), 0 otherwise.
+  readonly reactionKind: number
+  // +0xd80: non-zero while the racer carries a timed effect it can pass on (set to 1000 by 0x00439900).
+  readonly timedEffectCharge: number
+  // +0xdf8: the point a player is guided to (0x00439e60 sets it with flag 0x8000, 0x00439e90 clears the flag).
+  readonly guidanceTarget: Vector3
+  // The 750 ms timer 0x00438e60 adds to the collision manager (milliseconds counted so far), or null when none runs.
+  readonly contactTimerMilliseconds: number | null
 }
 
 // One entry of the ranking array (0x004c67b0, stride 12: racer, distance, progress).
@@ -241,6 +372,13 @@ export type RacerSet = {
   readonly rubberBand: RubberBand
   // Global 0x004c6ee4: the random table position, shared by every user of the table.
   readonly randomPosition: RandomTablePosition
+  // Racer set +0xf0 (the collision manager, vtable 0x004b0aa8): the racers' nodes in list order (list +0x2c), as indexes.
+  // The list is sorted by the display bounding sphere's lowest x on every step, so the order is state.
+  readonly collisionOrder: readonly number[]
+  // The same manager's list +0x48 (objects the racers touch, registered by effects, projectiles and bricks) and the
+  // contacts the last pass 4 found in it (0x0043d270); whoever registers an entry answers its contacts.
+  readonly registryEntries: readonly RegistryEntry[]
+  readonly registryContacts: readonly RegistryContact[]
 }
 
 // Constant inputs of a race step.
@@ -251,6 +389,8 @@ export type RacerSetContext = {
   readonly checkpoints: readonly Checkpoint[]
   // Every car rigid body's collision list (+0x140): the track's BVB instance, then the moving objects.
   readonly collisionObjects: readonly CollisionObject[]
+  // 0x004bef70, written by Race_LoadTrackContent from race +0x3348: the number of laps of the race.
+  readonly raceLapCount: number
 }
 
 // A call into code this module does not port. It receives and returns the whole set so it can move the random cursor.
@@ -303,6 +443,26 @@ export type RacerSetStepDependencies = {
   readonly updateNearestRacerSound: RacerSetBoundary
 }
 
+// What the collision response of two racers (0x00438560) calls that this module does not port.
+export type RacerCollisionDependencies = {
+  // 0x00429680 on a scripted car body: the route follower is moved by the displacement (0x004a5750, 0x0042a290, 0x0042a570).
+  readonly separateScriptedCarBody: (
+    context: RacerSetContext,
+    racerSet: RacerSet,
+    racerIndex: number,
+    displacement: Vector3
+  ) => RacerSet
+  // 0x00439900 (thiscall on the receiver: the giver's figure and +0xd7c): passes a timed effect on.
+  readonly transferTimedEffect: (
+    context: RacerSetContext,
+    racerSet: RacerSet,
+    receiverIndex: number,
+    giverIndex: number
+  ) => RacerSet
+  // 0x00439b00, the end of the giver's timed effect.
+  readonly endTimedEffect: RacerBoundary
+}
+
 // Racer set step input.
 export type RacerSetStepInput = {
   readonly context: RacerSetContext
@@ -349,4 +509,15 @@ export type PlayerControllerInput = {
   readonly state: PlayerControllerState
   readonly racerIndex: number
   readonly dependencies: PlayerControllerDependencies
+}
+
+// What pass 4 calls besides the collision response.
+export type RacerPassDependencies = RacerCollisionDependencies & {
+  // Slot 6 (+0x18) of a racer's bounding volume against an entry's volume: the precise test of 0x0043d270.
+  readonly getIsTouchingRegistryEntry: (
+    context: RacerSetContext,
+    racerSet: RacerSet,
+    racerIndex: number,
+    entry: RegistryEntry
+  ) => boolean
 }

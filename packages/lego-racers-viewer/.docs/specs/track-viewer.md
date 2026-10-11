@@ -13,6 +13,8 @@ Shows any LEGO Racers world from the player's own `LEGO.JAM` in the browser: tex
 - **Watch the animation**: a button plays or pauses the skeleton instances and the sky; time runs in whole milliseconds, at most 100 per frame like the engine.
 - **See what is missing**: the scene summary lists the loaded worlds, counts, and textures without an image; a world that cannot be linked shows the original's error message.
 
+- **Race**: the _Race_ button switches to race mode. In development one button loads the local LEGO.JAM, LEGORacers.exe and the music and starts Royal Knights Raceway live (the original's frame clock feeds `stepRace`; arrows, Enter, Right Ctrl, M, Space and Right Alt or a gamepad drive; the chase camera, HUD, music and sounds follow the race). In production the player chooses LEGO.JAM, LEGORacers.exe and the .tun files.
+
 ## Invariants
 
 - The archive never leaves the browser.
@@ -24,4 +26,4 @@ Shows any LEGO Racers world from the player's own `LEGO.JAM` in the browser: tex
 
 ## Out of scope
 
-Sprites, material animations, level-of-detail switching, the engine's lighting of models with normals (approximated with Lambert lighting), the clear colour below the sky's horizon, racer textures built at run time, and the menu code's world load order.
+Race mode: the chassis and driver databases (every racer uses a placeholder car and driver model pair, the driver at a placeholder seat), wheels, collision contacts (laps and bricks are not counted), the HUD's bitmap fonts (a browser font stands in), the intro fly-through, and the Direct3D field of view (60 degrees stands in). Sprites, material animations, level-of-detail switching, the engine's lighting of models with normals (approximated with Lambert lighting), the clear colour below the sky's horizon, racer textures built at run time, and the menu code's world load order.

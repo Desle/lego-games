@@ -1,4 +1,13 @@
 export {
+  collideRacers,
+  createCollideRacers,
+  RACER_COLLISION_DEPENDENCIES_NOT_YET_PORTED,
+} from './controller/collide-racers/collide-racers.ts'
+export { endRacerKick, respondToRacerContact } from './controller/racer-contact/racer-contact.ts'
+export { followDriverRoute } from './controller/follow-driver-route/follow-driver-route.ts'
+export { notifyRacerContact } from './controller/notify-racer-contact/notify-racer-contact.ts'
+export { updatePlayerGuidance } from './controller/update-player-guidance/update-player-guidance.ts'
+export {
   startRacerPowerSlide,
   stopRacerPowerSlide,
 } from './controller/racer-power-slide/racer-power-slide.ts'
@@ -15,6 +24,11 @@ export {
 } from './controller/update-player-controller/update-player-controller.ts'
 export { readRacerTables } from './services/read-racer-tables/read-racer-tables.ts'
 export {
+  addCarBodyImpulse,
+  setCarBodyPush,
+  startCarBodySpin,
+} from './types/car-body-commands/car-body-commands.ts'
+export {
   createCarBody,
   foldCarBodySpinTimer,
   getCarBodyAverageGrip,
@@ -30,9 +44,20 @@ export {
   stopCarBodyPowerSlide,
   stopCarBodySlide,
 } from './types/car-body/car-body.ts'
+export {
+  blendFigureAnimation,
+  chainFigureAnimation,
+  createFigure,
+  getFigureAnimationId,
+  getFigureBounds,
+  playFigureAnimation,
+  updateFigure,
+} from './types/figure/figure.ts'
+export { createVehicle, updateVehicle, updateVehicleDriver } from './types/vehicle/vehicle.ts'
 export { COSINE_TABLE_ADDRESS, getTableCosine } from './types/cosine-table/cosine-table.ts'
 export {
   applyDriverSteering,
+  assignDriverRoute,
   applyDriverThrottle,
   createRacerDriver,
   setDriverSteering,
@@ -55,12 +80,20 @@ export type {
   CarBodyDefinition,
   DrivenCarBody,
   DriverUpdate,
+  Figure,
+  FigureAnimation,
+  FigureBounds,
+  FigureChild,
+  Vehicle,
+  ForceFeedbackEffect,
   PlayerController,
   PlayerControllerDependencies,
   PlayerControllerInput,
   PlayerControllerState,
   Racer,
   RacerBoundary,
+  RacerCollisionDependencies,
+  RacerPassDependencies,
   RacerControls,
   RacerDriver,
   RacerSet,

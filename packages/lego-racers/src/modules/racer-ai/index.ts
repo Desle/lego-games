@@ -41,6 +41,7 @@ export { UnportableRouteError } from './types/racer-ai-errors/racer-ai-errors.ts
 export {
   advanceRouteFollower,
   createRouteFollower,
+  moveRouteFollower,
   resetRouteFollower,
   setRouteFollowerSpeedFactor,
   startRouteFollowerAtLoop,

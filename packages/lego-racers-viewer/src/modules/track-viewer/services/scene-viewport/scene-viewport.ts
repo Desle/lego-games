@@ -33,7 +33,7 @@ const FLY_DIRECTIONS: Readonly<Record<string, readonly [number, number, number]>
   KeyQ: [0, -1, 0],
 }
 
-const showSceneObjects = (scene: Scene, background: SceneBackground | null): ShownScene => {
+export const showSceneObjects = (scene: Scene, background: SceneBackground | null): ShownScene => {
   const backgroundPath = background?.backgroundWorldPath ?? null
   return Object.freeze({
     scene,

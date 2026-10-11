@@ -1,11 +1,6 @@
-import { readFloatTriple } from '../../../token-reader/index.ts'
+import { readFloatTriple, readKeywordsUntilRightCurly } from '../../../token-reader/index.ts'
 import { UnportableFileError } from '../../../../shared/errors/gol-file-errors.ts'
-import {
-  BinaryToken,
-  createTokenReader,
-  TokenReaderFailure,
-  type TokenReader,
-} from '../../../token-reader/index.ts'
+import { BinaryToken, createTokenReader, type TokenReader } from '../../../token-reader/index.ts'
 import {
   HAZARDS_WITHOUT_DATA,
   HazardBlockKeyword,
@@ -38,15 +33,7 @@ const readBlock = <Value>(
   applyKeyword: (keyword: number, value: Value) => Value | null
 ): Value => {
   reader.expectLeftCurly()
-  let value = initial
-  for (
-    let keyword = reader.getNextToken();
-    keyword !== BinaryToken.RIGHT_CURLY;
-    keyword = reader.getNextToken()
-  ) {
-    value = applyKeyword(keyword, value) ?? reader.fail(TokenReaderFailure.SYNTAX_ERROR)
-  }
-  return value
+  return readKeywordsUntilRightCurly(reader, initial, applyKeyword)
 }
 
 // 0x0048f830: a mirrored track negates the y of the three vectors after the block.

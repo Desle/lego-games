@@ -55,6 +55,7 @@ export const createTestContext = (): RacerSetContext =>
     tables: IDENTITY_TABLES,
     checkpoints: [],
     collisionObjects: [],
+    raceLapCount: 3,
   })
 
 export const createTestRacerSet = (count: number): RacerSet =>
