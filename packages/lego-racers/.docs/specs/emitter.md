@@ -8,6 +8,8 @@ Parses an `.EMB` emitter file (`COMMON\EMITTER.EMB` and each race's `RACECxRy.EM
 
 - **Parse emitters**: the race passes the file's bytes to `parseEmitters` and gets the emitters in file order and `readByteCount`.
 
+- **Run the emitters**: `createEmitterPool`, `spawnEmitter`, `releaseEmitter`, the setters and `updateEmitterPool` (Emitters_Update, with its random table draws) keep a pool of emitters and their particles.
+
 ## Invariants
 
 - The file is `0x27 [ count ] {`, then for a non-zero count count blocks `0x27 "name" { keywords }` and `}`; for a count of zero the final curly is never read.
@@ -16,4 +18,4 @@ Parses an `.EMB` emitter file (`COMMON\EMITTER.EMB` and each race's `RACECxRy.EM
 
 ## Out of scope
 
-Resolving the entry index and the linked name, and running the particle emitters.
+Drawing the particles (their sprite materials) and the vehicles' and power-ups' own spawns.

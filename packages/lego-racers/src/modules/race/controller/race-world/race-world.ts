@@ -1,3 +1,4 @@
+import type { HazardRacer } from '../../../hazard/index.ts'
 import { getBrickKindCode, getBrickKindFromCode } from '../../../power-ups/index.ts'
 import type {
   PowerUpContext,
@@ -15,7 +16,7 @@ import type {
   ProjectileContext,
   ProjectileEvent,
 } from '../../../projectiles/index.ts'
-import { getRacer, setCarBodyPush, setRacer } from '../../../racer/index.ts'
+import { getRacer, getTableCosine, setCarBodyPush, setRacer } from '../../../racer/index.ts'
 import type { Racer, RacerControls, RacerSet, RacerSetContext } from '../../../racer/index.ts'
 import type { RaceContacts, RaceRacerSet, RaceState } from '../../types/race.types.ts'
 import { getLapGapMilliseconds } from '../../types/lap-gap/lap-gap.ts'
@@ -278,6 +279,16 @@ export const getRacerSetAfterProjectileEvents = (
     })
   }, racerSet)
 
+const getHazardRacer = (racer: Racer | undefined, racerIndex: number): HazardRacer | null => {
+  if (racer === undefined) return null
+  const { position } = racer.carBody.rigidBody.displayFrame
+  return Object.freeze({
+    index: racerIndex,
+    flags: racer.flags,
+    position: Object.freeze([position.x, position.y, position.z] as const),
+  })
+}
+
 const ZONE_ZERO = 0
 const ZONE_ONE = 1
 const TARGET_SET_FLAG = 0x8000
@@ -480,7 +491,17 @@ export const changeTrackLogic = (
     ...racerSet.trackLogic,
     random: { table: racerSet.trackLogic.random.table, position: racerSet.randomPosition },
   }
-  const step = run(synced, { arithmetic: context.arithmetic, world: STATIC_TRACK_WORLD })
+  const track = context.collisionObjects[0]
+  const step = run(synced, {
+    arithmetic: context.arithmetic,
+    world: STATIC_TRACK_WORLD,
+    getHazardRacer: (racerIndex) => getHazardRacer(racerSet.racers[racerIndex], racerIndex),
+    getTableCosine: (index) => getTableCosine(context.tables, index),
+    probe:
+      track === undefined
+        ? NO_LINE_HIT
+        : createTrackLineProbe(context.arithmetic, track.volume, () => false),
+  })
   const changed: RaceRacerSet = Object.freeze({
     ...racerSet,
     trackLogic: step.state,

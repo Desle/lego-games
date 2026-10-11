@@ -15,6 +15,8 @@ Parses a race's `.HZB` hazard list exactly as `Hazards_Load` (`LEGORacers.exe` `
 - `0x3a` stores its float squared; a mirrored track negates the y of the `0x33` vectors, of the `0x3d` points and of the `0x40` `0x37` vector.
 - A hazard keyword without a class, a fifth name in a `0x34` hazard and a `0x3d` hazard that reaches the end of the file throw `UnportableFileError`, where the original calls through a null object, overruns its stack or loops forever.
 
+- **Run the hazards**: `createHazardRuntime` makes one object per definition (class loaders may draw and change the worlds); `updateHazards`, `updateHazardsAfterRacers`, the bus walks (`startHazardSignal`, `startStopHazardSignal`, `stopHazardSignal`, `forceEndHazards`, the racer-trigger walks) and `touchHazard` run them against a session that the track logic supplies.
+
 ## Out of scope
 
-Resolving the names against the worlds, and animating the hazards (`0x0048add0`).
+The skeleton poses of hazard instances, the collision registry callbacks and sounds (see `.docs/reverse-engineering/hazards-and-emitters.md`).

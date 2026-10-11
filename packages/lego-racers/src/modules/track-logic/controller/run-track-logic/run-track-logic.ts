@@ -1,3 +1,4 @@
+import type { Vector3 } from '../../../event/index.ts'
 import type {
   TrackLogicContext,
   TrackLogicState,
@@ -35,8 +36,8 @@ export const updateTrackEvents = (
   milliseconds: number
 ): TrackLogicStep => runTrackLogic(state, context, (session) => session.updateEvents(milliseconds))
 
-// The track logic's part of Race_Update 0x00435220, in its order: Triggers_Update (environment, then main),
-// Events_Update, Timers_Update. Hazards and emitters sit between them and are not ported.
+// The track logic's part of Race_Update 0x00435220, in its order: the worlds' animation (0x00416090), Triggers_Update
+// (environment, then main), Emitters_Update (both pools), Events_Update, Hazards_Update, Timers_Update.
 export const updateTrackLogicFrame = (
   state: TrackLogicState,
   context: TrackLogicContext,
@@ -44,10 +45,21 @@ export const updateTrackLogicFrame = (
   racerCount: number
 ): TrackLogicStep =>
   runTrackLogic(state, context, (session) => {
+    session.advanceWorlds(milliseconds)
     session.updateTriggers(racerCount)
+    session.updateEmitters(milliseconds)
     session.updateEvents(milliseconds)
+    session.updateHazards(milliseconds)
     session.updateTimers(milliseconds)
   })
+
+// 0x0048ae00, after the racers' sub-steps: the hazards that follow the cameras.
+export const updateTrackHazardsAfterRacers = (
+  state: TrackLogicState,
+  context: TrackLogicContext,
+  cameraPositions: readonly Vector3[]
+): TrackLogicStep =>
+  runTrackLogic(state, context, (session) => session.updateHazardsAfterRacers(cameraPositions))
 
 // Pass 4 of every racer set sub-step: the registry's time list (0x0042fc10) runs the timers' callbacks.
 export const tickTrackTimeEntries = (

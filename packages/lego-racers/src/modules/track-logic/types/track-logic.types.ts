@@ -18,7 +18,17 @@ import type {
   ObjectReference,
   Vector3,
 } from '../../event/index.ts'
+import type { EmitterPool } from '../../emitter/index.ts'
+import type {
+  HazardBus,
+  HazardEffect,
+  HazardList,
+  HazardRacer,
+  HazardRuntime,
+} from '../../hazard/index.ts'
+import type { LineProbe } from '../../projectiles/index.ts'
 import type { RandomTable, RandomTablePosition } from '../../random-table/index.ts'
+import type { RaceWorlds } from '../../world-animation/index.ts'
 import type { Timer, TimerList } from '../../timer/index.ts'
 import type { Trigger, TriggerList } from '../../trigger/index.ts'
 import type { FloatArithmetic } from '../../simulation-math/index.ts'
@@ -108,6 +118,7 @@ export type TrackEffect =
       readonly slot: number
       readonly vector: Vector3 | null
     }
+  | HazardEffect
 
 export type TrackWorldObject = {
   // +0xbc: the animation the object plays (a uint16).
@@ -136,6 +147,18 @@ export type TrackRandom = {
 export type TrackLogicContext = {
   readonly arithmetic: FloatArithmetic
   readonly world: TrackWorld
+  // What the hazards read of a racer (flags and position); without it no racer is found.
+  readonly getHazardRacer?: (racerIndex: number) => HazardRacer | null
+  // The cosine table at 0x004bf7ec and the track line probe 0x0041f730, which the hazards read.
+  readonly getTableCosine?: (index: number) => number
+  readonly probe?: LineProbe
+}
+
+// The two emitter pools: the common one (race +0x2150, vehicles and power-ups spawn into it) and the track's (race
+// +0x248c, hazards and 3D events), each absent when the race has no emitter file.
+export type TrackEmitters = {
+  readonly common: EmitterPool | null
+  readonly track: EmitterPool | null
 }
 
 // One timer (0x24 bytes, Timer_Setup 0x00464750): its parsed values and the state Timers_Update and the callback keep.
@@ -191,6 +214,10 @@ export type TrackLogicState = {
   // Events_Load's 0x39 pairs (event set +0x6c): the first identifier ends the second's events.
   readonly links: readonly EventLink[]
   readonly random: TrackRandom
+  // The worlds the hazards and animation events move (race +0x390, +0x398, +0x3a4).
+  readonly worlds: RaceWorlds
+  readonly hazards: HazardRuntime
+  readonly emitters: TrackEmitters
 }
 
 // What a timer's callback uses of the session.
@@ -207,6 +234,11 @@ export type TrackLogicInput = {
   readonly timerList: TimerList | null
   readonly mainTriggers: TriggerList | null
   readonly environmentTriggers: TriggerList | null
+  // The hazard list and the world and emitter state they and the events work on; a race without them has none.
+  readonly hazardList?: HazardList | null
+  readonly isMirrored?: boolean
+  readonly worlds?: RaceWorlds
+  readonly emitters?: TrackEmitters
 }
 
 export type TrackLogicStep = {
@@ -215,7 +247,7 @@ export type TrackLogicStep = {
 }
 
 // The operations the class handlers call; the session threads the state through them (events.ts).
-export type TrackSession = {
+export type TrackSession = HazardBus & {
   readonly context: TrackLogicContext
   // MOV r16,word ptr [position*2 + 0x004befec] after advancing the position.
   readonly drawRandomValue: () => number
@@ -225,14 +257,6 @@ export type TrackSession = {
   readonly announceTransition: (event: TrackEvent, from: number, to: number) => void
   // The class's end (vtable +0xc).
   readonly endEvent: (event: TrackEvent) => TrackEvent
-  // 0x00461ef0, 0x00462580 and 0x00462140: the bus the events, hazards and timers talk over.
-  readonly startSignal: (identifier: number, parameter: Vector3 | null) => void
-  readonly startStopSignal: (
-    startIdentifier: number,
-    stopIdentifier: number,
-    parameter: Vector3 | null
-  ) => void
-  readonly stopSignal: (identifier: number, parameter: Vector3 | null) => void
   // 0x00462350: the events with this identifier end at their next update.
   readonly forceEnd: (identifier: number) => void
   // 0x004628c0, 0x00462ae0 and 0x004629d0: a racer fires or releases the trigger-driven events.
@@ -245,6 +269,13 @@ export type TrackSession = {
   readonly releaseTrigger: (identifier: number, racerIndex: number | null) => void
   // Events_Update 0x00461cc0
   readonly updateEvents: (milliseconds: number) => void
+  // 0x00416090 for the three worlds (track, local, blended), the first of Race_Update's per-frame updates.
+  readonly advanceWorlds: (milliseconds: number) => void
+  // Emitters_Update 0x00489fa0 for the common pool and then the track's.
+  readonly updateEmitters: (milliseconds: number) => void
+  // Hazards_Update 0x0048add0 and the hazards' camera update 0x0048ae00 after the racers.
+  readonly updateHazards: (milliseconds: number) => void
+  readonly updateHazardsAfterRacers: (cameraPositions: readonly Vector3[]) => void
   // Timers_Update 0x00464dd0 and the registry's time list (0x0042fc10).
   readonly updateTimers: (milliseconds: number) => void
   // Triggers_Update: the environment triggers, then the main triggers, release what nobody touched.
@@ -296,3 +327,8 @@ export type SessionBuild = {
 }
 
 export type SessionReference = { current: TrackSession | null }
+
+// The hazards a race loaded, the worlds their loaders changed and the random table position after their draws.
+export type LoadedHazards = Pick<TrackLogicState, 'hazards' | 'worlds'> & {
+  readonly position: RandomTablePosition
+}

@@ -284,6 +284,10 @@ export const useRaceController = (): RaceController => {
         for (const sound of frame.sounds) audio.playSound(sound)
         if (frame.music !== null) audio.playMusic(frame.music)
         viewport.update(getRacerPoses(raceState), frame.cameraView, getEffectViews(raceState))
+        viewport.showHazards(raceState.trackLogic.worlds.track, [
+          raceState.trackLogic.emitters.common,
+          raceState.trackLogic.emitters.track,
+        ])
         viewport.animate(advance.frameMilliseconds)
         setScreen((previous) => ({
           ...previous,

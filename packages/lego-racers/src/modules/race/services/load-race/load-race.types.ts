@@ -54,6 +54,9 @@ export type RouteFiles = {
   readonly getIsPresent: (path: string) => boolean
 }
 
+// Reads a file of the archive by its full path.
+export type ReadFile = (path: string) => Uint8Array
+
 export type RouteDrawer = (position: RandomTablePosition) => RandomDraw
 
 export type RacerDescriptionRequest = {
