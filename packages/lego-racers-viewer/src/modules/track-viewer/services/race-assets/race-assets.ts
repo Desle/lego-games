@@ -98,53 +98,13 @@ const loadEffectModel = (archive: JamArchive, name: string, isSkeletal: boolean)
     animationName: isSkeletal ? name : null,
   })
 
-// 0x0045ba90 picks the brick material by kind: 1 pbrickP (red), 2 pbrickS (blue), 3 pbrickT (green), 4 pbrickM (yellow);
-// POWERUP.MDB holds them. The brick model is drawn with that material in place of its own.
-const BRICK_MATERIAL_NAMES: Readonly<Record<string, string>> = Object.freeze({
-  projectile: 'pbrickP',
-  shield: 'pbrickS',
-  turbo: 'pbrickT',
-  hazard: 'pbrickM',
-})
-
-const getModelWithMaterial = (model: ModelScene, materialName: string): ModelScene => {
-  const materialIndex = model.scene.materials.findIndex(
-    (material) => material.name === materialName
-  )
-  if (materialIndex === -1) return model
-  return Object.freeze({
-    ...model,
-    scene: Object.freeze({
-      ...model.scene,
-      meshes: Object.freeze(
-        model.scene.meshes.map((mesh) =>
-          Object.freeze({
-            ...mesh,
-            materialIndices: Object.freeze(mesh.materialIndices.map(() => materialIndex)),
-          })
-        )
-      ),
-    }),
-  })
-}
-
-const getPowerUpBrickModels = (model: ModelScene): Readonly<Record<string, ModelScene>> =>
-  Object.freeze(
-    Object.fromEntries(
-      Object.entries(BRICK_MATERIAL_NAMES).map(([kind, name]) => [
-        kind,
-        getModelWithMaterial(model, name),
-      ])
-    )
-  )
-
 const getEffectModels = (archive: JamArchive): EffectModels =>
   Object.freeze({
     rocket: loadEffectModel(archive, 'DMISSILE', true),
     barrel: loadEffectModel(archive, 'BARREL', false),
     magnet: loadEffectModel(archive, 'MAGNET04', true),
     spikedExplosion: loadEffectModel(archive, 'SPIKEXP', false),
-    powerUpBricks: getPowerUpBrickModels(loadEffectModel(archive, 'PUBRICKY', true)),
+    powerUpBrick: loadEffectModel(archive, 'PUBRICKY', true),
     enhancementBrick: loadEffectModel(archive, 'ENHABRIK', true),
   })
 
