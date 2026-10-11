@@ -27,6 +27,7 @@ import {
   enterZoneTwo,
   enterZoneZero,
   getRacerAfterPowerUpEvent,
+  getRacerTumbling,
 } from '../../types/racer-transitions/racer-transitions.ts'
 import type { RaceWorldChange } from './race-world.types.ts'
 
@@ -260,16 +261,17 @@ export const getProjectileContext = (
   })
 }
 
-const TUMBLING_STARTED_FLAG = 0x8
-
-// 0x00439570 sets racer flag 0x8; the other events call car body slots that are not ported (they stay in the
+// 0x00439570 makes the racer tumble; the other events call car body slots that are not ported (they stay in the
 // events the race reports).
-export const getRacerAfterProjectileEvent = (racer: Racer, event: ProjectileEvent): Racer =>
-  event.type === 'projectiles.racer_tumbling_started'
-    ? Object.freeze({ ...racer, flags: (racer.flags | TUMBLING_STARTED_FLAG) >>> 0 })
-    : racer
+export const getRacerAfterProjectileEvent = (
+  arithmetic: FloatArithmetic,
+  racer: Racer,
+  event: ProjectileEvent
+): Racer =>
+  event.type === 'projectiles.racer_tumbling_started' ? getRacerTumbling(arithmetic, racer) : racer
 
 export const getRacerSetAfterProjectileEvents = (
+  arithmetic: FloatArithmetic,
   racerSet: RaceRacerSet,
   events: readonly ProjectileEvent[]
 ): RaceRacerSet =>
@@ -280,7 +282,7 @@ export const getRacerSetAfterProjectileEvents = (
       ...setRacer(
         current,
         event.racer,
-        getRacerAfterProjectileEvent(getRacer(current, event.racer), event)
+        getRacerAfterProjectileEvent(arithmetic, getRacer(current, event.racer), event)
       ),
     })
   }, racerSet)

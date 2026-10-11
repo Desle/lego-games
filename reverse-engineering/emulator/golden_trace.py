@@ -64,6 +64,7 @@ RACER_FIELDS = (
     ("racer.checkpointSide", 0xCC8, 1),
     ("racer.heldPowerUp", 0xCCC, 1),
     ("racer.powerUpThink", 0xCD8, 2),
+    ("racer.turboLevel", 0xD68, 1),
 )
 CONTROLLER_FIELDS = (
     ("controller.bindings", 0x5C, 1),

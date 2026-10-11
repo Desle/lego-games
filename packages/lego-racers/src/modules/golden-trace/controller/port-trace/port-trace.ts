@@ -98,6 +98,7 @@ const getRacerFields = (racer: Racer, index: number, context: RacerSetContext): 
       racer.powerUpThinkMilliseconds >>> 0,
       racer.powerUpThinkIntervalMilliseconds >>> 0,
     ],
+    [`${prefix}.racer.turboLevel`]: getIntegerWords(racer.turboLevel),
     [`${prefix}.body.wheels`]: rigidBody.wheels.flatMap((wheel) => [
       (wheel.isOnGround ? 1 : 0) | (wheel.isProbed ? 2 : 0),
       getBitsFromFloat(wheel.depthSquared),

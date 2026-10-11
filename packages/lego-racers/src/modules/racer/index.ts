@@ -33,6 +33,7 @@ export { readRacerTables } from './services/read-racer-tables/read-racer-tables.
 export {
   addCarBodyImpulse,
   clearCarBodyTwoPointMode,
+  endCarBodySpin,
   endCarBodyBoost,
   endCarBodyFlaggedState,
   holdCarBody,

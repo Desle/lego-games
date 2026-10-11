@@ -3,8 +3,10 @@ import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
 import {
   assignDriverRoute,
   endCarBodyBoost,
+  endCarBodySpin,
   getDriven,
   setCarBodyHeadingFromFrame,
+  setCarBodyTwoPointMode,
   setDriven,
   startCarBodyBoost,
   startCarBodyFlip,
@@ -24,6 +26,8 @@ const RACER_REVERSE_LAP_FLAG = 0x80000
 // Driver +0x14 bit 0x80: the driver has no route (0x0043a0e0 sets it when 0x0043d070 finds none).
 const DRIVER_NO_ROUTE_FLAG = 0x80
 const LAP_GAP_COUNTDOWN_MILLISECONDS = 2000
+const RACER_TUMBLING_FLAG = 0x8
+const TUMBLING_TURBO_LEVEL = 2
 
 // 0x004374c0, the racer fields: flag 0x2 set and 0x1000..0x4000 cleared, no checkpoint, zone history 0, 2, 1, no lap.
 // The route placement (0x0042a670, car body +0xb30 = 1) is done by the scripted car body code.
@@ -191,17 +195,28 @@ const RACER_TURBO_FLAG = 0x40
 const DRIVER_FULL_THROTTLE_FLAG = 0x1
 const DRIVER_FULL_THROTTLE_TOUCHING_FLAG = 0x100
 
+// 0x00439570: the racer tumbles (flag 0x8, once): the car body's spin ends (slot 0x2c) and it goes into two-point mode
+// (slot 0x30).
+export const getRacerTumbling = (arithmetic: FloatArithmetic, racer: Racer): Racer =>
+  (racer.flags & RACER_TUMBLING_FLAG) !== 0
+    ? racer
+    : Object.freeze({
+        ...racer,
+        flags: (racer.flags | RACER_TUMBLING_FLAG) >>> 0,
+        carBody: setCarBodyTwoPointMode(arithmetic, endCarBodySpin(arithmetic, racer.carBody)),
+      })
+
 // 0x0045cd70 → 0x00429cf0 on the car body, then 0x004396c0: racer flag 0x40, the driver at full throttle (driver
-// flag 0x1 set, 0x100 cleared), the heading from the frame (0x00446fa0) and the boost (0x004292e0). The vehicle's
-// effects, racer +0xd68 (the level, read by force feedback and presentation) and level 2's tumble (0x00439570) are
-// not applied here.
+// flag 0x1 set, 0x100 cleared), the heading from the frame (0x00446fa0), the boost (0x004292e0) and racer +0xd68, the
+// level; level 2 ends with the tumble (0x00439570). The vehicle's effects are not applied here.
 export const getRacerAfterTurboStart = (
   arithmetic: FloatArithmetic,
   racer: Racer,
-  boostMilliseconds: number
+  boostMilliseconds: number,
+  level: number
 ): Racer => {
   const flipped = startCarBodyFlip(arithmetic, racer.carBody, TURBO_FLIP_RATE, boostMilliseconds)
-  return Object.freeze({
+  const started: Racer = Object.freeze({
     ...racer,
     flags: (racer.flags | RACER_TURBO_FLAG) >>> 0,
     driver: Object.freeze({
@@ -209,7 +224,9 @@ export const getRacerAfterTurboStart = (
       flags: (racer.driver.flags & ~DRIVER_FULL_THROTTLE_TOUCHING_FLAG) | DRIVER_FULL_THROTTLE_FLAG,
     }),
     carBody: startCarBodyBoost(arithmetic, setCarBodyHeadingFromFrame(arithmetic, flipped)),
+    turboLevel: level,
   })
+  return level === TUMBLING_TURBO_LEVEL ? getRacerTumbling(arithmetic, started) : started
 }
 
 // 0x00439730 (then 0x004395a0, which acts on racer flag 0x8): racer flag 0x40 and driver flags 0x101 cleared, and
@@ -240,7 +257,7 @@ export const getRacerAfterPowerUpEvent = (
 ): Racer => {
   switch (event.type) {
     case 'power_ups.racer_turbo_started':
-      return getRacerAfterTurboStart(arithmetic, racer, event.boostMilliseconds)
+      return getRacerAfterTurboStart(arithmetic, racer, event.boostMilliseconds, event.level)
     case 'power_ups.racer_turbo_ended':
       return getRacerAfterTurboEnd(arithmetic, racer)
     case 'power_ups.racer_shield_raised':

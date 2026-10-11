@@ -353,6 +353,8 @@ export type Racer = {
   readonly collisionSoundMilliseconds: number
   // +0xd50: uint32 milliseconds with no wheel on the ground.
   readonly airborneMilliseconds: number
+  // +0xd68: the level of the turbo started last (0x004396c0); force feedback and presentation read it.
+  readonly turboLevel: number
   // +0xd74, +0xd84: uint32 countdowns whose meaning is not identified.
   readonly unidentifiedCountdownD74Milliseconds: number
   readonly unidentifiedCountdownD84Milliseconds: number

@@ -12,6 +12,7 @@ import {
 import type { ComputerSpeedState } from '../../../racer-ai/index.ts'
 import {
   addScaledImpulse,
+  CAR_RIGID_BODY_HOOKS,
   CarRigidBodyFlag,
   getBodyInTwoPointMode,
   getBodyOutOfTwoPointMode,
@@ -271,6 +272,24 @@ export const startCarBodyFlip = (
     flipAngle: 0,
     flipRate: -rate,
     rigidBody: Object.freeze({ ...body.rigidBody, pitchTimer: milliseconds }),
+  })
+}
+
+// Car body slot 11 (0x00429cd0): the spin ends. A free body takes 0x004482e0; a scripted body only clears flags 0x2 and
+// 0x4 (0xf9 mask).
+export const endCarBodySpin = (arithmetic: FloatArithmetic, body: CarBody): CarBody => {
+  if (!body.isScripted) {
+    return Object.freeze({
+      ...body,
+      rigidBody: CAR_RIGID_BODY_HOOKS.onSpinEnded(arithmetic, body.rigidBody),
+    })
+  }
+  return Object.freeze({
+    ...body,
+    rigidBody: Object.freeze({
+      ...body.rigidBody,
+      flags: body.rigidBody.flags & ~(CarRigidBodyFlag.SPINNING | CarRigidBodyFlag.SPIN_STARTED),
+    }),
   })
 }
 
