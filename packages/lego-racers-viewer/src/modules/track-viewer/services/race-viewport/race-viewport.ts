@@ -1,8 +1,9 @@
-import type { EffectViews, RacerPose } from '@lego-games/lego-racers/race-presentation'
+import type { EffectViews, RacerPose, WarpView } from '@lego-games/lego-racers/race-presentation'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type { Matrix3 } from '@lego-games/lego-racers/simulation-math'
 import {
   Color,
+  Group,
   LinearSRGBColorSpace,
   Matrix4,
   PerspectiveCamera,
@@ -14,6 +15,8 @@ import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
 import { getCameraFrustum, ORIGINAL_FIELD_OF_VIEW_DEGREES } from './camera-frustum.ts'
 import { createRaceParticles } from '../race-particles/race-particles.ts'
 import { createRaceEffects } from '../race-effects/race-effects.ts'
+import { createSceneObject } from '../scene-object/scene-object.ts'
+import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import { createModelObject } from '../model-object/model-object.ts'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import { showSceneObjects } from '../scene-viewport/scene-viewport.ts'
@@ -89,12 +92,63 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   // (vehicle +0x3c); the driver at the seat carried by that frame (LEGORacers.exe 0x0043e740).
   const colourShiftKeys = new Map<number, string>()
   const effects = createRaceEffects(trackScene, assets.effectModels)
+  // 0x0045d940: while the player is carried the tunnel and the car are drawn and the track is not. The tunnel is made
+  // anew when a warp starts, so its clocks start at 0, and is advanced to the time spent in the warp.
+  const warpGroup = new Group()
+  warpGroup.visible = false
+  trackScene.add(warpGroup)
+  let tunnel: SceneObject | null = null
+  let tunnelMilliseconds = 0
+  const setWarpTunnel = (warpView: WarpView | null) => {
+    if (warpView === null) {
+      if (tunnel !== null) {
+        warpGroup.remove(tunnel.group)
+        tunnel.dispose()
+        tunnel = null
+      }
+      warpGroup.visible = false
+      return
+    }
+    if (tunnel === null || warpView.tunnelMilliseconds < tunnelMilliseconds) {
+      if (tunnel !== null) {
+        warpGroup.remove(tunnel.group)
+        tunnel.dispose()
+      }
+      tunnel = createSceneObject(assets.effectModels.warpTunnel, {
+        includeInstance: () => true,
+        isBackground: false,
+      })
+      warpGroup.add(tunnel.group)
+      tunnelMilliseconds = 0
+    }
+    tunnel.animate(warpView.tunnelMilliseconds - tunnelMilliseconds)
+    tunnelMilliseconds = warpView.tunnelMilliseconds
+    warpGroup.visible = true
+  }
   const update = (
-    poses: readonly RacerPose[],
-    cameraView: CameraView,
-    effectViews: EffectViews
+    allPoses: readonly RacerPose[],
+    allCameraView: CameraView,
+    effectViews: EffectViews,
+    warpView: WarpView | null = null
   ) => {
-    effects.update(effectViews)
+    setWarpTunnel(warpView)
+    shown.track.group.visible = warpView === null
+    particles.points.visible = warpView === null
+    const poses =
+      warpView === null
+        ? allPoses
+        : allPoses.map((pose) =>
+            pose.racerIndex === warpView.pose.racerIndex ? warpView.pose : pose
+          )
+    const cameraView = warpView === null ? allCameraView : warpView.cameraView
+    effects.update(
+      warpView === null ? effectViews : { ...effectViews, effects: [], bricks: [], explosions: [] }
+    )
+    for (const rig of racerRigs) {
+      const isShown = warpView === null || rig === racerRigs[warpView.pose.racerIndex]
+      for (const part of [rig.wheels, rig.body, rig.driver])
+        if (part !== null) part.group.visible = isShown
+    }
     for (const pose of poses) {
       const racerRig = racerRigs[pose.racerIndex]
       if (racerRig === undefined) continue

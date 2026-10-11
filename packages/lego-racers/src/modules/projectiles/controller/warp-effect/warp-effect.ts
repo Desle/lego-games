@@ -26,6 +26,14 @@ const getLandingForward = (context: ProjectileContext, routeNodeIndex: number | 
     : Object.freeze({ x: -next.normal.x, y: -next.normal.y, z: -next.normal.z })
 }
 
+// 0x0045d780: the carry starts at the node after the racer's checkpoint (`route[checkpoint + 0x20]`); a racer with no
+// checkpoint starts at the first node.
+const getNextRouteNodeIndex = (
+  context: ProjectileContext,
+  routeNodeIndex: number | null
+): number | null =>
+  routeNodeIndex === null ? null : (context.route[routeNodeIndex]?.nextIndex ?? null)
+
 // 0x0045d780 (warp vtable slot 2): while the racer is off the track (state 3) it is carried 0.6 units per
 // millisecond along the route, before the countdown; when the countdown ends the warp (0x0045dc90 state 3) the racer
 // is put down 5 above the ground and sent along the route at speed 700.
@@ -47,7 +55,7 @@ export const updateWarp = (
           context.route,
           racer.position,
           arithmetic.storeFloat(arithmetic.multiply(stepMilliseconds, WARP_UNITS_PER_MILLISECOND)),
-          racer.routeNodeIndex
+          getNextRouteNodeIndex(context, racer.routeNodeIndex)
         )
       : null
   const movedEvents: readonly ProjectileEvent[] =

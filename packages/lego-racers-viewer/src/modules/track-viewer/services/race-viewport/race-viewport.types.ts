@@ -5,7 +5,7 @@ import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
 import type { PerspectiveCamera, Scene as ThreeScene } from 'three'
-import type { EffectViews, RacerPose } from '@lego-games/lego-racers/race-presentation'
+import type { EffectViews, RacerPose, WarpView } from '@lego-games/lego-racers/race-presentation'
 
 // The WebGL view of a race: the track, sky and backdrop, a car and a driver per racer, and the player's camera.
 export type RaceViewport = {
@@ -13,7 +13,8 @@ export type RaceViewport = {
   readonly update: (
     poses: readonly RacerPose[],
     cameraView: CameraView,
-    effects: EffectViews
+    effects: EffectViews,
+    warpView?: WarpView | null
   ) => void
   // Shows the simulation's hazards and emitters: the track world's skeleton instances take the clip states the
   // simulation advanced, and the emitter pools' particles are drawn as points.
