@@ -18,6 +18,7 @@ export {
   CarRigidBodyFlag,
   createCarRigidBody,
   HULL_POINT_COUNT,
+  saveStepStart,
   setHullPoint,
   setLocalCentreOfMass,
   setWheelGeometry,
@@ -40,7 +41,11 @@ export {
   removeAngularMomentumAlongAxis,
 } from './types/rigid-body-forces/rigid-body-forces.ts'
 export { integrateRigidBody } from './types/rigid-body-integration/rigid-body-integration.ts'
-export { CAR_RIGID_BODY_HOOKS, stepCarRigidBody } from './types/rigid-body-step/rigid-body-step.ts'
+export {
+  CAR_RIGID_BODY_HOOKS,
+  clearContacts,
+  stepCarRigidBody,
+} from './types/rigid-body-step/rigid-body-step.ts'
 export {
   createBoxRigidBody,
   getAngularVelocity,

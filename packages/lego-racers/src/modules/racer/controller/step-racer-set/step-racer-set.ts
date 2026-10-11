@@ -17,6 +17,7 @@ import { rankRacers } from '../../types/racer-ranking/racer-ranking.ts'
 import {
   getDriven,
   getRacer,
+  getRacerCollisionObjects,
   setDriven,
   setRacer,
   setRandomPosition,
@@ -78,7 +79,7 @@ export const stepRacerRigidBody: RacerBoundary = (
   const racer = getRacer(racerSet, racerIndex)
   const rigidBody = stepCarRigidBody(context.arithmetic, racer.carBody.rigidBody, {
     stepMilliseconds,
-    collisionObjects: context.collisionObjects,
+    collisionObjects: getRacerCollisionObjects(context, racer),
   })
   return setRacer(
     racerSet,

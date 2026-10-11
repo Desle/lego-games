@@ -1,5 +1,9 @@
 import type { PowerUpEvent } from '../../../power-ups/index.ts'
+import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
+import { assignDriverRoute, getDriven, setDriven } from '../../../racer/index.ts'
 import type { Racer } from '../../../racer/index.ts'
+import { FLOAT32_MAXIMUM } from '../../../simulation-math/index.ts'
+import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 
 export const COMPUTER_CONTROLLER = 2
 export const PLAYER_CONTROLLER = 0
@@ -40,16 +44,56 @@ export const releaseRacerAtStart = (racer: Racer): Racer =>
     zoneBeforePrevious: 1,
   })
 
-// 0x0043a0e0: a finished player is driven by the computer from then on. The route search 0x0043d070 is not
-// ported, so a racer without a route gets driver flag 0x80 (the code's own answer when no route is found).
-export const convertRacerToComputer = (racer: Racer): Racer => {
-  const isWithoutRoute = racer.carBody.routeFollower === null
+// 0x0043d070: the loaded route whose loop point (route +0x24, the second vector) is nearest to the racer, by the
+// squared distance summed as (z² + y²) + x² (the minimum starts at FLT_MAX and is stored as a float32).
+const getNearestRoute = (
+  arithmetic: FloatArithmetic,
+  position: Vector3,
+  routes: readonly (ComputerRacerRoute | null)[]
+): ComputerRacerRoute | null => {
+  const { add, subtract, multiply, storeFloat, getIsBelow } = arithmetic
+  let nearest: ComputerRacerRoute | null = null
+  let minimum = FLOAT32_MAXIMUM
+  for (const route of routes) {
+    if (route === null || route.samples.length === 0) continue
+    const [x, y, z] = route.secondVector
+    const differenceX = subtract(x, position.x)
+    const differenceY = subtract(y, position.y)
+    const differenceZ = subtract(z, position.z)
+    const distance = add(
+      add(multiply(differenceZ, differenceZ), multiply(differenceY, differenceY)),
+      multiply(differenceX, differenceX)
+    )
+    if (!getIsBelow(distance, minimum)) continue
+    minimum = storeFloat(distance)
+    nearest = route
+  }
+  return nearest
+}
+
+// 0x0043a0e0: a finished player (or the demonstration's racer) is driven by the computer from then on. A racer
+// without a route asks for the nearest loaded one (0x0043d070) and follows it (0x004202f0); with none it is marked
+// as having no route (driver flag 0x80).
+export const convertRacerToComputer = (
+  arithmetic: FloatArithmetic,
+  racer: Racer,
+  routes: readonly (ComputerRacerRoute | null)[]
+): Racer => {
+  const converted = Object.freeze({ ...racer, controllerKind: COMPUTER_CONTROLLER })
+  if (racer.driver.route !== null || racer.carBody.routeFollower !== null) return converted
+  const route = getNearestRoute(arithmetic, racer.carBody.rigidBody.displayFrame.position, routes)
+  if (route === null) {
+    return Object.freeze({
+      ...converted,
+      driver: Object.freeze({
+        ...converted.driver,
+        flags: converted.driver.flags | DRIVER_NO_ROUTE_FLAG,
+      }),
+    })
+  }
   return Object.freeze({
-    ...racer,
-    controllerKind: COMPUTER_CONTROLLER,
-    driver: isWithoutRoute
-      ? Object.freeze({ ...racer.driver, flags: racer.driver.flags | DRIVER_NO_ROUTE_FLAG })
-      : racer.driver,
+    ...converted,
+    ...setDriven(converted, assignDriverRoute(arithmetic, getDriven(converted), route)),
   })
 }
 

@@ -8,6 +8,7 @@ import { getRaceModeRacerFlags, getRacerPowerUpAbilities } from '../../../racer-
 import { createProjectileWorld } from '../../../projectiles/index.ts'
 import {
   createCarBody,
+  createFigure,
   createPlayerController,
   createRacer,
   createRacerSet,
@@ -16,6 +17,7 @@ import type { Racer, RacerSet } from '../../../racer/index.ts'
 import { drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
 import { createTrackLogic } from '../../../track-logic/index.ts'
+import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import { RacePhase } from '../../types/race-phase/race-phase.ts'
 import type {
   RaceDefinition,
@@ -29,6 +31,8 @@ import {
   resetRacerForRace,
 } from '../../types/racer-transitions/racer-transitions.ts'
 import { placeCarBodyOnRoute } from '../../types/scripted-car-body/scripted-car-body.ts'
+import { createSurfaceMaterials } from '../../types/surface-materials/surface-materials.ts'
+import { createRegistryObjects, getRegistryEntries } from '../registry-objects/registry-objects.ts'
 import type { RacerSetup } from './create-race.types.ts'
 
 // The laps of a race with one local player (0x004327f0).
@@ -53,13 +57,22 @@ const createRacerFromDefinition = (
   const timers = createComputerTimers(tables.randomTable, position)
   const vehicleDraw = drawRandomValue(tables.randomTable, timers.position)
   const carBody = createCarBody(racerDefinition.carBody)
+  // The display figure's bounding sphere (0x0040e0b0): the frame's bounding radius that the ground probes take is the
+  // same radius, so the car body's value is used for both.
+  const figure = createFigure([], {
+    centre: ZERO_VECTOR3,
+    radius: carBody.rigidBody.displayBoundingRadius,
+    radiusScale: 1,
+  })
   const base = createRacer(
     racerDefinition.route === null
       ? carBody
-      : placeCarBodyOnRoute(arithmetic, carBody, racerDefinition.route)
+      : placeCarBodyOnRoute(arithmetic, carBody, racerDefinition.route),
+    figure
   )
   const racer: Racer = Object.freeze({
     ...base,
+    collisionObjectIndices: definition.carCollisionObjectIndices,
     lapCount,
     powerUpChances: personality.chances,
     proximityCheckMilliseconds: timers.tauntMilliseconds,
@@ -109,10 +122,11 @@ export const createRace = (definition: RaceDefinition): RaceState => {
       ),
     ]
   }, [])
+  const routes = racerDefinitions.map((racerDefinition) => racerDefinition.route)
   const racers = setups.map((made, index) =>
     isDemonstration && index === 0
       ? Object.freeze({
-          ...convertRacerToComputer(made.racer),
+          ...convertRacerToComputer(definition.arithmetic, made.racer, routes),
           flags: (made.racer.flags | DEMONSTRATION_FLAG) >>> 0,
         })
       : made.racer
@@ -148,6 +162,17 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     racerDefinition.controllerKind === PLAYER_CONTROLLER ? [index] : []
   )
   const powerUpStep = setBrickSoundsEnabled(powerUps, false)
+  const registryObjects = createRegistryObjects(
+    definition.mainTriggers,
+    definition.environmentTriggers,
+    powerUps.world.bricks.length,
+    powerUps.world.enhancementBricks.length
+  )
+  const registryEntries = getRegistryEntries(
+    definition.arithmetic,
+    { registryObjects, trackLogic, powerUpStep },
+    []
+  )
   return Object.freeze({
     phase: RacePhase.INTRODUCTION,
     phaseMilliseconds: 0,
@@ -169,15 +194,26 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     }),
     racerSet: Object.freeze({
       ...racerSet,
+      registryEntries,
       randomPosition: powerUps.world.random.position,
       rubberBand: createRubberBand(racerSet.rubberBand.bias),
     }),
+    routes: Object.freeze(routes),
     playerRacerIndices: Object.freeze(playerRacerIndices),
     playerControllers: Object.freeze(playerRacerIndices.map(() => createPlayerController(false))),
     powerUpStep,
     powerUpSetups: Object.freeze(setups.map((made) => made.setup)),
     getGroundPoint: definition.getGroundPoint,
     trackTargets: definition.trackTargets,
+    surfaces: createSurfaceMaterials(
+      definition.trackMaterials,
+      definition.collisionObjects[definition.carCollisionObjectIndices[1] ?? -1]
+    ),
+    collisionObjectNames: definition.collisionObjectNames,
+    taggedPositionMilliseconds: Object.freeze(
+      racers.map(() => Object.freeze(definition.collisionObjects.map(() => 0)))
+    ),
+    registryObjects,
     projectileWorld: createProjectileWorld(powerUpStep),
     projectileModelData: definition.projectileModelData,
     trackLogic,

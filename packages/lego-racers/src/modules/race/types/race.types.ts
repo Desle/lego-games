@@ -33,7 +33,9 @@ import type { RandomTablePosition } from '../../random-table/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../simulation-math/index.ts'
 import type { StartPosition } from '../../start-position/index.ts'
 import type { TimerList } from '../../timer/index.ts'
+import type { TrackMaterial } from '../../track-material/index.ts'
 import type { TriggerList } from '../../trigger/index.ts'
+import type { SurfaceMaterials } from './surface-materials/surface-materials.types.ts'
 import type { RacePhase as RacePhaseValues } from './race-phase/race-phase.ts'
 
 export type RacePhase = EnumValues<typeof RacePhaseValues>
@@ -72,8 +74,15 @@ export type RaceDefinition = {
   readonly isMirrored: boolean
   readonly racers: readonly RaceRacerDefinition[]
   readonly checkpoints: readonly Checkpoint[]
-  // Every car rigid body's collision list: the track's COLLIDE.BVB first, then the moving objects.
+  // The collision world's BVB instances in world order (race +0x3a0, 0x00432e20): the track, the checkpoint object, the
+  // start line, ... .
   readonly collisionObjects: readonly CollisionObject[]
+  // Their names (the world's lookup table, +0xd8), in the same order.
+  readonly collisionObjectNames: readonly string[]
+  // The instances every car starts with (race +0x3b0, then +0x3b8): positions in collisionObjects, the track first.
+  readonly carCollisionObjectIndices: readonly number[]
+  // The race's track materials (RAB keyword 0x43, race +0x27e0); empty when the race names none.
+  readonly trackMaterials: readonly TrackMaterial[]
   readonly startPositions: readonly StartPosition[]
   readonly powerUps: PowerUpPlacements
   readonly events: EventSet | null
@@ -129,6 +138,9 @@ export type RaceState = {
   readonly context: RacerSetContext
   // Race +0x3bc: the racers, the rubber band and the random table position.
   readonly racerSet: RacerSet
+  // Race +0x3104, stride 0x48: the route loaded for each racer slot, null for a slot without one. A racer without a
+  // route asks for the nearest of them when the computer takes it over (0x0043d070).
+  readonly routes: readonly (ComputerRacerRoute | null)[]
   // Race +0x6d4: the racer each local player drives.
   readonly playerRacerIndices: readonly number[]
   // Race +0x258, stride 0x74.
@@ -138,6 +150,16 @@ export type RaceState = {
   readonly powerUpSetups: readonly RaceRacerPowerUpSetup[]
   readonly getGroundPoint: GroundQuery | null
   readonly trackTargets: readonly ConeQueryTarget[]
+  // The properties of the collision world's materials (0x00435d20, 0x00435e70).
+  readonly surfaces: SurfaceMaterials
+  // The names of the collision world's instances (a main trigger names the one it adds to a car's collision list).
+  readonly collisionObjectNames: readonly string[]
+  // Race +0x32c4 (0x0045e3f0): per racer and per collision world instance, the milliseconds (a byte) that instance
+  // stays in the racer's collision list since a trigger last named it (0x0045e520); 0 when it is not there.
+  readonly taggedPositionMilliseconds: readonly (readonly number[])[]
+  // The objects registered with the collision registry (racer set +0xf0, list +0x48); a registry entry's id is a
+  // position in this list.
+  readonly registryObjects: readonly RegistryObject[]
   // The moving power-up effects (power-up system +0x193c, +0x1940, +0x18bc and each effect's body).
   readonly projectileWorld: ProjectileWorld
   readonly projectileModelData: ProjectileModelData
@@ -151,6 +173,21 @@ export type RaceState = {
   readonly environmentTriggers: TriggerList | null
   readonly hazards: HazardList | null
   readonly startPositions: readonly StartPosition[]
+}
+
+// What a registry entry stands for (Race_LoadTrackContent registers the main triggers, the environment triggers and
+// then the bricks, 0x004653f0 and 0x0045a340; each is prepended to the list).
+export type RegistryObject =
+  | { readonly type: 'main_trigger'; readonly index: number }
+  | { readonly type: 'environment_trigger'; readonly index: number }
+  | { readonly type: 'power_up_brick'; readonly index: number }
+  | { readonly type: 'enhancement_brick'; readonly index: number }
+
+// What the registry's volumes are read from: the objects, the triggers' state and the bricks.
+export type RegistrySource = {
+  readonly registryObjects: readonly RegistryObject[]
+  readonly trackLogic: TrackLogicState
+  readonly powerUpStep: PowerUpStep
 }
 
 // A racer's car touched a checkpoint's collision object (0x0042a830 → 0x00439fc0).
@@ -215,6 +252,10 @@ export type RaceRacerSet = RacerSet & {
   readonly powerUpSetups: readonly RaceRacerPowerUpSetup[]
   readonly getGroundPoint: GroundQuery | null
   readonly trackTargets: readonly ConeQueryTarget[]
+  readonly surfaces: SurfaceMaterials
+  readonly collisionObjectNames: readonly string[]
+  readonly taggedPositionMilliseconds: readonly (readonly number[])[]
+  readonly registryObjects: readonly RegistryObject[]
   readonly raceModeFlags: number
   readonly pendingContacts: RaceContacts
   readonly trackLogic: TrackLogicState

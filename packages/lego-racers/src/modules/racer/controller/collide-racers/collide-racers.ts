@@ -27,7 +27,7 @@ const CONTACT_TIMER_PERIOD_MILLISECONDS = 750 // 0x2ee, 0x00438e60
 
 // 0x004113c0 -> 0x0040e0b0 on the display figure (racer +0x5c): its animation decides the sphere. A figure without
 // a model part has radius 0 around the origin.
-const getSphere = (context: RacerSetContext, racer: Racer): BoundingSphere => {
+export const getRacerSphere = (context: RacerSetContext, racer: Racer): BoundingSphere => {
   const bounds = getFigureBounds(context.arithmetic, racer.figure)
   if (bounds === null) return { centre: ZERO_VECTOR3, radius: 0 }
   return getBoundingSphere(
@@ -39,7 +39,7 @@ const getSphere = (context: RacerSetContext, racer: Racer): BoundingSphere => {
 }
 
 const getInterval = (context: RacerSetContext, racer: Racer): BoundingInterval =>
-  getBoundingInterval(context.arithmetic, getSphere(context, racer))
+  getBoundingInterval(context.arithmetic, getRacerSphere(context, racer))
 
 // The box 0x00441790 and 0x00441330 read: the physics frame's rotation, the world centre of mass, the
 // dimensions and the car body's scale (+0xdc).
@@ -116,10 +116,11 @@ const sweepRacerPairs = (
     for (const secondIndex of order.slice(position + 1)) {
       const first = getRacer(current, firstIndex)
       const second = getRacer(current, secondIndex)
-      const firstSphere = getSphere(context, first)
+      const firstSphere = getRacerSphere(context, first)
       const firstMaximum = getBoundingInterval(context.arithmetic, firstSphere).maximum
       if (!getIsBelowOrEqual(getInterval(context, second).minimum, firstMaximum)) break
-      if (!getSpheresOverlap(context.arithmetic, firstSphere, getSphere(context, second))) continue
+      if (!getSpheresOverlap(context.arithmetic, firstSphere, getRacerSphere(context, second)))
+        continue
       const contact = getBoxContact(context.arithmetic, getBox(first), getBox(second))
       if (contact === undefined || getIsEqual(contact.depth, 0)) continue
       current = respondToRacerContact(

@@ -11,7 +11,12 @@ import {
 import { getRestartedForceFeedback } from '../../types/force-feedback/force-feedback.ts'
 import { startCarBodySlide } from '../../types/car-body/car-body.ts'
 import { playRacerVoice } from '../../types/racer-ranking/racer-ranking.ts'
-import { getRacer, setRacer, setRandomPosition } from '../../types/racer-state/racer-state.ts'
+import {
+  getRacer,
+  getRacerCollisionObjects,
+  setRacer,
+  setRandomPosition,
+} from '../../types/racer-state/racer-state.ts'
 import type {
   Racer,
   RacerCollisionDependencies,
@@ -287,20 +292,22 @@ export const respondToRacerContact = (
   // 0x00429680
   const separated = initialFirst.carBody.isScripted
     ? dependencies.separateScriptedCarBody(context, racerSet, firstIndex, displacement)
-    : updateRacer(racerSet, firstIndex, (racer) =>
-        Object.freeze({
-          ...racer,
-          carBody: Object.freeze({
-            ...racer.carBody,
-            rigidBody: moveOutOfContact(
-              arithmetic,
-              racer.carBody.rigidBody,
-              displacement,
-              context.collisionObjects
-            ),
-          }),
-        })
-      )
+    : dependencies.separateFreeCarBody !== undefined
+      ? dependencies.separateFreeCarBody(context, racerSet, firstIndex, displacement)
+      : updateRacer(racerSet, firstIndex, (racer) =>
+          Object.freeze({
+            ...racer,
+            carBody: Object.freeze({
+              ...racer.carBody,
+              rigidBody: moveOutOfContact(
+                arithmetic,
+                racer.carBody.rigidBody,
+                displacement,
+                getRacerCollisionObjects(context, racer)
+              ),
+            }),
+          })
+        )
   const first = getRacer(separated, firstIndex)
   const second = getRacer(separated, secondIndex)
   const impulse = getImpulse(arithmetic, first, second, contact)

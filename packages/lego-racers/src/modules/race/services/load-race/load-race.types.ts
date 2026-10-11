@@ -1,3 +1,4 @@
+import type { CollisionObject } from '../../../collision/index.ts'
 import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
 import type { RandomDraw, RandomTablePosition } from '../../../random-table/index.ts'
 import type { BuiltCar, RacerDatabases } from '../../../racer-setup/index.ts'
@@ -45,4 +46,10 @@ export type RacerDescriptionRequest = {
   readonly defaultPlayerCar: BuiltCar
   // The driver code of every racer slot (0x0042d730 fills slot i with code i; the players overwrite theirs).
   readonly racerCodes: readonly string[]
+}
+
+// The BVB instances of a race's collision world, in world order, with their names.
+export type CollisionWorld = {
+  readonly objects: readonly CollisionObject[]
+  readonly names: readonly string[]
 }

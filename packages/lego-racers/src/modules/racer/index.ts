@@ -1,6 +1,7 @@
 export {
   collideRacers,
   createCollideRacers,
+  getRacerSphere,
   RACER_COLLISION_DEPENDENCIES_NOT_YET_PORTED,
 } from './controller/collide-racers/collide-racers.ts'
 export { endRacerKick, respondToRacerContact } from './controller/racer-contact/racer-contact.ts'
@@ -71,8 +72,11 @@ export { rankRacers, playRacerVoice } from './types/racer-ranking/racer-ranking.
 export {
   createRacer,
   createRacerSet,
+  getDriven,
   getRacer,
+  getRacerCollisionObjects,
   getRacerSetProgress,
+  setDriven,
   setRacer,
 } from './types/racer-state/racer-state.ts'
 export type {

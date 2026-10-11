@@ -124,7 +124,11 @@ const disablePlayerControls = (raceState: RaceState, racerIndex: number): RaceSt
   const converted = setRacer(
     raceState.racerSet,
     racerIndex,
-    convertRacerToComputer(getRacer(raceState.racerSet, racerIndex))
+    convertRacerToComputer(
+      raceState.context.arithmetic,
+      getRacer(raceState.racerSet, racerIndex),
+      raceState.routes
+    )
   )
   const isPowerSliding = (getRacer(converted, racerIndex).flags & POWER_SLIDING_FLAG) !== 0
   const stopped = isPowerSliding
