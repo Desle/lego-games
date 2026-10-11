@@ -309,6 +309,7 @@ export const getFlightRacer = (context: RacerSetContext, racer: Racer): FlightRa
     beamRadius: 0,
     routeNodeIndex: racer.checkpointIndex < 0 ? null : racer.checkpointIndex,
     rocketHeading: row,
+    isComputer: racer.controllerKind === COMPUTER_CONTROLLER,
   })
 }
 

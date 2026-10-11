@@ -104,6 +104,7 @@ export const createVehicle = (
     driverPosition: ZERO_VECTOR3,
     bodyScale: 1,
     boundsCaches: null,
+    pendingPartsMarkScale: null,
   })
 
 // 0x0043cbb0 (thiscall on the racer set: position, minimum and maximum squared distance): the nearest racer inside the
