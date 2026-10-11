@@ -36,7 +36,6 @@ export const SKIPPED_COUNTDOWN_FINISHING_START_MILLISECONDS = 9000
 export const RESULTS_MILLISECONDS = 5000
 // `timer < 0x251d` in Race_UpdateState4: a race with a ghost holds at 9,501 ms for the menu (race +0x30c0 = 2).
 export const GHOST_MENU_MILLISECONDS = 9501
-export const GHOST_MENU_PAUSE_STATE = 2
 
 // The tunes of a race's music list (the first four entries of every LEGOMSC: start, track, lose and win), as
 // Race_UpdateState1/2/3 start them through the music stream manager (race +0x3314, slot +0x10).

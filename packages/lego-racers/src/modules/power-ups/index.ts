@@ -22,6 +22,7 @@ export {
   getStepWithAttachmentSlot,
   getStepWithAttachmentSlotFreed,
   getStepWithRacerEffectsFinished,
+  getStepWithRacerWarpsFinished,
   NoPowerUpEffectToTakeError,
 } from './controller/power-up-effects/power-up-effects.ts'
 export {

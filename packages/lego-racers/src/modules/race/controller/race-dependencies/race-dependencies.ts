@@ -8,106 +8,126 @@ import {
   usePowerUp,
 } from '../../../power-ups/index.ts'
 import {
+  createCollideRacers,
+  endCarBodyEffect,
+  endTimedEffect,
+  followDriverRoute,
   getRacer,
+  getRacerSphere,
   keepRacerSetNotYetPorted,
-  setRacer,
-  stepRacerRigidBody,
+  transferTimedEffect,
   updateVehicle,
 } from '../../../racer/index.ts'
 import type {
-  Racer,
   RacerBoundary,
+  RacerPassDependencies,
   RacerSetBoundary,
+  RacerSetContext,
   PlayerControllerDependencies,
   RacerSetStepDependencies,
 } from '../../../racer/index.ts'
+import { getSpheresOverlap } from '../../../racer-collision/index.ts'
+import { runTrackLogic, tickTrackTimeEntries } from '../../../track-logic/index.ts'
 import {
   getRacerAfterTargetGuidance,
   getRacerAfterWrongWayCheck,
 } from '../../types/player-guidance/player-guidance.ts'
-import { getLapGapMilliseconds } from '../../types/lap-gap/lap-gap.ts'
+import { getRacerAfterCheckpointContact } from '../../types/checkpoint-touch/checkpoint-touch.ts'
 import type { RaceRacerSet } from '../../types/race.types.ts'
-import {
-  enterZoneOne,
-  enterZoneTwo,
-  enterZoneZero,
-  getRacerAfterCheckpointTouch,
-  PLAYER_CONTROLLER,
-} from '../../types/racer-transitions/racer-transitions.ts'
-import { stepScriptedCarBody } from '../../types/scripted-car-body/scripted-car-body.ts'
-import { tickTrackTimeEntries } from '../../../track-logic/index.ts'
+import { PLAYER_CONTROLLER } from '../../types/racer-transitions/racer-transitions.ts'
 import {
   changePowerUps,
+  changeRacer,
   changeTrackLogic,
   getRaceRacerSetOf,
+  getRacerSetInZone,
   NO_RACE_CONTACTS,
 } from '../race-world/race-world.ts'
+import {
+  separateFreeRacerBody,
+  separateScriptedRacerBody,
+  stepRacerRigidBodyWithContacts,
+  stepRacerScriptWithContacts,
+} from '../racer-contacts/racer-contacts.ts'
+import { getRegistryEntries, getRegistrySphere } from '../registry-objects/registry-objects.ts'
 
-const ZONE_ZERO = 0
-const ZONE_ONE = 1
 const RACER_PERMANENT_TURBO_FLAG = 0x8000000
 const RACER_TUMBLING_FLAG = 0x8
 
-const updateRacerAt = (
-  racerSet: RaceRacerSet,
-  racerIndex: number,
-  change: (racer: Racer) => Racer
-): RaceRacerSet =>
-  getRaceRacerSetOf(setRacer(racerSet, racerIndex, change(getRacer(racerSet, racerIndex))))
+// The calls the racer collision response (0x00438560) makes into code that is not ported.
+const RACE_COLLISION_DEPENDENCIES: RacerPassDependencies = Object.freeze({
+  // 0x0043d270's precise test, slot 6 of the racer's sphere against the registered object's sphere (0x00411b90).
+  getIsTouchingRegistryEntry: (context, racerSet, racerIndex, entry) => {
+    const raced = getRaceRacerSetOf(racerSet)
+    const object = raced.registryObjects[entry.id]
+    return (
+      object !== undefined &&
+      getSpheresOverlap(
+        context.arithmetic,
+        getRacerSphere(context, getRacer(raced, racerIndex)),
+        getRegistrySphere(raced, object)
+      )
+    )
+  },
+  separateScriptedCarBody: separateScriptedRacerBody,
+  separateFreeCarBody: separateFreeRacerBody,
+  transferTimedEffect,
+  endTimedEffect,
+})
 
-// Pass 2: CarBody_Update 0x004293f0 for a body that follows a script, which runs 0x00429d40.
-const stepRacerScript: RacerBoundary = (context, racerSet, racerIndex, stepMilliseconds) =>
-  updateRacerAt(getRaceRacerSetOf(racerSet), racerIndex, (racer) =>
-    Object.freeze({
-      ...racer,
-      carBody: stepScriptedCarBody(context.arithmetic, racer.carBody, stepMilliseconds),
-    })
-  )
+const collideRegisteredRacers = createCollideRacers(RACE_COLLISION_DEPENDENCIES)
 
-// Pass 4: what the collision registry (racer set +0xf0) and the rigid bodies' contacts report is delivered here,
-// once per frame (the registry itself, 0x0043d180, is not ported).
+// The registry's answer to the racers it found touching an object (0x004408e0's callbacks): a trigger fires its
+// events (0x00463c70, 0x00464f40), a brick is collected (0x00453af0).
+const answerRegistryContacts = (context: RacerSetContext, racerSet: RaceRacerSet): RaceRacerSet =>
+  racerSet.registryContacts.reduce((current, contact) => {
+    const object = current.registryObjects[contact.id]
+    const racer = current.racers[contact.racer]
+    if (object === undefined || racer === undefined) return current
+    if (object.type === 'main_trigger' || object.type === 'environment_trigger') {
+      const isMain = object.type === 'main_trigger'
+      return changeTrackLogic(context, current, (trackLogic, trackContext) =>
+        runTrackLogic(trackLogic, trackContext, (session) =>
+          session.touchTrigger({
+            isMain,
+            triggerIndex: object.index,
+            racer: isMain ? { index: contact.racer, currentLap: racer.currentLap } : null,
+          })
+        )
+      )
+    }
+    const brickContacts = [{ racer: contact.racer, brick: object.index }]
+    return changePowerUps(context, current, (step, powerUpContext) =>
+      object.type === 'power_up_brick'
+        ? touchPowerUpBricks(step, powerUpContext, brickContacts)
+        : touchEnhancementBricks(step, powerUpContext, brickContacts)
+    )
+  }, racerSet)
+
+// Pass 4: the collision manager (racer set +0xf0, 0x0043d180): the registry's time list runs the timers' callbacks
+// (0x0042fce0), the racers sort and meet (0x0043aca0, 0x0043ab90) and then touch the registered objects
+// (0x0043d270). What a caller delivers as RaceContacts is applied first.
 const deliverContacts: RacerSetBoundary = (context, racerSet, stepMilliseconds) => {
-  // The registry's time list runs first (0x0042fce0 → 0x0042fc10): the timers' callbacks.
   const raced = changeTrackLogic(context, getRaceRacerSetOf(racerSet), (trackLogic, trackContext) =>
     tickTrackTimeEntries(trackLogic, trackContext, stepMilliseconds)
   )
   const { checkpointTouches, zoneCrossings, brickContacts, enhancementBrickContacts } =
     raced.pendingContacts
-  const touched = checkpointTouches.reduce((current, touch) => {
-    const checkpoint = context.checkpoints[touch.checkpointIndex]
-    if (checkpoint === undefined) return current
-    // 0x00439fc0: the contact's vector against the plane normal, (z + y) + x, side 1 when it is not below 0.
-    const { add, multiply, getIsBelow } = context.arithmetic
-    const [normalX, normalY, normalZ] = checkpoint.plane
-    const dot = add(
-      add(multiply(touch.direction.z, normalZ), multiply(touch.direction.y, normalY)),
-      multiply(touch.direction.x, normalX)
-    )
-    const side = getIsBelow(dot, 0) ? 0 : 1
-    return updateRacerAt(current, touch.racerIndex, (racer) =>
-      getRacerAfterCheckpointTouch(
-        racer,
-        touch.checkpointIndex,
-        context.arithmetic.getIsEqual(checkpoint.progress, 0),
-        side
-      )
-    )
-  }, raced)
+  const touched = checkpointTouches.reduce(
+    (current, touch) =>
+      changeRacer(current, touch.racerIndex, (racer) =>
+        getRacerAfterCheckpointContact(
+          context.arithmetic,
+          context.checkpoints,
+          racer,
+          touch.checkpointIndex,
+          touch.direction
+        )
+      ),
+    raced
+  )
   const zoned = zoneCrossings.reduce(
-    (current, crossing) =>
-      updateRacerAt(current, crossing.racerIndex, (racer) => {
-        if (crossing.zone === ZONE_ZERO) return enterZoneZero(racer)
-        if (crossing.zone === ZONE_ONE) {
-          return enterZoneOne(racer, (next) =>
-            getLapGapMilliseconds(
-              setRacer(current, crossing.racerIndex, next),
-              crossing.racerIndex,
-              next.lapCount
-            )
-          )
-        }
-        return enterZoneTwo(racer)
-      }),
+    (current, crossing) => getRacerSetInZone(current, crossing.racerIndex, crossing.zone),
     touched
   )
   const bricked = changePowerUps(context, zoned, (step, powerUpContext) =>
@@ -117,7 +137,15 @@ const deliverContacts: RacerSetBoundary = (context, racerSet, stepMilliseconds) 
       enhancementBrickContacts
     )
   )
-  return Object.freeze({ ...bricked, pendingContacts: NO_RACE_CONTACTS })
+  const refreshed: RaceRacerSet = Object.freeze({
+    ...bricked,
+    pendingContacts: NO_RACE_CONTACTS,
+    registryEntries: getRegistryEntries(context.arithmetic, bricked, bricked.registryEntries),
+  })
+  return answerRegistryContacts(
+    context,
+    getRaceRacerSetOf(collideRegisteredRacers(context, refreshed, stepMilliseconds))
+  )
 }
 
 // Pass 7: 0x00438f20 for a computer racer holding a power-up (the racer module has already moved the timers).
@@ -125,7 +153,7 @@ const considerPowerUp: RacerBoundary = (context, racerSet, racerIndex, stepMilli
   const raced = getRaceRacerSetOf(racerSet)
   const setup = raced.powerUpSetups[racerIndex]
   if (setup === undefined) return raced
-  const zeroed = updateRacerAt(raced, racerIndex, (racer) =>
+  const zeroed = changeRacer(raced, racerIndex, (racer) =>
     Object.freeze({ ...racer, powerUpThinkMilliseconds: 0, powerUpThinkIntervalMilliseconds: 0 })
   )
   return changePowerUps(context, zeroed, (step, powerUpContext) =>
@@ -157,9 +185,9 @@ const keepTurbo: RacerBoundary = (context, racerSet, racerIndex) => {
       )
 }
 
-// Pass 7: 0x00439cf0 and 0x00439ea0 for player racers.
+// Pass 7: 0x00439cf0 and 0x00439ea0 for player racers (the target is the one a trigger's event set, racer +0xdf8).
 const guidePlayer: RacerBoundary = (context, racerSet, racerIndex, stepMilliseconds) =>
-  updateRacerAt(getRaceRacerSetOf(racerSet), racerIndex, (racer) =>
+  changeRacer(getRaceRacerSetOf(racerSet), racerIndex, (racer) =>
     racer.controllerKind === PLAYER_CONTROLLER
       ? getRacerAfterTargetGuidance(
           context.arithmetic,
@@ -167,28 +195,28 @@ const guidePlayer: RacerBoundary = (context, racerSet, racerIndex, stepMilliseco
             { arithmetic: context.arithmetic, checkpoints: context.checkpoints, stepMilliseconds },
             racer
           ),
-          null
+          racer.guidanceTarget
         )
       : racer
   )
 
-// RacerSetStepDependencies for a race. Wired: the car rigid body, the scripted car body, the contacts a frame
-// delivers, the computer's power-up use and the permanent turbo, the player's wrong-way warning. Audio and
-// presentation (sounds, camera, effects) keep the racer's stand-in. Still stubs: the driver's route following
-// 0x004203b0, racer-against-racer collisions, the
-// car body effect 0x004397b0, the end of the curse 0x00439b00, the taunt 0x00439c90 and the contact sound.
+// RacerSetStepDependencies for a race. Wired: the car rigid body and the scripted car body with the car body's contact
+// filter and surface values, the collision manager with the registry (triggers and bricks), the computer's power-up
+// use and the permanent turbo, the player's wrong-way warning, the driver's route following 0x004203b0, the vehicle
+// 0x0043e070, the timed effect and the car body effect. Audio and presentation (sounds, camera, effects) keep the
+// racer's stand-in. Still stubs: the taunt 0x00439c90 and the contact sound.
 export const RACE_STEP_DEPENDENCIES: RacerSetStepDependencies = Object.freeze({
-  followDriverRoute: keepRacerSetNotYetPorted,
-  stepRigidBody: stepRacerRigidBody,
-  stepScriptedCarBody: stepRacerScript,
+  followDriverRoute,
+  stepRigidBody: stepRacerRigidBodyWithContacts,
+  stepScriptedCarBody: stepRacerScriptWithContacts,
   updateEngineSound: keepRacerSetNotYetPorted,
   endPowerSlideEffects: keepRacerSetNotYetPorted,
   collideRacers: deliverContacts,
   updateVehicle,
   updateRacerSounds: keepRacerSetNotYetPorted,
   considerComputerPowerUp: considerPowerUp,
-  endCarBodyEffect: keepRacerSetNotYetPorted,
-  endTimedEffect: keepRacerSetNotYetPorted,
+  endCarBodyEffect,
+  endTimedEffect,
   tauntNearestRacer: keepRacerSetNotYetPorted,
   updatePlayerGuidance: guidePlayer,
   notifyRacerContact: keepRacerSetNotYetPorted,

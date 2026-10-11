@@ -12,7 +12,6 @@ import {
   setHullPoint,
   setWheelGeometry,
 } from '../car-rigid-body/car-rigid-body.ts'
-import { TwoPointModeNotPortedError } from '../two-point-mode/two-point-mode.ts'
 import type { CarRigidBody } from '../racer-physics.types.ts'
 import { stepCarRigidBody } from './rigid-body-step.ts'
 
@@ -166,16 +165,20 @@ describe('stepCarRigidBody', () => {
     ).toBeLessThan(20.5)
   })
 
-  it('stops with an error instead of running the unported two-point mode', () => {
+  it('falls in two-point mode with the tilt set from the turn radius and no wheel probes (0x00448840)', () => {
     // Arrange
     const car = createCar({ x: 0, y: 0, z: 100 })
-    const twoPoint = { ...car, flags: CarRigidBodyFlag.TWO_POINT }
+    const twoPoint = { ...car, flags: CarRigidBodyFlag.TWO_POINT, turnRadius: 1024 }
 
     // Act
-    const step = () =>
-      stepCarRigidBody(SINGLE, twoPoint, { stepMilliseconds: STEP, collisionObjects: [] })
+    const step = stepCarRigidBody(SINGLE, twoPoint, {
+      stepMilliseconds: STEP,
+      collisionObjects: [],
+    })
 
     // Assert
-    expect(step).toThrow(TwoPointModeNotPortedError)
+    expect(step.groundedWheelCount).toBe(0)
+    expect(step.twoPointTargetTilt).toBeCloseTo(-(0.75 * (Math.PI / 4)), 5)
+    expect(step.frame.position.z).toBeLessThan(100)
   })
 })

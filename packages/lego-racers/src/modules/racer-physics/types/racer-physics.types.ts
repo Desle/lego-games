@@ -1,4 +1,9 @@
-import type { CollisionObject, CollisionTriangle } from '../../collision/index.ts'
+import type {
+  CollisionObject,
+  CollisionTriangle,
+  CollisionVolume,
+  SegmentQueryResult,
+} from '../../collision/index.ts'
 import type { FloatArithmetic, Matrix3, Vector3 } from '../../simulation-math/index.ts'
 
 // The Gol frame a rigid body moves (rigid body +0x04 points to it; the car body embeds one at +0xe4).
@@ -192,6 +197,8 @@ export type CarRigidBody = RigidBody & {
   readonly twoPointHeightRate: number
   readonly twoPointTargetTilt: number
   readonly twoPointTilt: number
+  // +0x664..+0x678: the midpoints of the front and the rear wheel pairs that the two-point mode probes and pushes at.
+  readonly twoPointPositions: readonly Vector3[]
   // +0x684..+0x6bc
   readonly stepStart: StepStartSnapshot
   // +0x6c0, see CarRigidBodyFlag.
@@ -284,6 +291,20 @@ export type ContactAdvance = {
   readonly body: CarRigidBody
   readonly remainingMilliseconds: number
 }
+
+// What 0x004465c0's landing leaves: the body, and whether the car bounced off the ground.
+export type TwoPointLanding = {
+  readonly body: CarRigidBody
+  readonly isBounced: boolean
+}
+
+// Slot of the collision volume query (0x00403fa0); the two-point probe takes it as a dependency.
+export type SegmentQuery = (
+  arithmetic: FloatArithmetic,
+  volume: CollisionVolume,
+  start: Vector3,
+  end: Vector3
+) => SegmentQueryResult
 
 export type CarRigidBodyStepInput = {
   // Integer milliseconds of one physics sub-step (at most 40, see getPhysicsSubSteps).

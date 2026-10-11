@@ -146,3 +146,27 @@ export type RouteSegment = {
   readonly previousPosition: Vector3
   readonly nextPosition: Vector3
 }
+
+// A segment's length (stored, and the square root before it was stored), its reciprocal and its unit direction
+// (0x004a58b6..0x004a5932).
+export type SegmentGeometry = {
+  readonly unroundedLength: number
+  readonly length: number
+  readonly inverseLength: number
+  readonly unit: Vector3
+}
+
+// Where 0x004a5750's walk along the route ended: the segment (null when the route ran out), how far into it, and the
+// displacement that was not used.
+export type SegmentMove = {
+  readonly segment: RouteSegment | null
+  readonly geometry: SegmentGeometry
+  readonly distance: number
+  readonly displacement: Vector3
+}
+
+// 0x004a5750's result: the follower and the displacement it shortened.
+export type RouteFollowerMove = {
+  readonly follower: RouteFollower
+  readonly displacement: Vector3
+}

@@ -62,6 +62,7 @@ export const FIXTURE_DATABASES: RacerDatabases = Object.freeze({
 })
 
 export const FIXTURE_CAR: CarDescription = Object.freeze({
+  chassisName: 'kkchas0',
   mass: 4500,
   centreOfMass: Object.freeze({ x: -1, y: 0, z: -1 }),
   wheelPoints: Object.freeze([

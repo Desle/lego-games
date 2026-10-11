@@ -1,3 +1,5 @@
+import type { CollisionObject } from '../../../collision/index.ts'
+import type { PointsRecord } from '../../types/points-record/points-record.types.ts'
 import type { GhostSession } from '../../../ghost/index.ts'
 import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
 import type { RandomDraw, RandomTablePosition } from '../../../random-table/index.ts'
@@ -20,6 +22,10 @@ export type LoadRaceOptions = {
   readonly playerCars?: readonly BuiltCar[]
   // The driver code of each racer slot, instead of the codes of the race's circuit in LEGORACE.CRB.
   readonly racerCodes?: readonly string[]
+  // Race +0x18: the circuit's points record when the race is part of a circuit.
+  readonly pointsRecord?: PointsRecord
+  // Game settings +0x1e & 0x40.
+  readonly isSettingsFlag40Set?: boolean
   // Game settings +0x3c of the race (LEGORACE.RCB's flag, set for the mirrored second pass of a circuit): every
   // loader negates the y of what it reads (Race_LoadTrackContent's argument).
   readonly isMirrored?: boolean
@@ -59,4 +65,10 @@ export type RacerDescriptionRequest = {
   readonly playerCars: readonly BuiltCar[]
   // The driver code of every racer slot (0x0042d730 fills slot i with code i; the players overwrite theirs).
   readonly racerCodes: readonly string[]
+}
+
+// The BVB instances of a race's collision world, in world order, with their names.
+export type CollisionWorld = {
+  readonly objects: readonly CollisionObject[]
+  readonly names: readonly string[]
 }

@@ -29,8 +29,9 @@ const isGamePresent = getIsOriginalJamPresent() && getIsOriginalExecutablePresen
 const FRAME_MILLISECONDS = 100
 const RACER_COUNT = 5
 const PLAYER_NAMES = ['ASH', 'KK', 'IL', 'RK', 'CC', 'TC']
-// A lap of the scripts takes this long for the winner; the others follow in racer order.
-const LAP_MILLISECONDS = 30000
+// A lap of the scripts takes this long for the winner; the others follow in racer order. It is far shorter than a
+// real lap, so the scripted crossings decide the places before the racers that really drive get round.
+const LAP_MILLISECONDS = 6000
 
 const getResources = () => loadGameResources(readOriginalJam(), readOriginalExecutable())
 
