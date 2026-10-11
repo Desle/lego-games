@@ -10,13 +10,13 @@ A font is an FDB entry (`name`, a character list, spacing `0x2c`, colour key `0x
 
 The table has one 12-byte entry per FDB character plus one for the space, kept at `+0x28`, count at `+0x24`:
 
-| Offset | Field                                                                                  |
-| ------ | -------------------------------------------------------------------------------------- |
-| `+0`   | character code (entry 0: `0x20`)                                                        |
-| `+2`   | first column in the image                                                              |
+| Offset | Field                                                                                                 |
+| ------ | ----------------------------------------------------------------------------------------------------- |
+| `+0`   | character code (entry 0: `0x20`)                                                                      |
+| `+2`   | first column in the image                                                                             |
 | `+4`   | texture page (always 0: every font fits one page, or the layout loop of `0x1001e5e0` would never end) |
-| `+6/8` | position in the page                                                                   |
-| `+10`  | width                                                                                  |
+| `+6/8` | position in the page                                                                                  |
+| `+10`  | width                                                                                                 |
 
 Scan (`0x1001e190`): the separator is column 0 (every row of it). `L` = the number of leading columns equal to it = space width (`font +0x18`); the first glyph starts at `L + 1`; each following glyph skips separator columns, then runs until the next separator column; a zero width is the fatal "Incomplete font image". `font +0x1c` = image height, `+0x20` = FDB `0x2c` (letter spacing, signed). The table is then sorted ascending by code (`qsort`, `0x1001f140`).
 
@@ -26,16 +26,16 @@ Hypothesis: 4-bit surfaces are compared in the image's own pixel order (high nib
 
 ## Text routines (exe)
 
-| Address      | Port                  | What it does                                                                                                                                   |
-| ------------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `0x004092b0` | `getGlyphIndex`       | Binary search of the sorted table, starts at `count >> 1`, answers 0 (the glyph with the lowest code) when missing                              |
-| `0x00408be0` | `getTextWidth`        | Sum of advances (space: space width + spacing; else glyph width + spacing) minus one spacing, never negative; height = line height              |
-| `0x00408d50` | `getWrappedTextSize`  | Same with line breaking at `maximumWidth / scaleX` (`floor`), line advance `ceil((height + offset) * scaleY)`, width `ceil(width * scaleX)` (unsigned result) |
-| `0x00408fe0` | `layoutText`          | Draws the lines: break at the last space, or between letters for a word wider than the line; a centred line starts `(avail - width) >> 1` further right in unscaled pixels; runs of at most 128 glyphs |
-| `0x00409300` | `drawGlyphRun`        | One run: advances `ftol(width * scale)` for the rectangle, a float position `x += width * scale + spacing * scale` for the next glyph; a scale at or below `0x30800000` draws nothing |
-| `0x00409560` | `getClipRectangle`    | The part of the surface a clip rectangle leaves                                                                                                |
-| `0x00409690` | `clipGlyphRectangles` | Moves the destination edges inside the clip and the source edges with them by `ftol(distance / scale)`                                         |
-| `0x00408500` .. | not ported       | The font object's draw interface (begin, page select, blit, end) is a vtable of the surface; the port outputs the blit rectangles instead       |
+| Address         | Port                  | What it does                                                                                                                                                                                           |
+| --------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `0x004092b0`    | `getGlyphIndex`       | Binary search of the sorted table, starts at `count >> 1`, answers 0 (the glyph with the lowest code) when missing                                                                                     |
+| `0x00408be0`    | `getTextWidth`        | Sum of advances (space: space width + spacing; else glyph width + spacing) minus one spacing, never negative; height = line height                                                                     |
+| `0x00408d50`    | `getWrappedTextSize`  | Same with line breaking at `maximumWidth / scaleX` (`floor`), line advance `ceil((height + offset) * scaleY)`, width `ceil(width * scaleX)` (unsigned result)                                          |
+| `0x00408fe0`    | `layoutText`          | Draws the lines: break at the last space, or between letters for a word wider than the line; a centred line starts `(avail - width) >> 1` further right in unscaled pixels; runs of at most 128 glyphs |
+| `0x00409300`    | `drawGlyphRun`        | One run: advances `ftol(width * scale)` for the rectangle, a float position `x += width * scale + spacing * scale` for the next glyph; a scale at or below `0x30800000` draws nothing                  |
+| `0x00409560`    | `getClipRectangle`    | The part of the surface a clip rectangle leaves                                                                                                                                                        |
+| `0x00409690`    | `clipGlyphRectangles` | Moves the destination edges inside the clip and the source edges with them by `ftol(distance / scale)`                                                                                                 |
+| `0x00408500` .. | not ported            | The font object's draw interface (begin, page select, blit, end) is a vtable of the surface; the port outputs the blit rectangles instead                                                              |
 
 `getTextLine` is the line-breaking loop that `0x00408d50` and `0x00408fe0` share.
 
