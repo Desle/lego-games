@@ -14,6 +14,9 @@ export type GoldenTraceScenario = {
   readonly racerCount: number
   readonly localPlayerCount: number
   readonly randomPosition: number
+  // The circuit's name in LEGORACE.CRB (game settings +0x2d) and the mirrored second pass's flag (+0x3c).
+  readonly circuitName: string
+  readonly isMirrored: boolean
   // 'auto' lets the original's DDSCL_FPUSETUP choose (24-bit); the port then runs single precision.
   readonly precision: FpuPrecisionValue | 'auto'
   readonly frames: readonly TraceFrameInput[]
@@ -67,4 +70,7 @@ export type ScenarioRequest = {
   readonly racerCodes: readonly string[]
   readonly frames: readonly TraceFrameInput[]
   readonly precision?: GoldenTraceScenario['precision']
+  readonly circuitName?: string
+  readonly isMirrored?: boolean
+  readonly racerCount?: number
 }

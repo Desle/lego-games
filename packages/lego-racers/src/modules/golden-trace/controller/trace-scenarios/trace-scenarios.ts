@@ -34,9 +34,11 @@ export const createTraceScenario = (request: ScenarioRequest): GoldenTraceScenar
     name: request.name,
     raceFolder: request.raceFolder,
     racerCodes: request.racerCodes,
-    racerCount: Math.min(DEFAULT_RACER_COUNT, request.racerCodes.length),
+    racerCount: Math.min(request.racerCount ?? DEFAULT_RACER_COUNT, request.racerCodes.length),
     localPlayerCount: 1,
     randomPosition: 0,
+    circuitName: request.circuitName ?? 'c1',
+    isMirrored: request.isMirrored ?? false,
     precision: request.precision ?? 'auto',
     frames: request.frames,
   })

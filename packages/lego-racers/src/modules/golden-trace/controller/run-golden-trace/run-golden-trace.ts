@@ -45,6 +45,7 @@ export const runGoldenTrace = async (
     racerCount: scenario.racerCount,
     localPlayerCount: scenario.localPlayerCount,
     randomPosition: scenario.randomPosition,
+    isMirrored: scenario.isMirrored,
     fpuPrecision: precision,
     isPlayerChampionCar: true,
     // The emulator has no sound device, so the original starts no music stream and spares the racing tune's draw.

@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from unicorn.x86_const import UC_X86_REG_FPCW  # noqa: E402
 
 import boot  # noqa: E402
+import computer_trace  # noqa: E402
 import race_session  # noqa: E402
 
 APPLICATION_BASE = 0x004C4A38 + 4
@@ -101,6 +102,7 @@ def snapshot_fields(machine, race: int, racer_count: int, local_players: int) ->
         fields[f"racer{index}.display.sphere"] = read_words(machine, display + 0x04, 4)
         fields[f"racer{index}.display.position"] = read_words(machine, display + 0x4C, 3)
         fields[f"racer{index}.display.rotation"] = read_words(machine, display + 0x28, 9)
+    computer_trace.snapshot_computer_fields(machine, fields, racers, race + RACER_SET_OFFSET, racer_count)
     for index in range(local_players):
         controller = race + CONTROLLER_OFFSET + CONTROLLER_STRIDE * index
         for name, offset, count in CONTROLLER_FIELDS:

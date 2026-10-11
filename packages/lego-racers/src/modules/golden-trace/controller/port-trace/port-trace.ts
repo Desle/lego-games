@@ -10,7 +10,9 @@ import type { RaceDefinition, RaceState } from '../../../race/index.ts'
 import { DEFAULT_KEYBOARD_BINDINGS, getRacerControls } from '../../../race-input/index.ts'
 import { getRacerSphere } from '../../../racer/index.ts'
 import type { Racer, RacerSetContext } from '../../../racer/index.ts'
-import type { Matrix3, Vector3 } from '../../../simulation-math/index.ts'
+import type { Matrix3 } from '../../../simulation-math/index.ts'
+import { getFloatWords, getVectorWords } from '../trace-words/trace-words.ts'
+import { getComputerTraceFields } from '../computer-trace/computer-trace.ts'
 import type {
   GoldenTraceScenario,
   TraceFields,
@@ -19,12 +21,6 @@ import type {
 } from '../../types/golden-trace.types.ts'
 
 const SCAN_CODE_MASK = 0xff
-
-const getFloatWords = (values: readonly number[]): readonly number[] =>
-  values.map((value) => getBitsFromFloat(value))
-
-const getVectorWords = (vector: Vector3): readonly number[] =>
-  getFloatWords([vector.x, vector.y, vector.z])
 
 const getMatrixWords = (matrix: Matrix3): readonly number[] => getFloatWords(matrix)
 
@@ -140,6 +136,7 @@ export const getTraceFields = (raceState: RaceState, localPlayerCount: number): 
     }),
     {}
   ),
+  ...getComputerTraceFields(raceState.racerSet),
   ...getPlayerFields(raceState, localPlayerCount),
   'race.phase': getIntegerWords(RACE_PHASE_STATE_NUMBERS[raceState.phase]),
   'race.phaseMilliseconds': getIntegerWords(raceState.phaseMilliseconds),
