@@ -18,7 +18,7 @@ import type {
   ObjectReference,
   Vector3,
 } from '../../event/index.ts'
-import type { EmitterPool } from '../../emitter/index.ts'
+import type { EmitterPlacement, EmitterPools, EmitterReference } from '../../emitter/index.ts'
 import type {
   HazardBus,
   HazardEffect,
@@ -55,8 +55,10 @@ export type TrackEventBase<Kind extends TrackEventKind, Record> = {
   readonly position: Vector3
   // 2A +0x54: the chance as a byte (255 plays every time and draws nothing)
   readonly chance: number
-  // 2A +0x20 (looped sound) and 3D +0x30 (emitter)
+  // 2A +0x20 (looped sound)
   readonly isHandleHeld: boolean
+  // 3D +0x30 and +0x60: the emitter the event holds (flag +0x1c bit 5 while it does), or null
+  readonly emitterHandle: EmitterReference | null
   // 4B byte +0x2c bit 0 and 59 byte +0x34 bit 0: set while the class's second signal is held
   readonly isSignalHeld: boolean
 }
@@ -135,8 +137,6 @@ export type TrackWorld = {
   readonly getIsAnimationPlaying: (identifier: number) => boolean
   // 2A: a sound slot could be taken for a looped sound.
   readonly getIsSoundAvailable: (identifier: number) => boolean
-  // 3D: the emitter could be created (0x00489d70 found a free slot).
-  readonly getIsEmitterAvailable: (reference: ObjectReference) => boolean
 }
 
 export type TrackRandom = {
@@ -154,12 +154,8 @@ export type TrackLogicContext = {
   readonly probe?: LineProbe
 }
 
-// The two emitter pools: the common one (race +0x2150, vehicles and power-ups spawn into it) and the track's (race
-// +0x248c, hazards and 3D events), each absent when the race has no emitter file.
-export type TrackEmitters = {
-  readonly common: EmitterPool | null
-  readonly track: EmitterPool | null
-}
+// The two emitter pools of the race (see the emitter module).
+export type TrackEmitters = EmitterPools
 
 // One timer (0x24 bytes, Timer_Setup 0x00464750): its parsed values and the state Timers_Update and the callback keep.
 export type TrackTimer = {
@@ -271,6 +267,11 @@ export type TrackSession = HazardBus & {
   readonly updateEvents: (milliseconds: number) => void
   // 0x00416090 for the three worlds (track, local, blended), the first of Race_Update's per-frame updates.
   readonly advanceWorlds: (milliseconds: number) => void
+  // 0x0045eaf0's spawn: the emitter of this name from the common pool when it has one, else from the track's; null
+  // when the race has none, nothing was free, or the emitter is a one-shot.
+  readonly spawnEmitter: (name: string, placement: EmitterPlacement) => EmitterReference | null
+  // 0x00489f30: the owner lets go of its emitter.
+  readonly releaseEmitter: (handle: EmitterReference) => void
   // Emitters_Update 0x00489fa0 for the common pool and then the track's.
   readonly updateEmitters: (milliseconds: number) => void
   // Hazards_Update 0x0048add0 and the hazards' camera update 0x0048ae00 after the racers.

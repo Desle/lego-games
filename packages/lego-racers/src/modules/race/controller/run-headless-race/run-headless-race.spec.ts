@@ -11,6 +11,8 @@ import { runHeadlessRace } from './run-headless-race.ts'
 
 const FRAME_COUNT = 300
 const FRAME_MILLISECONDS = 33
+// Thousands of frames of a whole race; the default five seconds fail on a busy machine.
+const LONG_RACE_TIMEOUT_MILLISECONDS = 60_000
 const PLAYER = 0
 const COMPUTER_RACER_COUNT = 5
 const getIsGamePresent = (): boolean =>
@@ -83,7 +85,8 @@ describe('runHeadlessRace', () => {
       expect(finished).toEqual([1, 2, 3, 4, 5])
       expect(late.racers[PLAYER]?.isPlaced).toBe(false)
       expect(late.phase).toBe(RacePhase.RACING)
-    }
+    },
+    LONG_RACE_TIMEOUT_MILLISECONDS
   )
 
   it.skipIf(!getIsGamePresent())(
@@ -107,6 +110,7 @@ describe('runHeadlessRace', () => {
       expect(first.finishedRacerCount).toBe(6)
       expect([...first.placements].sort()).toEqual([1, 2, 3, 4, 5, 6])
       expect(first.racers.every((racer) => racer.isPlaced)).toBe(true)
-    }
+    },
+    LONG_RACE_TIMEOUT_MILLISECONDS
   )
 })

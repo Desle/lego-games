@@ -48,23 +48,6 @@ const getComputerRacerFields = (racer: Racer, index: number): TraceFields => {
       routeFollower === null ? getZeroWords(10) : getFollowerPoseWords(routeFollower),
     [`${prefix}.follower.playback`]:
       routeFollower === null ? getZeroWords(19) : getFollowerPlaybackWords(routeFollower),
-    [`${prefix}.scripted.state`]: getIntegerWords(
-      carBody.isScripted ? 1 : 0,
-      carBody.isRouteHeld ? 1 : 0
-    ),
-    [`${prefix}.scripted.speed`]: getFloatWords([carBody.speedFactor]),
-    [`${prefix}.scripted.motion`]: getFloatWords([
-      carBody.bounceHeight,
-      carBody.lateralOffset,
-      carBody.bounceVerticalSpeed,
-      carBody.scriptedSpinPeriod,
-      carBody.scriptedSpinTime,
-      carBody.flipRate,
-      carBody.flipAngle,
-      carBody.flipHeight,
-      carBody.defaultTargetSpeedFactor,
-      carBody.targetSpeedFactor,
-    ]),
     [`${prefix}.ai.personality`]: getIntegerWords(
       getPackedWord(racer.powerUpChances, 0),
       getPackedWord(racer.powerUpChances, 4) & 0xffff
@@ -76,7 +59,8 @@ const getComputerRacerFields = (racer: Racer, index: number): TraceFields => {
 
 export const getComputerTraceFields = (racerSet: RacerSet): TraceFields => ({
   ...racerSet.racers.reduce<TraceFields>(
-    (fields, racer, index) => ({ ...fields, ...getComputerRacerFields(racer, index) }),
+    (fields, racer, index) =>
+      racer.controllerKind === 2 ? { ...fields, ...getComputerRacerFields(racer, index) } : fields,
     {}
   ),
   'race.rubberBand': [

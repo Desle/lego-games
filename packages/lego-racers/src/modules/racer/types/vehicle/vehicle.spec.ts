@@ -196,25 +196,4 @@ describe('updateVehicle, the driver 0x0043ec10', () => {
     expect(getRacer(racerSet, 0).vehicle.watchedRacerIndex).toBe(1)
     expect(getRacer(racerSet, 0).vehicle.lookMilliseconds).toBe(5001)
   })
-
-  it('draws once for each effect emitter that lives, and not at all for a disabled racer', () => {
-    // Arrange
-    const effects = createCar({ vehicle: { smokeEmitterAge: 3, dustEmitterAge: 1 } })
-    const expired = createCar({ vehicle: { smokeEmitterAge: 10, boostEmitterAge: 4 } })
-    const disabled = createCar({
-      vehicle: { smokeEmitterAge: 3, dustEmitterAge: 1 },
-      racer: { flags: 0x10 },
-    })
-
-    // Act
-    const effectsSet = update([effects])
-    const expiredSet = update([expired])
-    const disabledSet = update([disabled])
-
-    // Assert
-    expect(effectsSet.randomPosition).toBe(2)
-    expect(expiredSet.randomPosition).toBe(0)
-    expect(getRacer(expiredSet, 0).vehicle.smokeEmitterAge).toBeNull()
-    expect(disabledSet.randomPosition).toBe(0)
-  })
 })

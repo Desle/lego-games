@@ -30,5 +30,14 @@ export type CarBodyContact =
   // A wheel's material changed (0x0042aa30, 0x0042aa70): the entered one fires its identifier, the left one releases.
   | { readonly type: 'surface_entered'; readonly identifier: number; readonly position: Vector3 }
   | { readonly type: 'surface_left'; readonly identifier: number; readonly position: Vector3 }
+  // 0x0042aad0 and 0x0042acb0: the vehicle's surface emitter of a wheel starts under the material's emitter name
+  // (0x0043dd50) or stops (0x0043de90).
+  | { readonly type: 'wheel_emitter_started'; readonly wheelIndex: number; readonly name: string }
+  | { readonly type: 'wheel_emitter_stopped'; readonly wheelIndex: number }
+
+// Asks the car body's surface walk to record the vehicle's wheel emitters as well (a computer's never run).
+export type WheelEmitterOptions = {
+  readonly isComputer: boolean
+}
 
 export type CarBodyContactRecorder = (contact: CarBodyContact) => void

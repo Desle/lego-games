@@ -1,3 +1,4 @@
+import type { RaceState } from '../../race/index.ts'
 import type { FpuPrecisionValue } from '../../simulation-math/index.ts'
 
 // One frame of a scenario: the frame time the clock hands the game and the DirectInput scan codes held during it.
@@ -24,6 +25,9 @@ export type GoldenTraceScenario = {
 
 // The 32-bit words of every observed field, by name: floats as their IEEE bits.
 export type TraceFields = Readonly<Record<string, readonly number[]>>
+
+// Reads one group of compared fields from the port's race state (see TRACE_FIELD_PROVIDERS).
+export type TraceFieldProvider = (raceState: RaceState, localPlayerCount: number) => TraceFields
 
 export type TraceFrame = {
   readonly frame: number

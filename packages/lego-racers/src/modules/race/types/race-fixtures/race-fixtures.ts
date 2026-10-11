@@ -61,6 +61,7 @@ export const FIXTURE_RACER_APPEARANCE: RacerAppearance = Object.freeze({
 
 export const createFixtureRacerFigures = (): RacerFigures =>
   Object.freeze({
+    bodyBounds: null,
     wheels: createFixtureFigure(),
     secondWheels: null,
     driver: createFixtureFigure(),

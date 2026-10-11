@@ -1,4 +1,5 @@
 import type { EnumValues } from '../../../shared/types/enum.types.ts'
+import type { Vector3 } from '../../simulation-math/index.ts'
 import type { ModelCommandKind as ModelCommandKindValues } from './model-command-kind/model-command-kind.ts'
 import type { VertexFormat as VertexFormatValues } from './vertex-format/vertex-format.ts'
 
@@ -56,4 +57,16 @@ export type Model = {
   readonly commands: readonly ModelCommand[]
   readonly scale: number
   readonly readByteCount: number
+}
+
+// The model part's bounding sphere (model +0x28 centre, +0x34 radius) with the model's scale (+0x38) applied.
+export type ModelBounds = {
+  readonly centre: Vector3
+  readonly radius: number
+}
+
+// The smallest and the largest value one axis takes over the vertices a bounding sphere covers.
+export type ModelAxisExtent = {
+  readonly minimum: number
+  readonly maximum: number
 }

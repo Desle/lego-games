@@ -73,8 +73,8 @@ describe('parseEmitters', () => {
       emitters: [
         {
           name: 'grassemt',
-          firstTruncatedValue: 9,
-          secondTruncatedValue: 0xd4,
+          firstTruncatedValue: 102,
+          secondTruncatedValue: 0x80,
           vector: [0, 0, -52.25],
           points: [
             [0, 0, 22],
@@ -94,6 +94,20 @@ describe('parseEmitters', () => {
       ],
       readByteCount: bytes.byteLength,
     })
+  })
+
+  it('turns the rate into a period of 1000 / rate and the fraction into a byte of fraction · 256', () => {
+    // Arrange: the wizard of RACEC1R0.EMB, which the original loads as period 33 and chance 25
+    const bytes = emitterFile([
+      emitterBlock('wizard', [0x28, ...encodeFloat(30), 0x29, ...encodeFloat(0.1)]),
+    ])
+
+    // Act
+    const [wizard] = parseEmitters(bytes).emitters
+
+    // Assert
+    expect(wizard?.firstTruncatedValue).toBe(33)
+    expect(wizard?.secondTruncatedValue).toBe(25)
   })
 
   it('starts from the reset values of 0x0048a0e0', () => {

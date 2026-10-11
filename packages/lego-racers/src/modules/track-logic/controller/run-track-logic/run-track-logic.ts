@@ -14,7 +14,6 @@ export const STATIC_TRACK_WORLD: TrackWorld = Object.freeze({
   getObject: () => null,
   getIsAnimationPlaying: () => false,
   getIsSoundAvailable: () => true,
-  getIsEmitterAvailable: () => true,
 })
 
 // Runs one operation on the track logic (a signal, a trigger, a frame's update) and returns the new state and the
