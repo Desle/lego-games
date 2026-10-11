@@ -13,6 +13,7 @@ import {
   createRacerSet,
 } from '../../../racer/index.ts'
 import type { Racer, RacerSet } from '../../../racer/index.ts'
+import { drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
 import { createTrackLogic } from '../../../track-logic/index.ts'
 import { RacePhase } from '../../types/race-phase/race-phase.ts'
