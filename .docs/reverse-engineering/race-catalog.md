@@ -26,6 +26,6 @@ Any other keyword is error 0. The port checks the circuit against the circuits i
 
 `MENUDATA\LEGORACE.RCB` (1,350 bytes) parses to its last byte: 27 entries. The first race, Royal Knights Raceway, is the entry `rkr`: race 1 of circuit `c1`, folder `racec0r0`, theme `castle1`, opponent `RK`. Circuits `c0`, `c1`, `c2` list four races each (`c0`: `racec0r1`, `racec1r0`, `racec0r3`, `racec0r2`); `c3` to `c5` repeat them reversed with the flag set; `c6` has `racec3r0` (`Final`, opponent `RR`); the entries `rr2` and `test` have no circuit.
 
-The front end, with no local player, picks one of the four races of `c0`..`c3` with `0x004befec[random] & 0x80000003` (random-table.md).
+The front end, with no local player, picks one of the four races of the first circuit `c0` (the circuit array's first record, `[front end +0x435c]`) with `0x004befec[random] & 0x80000003` (random-table.md); the circuits' race tables, the modes and the sessions built from them are in [game-progression.md](game-progression.md).
 
 Port: `parseRaceCatalog(bytes, circuits) → { entries, readByteCount }`.

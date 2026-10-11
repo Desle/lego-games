@@ -37,7 +37,8 @@ export const stepRace = (
   inputs: RaceInputs,
   frameMilliseconds: number
 ): RaceStepResult => {
-  if (!raceState.isRunning) return getStepOf(raceState)
+  // A menu holds the race (race +0x30c0): the state timer stands still and Race_Update does not run.
+  if (!raceState.isRunning || raceState.pauseState !== 0) return getStepOf(raceState)
   const controlled = applyPlayerControls(raceState, inputs)
   const timed: RaceState = Object.freeze({
     ...controlled,
@@ -47,3 +48,11 @@ export const stepRace = (
   const updated = updateRace(phased.raceState, inputs, frameMilliseconds)
   return getFlushedStep(Object.freeze({ raceState: updated, events: phased.events }))
 }
+
+// Race_ResumeFromPause 0x00436160 with a menu answer that ends the race (`iVar4 == 2`, choice not zero): the loop's
+// running flag (race +0x3334) becomes 0.
+export const endRaceFromMenu = (raceState: RaceState): RaceStepResult =>
+  Object.freeze({
+    raceState: Object.freeze({ ...raceState, pauseState: 0, isRunning: false }),
+    events: Object.freeze([{ type: 'race.ended' }] as const),
+  })

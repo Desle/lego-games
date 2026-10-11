@@ -3,6 +3,7 @@ import type { Checkpoint } from '../../checkpoint/index.ts'
 import type { CollisionObject } from '../../collision/index.ts'
 import type { ComputerRacerRoute } from '../../computer-racer-route/index.ts'
 import type { EventSet } from '../../event/index.ts'
+import type { GhostSession } from '../../ghost/index.ts'
 import type { HazardList } from '../../hazard/index.ts'
 import type { TrackEffect, TrackLogicState } from '../../track-logic/index.ts'
 import type {
@@ -70,6 +71,12 @@ export type RaceDefinition = {
   readonly isCountdownSkipped: boolean
   // Race_LoadTrackContent's argument: the track is mirrored (bias 0.05 for the rubber band).
   readonly isMirrored: boolean
+  // Race +0x18 != 0: the circuit runner's points record rides along (the results state lasts 5 s).
+  readonly isPointsRecordPresent: boolean
+  // Race +0x3364: the time trial's ghost object, null in any other race.
+  readonly ghost: GhostSession | null
+  // The tunes of the race's music list (RAB keyword 0x30, `LEGOMSC`); 0 when the race plays no music.
+  readonly musicTuneCount: number
   readonly racers: readonly RaceRacerDefinition[]
   readonly checkpoints: readonly Checkpoint[]
   // Every car rigid body's collision list: the track's COLLIDE.BVB first, then the moving objects.
@@ -110,6 +117,15 @@ export type RaceState = {
   readonly phaseMilliseconds: number
   // Race +0x3334: Race_RunLoop runs while it is non-zero.
   readonly isRunning: boolean
+  // Race +0x18 != 0.
+  readonly isPointsRecordPresent: boolean
+  // Race +0x3364: the ghost object (a time trial); the recorder runs in every sub-step.
+  readonly ghost: GhostSession | null
+  // The music list's tune count and the tune the music stream (race +0x3320) plays; null without a stream.
+  readonly musicTuneCount: number
+  readonly tuneIndex: number | null
+  // Race +0x30c0: non-zero while a menu holds the race (2 after a ghost race's finish); the race does not advance.
+  readonly pauseState: number
   // Race +0x3330: how many racers have been given a final place.
   readonly finishedRacerCount: number
   // Race +0x3348 (byte): the laps to race.
@@ -192,6 +208,8 @@ export type RaceEvent =
       readonly racerIndex: number
       readonly place: number
     }
+  // The music stream starts another tune of the list (0 introduction, 1 and 4+ racing, 2 lose, 3 win).
+  | { readonly type: 'race.tune_changed'; readonly tuneIndex: number }
   // 0x00439ba0: a racer crossed the start line into a new lap.
   | {
       readonly type: 'race.racer_started_lap'

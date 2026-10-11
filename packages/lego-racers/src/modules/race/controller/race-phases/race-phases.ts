@@ -1,3 +1,5 @@
+import { beginGhostRun, finishGhostRun } from '../../../ghost/index.ts'
+import { drawRandomRemainder } from '../../../random-table/index.ts'
 import {
   activatePowerUp,
   BrickKind,
@@ -9,8 +11,17 @@ import type { PlayerController, Racer, RacerSet } from '../../../racer/index.ts'
 import {
   COUNTDOWN_MILLISECONDS,
   FINISHING_MILLISECONDS,
+  GHOST_MENU_MILLISECONDS,
+  GHOST_MENU_PAUSE_STATE,
   INTRODUCTION_MILLISECONDS,
+  LOSING_TUNE_INDEX,
+  RACING_TUNE_INDEX,
   RacePhase,
+  RANDOM_RACING_TUNE_DIVISOR_OFFSET,
+  RANDOM_RACING_TUNE_MINIMUM_COUNT,
+  RANDOM_RACING_TUNES,
+  RESULTS_MILLISECONDS,
+  WINNING_TUNE_INDEX,
   SKIPPED_COUNTDOWN_FINISHING_START_MILLISECONDS,
 } from '../../types/race-phase/race-phase.ts'
 import type {
@@ -34,7 +45,12 @@ import {
   getRacerSetOf,
   NO_RACE_CONTACTS,
 } from '../race-world/race-world.ts'
-import type { FinishingProgress, PhaseChange, RaceWorldChanger } from './race-phases.types.ts'
+import type {
+  FinishingProgress,
+  PhaseChange,
+  RaceWorldChanger,
+  TuneChange,
+} from './race-phases.types.ts'
 
 const POWER_SLIDING_FLAG = 0x80
 const CONTROLS_DISABLED_FLAG = 0x2
@@ -184,11 +200,16 @@ const releasePlayerController = (
     : withController
 }
 
-// Race_UpdateState5 0x00435180 without the points record (race +0x18): the loop ends at once.
+// Race_UpdateState5 0x00435180: without the points record (race +0x18) the loop ends at once; with it, the results
+// stay for 5 s (the record's display counts down) and the timer is reset when they end.
 const stepResults = (step: RaceStepResult): RaceStepResult =>
-  getStepWith(step, Object.freeze({ ...step.raceState, phaseMilliseconds: 0, isRunning: false }), [
-    { type: 'race.ended' },
-  ])
+  step.raceState.isPointsRecordPresent && step.raceState.phaseMilliseconds < RESULTS_MILLISECONDS
+    ? step
+    : getStepWith(
+        step,
+        Object.freeze({ ...step.raceState, phaseMilliseconds: 0, isRunning: false }),
+        [{ type: 'race.ended' }]
+      )
 
 // Race_UpdateState4 0x00434eb0 (without a ghost): after 10 s the racers still running are given the next places
 // in racer order and every racer's place is recorded; before that, racers that finished their laps are placed.
@@ -196,6 +217,11 @@ const stepFinishing = (step: RaceStepResult): RaceStepResult => {
   const { raceState } = step
   const racerCount = raceState.racerSet.racers.length
   const indices = Array.from({ length: racerCount }, (_, index) => index)
+  if (raceState.ghost !== null && raceState.phaseMilliseconds >= GHOST_MENU_MILLISECONDS) {
+    return raceState.pauseState === GHOST_MENU_PAUSE_STATE
+      ? step
+      : getStepWith(step, Object.freeze({ ...raceState, pauseState: GHOST_MENU_PAUSE_STATE }), [])
+  }
   if (raceState.phaseMilliseconds >= FINISHING_MILLISECONDS) {
     const change = getPhaseChange(raceState, RacePhase.RESULTS, 0)
     const placed = indices.reduce(
@@ -228,6 +254,20 @@ const stepFinishing = (step: RaceStepResult): RaceStepResult => {
   }, step)
 }
 
+// FUN_004230e0, the last thing Race_UpdateState3 does for a finishing human: the ghost racer's lap times become the
+// ghost's run. The ghost's racer is the first local player's (race +0x6d4).
+const withGhostFinished = (raceState: RaceState): RaceState => {
+  const ghostRacerIndex = raceState.playerRacerIndices[0]
+  if (raceState.ghost === null || ghostRacerIndex === undefined) return raceState
+  return Object.freeze({
+    ...raceState,
+    ghost: finishGhostRun(
+      raceState.ghost,
+      getRacer(raceState.racerSet, ghostRacerIndex).lapMilliseconds
+    ),
+  })
+}
+
 // Race_UpdateState3 0x00434c80: racers that finished their laps are placed; when a human (or the
 // demonstration's racer 0) finishes, the finishing state starts and its function runs at once.
 const stepRacing = (step: RaceStepResult): RaceStepResult => {
@@ -248,12 +288,59 @@ const stepRacing = (step: RaceStepResult): RaceStepResult => {
         RacePhase.FINISHING,
         placed.raceState.isCountdownSkipped ? SKIPPED_COUNTDOWN_FINISHING_START_MILLISECONDS : 0
       )
-      const disabled = disablePlayerControls(change.raceState, index)
-      return { step: getStepWith(placed, disabled, [change.event]), isFinishing: true }
+      const disabled = withGhostFinished(disablePlayerControls(change.raceState, index))
+      const toned = getFinishTuneChange(disabled, index)
+      return {
+        step: getStepWith(placed, toned.raceState, [change.event, ...toned.events]),
+        isFinishing: true,
+      }
     },
     { step, isFinishing: false }
   )
   return result.isFinishing ? stepFinishing(result.step) : result.step
+}
+
+// Race_UpdateState2 0x00434b00 when the music stream is playing: tune 1 starts looping, unless the list has more
+// than four tunes and the race is not part of a circuit, when `draw % (count - 3)` picks tune 1, 4, 5 or 6 (the
+// draw moves the random table cursor).
+const getRacingTuneChange = (raceState: RaceState): TuneChange => {
+  if (raceState.tuneIndex === null) return { raceState, events: [] }
+  const isRandom =
+    raceState.musicTuneCount >= RANDOM_RACING_TUNE_MINIMUM_COUNT && !raceState.isPointsRecordPresent
+  const draw = isRandom
+    ? drawRandomRemainder(
+        raceState.context.tables.randomTable,
+        raceState.racerSet.randomPosition,
+        raceState.musicTuneCount - RANDOM_RACING_TUNE_DIVISOR_OFFSET
+      )
+    : null
+  const tuneIndex =
+    draw === null ? RACING_TUNE_INDEX : (RANDOM_RACING_TUNES[draw.value] ?? RACING_TUNE_INDEX)
+  return {
+    raceState: Object.freeze({
+      ...raceState,
+      tuneIndex,
+      racerSet:
+        draw === null
+          ? raceState.racerSet
+          : Object.freeze({ ...raceState.racerSet, randomPosition: draw.position }),
+    }),
+    events: [{ type: 'race.tune_changed', tuneIndex }],
+  }
+}
+
+// Race_UpdateState3 0x00434d..: the music stream plays the winning tune for a human who finishes first and the
+// losing tune for any other place.
+const getFinishTuneChange = (raceState: RaceState, racerIndex: number): TuneChange => {
+  if (raceState.tuneIndex === null) return { raceState, events: [] }
+  const tuneIndex =
+    getRacer(raceState.racerSet, racerIndex).racePosition === 1
+      ? WINNING_TUNE_INDEX
+      : LOSING_TUNE_INDEX
+  return {
+    raceState: Object.freeze({ ...raceState, tuneIndex }),
+    events: [{ type: 'race.tune_changed', tuneIndex }],
+  }
 }
 
 // Race_UpdateState2 0x00434b00: after 3 s (or at once when the countdown is skipped) the racers are released
@@ -294,8 +381,16 @@ const stepCountdown = (step: RaceStepResult): RaceStepResult => {
     ...controlled,
     finishedRacerCount: 0,
     powerUpStep: setBrickSoundsEnabled(controlled.powerUpStep, true),
+    ghost: controlled.ghost === null ? null : beginGhostRun(controlled.ghost),
   })
-  return stepRacing(getStepWith(step, sounding, [change.event, { type: 'race.controls_enabled' }]))
+  const toned = getRacingTuneChange(sounding)
+  return stepRacing(
+    getStepWith(step, toned.raceState, [
+      change.event,
+      { type: 'race.controls_enabled' },
+      ...toned.events,
+    ])
+  )
 }
 
 // Race_UpdateState1 0x004349a0: after 2 s each local player's racer is marked as starting (0x004393d0, flag
