@@ -608,7 +608,6 @@
 004202f0 RacerDriver_SetRoute
 0042b0c0 CarBody_ResetRoute
 00422100 ForceFeedback_NotifyContact
-# Car builder and vehicle presentation (car-builder.md)
 0043e740 Vehicle_UpdateLean
 0043ebd0 Frame_CopyRotation
 0049e2d0 BuildGrid_GetRestingHeight
@@ -632,7 +631,6 @@
 00497d80 LegoColors_FindColorIndex
 0042dfa0 FrontEnd_BuildDriverFigure
 0049dab0 DriverModel_Build
-# Game progression: circuit standings, ghost object, save files (feature/game-progression)
 00440220 CircuitStandings_Constructor
 00440240 CircuitStandings_Clear
 004402b0 CircuitStandings_ResetRacePoints
@@ -722,3 +720,23 @@
 00409560 Font_GetClipRectangle
 00409690 Font_ClipGlyphRectangles
 004092b0 Font_GetGlyphIndex
+0042a900 CarBody_UpdateSurfaceValues
+0042a100 CarBody_SetTargetTilt
+00429680 CarBody_SeparateScripted
+004464a0 CarBody_SetTwoPointOffsets
+0043d070 Race_GetNearestRoute
+0045b740 PowerUps_WarpFinishedRacers
+0045e520 TaggedPositions_Add
+0045e470 TaggedPositions_Tick
+0045e3f0 TaggedPositions_Remove
+00435d20 Race_UpdatePauseMenu
+00448840 RigidBody_SetTwoPointTargetTilt
+004465c0 RigidBody_ProbeTwoPoints
+00445bb0 RigidBody_StartPitch
+00448660 RigidBody_EnterTwoPointMode
+00448730 RigidBody_LeaveTwoPointMode
+00429b40 CarBody_EnterTwoPointMode
+00429bc0 CarBody_LeaveTwoPointMode
+00429380 CarBody_Hold
+00429c30 CarBody_EndFlaggedState
+004397b0 Racer_EndCarBodyEffect

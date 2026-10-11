@@ -296,6 +296,7 @@ export const createCarRigidBody = (
     twoPointHeightRate: getFloatFromBits(0x40400000),
     twoPointTargetTilt: 0,
     twoPointTilt: 0,
+    twoPointPositions: getRepeated(ZERO_VECTOR3, 2),
     stepStart: Object.freeze({
       linearVelocity: ZERO_VECTOR3,
       position: ZERO_VECTOR3,

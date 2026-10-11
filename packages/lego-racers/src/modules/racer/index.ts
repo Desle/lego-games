@@ -1,6 +1,7 @@
 export {
   collideRacers,
   createCollideRacers,
+  getRacerSphere,
   RACER_COLLISION_DEPENDENCIES_NOT_YET_PORTED,
 } from './controller/collide-racers/collide-racers.ts'
 export { endRacerKick, respondToRacerContact } from './controller/racer-contact/racer-contact.ts'
@@ -22,10 +23,22 @@ export {
   createPlayerController,
   updatePlayerController,
 } from './controller/update-player-controller/update-player-controller.ts'
+export {
+  endCarBodyEffect,
+  endTimedEffect,
+  transferTimedEffect,
+} from './controller/timed-effect/timed-effect.ts'
 export { readRacerTables } from './services/read-racer-tables/read-racer-tables.ts'
 export {
   addCarBodyImpulse,
+  clearCarBodyTwoPointMode,
+  endCarBodyBoost,
+  endCarBodyFlaggedState,
+  holdCarBody,
+  releaseCarBody,
   setCarBodyPush,
+  setCarBodyTwoPointMode,
+  startCarBodyFlip,
   startCarBodySpin,
 } from './types/car-body-commands/car-body-commands.ts'
 export {
@@ -71,8 +84,11 @@ export { rankRacers, playRacerVoice } from './types/racer-ranking/racer-ranking.
 export {
   createRacer,
   createRacerSet,
+  getDriven,
   getRacer,
+  getRacerCollisionObjects,
   getRacerSetProgress,
+  setDriven,
   setRacer,
 } from './types/racer-state/racer-state.ts'
 export type {

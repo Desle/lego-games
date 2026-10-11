@@ -2,9 +2,8 @@ import { DEFAULT_KEYBOARD_BINDINGS, RaceBinding } from '../../../race-input/inde
 import type { RaceBindingValue } from '../../../race-input/index.ts'
 import type { GoldenTraceScenario, TraceFrameInput } from '../../types/golden-trace.types.ts'
 
-// The introduction (2,000 ms) and the countdown (3,000 ms) pass before the racers are released.
-const FRAMES_BEFORE_START = 160
-// Accelerating within 100 ms of the start fires the start boost (0x00430790); the plain scenarios wait longer.
+// The introduction (about 2,000 ms after the camera) and the countdown (3,000 ms) pass before the racers are released,
+// at frame 160. Accelerating within 100 ms of that fires the start boost (0x00430790); the plain scenarios wait longer.
 const FRAMES_BEFORE_THROTTLE = 175
 const FRAME_MILLISECONDS = 33
 const DEFAULT_RACER_COUNT = 6

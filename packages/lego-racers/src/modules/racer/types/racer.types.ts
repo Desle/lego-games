@@ -166,6 +166,11 @@ export type CarBody = {
   // +0x7c8, +0x7d0: float32 bounce height above the route and its vertical speed.
   readonly bounceHeight: number
   readonly bounceVerticalSpeed: number
+  // +0x7dc, +0x7e0, +0x7e4: float32 rate, angle and height of a scripted body's pitch flip (0x00429cf0 starts it, the
+  // pitch timer +0x5dc runs it, 0x0042a290 turns the body and measures how far the flip lifted the wheel).
+  readonly flipRate: number
+  readonly flipAngle: number
+  readonly flipHeight: number
 }
 
 // The two forces a car body can carry (car rigid body +0x630 and +0x63c).
@@ -362,6 +367,9 @@ export type Racer = {
   readonly timedEffectCharge: number
   // +0xdf8: the point a player is guided to (0x00439e60 sets it with flag 0x8000, 0x00439e90 clears the flag).
   readonly guidanceTarget: Vector3
+  // The car rigid body's collision list (+0x140, count +0x154, at most five; 0x00444d90 sets the first two, 0x004488e0
+  // adds and 0x00448930 removes): positions in RacerSetContext.collisionObjects. The first is the track.
+  readonly collisionObjectIndices: readonly number[]
   // The 750 ms timer 0x00438e60 adds to the collision manager (milliseconds counted so far), or null when none runs.
   readonly contactTimerMilliseconds: number | null
 }
@@ -456,6 +464,14 @@ export type RacerSetStepDependencies = {
 export type RacerCollisionDependencies = {
   // 0x00429680 on a scripted car body: the route follower is moved by the displacement (0x004a5750, 0x0042a290, 0x0042a570).
   readonly separateScriptedCarBody: (
+    context: RacerSetContext,
+    racerSet: RacerSet,
+    racerIndex: number,
+    displacement: Vector3
+  ) => RacerSet
+  // 0x00429680 on a free car body is 0x004490b0: the body moves out of contact by the displacement. Without it the car
+  // rigid body's own move (with its default contact filter) runs.
+  readonly separateFreeCarBody?: (
     context: RacerSetContext,
     racerSet: RacerSet,
     racerIndex: number,

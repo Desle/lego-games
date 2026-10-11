@@ -16,7 +16,11 @@ import { advanceToContact, respondToContact } from '../hull-contacts/hull-contac
 import { removeAngularMomentumAlongAxis } from '../rigid-body-forces/rigid-body-forces.ts'
 import { integrateRigidBody } from '../rigid-body-integration/rigid-body-integration.ts'
 import { getWorldInverseInertia } from '../rigid-body/rigid-body.ts'
-import { TwoPointModeNotPortedError } from '../two-point-mode/two-point-mode.ts'
+import {
+  getBodyWithTwoPointOffsets,
+  getBodyWithTwoPointTargetTilt,
+  probeTwoPoints,
+} from '../two-point-mode/two-point-mode.ts'
 import type {
   CarRigidBody,
   CarRigidBodyHooks,
@@ -121,9 +125,10 @@ const getTimedBody = (
   })
   const rolled = getTimerRemovingMomentum(arithmetic, spun, 'rollTimer', 0, step)
   const pitched = getTimerRemovingMomentum(arithmetic, rolled, 'pitchTimer', 1, step)
-  if (getIsFlagSet(pitched, CarRigidBodyFlag.TWO_POINT))
-    throw new TwoPointModeNotPortedError(0x00448840)
-  return Object.freeze({ ...pitched, stepRemaining: step })
+  const tilted = getIsFlagSet(pitched, CarRigidBodyFlag.TWO_POINT)
+    ? getBodyWithTwoPointTargetTilt(arithmetic, pitched)
+    : pitched
+  return Object.freeze({ ...tilted, stepRemaining: step })
 }
 
 // One pass of RigidBody_Step's loop (0x00445098..0x004450fe) over the given milliseconds.
@@ -137,9 +142,14 @@ const runPass = (
   const pushed = applyCarForces(arithmetic, body)
   const integrated = integrateRigidBody(arithmetic, pushed, milliseconds)
   const limited = getWithTiltLimit(arithmetic, integrated)
-  if (getIsFlagSet(limited, CarRigidBodyFlag.TWO_POINT))
-    throw new TwoPointModeNotPortedError(0x004464a0)
-  const probed = probeGround(arithmetic, limited, milliseconds, input.collisionObjects)
+  const probed = getIsFlagSet(limited, CarRigidBodyFlag.TWO_POINT)
+    ? probeTwoPoints(
+        arithmetic,
+        getBodyWithTwoPointOffsets(arithmetic, limited, milliseconds),
+        milliseconds,
+        input.collisionObjects
+      )
+    : probeGround(arithmetic, limited, milliseconds, input.collisionObjects)
   const headed = updateHeading(arithmetic, probed, milliseconds)
   const split = getWithVelocitySplit(arithmetic, headed)
   const finished = getWithWorldCentreOfMass(arithmetic, hooks.afterPass(split))

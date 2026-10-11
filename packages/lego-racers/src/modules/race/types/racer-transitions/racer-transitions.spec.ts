@@ -1,5 +1,5 @@
 import type { Racer } from '../../../racer/index.ts'
-import { createFixtureRacer } from '../race-fixtures/race-fixtures.ts'
+import { createFixtureRacer, FIXTURE_ARITHMETIC } from '../race-fixtures/race-fixtures.ts'
 import {
   convertRacerToComputer,
   enterZoneOne,
@@ -126,7 +126,7 @@ describe('racer transitions', () => {
     const racer = getRacer()
 
     // Act
-    const converted = convertRacerToComputer(racer)
+    const converted = convertRacerToComputer(FIXTURE_ARITHMETIC, racer, [])
 
     // Assert
     expect(converted.controllerKind).toBe(2)

@@ -17,6 +17,8 @@ const ROUTE = {
   readByteCount: 0,
 } as const
 
+const STEP_INPUT = { stepMilliseconds: 33, collisionObjects: [] }
+
 const getCarBody = () => createCarBody(createFixtureRacerDefinition(2).carBody)
 
 describe('scripted car body', () => {
@@ -38,7 +40,7 @@ describe('scripted car body', () => {
     const placed = placeCarBodyOnRoute(FIXTURE_ARITHMETIC, getCarBody(), ROUTE)
 
     // Act
-    const stepped = stepScriptedCarBody(FIXTURE_ARITHMETIC, placed, 33)
+    const stepped = stepScriptedCarBody(FIXTURE_ARITHMETIC, placed, STEP_INPUT)
 
     // Assert
     expect(stepped).toBe(placed)
@@ -50,7 +52,10 @@ describe('scripted car body', () => {
     const released = Object.freeze({ ...placed, isRouteHeld: false })
 
     // Act
-    const stepped = stepScriptedCarBody(FIXTURE_ARITHMETIC, released, 32)
+    const stepped = stepScriptedCarBody(FIXTURE_ARITHMETIC, released, {
+      ...STEP_INPUT,
+      stepMilliseconds: 32,
+    })
 
     // Assert
     expect(stepped.routeFollower?.time).toBe(32)

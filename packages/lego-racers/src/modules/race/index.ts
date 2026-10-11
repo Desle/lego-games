@@ -16,7 +16,6 @@ export {
   COUNTDOWN_MILLISECONDS,
   FINISHING_MILLISECONDS,
   GHOST_MENU_MILLISECONDS,
-  GHOST_MENU_PAUSE_STATE,
   INTRODUCTION_MILLISECONDS,
   RACE_PHASE_STATE_NUMBERS,
   RacePhase,
@@ -35,6 +34,8 @@ export {
   placeCarBodyOnRoute,
   stepScriptedCarBody,
 } from './types/scripted-car-body/scripted-car-body.ts'
+export { PauseMenuMode } from './types/pause-menu/pause-menu.ts'
+export { RaceExit } from './types/race-exit/race-exit.ts'
 export { getStartFrame } from './types/start-frame/start-frame.ts'
 export type {
   CheckpointTouch,

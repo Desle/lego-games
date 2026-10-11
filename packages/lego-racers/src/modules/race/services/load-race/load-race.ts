@@ -1,6 +1,5 @@
 import { EMPTY_PROJECTILE_MODEL_DATA } from '../../types/projectile-model-data/projectile-model-data.ts'
 import { parseCheckpoints } from '../../../checkpoint/index.ts'
-import { loadCollisionObject } from '../../../collision/index.ts'
 import {
   chooseComputerRacerRoute,
   countComputerRacerRouteVariants,
@@ -29,6 +28,7 @@ import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-m
 import type { FloatArithmetic } from '../../../simulation-math/index.ts'
 import { parseStartPositions } from '../../../start-position/index.ts'
 import { parseTimers } from '../../../timer/index.ts'
+import { parseTrackMaterials } from '../../../track-material/index.ts'
 import { parseTriggers, TriggerFileKind } from '../../../trigger/index.ts'
 import {
   COMPUTER_CONTROLLER,
@@ -36,6 +36,7 @@ import {
 } from '../../types/racer-transitions/racer-transitions.ts'
 import type { RaceDefinition, RaceRacerDefinition } from '../../types/race.types.ts'
 import { getStartFrame } from '../../types/start-frame/start-frame.ts'
+import { loadCollisionWorld } from './load-collision-world.ts'
 import type { LoadRaceOptions, RouteDraws, RouteDrawer, RouteFiles } from './load-race.types.ts'
 import {
   describeAppearances,
@@ -71,12 +72,15 @@ const getBuiltCar = (arithmetic: FloatArithmetic, saved: SavedCar): BuiltCar | n
 const loadRoutes = (
   files: RouteFiles,
   kinds: readonly number[],
+  isDemonstration: boolean,
   startPosition: RandomTablePosition,
   drawFrom: RouteDrawer
 ): RouteDraws =>
   kinds.reduce<RouteDraws>(
     (progress, kind, racerIndex) => {
-      if (kind !== COMPUTER_CONTROLLER) return { ...progress, routes: [...progress.routes, null] }
+      if (kind !== COMPUTER_CONTROLLER && !isDemonstration) {
+        return { ...progress, routes: [...progress.routes, null] }
+      }
       const getPath = (name: string): string =>
         `${files.folder}${JAM_SEPARATOR}${name.toUpperCase()}`
       const counts = countComputerRacerRouteVariants(racerIndex, true, (name) =>
@@ -133,6 +137,7 @@ export const loadRaceDefinition = (
       getIsPresent,
     },
     kinds,
+    localPlayerCount === 0,
     createRandomTablePosition(options.randomPosition ?? 0),
     (position) => drawRandomValue(tables.randomTable, position)
   )
@@ -146,10 +151,17 @@ export const loadRaceDefinition = (
   const mainTriggerBytes = readNamed(description.mainTriggers)
   const environmentTriggerBytes = readNamed(description.environmentTriggers)
   const hazardBytes = readNamed(description.hazards)
-  const collisionBytes =
-    description.firstCollisionObject === null
-      ? null
-      : readFile(`${description.firstCollisionObject.toUpperCase()}.BVB`)
+  const collisionWorld = loadCollisionWorld(
+    arithmetic,
+    readNamed(description.collisionWorld),
+    readFile,
+    isMirrored
+  )
+  const getCollisionObjectIndex = (name: string | null): readonly number[] => {
+    const index = name === null ? -1 : collisionWorld.names.indexOf(name)
+    return index === -1 ? [] : [index]
+  }
+  const trackMaterialBytes = readNamed(description.trackMaterials)
   const startPositions =
     startPositionBytes === null
       ? []
@@ -231,10 +243,21 @@ export const loadRaceDefinition = (
     racers,
     checkpoints:
       checkpointBytes === null ? [] : parseCheckpoints(checkpointBytes, isMirrored).checkpoints,
-    collisionObjects:
-      collisionBytes === null
+    // The collision world's instances in world order (race +0x3a0). 0x004371c0 hands every car the track (race +0x3b0)
+    // and the checkpoint object (+0x3b8, when the race names one); the other instances join a car's list while it is
+    // in the trigger that names them (0x0045e520).
+    collisionObjects: collisionWorld.objects,
+    collisionObjectNames: collisionWorld.names,
+    carCollisionObjectIndices: [
+      ...getCollisionObjectIndex(description.firstCollisionObject),
+      ...getCollisionObjectIndex(description.checkpointObject),
+    ],
+    pointsRecord: options.pointsRecord ?? null,
+    isSettingsFlag40Set: options.isSettingsFlag40Set ?? false,
+    trackMaterials:
+      trackMaterialBytes === null
         ? []
-        : [loadCollisionObject({ bytes: collisionBytes, isMirrored, frame: undefined })],
+        : parseTrackMaterials(trackMaterialBytes, isMirrored).trackMaterials,
     startPositions,
     powerUps:
       powerUpBytes === null

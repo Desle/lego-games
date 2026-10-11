@@ -2,6 +2,7 @@ import {
   createRace,
   IDLE_RACER_CONTROLS,
   NO_RACE_CONTACTS,
+  PauseMenuMode,
   RacePhase,
   stepRace,
 } from '../../../race/index.ts'
@@ -37,7 +38,11 @@ export const playScriptedRace = (
   let frameCount = 0
   let racingMilliseconds = 0
   const crossedLaps = new Map<number, number>(scripts.map((script) => [script.racerIndex, -1]))
-  while (raceState.isRunning && raceState.pauseState === 0 && frameCount < maximumFrameCount) {
+  while (
+    raceState.isRunning &&
+    raceState.pauseMenu.mode === PauseMenuMode.NONE &&
+    frameCount < maximumFrameCount
+  ) {
     const isStarted =
       raceState.phase === RacePhase.RACING ||
       raceState.phase === RacePhase.FINISHING ||
@@ -70,6 +75,6 @@ export const playScriptedRace = (
     session,
     raceState,
     frameCount,
-    isHeldForMenu: raceState.isRunning && raceState.pauseState !== 0,
+    isHeldForMenu: raceState.isRunning && raceState.pauseMenu.mode !== PauseMenuMode.NONE,
   })
 }

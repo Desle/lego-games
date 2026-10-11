@@ -19,6 +19,7 @@ import {
   getRacerSetOf,
   IDLE_RACER_CONTROLS,
   NO_RACE_CONTACTS,
+  updateTaggedPositions,
 } from '../race-world/race-world.ts'
 import type { PlayerControllerProgress, PlayerControllerRun } from './update-race.types.ts'
 
@@ -68,6 +69,7 @@ const getStateWithProgress = (state: RaceState, progress: PlayerControllerProgre
     powerUpStep: progress.racerSet.powerUpStep,
     trackLogic: progress.racerSet.trackLogic,
     trackEffects: progress.racerSet.trackEffects,
+    taggedPositionMilliseconds: progress.racerSet.taggedPositionMilliseconds,
     playerControllers: progress.controllers,
   })
 
@@ -80,9 +82,9 @@ export const applyPlayerControls = (state: RaceState, inputs: RaceInputs): RaceS
     )
   )
 
-// Race_Update 0x00435220: the frame's whole time step goes to the power-ups and the players' controllers, then
-// the racers run in sub-steps of at most 40 ms. Not ported: the animations (0x00416090), the tagged positions
-// (0x0045e470), the triggers, events, hazards, timers and emitters, the sky and the HUD; the cameras
+// Race_Update 0x00435220: the frame's whole time step goes to the power-ups, the tagged positions (0x0045e470), the
+// track logic and the players' controllers, then the racers run in sub-steps of at most 40 ms. Not ported: the
+// animations (0x00416090), the hazards and emitters, the sky and the HUD; the cameras
 // (0x00428540) and the ghost recorder (0x00422710) only read the racers.
 export const updateRace = (
   state: RaceState,
@@ -115,8 +117,9 @@ export const updateRace = (
     return projected.step
   })
   const projected = getRacerSetAfterProjectileEvents(changed, projectileWorld.events)
-  const powered = changeTrackLogic(counted.context, projected, (trackLogic, trackContext) =>
-    updateTrackLogicFrame(trackLogic, trackContext, stepMilliseconds, projected.racers.length)
+  const tagged = updateTaggedPositions(projected, stepMilliseconds)
+  const powered = changeTrackLogic(counted.context, tagged, (trackLogic, trackContext) =>
+    updateTrackLogicFrame(trackLogic, trackContext, stepMilliseconds, tagged.racers.length)
   )
   const controlled = counted.isDemonstration
     ? { controllers: counted.playerControllers, racerSet: powered }

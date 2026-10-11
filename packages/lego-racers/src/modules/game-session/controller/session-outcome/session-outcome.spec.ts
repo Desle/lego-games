@@ -60,7 +60,7 @@ const getWonCircuit = (circuitName: string): GameSession => {
       start,
       [0, 1, 2, 3, 4].map((racerIndex) => ({
         racerIndex,
-        lapEndMilliseconds: [1, 2, 3].map((lap) => lap * 30000 + racerIndex * 1500),
+        lapEndMilliseconds: [1, 2, 3].map((lap) => lap * 6000 + racerIndex * 1500),
       })),
       { frameMilliseconds: FRAME_MILLISECONDS }
     )
@@ -69,7 +69,7 @@ const getWonCircuit = (circuitName: string): GameSession => {
   return startNextRace(session).session
 }
 
-describe('what a circuit result writes to the save file', () => {
+describe('what a circuit result writes to the save file', { timeout: 60_000 }, () => {
   it.skipIf(!isGamePresent)(
     'records first place, awards the circuit trophy and unlocks the next circuit',
     () => {

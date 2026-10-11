@@ -4,12 +4,13 @@ import {
   COUNTDOWN_MILLISECONDS,
   FINISHING_MILLISECONDS,
   GHOST_MENU_MILLISECONDS,
-  GHOST_MENU_PAUSE_STATE,
   INTRODUCTION_MILLISECONDS,
   RacePhase,
   RESULTS_MILLISECONDS,
 } from '../../types/race-phase/race-phase.ts'
 import type { RaceInputs, RaceState } from '../../types/race.types.ts'
+import { PauseMenuMode } from '../../types/pause-menu/pause-menu.ts'
+import { RaceExit } from '../../types/race-exit/race-exit.ts'
 import { createRace } from '../create-race/create-race.ts'
 import { createFixtureDefinition, createFixtureRace } from '../race-fixtures/race-fixtures.ts'
 import { IDLE_RACER_CONTROLS, NO_RACE_CONTACTS } from '../race-world/race-world.ts'
@@ -124,7 +125,7 @@ describe('stepRace', () => {
     // Assert
     expect(step.raceState.isRunning).toBe(false)
     expect(step.raceState.placements).toEqual([1, 2])
-    expect(step.events.at(-1)).toEqual({ type: 'race.ended' })
+    expect(step.events.at(-1)).toEqual({ type: 'race.ended', exit: 'finished' })
   })
 
   it('does nothing once the race has ended', () => {
@@ -177,11 +178,12 @@ describe('stepRace', () => {
     expect(recorded.raceState.ghost?.currentRun.samples.length).toBeGreaterThan(0)
     expect(finished.raceState.ghost?.bestRun).not.toBeNull()
     expect(finished.raceState.ghost?.isRunning).toBe(false)
-    expect(held.raceState.pauseState).toBe(GHOST_MENU_PAUSE_STATE)
+    expect(held.raceState.pauseMenu.mode).toBe(PauseMenuMode.RESULTS)
     expect(held.raceState.isRunning).toBe(true)
-    expect(stillHeld.raceState).toBe(held.raceState)
+    expect(stillHeld.raceState.pauseMenu.mode).toBe(PauseMenuMode.RESULTS)
+    expect(stillHeld.raceState.phaseMilliseconds).toBe(held.raceState.phaseMilliseconds)
     expect(ended.raceState.isRunning).toBe(false)
-    expect(ended.events).toEqual([{ type: 'race.ended' }])
+    expect(ended.events).toEqual([{ type: 'race.ended', exit: RaceExit.RESTART }])
   })
 
   it('starts the introduction tune and, outside a circuit, picks the racing tune with the random table', () => {

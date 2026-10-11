@@ -128,13 +128,15 @@ const testObject = (
 // points to the new frame and runs each from where it was at the start of the pass, against the
 // moving objects and (unless flag 0x1000) the track. The contact whose end point lies deepest
 // behind its triangle wins. On a contact the body goes back to the start of the pass and the
-// result is the time to the contact, truncated, minus 5 ms (0 when that is less than 5).
+// result is the time to the contact, truncated, minus 5 ms (0 when that is less than 5). A scripted car body
+// (0x00429d40) passes false for the track.
 export const advanceToContact = (
   arithmetic: FloatArithmetic,
   body: CarRigidBody,
   stepMilliseconds: number,
   collisionObjects: readonly CollisionObject[],
-  hooks: CarRigidBodyHooks
+  hooks: CarRigidBodyHooks,
+  isTrackTested: boolean = !getIsFlagSet(body, CarRigidBodyFlag.WITHOUT_TRACK_CONTACTS)
 ): ContactAdvance => {
   const moved: CarRigidBody = Object.freeze({
     ...body,
@@ -151,7 +153,6 @@ export const advanceToContact = (
       { body: moved, closestSquared: -FLOAT32_MAXIMUM, fraction: 0 }
     )
   const track = collisionObjects[0]
-  const isTrackTested = !getIsFlagSet(body, CarRigidBodyFlag.WITHOUT_TRACK_CONTACTS)
   const searched =
     isTrackTested && track !== undefined
       ? testObject(arithmetic, afterObjects, hooks, track, 0)
