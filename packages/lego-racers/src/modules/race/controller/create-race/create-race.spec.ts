@@ -25,6 +25,19 @@ describe('createRace', () => {
     expect(getRacer(state.racerSet, 1)).toMatchObject({ flags: 0x2, lap: -1, controllerKind: 2 })
   })
 
+  it('starts every racer without a colour shift, as RacerSet_ResetRacers 0x0043a780 and the race teardown 0x00434000 leave it (0x004400e0)', () => {
+    // Arrange
+    const definition = createFixtureDefinition()
+
+    // Act
+    const state = createRace(definition)
+
+    // Assert
+    expect(state.racerSet.racers.map((racer) => racer.colourShift)).toEqual(
+      state.racerSet.racers.map(() => null)
+    )
+  })
+
   it('draws three table values for each racer, in racer order (0x00436df0, then 0x0043d7a0)', () => {
     // Arrange
     const definition = createFixtureDefinition()
