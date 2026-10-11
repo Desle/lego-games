@@ -120,8 +120,8 @@ const getRenderFrame = (line: RenderFrameLine): OriginalRenderFrame => {
 const getAudioFrame = (line: AudioFrameLine): OriginalAudioFrame =>
   Object.freeze({
     frame: line.frame,
-    events: line.events.map(
-      ({ kind, ...values }): OriginalAudioEvent => Object.freeze({ kind, values })
+    events: line.events.map(({ kind, ...values }): OriginalAudioEvent =>
+      Object.freeze({ kind, values })
     ),
   })
 
@@ -152,14 +152,15 @@ export const readOriginalPresentation = async (
       renderFrames.push(getRenderFrame(line))
     } else if (line.type === 'audio_frame') {
       audioFrames.push(getAudioFrame(line))
-    } else if (line.type === 'done') {
+    } else {
       progress.isDone = true
       progress.introductionCameraLimit = line.introductionCameraLimit
       progress.introductionCameraRate = line.introductionCameraRate
     }
   })
-  const exitCode = await new Promise<number | null>((resolveExit) =>
-    child.once('exit', (code) => resolveExit(code))
+  // 'close' comes after the output is read to its end.
+  const exitCode = await new Promise<number | null>((resolveClose) =>
+    child.once('close', resolveClose)
   )
   if (!progress.isDone || exitCode !== 0) {
     throw new Error(`The original presentation trace failed (exit ${String(exitCode)})`)

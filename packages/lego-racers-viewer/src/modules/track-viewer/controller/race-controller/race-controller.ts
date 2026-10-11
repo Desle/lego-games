@@ -66,19 +66,34 @@ const fetchBytes = async (url: string): Promise<Uint8Array> => {
   return new Uint8Array(await response.arrayBuffer())
 }
 
-// The dev server hands out LEGORacers.exe and the tunes next to the local LEGO.JAM.
+// The dev server hands out LEGORacers.exe and the tunes next to the local LEGO.JAM; a race fetches the tunes its music
+// list names (every track has its own list).
 const getDevelopmentGameFiles = async (): Promise<LoadedGameFiles> => {
   const jam = await getDevelopmentJam()
   const executable = await fetchBytes(`${DEVELOPMENT_GAME_FILE_ROUTE}/${EXECUTABLE_NAME}`)
-  const tuneNames = ['start', 'royal', 'lose', 'win', 'knight', 'moat', 'armor'].map(
-    (name) => `${name}.tun`
+  return {
+    jam,
+    files: { executable, tunes: new Map() },
+    readTune: (name) => fetchBytes(`${DEVELOPMENT_GAME_FILE_ROUTE}/${name}`).catch(() => null),
+  }
+}
+
+// The race's assets with the tunes of its music list (`LEGOMSC`) added; a tune that cannot be read stays silent.
+const loadRaceTunes = async (
+  assets: RaceAssets,
+  gameFiles: LoadedGameFiles
+): Promise<RaceAssets> => {
+  const tunes = new Map(assets.tunes)
+  await Promise.all(
+    assets.musicNames
+      .map((name) => name.toLowerCase())
+      .filter((name) => !tunes.has(name))
+      .map(async (name) => {
+        const bytes = await gameFiles.readTune(name)
+        if (bytes !== null) tunes.set(name, bytes)
+      })
   )
-  const tunes = await Promise.all(
-    tuneNames.map(
-      async (name) => [name, await fetchBytes(`${DEVELOPMENT_GAME_FILE_ROUTE}/${name}`)] as const
-    )
-  )
-  return { jam, files: { executable, tunes: new Map(tunes) } }
+  return { ...assets, tunes }
 }
 
 const getChosenGameFiles = async (files: readonly File[]): Promise<LoadedGameFiles> => {
@@ -102,6 +117,7 @@ const getChosenGameFiles = async (files: readonly File[]): Promise<LoadedGameFil
       executable: new Uint8Array(await executableFile.arrayBuffer()),
       tunes: new Map(tunes),
     },
+    readTune: (name) => Promise.resolve(new Map(tunes).get(name.toLowerCase()) ?? null),
   }
 }
 
@@ -174,14 +190,13 @@ export const useRaceController = (): RaceController => {
       // Lets the loading state paint before the synchronous load.
       window.setTimeout(() => {
         try {
-          setAssets(
-            loadRaceAssets(
-              gameFiles.jam,
-              gameFiles.files,
-              { raceFolder: next.race.folder },
-              next.definition
-            )
+          const loaded = loadRaceAssets(
+            gameFiles.jam,
+            gameFiles.files,
+            { raceFolder: next.race.folder },
+            next.definition
           )
+          loadRaceTunes(loaded, gameFiles).then(setAssets).catch(showFailure)
         } catch (error) {
           showFailure(error)
         }

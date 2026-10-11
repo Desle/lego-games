@@ -60,4 +60,3 @@ export const getHudContext = (assets: RaceAssets, stageSize: RaceStageSize): Hud
     measureText,
   }
 }
-

@@ -56,6 +56,8 @@ export type RaceAssets = {
 export type LoadedGameFiles = {
   readonly jam: Uint8Array
   readonly files: RaceGameFiles
+  // Reads a music file (e.g. `knight.tun`) next to LEGO.JAM; null when it is missing.
+  readonly readTune: (name: string) => Promise<Uint8Array | null>
 }
 
 export type { HudBitmapFont, HudFonts, HudImage } from '../../types/hud-fonts/hud-fonts.types.ts'

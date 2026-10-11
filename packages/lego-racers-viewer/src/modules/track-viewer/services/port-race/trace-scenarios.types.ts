@@ -7,3 +7,8 @@ export type TraceScenarioRequest = {
   readonly recordFrames?: readonly number[]
   readonly isRenderRecorded?: boolean
 }
+
+// A scenario of the audio trace and the sound ids the port still lacks in it.
+export type AudioTraceCase = TraceScenarioRequest & {
+  readonly gapSoundIds: readonly number[]
+}

@@ -1,7 +1,4 @@
-export {
-  compareAudioCalls,
-  getOriginalAudioCalls,
-} from './controller/audio-trace/audio-trace.ts'
+export { compareAudioCalls, getOriginalAudioCalls } from './controller/audio-trace/audio-trace.ts'
 export {
   getIsOriginalPresentationAvailable,
   readOriginalPresentation,

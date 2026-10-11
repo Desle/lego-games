@@ -19,5 +19,6 @@ export const getTuneMusic = (tuneIndex: number): MusicCue =>
   Object.freeze({
     listIndex: tuneIndex,
     isLooping: tuneIndex !== WIN_LIST_INDEX && tuneIndex !== LOSS_LIST_INDEX,
-    address: tuneIndex === WIN_LIST_INDEX || tuneIndex === LOSS_LIST_INDEX ? '0x00434c80' : '0x00434b00',
+    address:
+      tuneIndex === WIN_LIST_INDEX || tuneIndex === LOSS_LIST_INDEX ? '0x00434c80' : '0x00434b00',
   })
