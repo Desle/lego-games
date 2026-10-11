@@ -311,6 +311,9 @@ export type Vehicle = {
   // warp's draw (0x0045d940) leave a part's radius at -1 or its sphere at the origin until the next update refreshes
   // it (0x00411ef0 reads every part through the getters 0x00411c60 and 0x00411ca0). null parts are fresh.
   readonly boundsCaches: VehicleBoundsCaches | null
+  // A 0x00440160 call that happens after the frame's vehicle update (a stolen warp's reset runs in the racers' power-up
+  // pass, 0x0043917e), applied when the frame ends.
+  readonly pendingPartsMarkScale: number | null
 }
 
 export type VehicleBoundsCaches = {

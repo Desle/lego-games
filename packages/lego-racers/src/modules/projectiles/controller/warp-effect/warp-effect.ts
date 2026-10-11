@@ -47,7 +47,8 @@ export const updateWarp = (
   if (before.state === EffectState.FINISHED) return Object.freeze({ step, world })
   const racer = before.ownerRacer === null ? undefined : context.racers[before.ownerRacer]
   const { arithmetic } = context.powerUps
-  const isCarried = before.state === EffectState.ACTIVE && before.ownerRacer !== null
+  const isCarried =
+    before.state === EffectState.ACTIVE && before.ownerRacer !== null && racer?.isComputer !== true
   const carried: Vector3 | null =
     isCarried && racer !== undefined
       ? getPointMovedAlongRoute(

@@ -64,6 +64,7 @@ const getFlightRacer = (x: number, overrides: Partial<FlightRacer> = {}): Flight
   beamRadius: 2,
   routeNodeIndex: null,
   rocketHeading: { x: 1, y: 0, z: 0 },
+  isComputer: false,
   ...overrides,
 })
 
