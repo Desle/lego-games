@@ -1,11 +1,10 @@
 import {
   compareQuadPlacements,
-  compareRenderFrame,
+  compareRenderFrameByRoot,
   getOriginalQuads,
   getOriginalTriangles,
   getCandidateMatrices,
   matchTextures,
-  projectWorldTriangle,
   readOriginalPresentation,
 } from '@lego-games/lego-racers/presentation-trace'
 import { getEffectViews, getRacerPoses } from '@lego-games/lego-racers/race-presentation'
@@ -28,9 +27,17 @@ import { createPresentationScenario } from './trace-scenarios.ts'
 import type { TraceScenarioRequest } from './trace-scenarios.types.ts'
 
 const getEffectScenes = (assets: RaceAssets): readonly Scene[] => {
-  const { powerUpBricks, warpTunnel, ...models } = assets.effectModels
+  const { powerUpBricks, rocket, barrel, magnet, spikedExplosion, enhancementBrick, warpTunnel } =
+    assets.effectModels
   return [
-    ...[...Object.values(models), ...Object.values(powerUpBricks)].map((model) => model.scene),
+    ...[
+      rocket,
+      barrel,
+      magnet,
+      spikedExplosion,
+      enhancementBrick,
+      ...Object.values(powerUpBricks),
+    ].map((model) => model.scene),
     warpTunnel,
   ]
 }
@@ -112,32 +119,20 @@ export const runRenderComparison = async (
       stage.animate(milliseconds)
       const originalFrame = original.renderFrames.find((candidate) => candidate.frame === frame)
       if (originalFrame === undefined) return
-      if (frame === 320)
-        for (const draw of originalFrame.draws)
-          console.log(
-            'WARPDBG',
-            draw.modelMatrix.map((value) => value.toFixed(1)).join(' '),
-            (draw.indices?.length ?? draw.vertices.length) / 3,
-            JSON.stringify(Object.keys(draw))
-          )
-      const portTriangles = getPortWorldTriangles([stage.backgroundScene, stage.trackScene])
+      const portTriangles = getPortWorldTriangles([
+        ...(stage.backgroundScene.visible ? stage.backgroundScene.children : []),
+        ...stage.trackScene.children,
+      ])
       const originalTriangles = getOriginalTriangles(originalFrame)
       const textureMatches = matchTextures(original.textures, allTextures(portTriangles.textures))
-      const comparisons = getCandidateMatrices(originalFrame, CANDIDATE_COUNT).map((matrix) =>
-        compareRenderFrame({
-          original: originalTriangles,
-          port: portTriangles.triangles.flatMap((triangle) => {
-            const drawn = projectWorldTriangle(triangle, matrix)
-            return drawn === null ? [] : [drawn]
-          }),
-          viewport: { width: ORIGINAL_STAGE_SIZE.width, height: ORIGINAL_STAGE_SIZE.height },
-          textureMatches,
-          tolerances: TOLERANCES,
-        })
-      )
-      const comparison = comparisons.reduce((best, candidate) =>
-        candidate.matchedCount > best.matchedCount ? candidate : best
-      )
+      const comparison = compareRenderFrameByRoot({
+        original: originalTriangles,
+        port: portTriangles.triangles,
+        candidates: getCandidateMatrices(originalFrame, CANDIDATE_COUNT, ORIGINAL_STAGE_SIZE),
+        viewport: { width: ORIGINAL_STAGE_SIZE.width, height: ORIGINAL_STAGE_SIZE.height },
+        textureMatches,
+        tolerances: TOLERANCES,
+      })
       if (presentation.hudFrame !== null) {
         const hud = compareQuadPlacements({
           original: getOriginalQuads(originalFrame),

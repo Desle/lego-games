@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs'
 import { getIsOriginalPresentationAvailable } from '@lego-games/lego-racers/presentation-trace'
 import { getIsOriginalGamePresent } from './original-game-files.ts'
 import { runRenderComparison } from './render-comparison.ts'
@@ -35,7 +36,12 @@ describe.skipIf(!isGamePresent())('render trace', () => {
   // eslint-disable-next-line no-restricted-syntax -- the lint rule knows `it(...)`, not `it.each(...)(...)`
   it.each(RENDER_CASES)('compares $name', async (renderCase) => {
     // Arrange / Act
-    const result = await runRenderComparison(renderCase)
+    const framesOverride = process.env['RENDER_TRACE_FRAMES']
+    const recordFrames =
+      framesOverride === undefined ? renderCase.recordFrames : framesOverride.split(',').map(Number)
+    const result = await runRenderComparison(
+      recordFrames === undefined ? renderCase : { ...renderCase, recordFrames }
+    )
 
     // Assert
     console.log(
@@ -62,22 +68,23 @@ describe.skipIf(!isGamePresent())('render trace', () => {
         )
         .join('\n')
     )
-    if (process.env['RENDER_TRACE_GROUPS'] !== undefined) {
-      console.log(
-        JSON.stringify(result.totals),
-        result.groups
+    const groupsPath = process.env['RENDER_TRACE_GROUPS']
+    if (groupsPath !== undefined) {
+      writeFileSync(
+        groupsPath,
+        `${JSON.stringify(result.totals)}\n${result.groups
           .slice(0, 40)
           .map(
             (group) =>
               `${group.kind} ${group.source} x${String(group.count)} frames ${group.frames.join(',')}: ${group.firstDetail}`
           )
-          .join('\n')
+          .join('\n')}`
       )
     }
     const lowest = Math.min(
       ...result.totals.map((total) => total.matchedCount / total.originalCount)
     )
-    expect(result.totals.length).toBe(renderCase.recordFrames?.length)
+    expect(result.totals.length).toBe(recordFrames?.length)
     expect(lowest).toBeGreaterThan(MINIMUM_MATCHED_SHARE)
   })
 })

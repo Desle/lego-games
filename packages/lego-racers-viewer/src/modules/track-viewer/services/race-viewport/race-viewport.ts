@@ -1,6 +1,7 @@
 import type { EffectViews, RacerPose, WarpView } from '@lego-games/lego-racers/race-presentation'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type { Matrix3 } from '@lego-games/lego-racers/simulation-math'
+import type { Mesh, MeshBasicMaterial } from 'three'
 import {
   Color,
   Group,
@@ -19,6 +20,7 @@ import { createRaceEffects } from '../race-effects/race-effects.ts'
 import { createSceneObject } from '../scene-object/scene-object.ts'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import { createModelObject } from '../model-object/model-object.ts'
+import { WARP_WORLD_PATH } from '../race-assets/race-assets.ts'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import { showSceneObjects } from '../scene-viewport/scene-viewport.ts'
 import type { ShownScene } from '../scene-viewport/scene-viewport.types.ts'
@@ -32,6 +34,9 @@ import type {
 } from './race-viewport.types.ts'
 
 const BACKGROUND_COLOR = 0x101820
+const MILLISECONDS_PER_SECOND = 1000
+// The scroll the original adds stays below 1 (it wraps).
+const getWrappedFraction = (value: number): number => value - Math.floor(value)
 const NEAR_PLANE = 0.5
 const FAR_PLANE = 20000
 // Rows of a frame's rotation are the images of the model's axes; three.js takes them as columns.
@@ -116,13 +121,22 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
         tunnel.dispose()
       }
       tunnel = createSceneObject(assets.effectModels.warpTunnel, {
-        includeInstance: () => true,
+        includeInstance: (instance) => instance.worldPath === WARP_WORLD_PATH,
         isBackground: false,
       })
       warpGroup.add(tunnel.group)
       tunnelMilliseconds = 0
     }
     tunnel.animate(warpView.tunnelMilliseconds - tunnelMilliseconds)
+    const [scrollU, scrollV] = assets.effectModels.warpTextureScroll
+    tunnel.group.traverse((object) => {
+      if (object.type !== 'Mesh') return
+      const { map } = (object as Mesh).material as MeshBasicMaterial
+      map?.offset.set(
+        getWrappedFraction((scrollU * warpView.tunnelMilliseconds) / MILLISECONDS_PER_SECOND),
+        getWrappedFraction((scrollV * warpView.tunnelMilliseconds) / MILLISECONDS_PER_SECOND)
+      )
+    })
     tunnelMilliseconds = warpView.tunnelMilliseconds
     warpGroup.visible = true
   }
@@ -135,6 +149,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     setWarpTunnel(warpView)
     shown.track.group.visible = warpView === null
     particles.points.visible = warpView === null
+    backgroundScene.visible = warpView === null
     const poses =
       warpView === null
         ? allPoses
@@ -254,6 +269,7 @@ export const createRaceViewport = (
     dispose: () => {
       stage.dispose()
       renderer.dispose()
+      renderer.forceContextLoss()
       renderer.domElement.remove()
     },
   })

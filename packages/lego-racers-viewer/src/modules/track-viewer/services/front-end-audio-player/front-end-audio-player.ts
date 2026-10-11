@@ -42,9 +42,11 @@ export const createFrontEndAudioPlayer = (
       return null
     }
   }
+  let isDisposed = false
   return Object.freeze({
     resume: () => void context.resume(),
     playSound: (name: string) => {
+      if (isDisposed) return
       const buffer = getBuffer(name)
       if (buffer === null) return
       const source = context.createBufferSource()
@@ -53,6 +55,7 @@ export const createFrontEndAudioPlayer = (
       source.start()
     },
     playMusic: (listIndex: number | null) => {
+      if (isDisposed) return
       musicRequest += 1
       const request = musicRequest
       music?.stop()
@@ -80,6 +83,7 @@ export const createFrontEndAudioPlayer = (
         .catch(() => undefined)
     },
     dispose: () => {
+      isDisposed = true
       musicRequest += 1
       music?.stop()
       void context.close()

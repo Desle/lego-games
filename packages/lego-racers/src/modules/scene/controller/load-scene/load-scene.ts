@@ -119,6 +119,15 @@ const getSceneWithWorld = (archive: JamArchive, scene: Scene, worldPath: string)
 export const loadScene = (archive: JamArchive, worldPaths: readonly string[]): Scene =>
   worldPaths.reduce((scene, worldPath) => getSceneWithWorld(archive, scene, worldPath), EMPTY_SCENE)
 
+// Loads more worlds onto a scene that is already loaded: their textures and materials search the earlier ones and
+// shadow them by name, as the game's container chains do.
+export const loadSceneOnto = (
+  archive: JamArchive,
+  scene: Scene,
+  worldPaths: readonly string[]
+): Scene =>
+  worldPaths.reduce((current, worldPath) => getSceneWithWorld(archive, current, worldPath), scene)
+
 // Every world file in the archive, in archive order.
 export const getWorldPaths = (archive: JamArchive): readonly string[] =>
   Object.freeze(archive.getFilePaths().filter((path) => path.endsWith('.WDB')))
