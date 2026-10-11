@@ -27,7 +27,7 @@ import {
   getHudFrame,
   startHudCountdown,
 } from '../../../race-hud/index.ts'
-import type { HudFrame, HudRacerView } from '../../../race-hud/index.ts'
+import type { HudFrame, HudMinimap, HudRacerView } from '../../../race-hud/index.ts'
 import { RacePhase } from '../../../race/index.ts'
 import type { RaceState, RaceStepResult } from '../../../race/index.ts'
 import { getRacer } from '../../../racer/index.ts'
@@ -46,6 +46,8 @@ const TIME_SCALE_FLAG = 0x100
 const WARPING_FLAG = 0x10
 const POWER_SLIDING_FLAG = 0x80
 const WRONG_WAY_FLAG = 0x4000
+// Racer +0xd08 = 2: a computer drives it.
+const COMPUTER_CONTROLLER = 2
 // The countdown and racing and finishing states draw the HUD (Race_Render 0x004354d0 calls slot +0x40 in 2..4).
 const HUD_PHASES: readonly string[] = [RacePhase.COUNTDOWN, RacePhase.RACING, RacePhase.FINISHING]
 
@@ -90,6 +92,34 @@ const getHudRacerView = (raceState: RaceState, racerIndex: number): HudRacerView
       kindCode: racer.heldPowerUp,
       level: powerUpRacer?.enhancementLevel ?? 0,
     }),
+  })
+}
+
+// What the minimap reads (0x004249b0): every racer's display frame position and who drives it, and the way the player points.
+const getHudMinimap = (
+  raceState: RaceState,
+  playerIndex: number,
+  hudContext: HudContext
+): HudMinimap | null => {
+  if (hudContext.displayBounds === null) return null
+  const racers = raceState.racerSet.racers
+  const own = racers[playerIndex]
+  if (own === undefined) return null
+  const { rotation } = own.carBody.rigidBody.displayFrame
+  return Object.freeze({
+    displayBounds: hudContext.displayBounds,
+    isMirrored: hudContext.isMirrored,
+    mapImageName: hudContext.mapImageName,
+    racers: Object.freeze(
+      racers.map((racer) =>
+        Object.freeze({
+          position: racer.carBody.rigidBody.displayFrame.position,
+          isComputer: racer.controllerKind === COMPUTER_CONTROLLER,
+        })
+      )
+    ),
+    ownIndex: playerIndex,
+    ownHeading: Object.freeze({ x: rotation[0], y: rotation[1] }),
   })
 }
 
@@ -215,6 +245,7 @@ export const stepRacePresentation = (
         imageNames: hudContext.imageNames,
         getImageSize: hudContext.getImageSize,
         measureText: hudContext.measureText,
+        minimap: getHudMinimap(raceState, presentation.playerRacerIndex, hudContext),
       })
     : null
   const racer = getPlayerRacer(raceState, presentation.playerRacerIndex)

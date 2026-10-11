@@ -37,6 +37,9 @@ const hudContext: HudContext = {
   getString,
   imageNames: [],
   getImageSize: () => null,
+  displayBounds: null,
+  isMirrored: false,
+  mapImageName: null,
   measureText,
 }
 

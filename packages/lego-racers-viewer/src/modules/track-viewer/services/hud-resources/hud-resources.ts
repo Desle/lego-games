@@ -3,6 +3,7 @@ import { getHudLayout, HudFont } from '@lego-games/lego-racers/race-hud'
 import type { HudContext } from '@lego-games/lego-racers/race-presentation'
 import type { HudMeasureText } from '@lego-games/lego-racers/race-hud'
 import type { HudFonts, HudImage } from '../../types/hud-fonts/hud-fonts.types.ts'
+import { MAP_IMAGE_NAME } from '../race-assets/race-assets.ts'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import type { RaceStageSize } from '../race-viewport/race-viewport.types.ts'
 
@@ -58,5 +59,8 @@ export const getHudContext = (assets: RaceAssets, stageSize: RaceStageSize): Hud
     imageNames: assets.imageNames,
     getImageSize: (name) => assets.hudImages.get(name.toUpperCase()) ?? null,
     measureText,
+    displayBounds: assets.displayBounds,
+    isMirrored: assets.definition.isMirrored,
+    mapImageName: assets.hudImages.has(MAP_IMAGE_NAME) ? MAP_IMAGE_NAME : null,
   }
 }
