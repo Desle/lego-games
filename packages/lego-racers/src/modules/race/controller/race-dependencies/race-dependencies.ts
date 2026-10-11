@@ -34,7 +34,13 @@ import {
   PLAYER_CONTROLLER,
 } from '../../types/racer-transitions/racer-transitions.ts'
 import { stepScriptedCarBody } from '../../types/scripted-car-body/scripted-car-body.ts'
-import { changePowerUps, getRaceRacerSetOf, NO_RACE_CONTACTS } from '../race-world/race-world.ts'
+import { tickTrackTimeEntries } from '../../../track-logic/index.ts'
+import {
+  changePowerUps,
+  changeTrackLogic,
+  getRaceRacerSetOf,
+  NO_RACE_CONTACTS,
+} from '../race-world/race-world.ts'
 
 const ZONE_ZERO = 0
 const ZONE_ONE = 1
@@ -59,8 +65,11 @@ const stepRacerScript: RacerBoundary = (context, racerSet, racerIndex, stepMilli
 
 // Pass 4: what the collision registry (racer set +0xf0) and the rigid bodies' contacts report is delivered here,
 // once per frame (the registry itself, 0x0043d180, is not ported).
-const deliverContacts: RacerSetBoundary = (context, racerSet) => {
-  const raced = getRaceRacerSetOf(racerSet)
+const deliverContacts: RacerSetBoundary = (context, racerSet, stepMilliseconds) => {
+  // The registry's time list runs first (0x0042fce0 → 0x0042fc10): the timers' callbacks.
+  const raced = changeTrackLogic(context, getRaceRacerSetOf(racerSet), (trackLogic, trackContext) =>
+    tickTrackTimeEntries(trackLogic, trackContext, stepMilliseconds)
+  )
   const { checkpointTouches, zoneCrossings, brickContacts, enhancementBrickContacts } =
     raced.pendingContacts
   const touched = checkpointTouches.reduce((current, touch) => {

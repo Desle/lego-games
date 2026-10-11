@@ -2,7 +2,9 @@ import type { EnumValues } from '../../../shared/types/enum.types.ts'
 import type { Checkpoint } from '../../checkpoint/index.ts'
 import type { CollisionObject } from '../../collision/index.ts'
 import type { ComputerRacerRoute } from '../../computer-racer-route/index.ts'
+import type { EventSet } from '../../event/index.ts'
 import type { HazardList } from '../../hazard/index.ts'
+import type { TrackEffect, TrackLogicState } from '../../track-logic/index.ts'
 import type {
   CarBodyDefinition,
   PlayerController,
@@ -21,6 +23,12 @@ import type {
   RacerPowerUpAbilities,
 } from '../../power-ups/index.ts'
 import type { PowerUpPlacements } from '../../power-up/index.ts'
+import type {
+  DebrisAnimations,
+  ProjectileEvent,
+  ProjectileWorld,
+  RouteNode,
+} from '../../projectiles/index.ts'
 import type { RandomTablePosition } from '../../random-table/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../simulation-math/index.ts'
 import type { StartPosition } from '../../start-position/index.ts'
@@ -68,6 +76,7 @@ export type RaceDefinition = {
   readonly collisionObjects: readonly CollisionObject[]
   readonly startPositions: readonly StartPosition[]
   readonly powerUps: PowerUpPlacements
+  readonly events: EventSet | null
   readonly timers: TimerList | null
   readonly mainTriggers: TriggerList | null
   readonly environmentTriggers: TriggerList | null
@@ -78,6 +87,15 @@ export type RaceDefinition = {
   readonly getGroundPoint: GroundQuery | null
   // The track's TGB points (race +0x32c4), the cannon's and grapple's aims.
   readonly trackTargets: readonly ConeQueryTarget[]
+  readonly projectileModelData: ProjectileModelData
+}
+
+// Model and route data the moving power-up effects read and the port does not parse yet (projectiles.md).
+export type ProjectileModelData = {
+  // Racer set +0x10: the route a warping racer follows.
+  readonly routeNodes: readonly RouteNode[]
+  readonly rocketLaunchMilliseconds: readonly number[]
+  readonly debrisAnimations: DebrisAnimations
 }
 
 // What a computer racer's power-up code reads that is not racer state (racer +0xcd0, +0xcd4, +0xd1c..).
@@ -120,6 +138,13 @@ export type RaceState = {
   readonly powerUpSetups: readonly RaceRacerPowerUpSetup[]
   readonly getGroundPoint: GroundQuery | null
   readonly trackTargets: readonly ConeQueryTarget[]
+  // The moving power-up effects (power-up system +0x193c, +0x1940, +0x18bc and each effect's body).
+  readonly projectileWorld: ProjectileWorld
+  readonly projectileModelData: ProjectileModelData
+  // Events, triggers and timers at runtime (race +0x2098, +0x2080, +0x2128, +0x213c).
+  readonly trackLogic: TrackLogicState
+  // The effects the track logic asked for and the race has not reported yet.
+  readonly trackEffects: readonly TrackEffect[]
   // Loaded and kept; their per-frame logic is not ported (race +0x2080, +0x2128, +0x213c, +0x2148).
   readonly timers: TimerList | null
   readonly mainTriggers: TriggerList | null
@@ -176,6 +201,8 @@ export type RaceEvent =
   // Race +0x3334 became 0.
   | { readonly type: 'race.ended' }
   | { readonly type: 'race.power_up'; readonly event: PowerUpEvent }
+  | { readonly type: 'race.projectile'; readonly event: ProjectileEvent }
+  | { readonly type: 'race.track_effect'; readonly effect: TrackEffect }
 
 export type RaceStepResult = {
   readonly raceState: RaceState
@@ -190,4 +217,6 @@ export type RaceRacerSet = RacerSet & {
   readonly trackTargets: readonly ConeQueryTarget[]
   readonly raceModeFlags: number
   readonly pendingContacts: RaceContacts
+  readonly trackLogic: TrackLogicState
+  readonly trackEffects: readonly TrackEffect[]
 }
