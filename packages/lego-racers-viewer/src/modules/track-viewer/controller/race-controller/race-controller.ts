@@ -5,7 +5,7 @@ import {
   NO_RACE_CONTACTS,
   stepRace,
 } from '@lego-games/lego-racers/race'
-import type { RaceState } from '@lego-games/lego-racers/race'
+import type { LoadRaceOptions, RaceState } from '@lego-games/lego-racers/race'
 import { getHudLayout } from '@lego-games/lego-racers/race-hud'
 import { getRacerControls } from '@lego-games/lego-racers/race-input'
 import {
@@ -42,6 +42,7 @@ const INITIAL_SCREEN: RaceScreen = Object.freeze({
   phase: null,
   hudCommands: [],
   hudImageUrls: new Map(),
+  hudFonts: null,
   lapCount: 0,
 })
 
@@ -94,7 +95,7 @@ const getChosenGameFiles = async (files: readonly File[]): Promise<LoadedGameFil
 }
 
 const getHudContext = (assets: RaceAssets): HudContext => {
-  const measureText = createHudTextMeasure()
+  const measureText = createHudTextMeasure(assets.hudFonts)
   const getString = (stringId: number) => assets.getString(stringId)
   const holder = assets.hudImages.get(HOLDER_IMAGE_NAME) ?? FALLBACK_HOLDER_SIZE
   return {
@@ -118,25 +119,17 @@ export const useRaceController = (): RaceController => {
   const containerReference = useRef<HTMLDivElement | null>(null)
   const [screen, setScreen] = useState<RaceScreen>(INITIAL_SCREEN)
   const [assets, setAssets] = useState<RaceAssets | null>(null)
+  const [gameFiles, setGameFiles] = useState<LoadedGameFiles | null>(null)
 
-  const startRace = useCallback((getFiles: () => Promise<LoadedGameFiles>) => {
+  // The game's files are opened first: the front end shows its menus from them, and they stay open for every race.
+  const openGame = useCallback((getFiles: () => Promise<LoadedGameFiles>) => {
     setAssets(null)
     setScreen({ ...INITIAL_SCREEN, status: RaceStatus.LOADING })
     getFiles()
-      // Lets the loading state paint before the synchronous load.
-      .then(({ jam, files }) =>
-        window.setTimeout(() => {
-          try {
-            setAssets(loadRaceAssets(jam, files))
-          } catch (error) {
-            setScreen({
-              ...INITIAL_SCREEN,
-              status: RaceStatus.FAILED,
-              errorMessage: getErrorMessage(error),
-            })
-          }
-        }, 0)
-      )
+      .then((files) => {
+        setGameFiles(files)
+        setScreen({ ...INITIAL_SCREEN, status: RaceStatus.MENU })
+      })
       .catch((error: unknown) =>
         setScreen({
           ...INITIAL_SCREEN,
@@ -145,6 +138,27 @@ export const useRaceController = (): RaceController => {
         })
       )
   }, [])
+
+  // The menus chose a race: its assets load with the options the menus produced.
+  const startRace = useCallback(
+    (options: LoadRaceOptions) => {
+      if (gameFiles === null) return
+      setScreen({ ...INITIAL_SCREEN, status: RaceStatus.LOADING })
+      // Lets the loading state paint before the synchronous load.
+      window.setTimeout(() => {
+        try {
+          setAssets(loadRaceAssets(gameFiles.jam, gameFiles.files, options))
+        } catch (error) {
+          setScreen({
+            ...INITIAL_SCREEN,
+            status: RaceStatus.FAILED,
+            errorMessage: getErrorMessage(error),
+          })
+        }
+      }, 0)
+    },
+    [gameFiles]
+  )
 
   useEffect(() => {
     const container = containerReference.current
@@ -167,6 +181,7 @@ export const useRaceController = (): RaceController => {
       status: RaceStatus.RUNNING,
       phase: raceState.phase,
       hudImageUrls,
+      hudFonts: assets.hudFonts,
       lapCount: raceState.lapCount,
     })
 
@@ -216,14 +231,21 @@ export const useRaceController = (): RaceController => {
     ...screen,
     containerReference,
     isDevelopmentFilesAvailable: import.meta.env.DEV,
+    gameJam: screen.status === RaceStatus.MENU ? (gameFiles?.jam ?? null) : null,
     // A production build replaces DEV with false and drops the development fetches entirely.
-    onDevelopmentRaceRequested: import.meta.env.DEV
-      ? () => startRace(getDevelopmentGameFiles)
+    onDevelopmentGameRequested: import.meta.env.DEV
+      ? () => openGame(getDevelopmentGameFiles)
       : () => undefined,
-    onGameFilesChosen: (files) => startRace(() => getChosenGameFiles(files)),
+    onGameFilesChosen: (files) => openGame(() => getChosenGameFiles(files)),
+    onRaceRequested: startRace,
+    onGameClosed: () => {
+      setAssets(null)
+      setGameFiles(null)
+      setScreen(INITIAL_SCREEN)
+    },
     onRaceStopped: () => {
       setAssets(null)
-      setScreen(INITIAL_SCREEN)
+      setScreen({ ...INITIAL_SCREEN, status: gameFiles === null ? RaceStatus.IDLE : RaceStatus.MENU })
     },
   }
 }

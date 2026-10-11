@@ -1,10 +1,13 @@
 import { decodeSoundBank } from '@lego-games/lego-racers/audio'
 import { decodeBitmap, getBitmapColors } from '@lego-games/lego-racers/bitmap'
+import { parseFontDatabase } from '@lego-games/lego-racers/font-database'
+import { buildBitmapFont, getFontImagePixels } from '@lego-games/lego-racers/font-rendering'
 import { parseImageDatabase } from '@lego-games/lego-racers/image-database'
 import type { ImageDefinition } from '@lego-games/lego-racers/image-database'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import { loadRaceDefinition } from '@lego-games/lego-racers/race'
+import type { LoadRaceOptions } from '@lego-games/lego-racers/race'
 import { parseRaceDescription } from '@lego-games/lego-racers/race-description'
 import {
   COMMON_DIRECTORY,
@@ -16,10 +19,18 @@ import {
 } from '@lego-games/lego-racers/scene'
 import { parseSky } from '@lego-games/lego-racers/sky'
 import { getString, parseStringTable } from '@lego-games/lego-racers/string-table'
-import type { HudImage, RaceAssets, RaceGameFiles, RacerModels } from './race-assets.types.ts'
+import { HUD_FONT_NAMES } from '../../types/hud-fonts/hud-fonts.ts'
+import type {
+  HudBitmapFont,
+  HudFonts,
+  HudImage,
+  RaceAssets,
+  RaceGameFiles,
+  RacerModels,
+} from './race-assets.types.ts'
 
-const RACE_DIRECTORY = 'GAMEDATA\\RACEC0R0'
-const RACE_DESCRIPTION_PATH = `${RACE_DIRECTORY}\\RACEC0R0.RAB`
+// The race the original starts first; the menus choose another through `LoadRaceOptions.raceFolder`.
+const DEFAULT_RACE_FOLDER = 'RACEC0R0'
 const ENGLISH_DIRECTORY = `${COMMON_DIRECTORY}\\ENGLISH`
 const SEPARATOR = '\\'
 // The image database flag for a colour key (IMAGE_KEYWORD_2B_FLAG, 0x20).
@@ -70,25 +81,53 @@ const getHudImage = (archive: JamArchive, definition: ImageDefinition): HudImage
 
 const readBank = (archive: JamArchive, path: string) => decodeSoundBank(archive.readFile(path))
 
+// Hud_Initialize 0x00425d80: the two fonts of LEGOFNTS.FDB, built from the font bitmaps of the language folder.
+const loadHudFonts = (archive: JamArchive): HudFonts => {
+  const database = parseFontDatabase(archive.readFile(`${ENGLISH_DIRECTORY}\\LEGOFNTS.FDB`))
+  const entries = Object.entries(HUD_FONT_NAMES).flatMap(([hudFont, fontName]) => {
+    const definition = database.fonts.find((candidate) => candidate.name === fontName)
+    if (definition === undefined) return []
+    const bitmap = decodeBitmap(archive.readFile(`${ENGLISH_DIRECTORY}\\${fontName.toUpperCase()}.BMP`))
+    const font = buildBitmapFont(definition, bitmap)
+    const hudBitmapFont: HudBitmapFont = Object.freeze({
+      font,
+      image: Object.freeze({
+        name: fontName,
+        width: bitmap.width,
+        height: bitmap.height,
+        colors: getFontImagePixels(bitmap, font.colorKey),
+      }),
+    })
+    return [[hudFont, hudBitmapFont] as const]
+  })
+  return new Map(entries)
+}
+
 // Everything a race of Royal Knights Raceway needs from the player's files: the race definition, the worlds with
 // the sky and the background, the racers' models, the HUD's strings and images, the sound banks and the music.
-export const loadRaceAssets = (jam: Uint8Array, files: RaceGameFiles): RaceAssets => {
+export const loadRaceAssets = (
+  jam: Uint8Array,
+  files: RaceGameFiles,
+  options: LoadRaceOptions = {}
+): RaceAssets => {
   const archive = openJamArchive(jam)
-  const description = parseRaceDescription(archive.readFile(RACE_DESCRIPTION_PATH), false)
-  const definition = loadRaceDefinition(jam, files.executable)
+  const raceFolder = options.raceFolder ?? DEFAULT_RACE_FOLDER
+  const raceDirectory = `GAMEDATA\\${raceFolder}`
+  const description = parseRaceDescription(archive.readFile(`${raceDirectory}\\${raceFolder}.RAB`), false)
+  const definition = loadRaceDefinition(jam, files.executable, options)
   const scene = loadScene(archive, [
-    ...getRaceWorldPaths(RACE_DIRECTORY, description),
-    ...(getRaceBackgroundWorldPath(RACE_DIRECTORY, description) === null
+    ...getRaceWorldPaths(raceDirectory, description),
+    ...(getRaceBackgroundWorldPath(raceDirectory, description) === null
       ? []
-      : [getRaceBackgroundWorldPath(RACE_DIRECTORY, description) ?? '']),
+      : [getRaceBackgroundWorldPath(raceDirectory, description) ?? '']),
   ])
-  const skyPath = getRaceSkyPath(RACE_DIRECTORY, description)
+  const skyPath = getRaceSkyPath(raceDirectory, description)
   const imageDatabase = parseImageDatabase(archive.readFile(`${COMMON_DIRECTORY}\\LEGOIMGS.IDB`))
   const table = parseStringTable(archive.readFile(`${ENGLISH_DIRECTORY}\\GAME.SRF`))
   const trackBankName = description.trackSoundBank ?? ''
   const musicList = readBank(
     archive,
-    `${RACE_DIRECTORY}\\${(description.musicList ?? '').toUpperCase()}`
+    `${raceDirectory}\\${(description.musicList ?? '').toUpperCase()}`
   )
   return Object.freeze({
     archive,
@@ -96,7 +135,7 @@ export const loadRaceAssets = (jam: Uint8Array, files: RaceGameFiles): RaceAsset
     scene,
     background: Object.freeze({
       sky: skyPath === null ? null : parseSky(archive.readFile(skyPath)),
-      backgroundWorldPath: getRaceBackgroundWorldPath(RACE_DIRECTORY, description),
+      backgroundWorldPath: getRaceBackgroundWorldPath(raceDirectory, description),
     }),
     racerModels: Object.freeze(
       definition.racers.map((_, index) =>
@@ -105,6 +144,7 @@ export const loadRaceAssets = (jam: Uint8Array, files: RaceGameFiles): RaceAsset
     ),
     getString: (stringId: number) => getString(table, stringId) ?? '',
     imageNames: Object.freeze(imageDatabase.images.map((image) => image.name.toUpperCase())),
+    hudFonts: loadHudFonts(archive),
     hudImages: new Map(
       imageDatabase.images.flatMap((image) => {
         const hudImage = getHudImage(archive, image)
@@ -112,8 +152,8 @@ export const loadRaceAssets = (jam: Uint8Array, files: RaceGameFiles): RaceAsset
       })
     ),
     generalSounds: readBank(archive, `${COMMON_DIRECTORY}\\GENERAL.SBK`),
-    trackSounds: readBank(archive, `${RACE_DIRECTORY}\\${trackBankName.toUpperCase()}.SBK`),
-    trackSoundDirectory: RACE_DIRECTORY,
+    trackSounds: readBank(archive, `${raceDirectory}\\${trackBankName.toUpperCase()}.SBK`),
+    trackSoundDirectory: raceDirectory,
     musicNames: Object.freeze(musicList.soundPaths),
     tunes: files.tunes,
   })

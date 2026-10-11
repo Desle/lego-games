@@ -1,17 +1,19 @@
+import { getTextWidth } from '@lego-games/lego-racers/font-rendering'
 import { HudFont } from '@lego-games/lego-racers/race-hud'
 import type { HudMeasureText } from '@lego-games/lego-racers/race-hud'
-import { HUD_FONT_FAMILY, HUD_FONT_SIZES } from '../../types/hud-fonts/hud-fonts.ts'
-import type { HudImage } from '../race-assets/race-assets.types.ts'
+import type { HudFonts, HudImage } from '../race-assets/race-assets.types.ts'
 
-export const createHudTextMeasure = (): HudMeasureText => {
-  const context = document.createElement('canvas').getContext('2d')
-  return (font, text) => {
-    const size = HUD_FONT_SIZES[font] ?? HUD_FONT_SIZES[HudFont.TEXT] ?? 16
-    if (context === null) return { width: Math.ceil(text.length * size * 0.6), height: size }
-    context.font = `${String(size)}px ${HUD_FONT_FAMILY}`
-    return { width: Math.ceil(context.measureText(text).width), height: size }
+// FUN_00408be0: the size of a string in the HUD's bitmap font, in the font's own pixels.
+export const createHudTextMeasure =
+  (fonts: HudFonts): HudMeasureText =>
+  (font, text) => {
+    const hudFont = fonts.get(font) ?? fonts.get(HudFont.TEXT)
+    if (hudFont === undefined) return { width: 0, height: 0 }
+    return getTextWidth(
+      hudFont.font,
+      Array.from(text, (letter) => letter.charCodeAt(0))
+    )
   }
-}
 
 // A data URL per HUD image so the overlay can show them as plain images.
 export const createHudImageUrls = (

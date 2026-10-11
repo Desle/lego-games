@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react'
 import type { HudCommand } from '@lego-games/lego-racers/race-hud'
 import RaceHudOverlay from './race-hud-overlay.tsx'
+import type { RaceHudOverlayProps } from './race-hud-overlay.types.ts'
 
 const text = (overrides: Partial<Extract<HudCommand, { kind: 'text' }>> = {}): HudCommand => ({
   kind: 'text',
@@ -14,26 +15,36 @@ const text = (overrides: Partial<Extract<HudCommand, { kind: 'text' }>> = {}): H
   ...overrides,
 })
 
+const getProps = (overrides: Partial<RaceHudOverlayProps> = {}): RaceHudOverlayProps => ({
+  commands: [],
+  imageUrls: new Map(),
+  fonts: null,
+  width: 800,
+  height: 600,
+  phase: 'racing',
+  ...overrides,
+})
+
 describe('RaceHudOverlay', () => {
   it('renders default snapshot', () => {
     // Arrange / Act
     const { container } = render(
-      <RaceHudOverlay commands={[]} imageUrls={new Map()} phase={null} />
+      <RaceHudOverlay {...getProps({ commands: [] })} />
     )
 
     // Assert
     expect(container).toMatchSnapshot()
   })
 
-  it('renders the countdown numeral in cyan at its position and scale', () => {
+  it('renders the countdown numeral as accessible text beside the font canvas', () => {
     // Arrange / Act
     const { container, getByText } = render(
-      <RaceHudOverlay commands={[text()]} imageUrls={new Map()} phase="countdown" />
+      <RaceHudOverlay {...getProps({ commands: [text()], phase: 'countdown' })} />
     )
 
     // Assert
     expect(container).toMatchSnapshot()
-    expect(getByText('3')).toHaveStyle({ left: '380px', top: '250px', color: 'rgb(0, 255, 255)' })
+    expect(getByText('3')).toBeInTheDocument()
   })
 
   it('renders the lap row texts with the font colour white', () => {
@@ -45,7 +56,7 @@ describe('RaceHudOverlay', () => {
 
     // Act
     const { container } = render(
-      <RaceHudOverlay commands={commands} imageUrls={new Map()} phase="racing" />
+      <RaceHudOverlay {...getProps({ commands })} />
     )
 
     // Assert
@@ -93,7 +104,7 @@ describe('RaceHudOverlay', () => {
 
     // Act
     const { container } = render(
-      <RaceHudOverlay commands={commands} imageUrls={imageUrls} phase="racing" />
+      <RaceHudOverlay {...getProps({ commands, imageUrls })} />
     )
 
     // Assert
