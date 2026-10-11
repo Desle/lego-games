@@ -40,9 +40,9 @@ const DEFAULT_FORWARD: Vector3 = Object.freeze({ x: 1, y: 0, z: 0 })
 const DEFAULT_UP: Vector3 = Object.freeze({ x: 0, y: 0, z: 1 })
 const DEFAULT_CAMERA_NEGATED_UP: Vector3 = Object.freeze({ x: 0, y: 0, z: -1 })
 const DEFAULT_KEYWORD_36_VALUE = 1
-const DEFAULT_CAMERA_KEYWORD_45_VALUE = 1
-const DEFAULT_CAMERA_KEYWORD_46_VALUE = 100
-const DEFAULT_CAMERA_KEYWORD_47_VALUE = 65
+const DEFAULT_CAMERA_NEAR_PLANE = 1
+const DEFAULT_CAMERA_FAR_PLANE = 100
+const DEFAULT_CAMERA_FIELD_OF_VIEW_DEGREES = 65
 
 export const truncateName = (name: string) => name.slice(0, NAME_LENGTH)
 
@@ -447,9 +447,9 @@ export const readCameras = (reader: TokenReader, counts: WorldCounts): readonly 
     let position = ZERO_VECTOR
     let forward = DEFAULT_FORWARD
     let negatedUp = DEFAULT_CAMERA_NEGATED_UP
-    let keyword45Value = DEFAULT_CAMERA_KEYWORD_45_VALUE
-    let keyword46Value = DEFAULT_CAMERA_KEYWORD_46_VALUE
-    let keyword47Value = DEFAULT_CAMERA_KEYWORD_47_VALUE
+    let nearPlane = DEFAULT_CAMERA_NEAR_PLANE
+    let farPlane = DEFAULT_CAMERA_FAR_PLANE
+    let fieldOfViewDegrees = DEFAULT_CAMERA_FIELD_OF_VIEW_DEGREES
     let target: Vector3 | null = null
     for (
       let keyword = reader.getNextToken();
@@ -478,13 +478,13 @@ export const readCameras = (reader: TokenReader, counts: WorldCounts): readonly 
           target = readVector3(reader)
           break
         case WorldKeyword.KEYWORD_45:
-          keyword45Value = reader.readFloat()
+          nearPlane = reader.readFloat()
           break
         case WorldKeyword.KEYWORD_46:
-          keyword46Value = reader.readFloat()
+          farPlane = reader.readFloat()
           break
         case WorldKeyword.KEYWORD_47:
-          keyword47Value = reader.readFloat()
+          fieldOfViewDegrees = reader.readFloat()
           break
         default:
           reader.fail(TokenReaderFailure.SYNTAX_ERROR)
@@ -500,9 +500,9 @@ export const readCameras = (reader: TokenReader, counts: WorldCounts): readonly 
       position,
       forward,
       negatedUp,
-      keyword45Value,
-      keyword46Value,
-      keyword47Value,
+      nearPlane,
+      farPlane,
+      fieldOfViewDegrees,
     })
   })
 

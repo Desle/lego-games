@@ -25,6 +25,9 @@ const getSceneCamera = (camera: Camera): SceneCamera =>
     position: camera.position,
     forward: camera.forward,
     up: Object.freeze({ x: -camera.negatedUp.x, y: -camera.negatedUp.y, z: -camera.negatedUp.z }),
+    nearPlane: camera.nearPlane,
+    farPlane: camera.farPlane,
+    fieldOfViewDegrees: camera.fieldOfViewDegrees,
   })
 
 const getSceneAmbientLight = (light: AmbientLight): SceneAmbientLight =>
