@@ -5,6 +5,7 @@ import type {
   MeshInstance,
   SkeletonInstance,
   SkeletonLevel,
+  Sprite,
 } from '../../../world/index.ts'
 import type {
   InstanceLevel,
@@ -137,20 +138,27 @@ const createMeshInstance = (instance: MeshInstance): MeshInstanceRuntime =>
     otherFlags: getFlags(instance),
   })
 
-// 0x1002e640 starts every material animation entry an instance refers to, looping (0x10025da0).
+// 0x1002e640 starts every material animation entry an instance refers to, looping (0x10025da0); so does 0x1002e250
+// for the entry a sprite names (keyword 0x3e).
 const createMaterialAnimations = (
   names: readonly string[],
   definitions: WorldAnimationInput['materialAnimations'],
-  instances: readonly (SkeletonInstance | MeshInstance | BspTreeInstance)[]
+  instances: readonly (SkeletonInstance | MeshInstance | BspTreeInstance)[],
+  sprites: readonly Sprite[]
 ): readonly MaterialAnimationRuntime[] =>
   definitions.map((definition, animationIndex) => {
-    const started = new Set(
-      instances.flatMap((instance) =>
+    const started = new Set([
+      ...instances.flatMap((instance) =>
         instance.materialAnimationReferences
           .filter((reference) => reference.materialAnimationIndex === animationIndex)
           .map((reference) => reference.entryIndex)
-      )
-    )
+      ),
+      ...sprites.flatMap((sprite) =>
+        sprite.materialAnimation?.materialAnimationIndex === animationIndex
+          ? [sprite.materialAnimation.entryIndex]
+          : []
+      ),
+    ])
     return Object.freeze({
       name: names[animationIndex] ?? '',
       definition,
@@ -176,7 +184,8 @@ export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation
     materialAnimations: createMaterialAnimations(
       world.materialAnimations,
       input.materialAnimations,
-      [...world.meshInstances, ...world.skeletonInstances, ...world.bspTreeInstances]
+      [...world.meshInstances, ...world.skeletonInstances, ...world.bspTreeInstances],
+      world.sprites
     ),
   })
 }
