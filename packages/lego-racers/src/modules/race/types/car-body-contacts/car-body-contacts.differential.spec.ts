@@ -4,7 +4,9 @@ import {
 } from '../../../../shared/emulator/emulator-client.ts'
 import type {
   EmulatorArgument,
+  EmulatorBuffer,
   EmulatorCall,
+  EmulatorPatch,
   EmulatorPrecision,
 } from '../../../../shared/emulator/emulator-client.types.ts'
 import { getBitsFromFloat } from '../../../../shared/emulator/float-bits.ts'
@@ -15,6 +17,7 @@ import {
 import type { FloatSampler } from '../../../../shared/emulator/seeded-random.types.ts'
 import type { Checkpoint } from '../../../checkpoint/index.ts'
 import type { Racer } from '../../../racer/index.ts'
+import type { CarWheel } from '../../../racer-physics/index.ts'
 import { createFloatArithmetic } from '../../../simulation-math/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
 import type { TrackMaterial } from '../../../track-material/index.ts'
@@ -304,10 +307,263 @@ const expectMatchesOriginal = async (precision: EmulatorPrecision): Promise<void
   expect(mismatches.slice(0, 5)).toEqual([])
 }
 
-describe.skipIf(!getIsEmulatorAvailable())('the car body contact filter against the original', () =>
-  it.each(PRECISIONS)(
-    '0x0042a830 matches the original in %s precision',
-    (precision) => expectMatchesOriginal(precision),
-    TEST_TIMEOUT_IN_MILLISECONDS
-  )
+const SURFACE_ADDRESS = 0x0042a900
+const WHEEL_START = 0x198
+const WHEEL_SIZE = 0x70
+const WHEEL_COUNT = 4
+const SURFACE_IGNORED_FLAG = 0x100000
+const ENTER_EVENT_ADDRESS = 0x00461ef0
+const LEAVE_EVENT_ADDRESS = 0x00462140
+const EVENT_TAIL_ADDRESSES = [0x004628c0, 0x004629d0]
+const LOG_COUNT_OFFSET = 0xf0
+const LEAVE_LOG_MARK = 0x80000000
+
+// The surface kinds a wheel can stand on: nothing, an object without a property entry, or one of three entries.
+const SURFACE_NAMES: readonly (string | undefined)[] = [
+  undefined,
+  'plain',
+  'first',
+  'second',
+  'third',
+]
+// Flags 0x80 (sound) and 0x400 (emitter) reach presentation code that the port skips.
+const SURFACE_FLAG_CHOICES = [0x2, 0x4, 0x40, 0x800, 0x1000, 0x2000, 0x4000, 0x8000]
+
+type SurfaceWheelCase = {
+  readonly material: string | undefined
+  readonly previousMaterial: string | undefined
+  readonly isOnGround: boolean
+}
+
+type SurfaceCase = {
+  readonly isIgnored: boolean
+  readonly wheels: readonly SurfaceWheelCase[]
+  readonly entries: ReadonlyMap<string, TrackMaterial>
+}
+
+const FALLBACK_ENTRY = getTrackMaterial({ kind: 1, flags: 0 } as FilterCase)
+
+const sampleSurfaceName = (sampler: FloatSampler): string | undefined =>
+  SURFACE_NAMES[sampler.sampleIntegerBelow(SURFACE_NAMES.length)]
+
+const sampleSurfaceEntry = (sampler: FloatSampler, name: string): TrackMaterial => ({
+  ...getTrackMaterial({
+    kind: 1,
+    flags: SURFACE_FLAG_CHOICES.reduce(
+      (flags, flag) => (sampler.getIsChance(50) ? flags | flag : flags),
+      0
+    ),
+  } as FilterCase),
+  name,
+  firstInteger: sampler.sampleIntegerBelow(1000) + 1,
+  secondInteger: sampler.sampleIntegerBelow(1000) + 1,
+  secondVector: [1, 2, 3].map(() => Math.fround(sampler.sampleUniform(10))) as [
+    number,
+    number,
+    number,
+  ],
+  firstFloat: Math.fround(sampler.sampleUniform(2)),
+  secondFloat: Math.fround(sampler.sampleUniform(2)),
+  thirdFloat: Math.fround(sampler.sampleUniform(5)),
+  fourthFloat: Math.fround(sampler.sampleUniform(2)),
+  fifthFloat: Math.fround(sampler.sampleUniform(30)),
+})
+
+const sampleSurfaceCase = (sampler: FloatSampler): SurfaceCase => ({
+  isIgnored: sampler.getIsChance(25),
+  wheels: Array.from({ length: WHEEL_COUNT }, () => ({
+    material: sampleSurfaceName(sampler),
+    previousMaterial: sampleSurfaceName(sampler),
+    isOnGround: sampler.getIsChance(75),
+  })),
+  entries: new Map(
+    ['first', 'second', 'third'].map((name) => [name, sampleSurfaceEntry(sampler, name)])
+  ),
+})
+
+const getMaterialReference = (name: string | undefined): EmulatorArgument =>
+  name === undefined ? 0 : { buffer: `object-${name}` }
+
+const getPropertyWords = (entry: TrackMaterial): readonly EmulatorArgument[] => {
+  const words = new Array<EmulatorArgument>(PROPERTY_WORDS).fill(0)
+  words[2] = entry.flags
+  words[3] = entry.firstInteger
+  words[4] = entry.secondInteger
+  entry.secondVector.forEach((value, index) => {
+    words[0x28 / 4 + index] = getBitsFromFloat(value)
+  })
+  words[0x48 / 4] = getBitsFromFloat(entry.firstFloat)
+  words[0x4c / 4] = getBitsFromFloat(entry.secondFloat)
+  words[0x50 / 4] = getBitsFromFloat(entry.thirdFloat)
+  words[0x54 / 4] = getBitsFromFloat(entry.fourthFloat)
+  words[0x58 / 4] = getBitsFromFloat(entry.fifthFloat)
+  return words
+}
+
+// mov edx,[ecx+0xf0]; mov eax,[esp+4]; (or eax,0x80000000;) mov [ecx+edx*4+0xf4],eax; inc [ecx+0xf0]; ret 8.
+const getLogPatch = (address: number, isLeave: boolean): EmulatorPatch => ({
+  address,
+  bytes: [
+    0x8b,
+    0x91,
+    LOG_COUNT_OFFSET,
+    0,
+    0,
+    0,
+    0x8b,
+    0x44,
+    0x24,
+    0x04,
+    ...(isLeave ? [0x0d, 0, 0, 0, 0x80] : []),
+    0x89,
+    0x84,
+    0x91,
+    LOG_COUNT_OFFSET + 4,
+    0,
+    0,
+    0,
+    0xff,
+    0x81,
+    LOG_COUNT_OFFSET,
+    0,
+    0,
+    0,
+    0xc2,
+    8,
+    0,
+  ],
+})
+
+const getSurfaceCall = (precision: EmulatorPrecision, item: SurfaceCase): EmulatorCall => {
+  const body = new Array<EmulatorArgument>(BODY_WORDS).fill(0)
+  body[At.racerPointer / 4] = { buffer: 'racer' }
+  body[At.eventsPointer / 4] = { buffer: 'events' }
+  body[0x6c0 / 4] = item.isIgnored ? SURFACE_IGNORED_FLAG : 0
+  item.wheels.forEach((wheel, index) => {
+    const start = (WHEEL_START + index * WHEEL_SIZE) / 4
+    body[start + 0x3c / 4] = getMaterialReference(wheel.material)
+    body[start + 0x40 / 4] = getMaterialReference(wheel.previousMaterial)
+    body[start + 0x48 / 4] = wheel.isOnGround ? 1 : 0
+  })
+  const eventWords = new Array<EmulatorArgument>(0x100 / 4).fill(0)
+  eventWords[0x14 / 4] = { buffer: 'hazards' }
+  const objects = ['plain', 'first', 'second', 'third'].map((name): EmulatorBuffer => ({
+    name: `object-${name}`,
+    words: Array.from({ length: MATERIAL_WORDS }, (_, index) =>
+      index === 5 && name !== 'plain' ? { buffer: `property-${name}` } : 0
+    ),
+    isRead: false,
+  }))
+  const properties = ['first', 'second', 'third'].map((name): EmulatorBuffer => ({
+    name: `property-${name}`,
+    words: getPropertyWords(item.entries.get(name) ?? FALLBACK_ENTRY),
+    isRead: false,
+  }))
+  return {
+    address: SURFACE_ADDRESS,
+    convention: 'thiscall',
+    precision,
+    arguments: [{ buffer: 'body' }],
+    buffers: [
+      { name: 'body', words: body, isRead: true },
+      { name: 'racer', words: new Array<number>(RACER_WORDS).fill(0), isRead: false },
+      { name: 'events', words: eventWords, isRead: true },
+      { name: 'hazards', words: new Array<number>(8).fill(0), isRead: false },
+      ...objects,
+      ...properties,
+    ],
+    patches: [
+      getLogPatch(ENTER_EVENT_ADDRESS, false),
+      getLogPatch(LEAVE_EVENT_ADDRESS, true),
+      ...EVENT_TAIL_ADDRESSES.map((address) => ({ address, bytes: [0xc2, 8, 0] })),
+    ],
+  }
+}
+
+const getSurfacePortResult = (item: SurfaceCase) => {
+  const surfaces: SurfaceMaterials = {
+    trackMaterials: item.entries,
+    checkpointIndices: new Map(),
+    checkpointObjectIndex: -1,
+  }
+  const log: number[] = []
+  const hooks = createCarBodyContactHooks(surfaces, (contact) => {
+    if (contact.type === 'surface_entered') log.push(contact.identifier)
+    if (contact.type === 'surface_left') log.push(contact.identifier + LEAVE_LOG_MARK)
+  })
+  const { rigidBody } = createFixtureRacer().carBody
+  const body = Object.freeze({
+    ...rigidBody,
+    flags: item.isIgnored ? SURFACE_IGNORED_FLAG : 0,
+    wheels: Object.freeze(
+      rigidBody.wheels.map((wheel, index) => ({
+        ...wheel,
+        ...item.wheels[index],
+      }))
+    ),
+  })
+  return { body: hooks.afterPass(body), log }
+}
+
+const getWheelSurfaceBits = (wheel: CarWheel): readonly number[] =>
+  [
+    wheel.surfaceDrag,
+    wheel.surfaceGrip,
+    wheel.surfaceSkidGrip,
+    wheel.grip,
+    wheel.surfaceValue60,
+    wheel.surfaceForce.x,
+    wheel.surfaceForce.y,
+    wheel.surfaceForce.z,
+  ].map(getBitsFromFloat)
+
+const expectSurfacesMatchOriginal = async (precision: EmulatorPrecision): Promise<void> => {
+  // Arrange
+  const sampler = createFloatSampler(createSeededRandom(0x42a900 + precision.length))
+  const cases = Array.from({ length: CASE_COUNT }, () => sampleSurfaceCase(sampler))
+  const session = openEmulatorSession()
+
+  // Act
+  const results = await session.callBatch(cases.map((item) => getSurfaceCall(precision, item)))
+  await session.close()
+  const mismatches = cases.flatMap((item, index) => {
+    const words = results[index]?.buffers['body'] ?? []
+    const eventWords = results[index]?.buffers['events'] ?? []
+    const logCount = eventWords[LOG_COUNT_OFFSET / 4] ?? 0
+    const original = {
+      wheels: item.wheels.map((_wheel, wheelIndex) => {
+        const start = (WHEEL_START + wheelIndex * WHEEL_SIZE + 0x50) / 4
+        return words.slice(start, start + 8)
+      }),
+      log: eventWords.slice(LOG_COUNT_OFFSET / 4 + 1, LOG_COUNT_OFFSET / 4 + 1 + logCount),
+    }
+    const ported = getSurfacePortResult(item)
+    const comparison = {
+      wheels: ported.body.wheels.map(getWheelSurfaceBits),
+      log: ported.log,
+    }
+    return JSON.stringify(original) === JSON.stringify(comparison)
+      ? []
+      : [`${String(index)}: ${JSON.stringify(original)} against ${JSON.stringify(comparison)}`]
+  })
+
+  // Assert
+  expect(mismatches.slice(0, 3)).toEqual([])
+}
+
+describe.skipIf(!getIsEmulatorAvailable())(
+  'the car body contact hooks against the original',
+  () => {
+    it.each(PRECISIONS)(
+      '0x0042a830 matches the original in %s precision',
+      (precision) => expectMatchesOriginal(precision),
+      TEST_TIMEOUT_IN_MILLISECONDS
+    )
+
+    it.each(PRECISIONS)(
+      '0x0042a900 matches the original in %s precision',
+      (precision) => expectSurfacesMatchOriginal(precision),
+      TEST_TIMEOUT_IN_MILLISECONDS
+    )
+  }
 )

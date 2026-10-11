@@ -46,7 +46,7 @@ export const releaseRacerAtStart = (racer: Racer): Racer =>
 
 // 0x0043d070: the loaded route whose loop point (route +0x24, the second vector) is nearest to the racer, by the
 // squared distance summed as (z² + y²) + x² (the minimum starts at FLT_MAX and is stored as a float32).
-const getNearestRoute = (
+export const getNearestRoute = (
   arithmetic: FloatArithmetic,
   position: Vector3,
   routes: readonly (ComputerRacerRoute | null)[]
