@@ -47,6 +47,7 @@ export const createRaceAudioPlayer = (assets: RaceAssets): RaceAudioPlayer => {
     }
   }
 
+  let isDisposed = false
   const start = (buffer: AudioBuffer, isLooping: boolean, volume: number) => {
     const source = context.createBufferSource()
     const gain = context.createGain()
@@ -61,11 +62,13 @@ export const createRaceAudioPlayer = (assets: RaceAssets): RaceAudioPlayer => {
   return Object.freeze({
     resume: () => void context.resume(),
     playSound: (request: SoundRequest) => {
+      if (isDisposed) return
       const path = getSoundPath(request)
       const buffer = path === null ? null : getSoundBuffer(path)
       if (buffer !== null) start(buffer, false, 1)
     },
     playMusic: (cue: MusicCue) => {
+      if (isDisposed) return
       music?.stop()
       music = null
       const tune = assets.tunes.get((assets.musicNames[cue.listIndex] ?? '').toLowerCase())
@@ -79,6 +82,7 @@ export const createRaceAudioPlayer = (assets: RaceAssets): RaceAudioPlayer => {
       )
     },
     dispose: () => {
+      isDisposed = true
       music?.stop()
       void context.close()
     },

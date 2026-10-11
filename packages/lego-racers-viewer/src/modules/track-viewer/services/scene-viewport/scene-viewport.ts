@@ -199,6 +199,7 @@ export const createSceneViewport = (container: HTMLElement): SceneViewport => {
     hideScene()
     controls.dispose()
     renderer.dispose()
+    renderer.forceContextLoss()
     renderer.domElement.remove()
   }
 

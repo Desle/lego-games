@@ -3,6 +3,7 @@ import type {
   DrawnTriangle,
   MatrixCount,
   ProjectedVertex,
+  RenderViewportSize,
   ScreenMatrix,
   ScreenTriangle,
   WorldTriangle,
@@ -21,12 +22,22 @@ export const getTurn = (triangle: ScreenTriangle): number => {
 
 export const getIsFrontFacing = (triangle: ScreenTriangle): boolean => getTurn(triangle) < 0
 
-// The matrices the original drew with, the ones with most triangles first. The track and the objects that stand in the
+// The clip matrix puts the screen in 0..1; the draws' model matrices put it in pixels.
+const getPixelMatrix = (matrix: ScreenMatrix, viewport: RenderViewportSize): ScreenMatrix =>
+  matrix.map((value, index) => {
+    if (index % 4 === 0) return value * viewport.width
+    if (index % 4 === 1) return value * viewport.height
+    return value
+  })
+
+// The matrices the original drew with: the camera's world to screen matrix (every draw carries it as its clip matrix),
+// then the model matrices, the ones with most triangles first. The track and the objects that stand in the
 // world have the identity as model matrix, so theirs is the world to screen matrix of the camera (device +0xc8518); the
 // caller picks the candidate under which the port's world lands on the original's triangles.
 export const getCandidateMatrices = (
   frame: OriginalRenderFrame,
-  limit: number
+  limit: number,
+  viewport: RenderViewportSize
 ): readonly ScreenMatrix[] => {
   const counts = new Map<string, MatrixCount>()
   for (const draw of frame.draws) {
@@ -36,10 +47,18 @@ export const getCandidateMatrices = (
     const entry = counts.get(key) ?? { matrix: draw.modelMatrix, triangleCount: 0 }
     counts.set(key, { matrix: entry.matrix, triangleCount: entry.triangleCount + triangleCount })
   }
-  return [...counts.values()]
-    .sort((left, right) => right.triangleCount - left.triangleCount)
-    .slice(0, limit)
-    .map((entry) => entry.matrix)
+  const [first] = frame.draws
+  const camera: readonly ScreenMatrix[] =
+    first !== undefined && first.clipMatrix.length === MATRIX_SIZE
+      ? [getPixelMatrix(first.clipMatrix, viewport)]
+      : []
+  return [
+    ...camera,
+    ...[...counts.values()]
+      .sort((left, right) => right.triangleCount - left.triangleCount)
+      .slice(0, limit)
+      .map((entry) => entry.matrix),
+  ]
 }
 
 const projectVertex = (vertex: WorldVertex, matrix: ScreenMatrix): ProjectedVertex => {
@@ -62,9 +81,11 @@ const projectVertex = (vertex: WorldVertex, matrix: ScreenMatrix): ProjectedVert
 // matrix, dropped when a corner is behind the camera or the triangle faces away, and in the order 0x1000ebd0 emits it.
 export const projectWorldTriangle = (
   triangle: WorldTriangle,
-  matrix: ScreenMatrix
+  matrix: ScreenMatrix,
+  space: 'world' | 'local' = 'world'
 ): DrawnTriangle | null => {
-  const [first, second, third] = triangle.vertices.map((vertex) => projectVertex(vertex, matrix))
+  const corners = space === 'world' ? triangle.vertices : triangle.localVertices
+  const [first, second, third] = corners.map((vertex) => projectVertex(vertex, matrix))
   if (first === undefined || second === undefined || third === undefined) return null
   if (first.clipW <= 0 || second.clipW <= 0 || third.clipW <= 0) return null
   if (!getIsFrontFacing([first, second, third])) return null

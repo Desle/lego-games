@@ -36,6 +36,9 @@ export type EffectModels = {
   readonly enhancementBrick: ModelScene
   // The warp's tunnel (TURBO3.WDB lists `dbricks` and `dtube`; 0x0045d940 draws them).
   readonly warpTunnel: Scene
+  // The texture scroll per second of the tube (the world's keyword 0x3f on `dtube`: u, v), which the original adds to the
+  // texture coordinates while the warp runs.
+  readonly warpTextureScroll: readonly [number, number]
 }
 
 export type RaceAssets = {
