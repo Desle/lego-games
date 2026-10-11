@@ -92,6 +92,11 @@ const setVehicle = (
   )
 }
 
+// 0x00438bc4 (the collision response of two racers): a spark emitter, a one-shot of the common pool, whose handle
+// nobody keeps.
+export const startCollisionSparks = (context: RacerSetContext, racerSet: RacerSet): RacerSet =>
+  spawnVehicleEmitter(context.arithmetic, racerSet, true, 'carsprk').racerSet
+
 // 0x0043def0: the dust emitter starts unless the vehicle already has one or its rear wheels hold surface emitters.
 export const startVehicleDust = (
   context: RacerSetContext,
