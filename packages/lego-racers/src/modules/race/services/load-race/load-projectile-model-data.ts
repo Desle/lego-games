@@ -1,3 +1,6 @@
+import { getModelBounds, parseModel } from '../../../model/index.ts'
+import type { ModelBounds } from '../../../model/index.ts'
+import type { FloatArithmetic } from '../../../simulation-math/index.ts'
 import { parseAnimation } from '../../../animation/index.ts'
 import { getRacerFilePath } from '../../../racer-appearance/index.ts'
 import { getSkeletalAnimation } from '../../../skeletal-animation/index.ts'
@@ -21,11 +24,29 @@ const getRocketLaunchMilliseconds = (readFile: (path: string) => Uint8Array): re
   )
 }
 
+const NO_BOUNDS: ModelBounds = Object.freeze({
+  centre: Object.freeze({ x: 0, y: 0, z: 0 }),
+  radius: 0,
+})
+
+const getBounds = (
+  arithmetic: FloatArithmetic,
+  readFile: (path: string) => Uint8Array,
+  name: string
+): ModelBounds =>
+  getModelBounds(arithmetic, parseModel(readFile(getRacerFilePath(name, 'GDB')))) ?? NO_BOUNDS
+
 // The model data the moving power-up effects read (projectiles.md).
 export const loadProjectileModelData = (
+  arithmetic: FloatArithmetic,
   readFile: (path: string) => Uint8Array
 ): ProjectileModelData =>
   Object.freeze({
     ...EMPTY_PROJECTILE_MODEL_DATA,
+    shapeBounds: Object.freeze({
+      grapple: getBounds(arithmetic, readFile, 'GRAPPLE'),
+      barrel: getBounds(arithmetic, readFile, 'BARREL'),
+      rocket: getBounds(arithmetic, readFile, 'DMISSILE'),
+    }),
     rocketLaunchMilliseconds: getRocketLaunchMilliseconds(readFile),
   })

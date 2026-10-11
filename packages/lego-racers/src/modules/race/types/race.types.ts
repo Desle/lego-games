@@ -1,3 +1,4 @@
+import type { ModelBounds } from '../../model/index.ts'
 import type { EnumValues } from '../../../shared/types/enum.types.ts'
 import type { Checkpoint } from '../../checkpoint/index.ts'
 import type { CollisionObject } from '../../collision/index.ts'
@@ -134,6 +135,9 @@ export type RaceDefinition = {
 
 // Model and route data the moving power-up effects read and the port does not parse yet (projectiles.md).
 export type ProjectileModelData = {
+  // The bounding spheres of the models the registered shapes take (0x00411510): the grapple hook, the barrel and the
+  // missile, in the model's own axes with its scale applied.
+  readonly shapeBounds: Readonly<Record<'grapple' | 'barrel' | 'rocket', ModelBounds>>
   // Racer set +0x10: the route a warping racer follows.
   readonly routeNodes: readonly RouteNode[]
   readonly rocketLaunchMilliseconds: readonly number[]
@@ -255,6 +259,7 @@ export type RegistrySource = {
   readonly trackLogic: TrackLogicState
   readonly powerUpStep: PowerUpStep
   readonly projectileWorld: ProjectileWorld
+  readonly projectileModelData: ProjectileModelData
 }
 
 // A racer's car touched a checkpoint's collision object (0x0042a830 → 0x00439fc0).

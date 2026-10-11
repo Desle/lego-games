@@ -287,6 +287,6 @@ export const loadRaceDefinition = (
     randomPosition: routeDraws.position,
     getGroundPoint: null,
     trackTargets: [],
-    projectileModelData: loadProjectileModelData(readArchiveFile),
+    projectileModelData: loadProjectileModelData(arithmetic, readArchiveFile),
   })
 }

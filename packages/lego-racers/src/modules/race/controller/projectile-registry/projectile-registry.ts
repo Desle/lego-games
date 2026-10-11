@@ -23,12 +23,10 @@ import {
 } from '../race-world/race-world.ts'
 import type { RaceRacerSet, RegistryObject, RegistrySource } from '../../types/race.types.ts'
 
-// The radii the original's registered shapes have, read from the emulator (the Gol model and figure bounds of the
-// cannon ball, the grapple hook, the barrel and the rocket; hypothesis: they are the bounds of those models).
+// The cannon ball's shape radius, read from the emulator ('@@cannon' is a built-in model). The grapple hook, the
+// barrel and the missile take theirs from their models' bounds (GRAPPLE, BARREL, DMISSILE), which agree with the
+// emulator to the last printed digit.
 const CANNON_BALL_RADIUS = getFloatFromBits(0x40624630)
-const GRAPPLE_HOOK_RADIUS = getFloatFromBits(0x401a721d)
-const BARREL_RADIUS = getFloatFromBits(0x4049d0e0)
-const ROCKET_RADIUS = getFloatFromBits(0x40169fb6)
 // 0x004573a0 sets 3.0 on the slick's sphere, 0x004560b0 and 0x00452ae0 set 10.0 (0x004b13f0 and its neighbour).
 const OIL_SLICK_RADIUS = 3
 const WIDE_HAZARD_RADIUS = 10
@@ -51,14 +49,29 @@ const getFlightSphere = (source: RegistrySource, effect: PowerUpEffect): Boundin
   if (motion.kind === 'ballistic') {
     return getSphere(
       motion.flight.framePosition,
-      effect.kind === PowerUpEffectKind.BARREL ? BARREL_RADIUS : CANNON_BALL_RADIUS
+      effect.kind === PowerUpEffectKind.BARREL
+        ? source.projectileModelData.shapeBounds.barrel.radius
+        : CANNON_BALL_RADIUS
     )
   }
+  const { shapeBounds } = source.projectileModelData
   if (motion.kind === 'grapple') {
-    return getSphere(motion.hook.flight.framePosition, GRAPPLE_HOOK_RADIUS)
+    const { framePosition, velocityX, velocityY } = motion.hook.flight
+    const { centre, radius } = shapeBounds.grapple
+    // Hypothesis: the hook's frame faces along its horizontal velocity with z up, and the bounds centre sits in it.
+    const length = Math.hypot(velocityX, velocityY) || 1
+    const forward = { x: velocityX / length, y: velocityY / length }
+    return getSphere(
+      Object.freeze({
+        x: framePosition.x + centre.x * forward.x - centre.y * forward.y,
+        y: framePosition.y + centre.x * forward.y + centre.y * forward.x,
+        z: framePosition.z + centre.z,
+      }),
+      radius
+    )
   }
   if (motion.kind === 'rocket' && motion.homing !== null) {
-    return getSphere(motion.homing.flight.framePosition, ROCKET_RADIUS)
+    return getSphere(motion.homing.flight.framePosition, shapeBounds.rocket.radius)
   }
   return ORIGIN_SPHERE
 }

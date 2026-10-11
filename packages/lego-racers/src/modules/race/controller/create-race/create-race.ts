@@ -295,6 +295,7 @@ export const createRace = (definition: RaceDefinition): RaceState => {
       trackLogic,
       powerUpStep,
       projectileWorld: createProjectileWorld(powerUpStep),
+      projectileModelData: definition.projectileModelData,
     },
     []
   )
