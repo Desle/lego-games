@@ -3,7 +3,7 @@ import type { RaceState } from '../../../race/index.ts'
 import type { TrackEvent } from '../../../track-logic/index.ts'
 import { getSkeletonInstanceFlags } from '../../../world-animation/index.ts'
 import type { WorldAnimation } from '../../../world-animation/index.ts'
-import type { TraceFields } from '../../types/golden-trace.types.ts'
+import type { TraceFieldProvider, TraceFields } from '../../types/golden-trace.types.ts'
 
 const PLAYING_FLAG = 2
 const LOOPING_FLAG = 4
@@ -83,7 +83,7 @@ const getRacerFlowFields = (raceState: RaceState): TraceFields =>
   )
 
 // The race flow and track logic fields the emulator side reads (reverse-engineering/emulator/track_trace.py).
-export const getTrackFields = (raceState: RaceState): TraceFields => {
+export const getTrackFields: TraceFieldProvider = (raceState) => {
   const { trackLogic, sky } = raceState
   return {
     ...Object.fromEntries(

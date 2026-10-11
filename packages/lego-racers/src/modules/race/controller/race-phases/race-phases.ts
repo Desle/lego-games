@@ -24,6 +24,10 @@ import {
   WINNING_TUNE_INDEX,
   SKIPPED_COUNTDOWN_FINISHING_START_MILLISECONDS,
 } from '../../types/race-phase/race-phase.ts'
+import {
+  findSkeletonInstanceIndex,
+  getIsSkeletonInstanceFinished,
+} from '../../../world-animation/index.ts'
 import { openPauseMenu } from '../pause-menu/pause-menu.ts'
 import { PauseMenuMode, PendingAction } from '../../types/pause-menu/pause-menu.ts'
 import { recordPlace, tickPointsRecord } from '../../types/points-record/points-record.ts'
@@ -454,16 +458,18 @@ const stepCountdown = (step: RaceStepResult, frameMilliseconds: number): RaceSte
 // Race_UpdateState1 0x004349a0: after 2 s each local player's racer is marked as starting (0x004393d0, flag
 // 0x400) and the countdown's function runs at once. The track's introduction camera (race +0x3ac) can hold the
 // state longer in the original; it is not modelled.
-const INTRODUCTION_CAMERA_TICKS_PER_SECOND = 30
 
-// Race_UpdateState1 0x004349a0: when the introduction camera's animation has finished the camera is handed to the
-// player and the state timer starts again from 0 (once).
-const getAfterIntroductionCamera = (raceState: RaceState): RaceState =>
-  raceState.introductionCameraLimit !== null &&
-  raceState.introductionCameraLimit * 1000 <=
-    raceState.introductionCameraMilliseconds * INTRODUCTION_CAMERA_TICKS_PER_SECOND
-    ? Object.freeze({ ...raceState, introductionCameraLimit: null, phaseMilliseconds: 0 })
+// Race_UpdateState1 0x004349a0: while the introduction camera's skeleton instance has not finished (0x0040e360) the
+// state holds; when it has, the camera is released (0x004047a0) and the state timer starts again from 0 (once).
+const getAfterIntroductionCamera = (raceState: RaceState): RaceState => {
+  const { introductionCameraObject } = raceState
+  if (introductionCameraObject === null) return raceState
+  const world = raceState.trackLogic.worlds.track
+  const instance = world.skeletonInstances[findSkeletonInstanceIndex(world, introductionCameraObject)]
+  return instance !== undefined && getIsSkeletonInstanceFinished(instance)
+    ? Object.freeze({ ...raceState, introductionCameraObject: null, phaseMilliseconds: 0 })
     : raceState
+}
 
 const stepIntroduction = (
   cameraStep: RaceStepResult,
@@ -471,7 +477,12 @@ const stepIntroduction = (
 ): RaceStepResult => {
   const step = getStepWith(cameraStep, getAfterIntroductionCamera(cameraStep.raceState), [])
   const { raceState } = step
-  if (raceState.phaseMilliseconds < INTRODUCTION_MILLISECONDS) return step
+  if (
+    raceState.introductionCameraObject !== null ||
+    raceState.phaseMilliseconds < INTRODUCTION_MILLISECONDS
+  ) {
+    return step
+  }
   const change = getPhaseChange(raceState, RacePhase.COUNTDOWN, 0)
   const marked = raceState.playerRacerIndices.reduce(
     (racerSet, racerIndex) =>

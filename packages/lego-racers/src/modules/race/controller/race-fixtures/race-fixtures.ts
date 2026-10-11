@@ -18,7 +18,7 @@ export const createFixtureDefinition = (): RaceDefinition => ({
   localPlayerCount: 1,
   multiplayerLapCount: 3,
   isCountdownSkipped: false,
-  introductionCameraLimit: null,
+  introductionCameraObject: null,
   isMirrored: false,
   isPointsRecordPresent: false,
   ghost: null,

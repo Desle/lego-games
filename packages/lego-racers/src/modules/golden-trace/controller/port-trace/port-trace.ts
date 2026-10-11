@@ -243,7 +243,6 @@ const getRaceFields: TraceFieldProvider = (raceState) => ({
   'race.phase': getIntegerWords(RACE_PHASE_STATE_NUMBERS[raceState.phase]),
   'race.phaseMilliseconds': getIntegerWords(raceState.phaseMilliseconds),
   'race.randomPosition': getIntegerWords(raceState.racerSet.randomPosition),
-  ...getTrackFields(raceState),
 })
 
 // Every group of compared fields. To compare more of the race, add a provider here that returns the same names the
@@ -253,6 +252,7 @@ export const TRACE_FIELD_PROVIDERS: readonly TraceFieldProvider[] = [
   getRacerSetFields,
   getPlayerFields,
   getRaceFields,
+  getTrackFields,
 ]
 
 export const getTraceFields = (raceState: RaceState, localPlayerCount: number): TraceFields =>

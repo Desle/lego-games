@@ -65,10 +65,15 @@ describe('track logic and race flow: the original race and the port, frame for f
       // Act
       for (const raceFolder of SELECTED_RACES) {
         const result = await runGoldenTrace(getScenario(raceFolder), jam, executable)
+        const isPhysics = (field: string): boolean =>
+          field.includes('.body.') || field.includes('.display.') || field.includes('.volume.')
+        const [firstPhysics] = result.comparison.divergenceByField.filter((divergence) =>
+          isPhysics(divergence.field)
+        )
         reports.push(
-          `${raceFolder}: ${String(result.comparison.frameCount)} frames`,
+          `${raceFolder}: ${String(result.comparison.frameCount)} frames, first racer physics difference: ${firstPhysics === undefined ? 'none' : formatDivergence(firstPhysics)}`,
           ...result.comparison.divergenceByField
-            .filter((divergence) => !divergence.field.includes('.body.'))
+            .filter((divergence) => !isPhysics(divergence.field))
             .map((divergence) => `  ${formatDivergence(divergence)}`)
         )
       }

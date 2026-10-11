@@ -40,8 +40,6 @@ export type OriginalTrace = {
   readonly frames: readonly TraceFrame[]
   // The x87 control word after the last frame.
   readonly controlWord: number
-  // The introduction camera animation's length minus one, or -1 without one.
-  readonly introductionCameraLimit: number
 }
 
 export type FieldDivergence = {

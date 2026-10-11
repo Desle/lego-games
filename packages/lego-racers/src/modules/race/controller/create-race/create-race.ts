@@ -19,6 +19,12 @@ import { drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
 import { createSkyState } from '../../../sky/index.ts'
 import { NO_EMITTER_POOLS } from '../../../emitter/index.ts'
+import {
+  findSkeletonInstanceIndex,
+  getSkeletonInstanceWithFlagsChanged,
+  getWorldWithSkeletonInstance,
+  INSTANCE_LOOPING_FLAG,
+} from '../../../world-animation/index.ts'
 import { createTrackLogic } from '../../../track-logic/index.ts'
 import type { TrackLogicState } from '../../../track-logic/index.ts'
 import { CLOSED_PAUSE_MENU } from '../../types/pause-menu/pause-menu.ts'
@@ -116,6 +122,37 @@ const createRacerFromDefinition = (
   })
 }
 
+// The camera follows the track world's skeleton instance named by the race description (RAB keyword 0x49); the
+// original's trace shows the instance without the looping flag from the first frame, which is what lets its clip
+// finish (0x0040e360). **Hypothesis**: the camera's attachment clears the flag; the writer is not traced.
+const getTrackLogicWithIntroductionCamera = (
+  trackLogic: TrackLogicState,
+  name: string | null
+): TrackLogicState => {
+  const world = trackLogic.worlds.track
+  const index = name === null ? -1 : findSkeletonInstanceIndex(world, name)
+  const instance = world.skeletonInstances[index]
+  return instance === undefined
+    ? trackLogic
+    : Object.freeze({
+        ...trackLogic,
+        worlds: Object.freeze({
+          ...trackLogic.worlds,
+          track: getWorldWithSkeletonInstance(
+            world,
+            index,
+            getSkeletonInstanceWithFlagsChanged(instance, 0, INSTANCE_LOOPING_FLAG)
+          ),
+        }),
+      })
+}
+
+const getFoundIntroductionCameraObject = (
+  trackLogic: TrackLogicState,
+  name: string | null
+): string | null =>
+  name !== null && findSkeletonInstanceIndex(trackLogic.worlds.track, name) >= 0 ? name : null
+
 // Race_LoadRaceDescription 0x00431e00 and Race_LoadTrackContent 0x00433480, as far as the simulation is
 // concerned: the lap count (0x004327f0), the racers (RacerSet_Setup 0x0043b190), the timers' draws and the
 // power-ups (PowerUps_Initialize 0x00457c20), ending in the state Race_RunLoop starts from.
@@ -151,7 +188,7 @@ export const createRace = (definition: RaceDefinition): RaceState => {
       : made.racer
   )
   const afterRacers = setups.at(-1)?.position ?? definition.randomPosition
-  const createdTrackLogic = createTrackLogic(
+  const loadedTrackLogic = createTrackLogic(
     {
       eventSet: definition.events,
       timerList: definition.timers,
@@ -164,6 +201,10 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     },
     definition.arithmetic,
     { table: definition.tables.randomTable, position: afterRacers }
+  )
+  const createdTrackLogic = getTrackLogicWithIntroductionCamera(
+    loadedTrackLogic,
+    definition.introductionCameraObject
   )
   // The pools belong to the racer set: vehicles spawn into them as well. The track logic gets them back whenever it
   // runs (changeTrackLogic).
@@ -219,8 +260,10 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     isCountdownSkipped: definition.isCountdownSkipped,
     ghost: definition.ghost,
     musicTuneCount: definition.musicTuneCount,
-    introductionCameraLimit: definition.introductionCameraLimit,
-    introductionCameraMilliseconds: 0,
+    introductionCameraObject: getFoundIntroductionCameraObject(
+      createdTrackLogic,
+      definition.introductionCameraObject
+    ),
     tuneIndex: definition.musicTuneCount > 0 ? INTRODUCTION_TUNE_INDEX : null,
     unidentifiedCountdownMilliseconds: 0,
     raceModeFlags: definition.raceModeFlags,

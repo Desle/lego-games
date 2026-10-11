@@ -21,8 +21,6 @@ import { formatDivergence, runGoldenTrace } from './run-golden-trace.ts'
 
 const TRACE_TIMEOUT_MILLISECONDS = 1_800_000
 const ROYAL_KNIGHTS_RACEWAY = 'RACEC0R0'
-// The introduction camera of Royal Knights Raceway ends after 7 ticks (the original's trace reports it).
-const ROYAL_KNIGHTS_INTRODUCTION_CAMERA_LIMIT = 7
 // The unported emitters of power-up objects and projectiles (oil slicks, cannon balls) draw from the random table in
 // the original; the race of each is named in golden-trace.md.
 const OTHER_TRACKS = [
@@ -72,7 +70,6 @@ const getCases = (): readonly ScenarioCase[] => {
     fpuPrecision: FpuPrecision.SINGLE,
     isPlayerChampionCar: true,
     musicTuneCount: 0,
-    introductionCameraLimit: ROYAL_KNIGHTS_INTRODUCTION_CAMERA_LIMIT,
   })
   return [
     { scenario: royalKnights('royal-knights-idle', getIdleFrames(300)), expected: null },

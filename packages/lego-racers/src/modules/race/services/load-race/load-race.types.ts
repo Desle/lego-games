@@ -12,8 +12,6 @@ export type LoadRaceOptions = {
   // The local players drive the champion car of their racer code instead of a car built from bricks (the golden
   // trace needs this: a built car's model comes from the car builder, which the emulator does not run).
   readonly isPlayerChampionCar?: boolean
-  // See RaceDefinition.introductionCameraLimit; the golden trace reads it from the original's camera.
-  readonly introductionCameraLimit?: number | null
   // The race's folder below GAMEDATA; the first race is RACEC0R0.
   readonly raceFolder?: string
   // Game settings +0x100: racer 0 is the player, the others are computer racers.

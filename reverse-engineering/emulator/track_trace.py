@@ -14,6 +14,8 @@ MAIN_TRIGGERS_OFFSET = 0x2080
 ENVIRONMENT_TRIGGERS_OFFSET = 0x2128
 SKY_OFFSET = 0x2F90
 TIME_LIST_OFFSET = 0x4AC + 0xC
+# Instance flag bits the port does not model: 0x8 (fade distances, 0x10028110) and 0x200000 (presentation).
+PRESENTATION_FLAGS = 0x200008
 WORLD_OFFSETS = (("track", 0x390), ("blended", 0x398), ("local", 0x3A4))
 
 # (name, array offset, count offset, stride, extra word offsets read from the element, byte offsets read as one word)
@@ -86,7 +88,8 @@ def read_timers(machine, race: int, fields: dict) -> None:
     array = machine.read_u32(timers + 8)
     words = []
     for index in range(count):
-        words += read_words(machine, array + 0x24 * index + 0x18, 2)
+        remaining, flags = read_words(machine, array + 0x24 * index + 0x18, 2)
+        words += [remaining, flags & 1]
     fields["track.timers"] = words
     words = []
     entry = machine.read_u32(race + TIME_LIST_OFFSET)
@@ -109,7 +112,7 @@ def read_world(machine, world: int) -> tuple:
     skeleton_array = machine.read_u32(world + 0xA0)
     for index in range(machine.read_u32(world + 0x54)):
         instance = skeleton_array + 0xF4 * index
-        skeletons += [machine.read_u32(instance + 0x5C), machine.read_u32(instance + 0xB4), machine.read_u32(instance + 0xD0)]
+        skeletons += [machine.read_u32(instance + 0x5C) & ~PRESENTATION_FLAGS, machine.read_u32(instance + 0xB4), machine.read_u32(instance + 0xD0)]
         skeletons += [struct.unpack("<H", machine.read_bytes(instance + 0xBC, 2))[0], machine.read_u32(instance + 0xEC)]
         skeletons += read_words(machine, instance + 0x4C, 3)
     return materials, skeletons

@@ -81,11 +81,7 @@ export const stepRace = (
     : getStepOf(updateRace(phased.raceState, inputs, frameMilliseconds))
   return getFlushedStep(
     Object.freeze({
-      raceState: Object.freeze({
-        ...updated.raceState,
-        introductionCameraMilliseconds:
-          updated.raceState.introductionCameraMilliseconds + frameMilliseconds,
-      }),
+      raceState: updated.raceState,
       events: [...keyed.events, ...phased.events, ...updated.events],
     })
   )

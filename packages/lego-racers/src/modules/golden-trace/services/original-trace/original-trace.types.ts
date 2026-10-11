@@ -4,5 +4,4 @@ export type TraceLine = {
   readonly fields?: Record<string, number[]>
   readonly isDone?: boolean
   readonly controlWord?: number
-  readonly introductionCameraLimit?: number
 }
