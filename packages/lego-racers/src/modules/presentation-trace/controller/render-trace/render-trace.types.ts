@@ -152,3 +152,35 @@ export type MatrixCount = { readonly matrix: ScreenMatrix; readonly triangleCoun
 export type Rgb = readonly [number, number, number]
 
 export type TextureDifference = { readonly key: string; readonly difference: number }
+
+// A rectangle drawn on the screen: a menu image, a glyph or a fill.
+export type QuadPlacement = {
+  readonly left: number
+  readonly top: number
+  readonly right: number
+  readonly bottom: number
+  // The original's surface hash, the port's image or font name; null for a fill.
+  readonly textureKey: string | null
+  readonly source: string
+}
+
+export type QuadsInput = {
+  readonly original: readonly QuadPlacement[]
+  readonly port: readonly QuadPlacement[]
+  readonly textureMatches: ReadonlyMap<string, TextureMatch>
+  readonly tolerancePixels: number
+}
+
+export type QuadGroup = {
+  readonly kind: 'missing_in_port' | 'extra_in_port' | 'texture'
+  readonly source: string
+  readonly count: number
+  readonly firstDetail: string
+}
+
+export type QuadComparison = {
+  readonly originalCount: number
+  readonly portCount: number
+  readonly matchedCount: number
+  readonly groups: readonly QuadGroup[]
+}

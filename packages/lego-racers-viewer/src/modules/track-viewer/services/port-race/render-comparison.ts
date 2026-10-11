@@ -1,5 +1,7 @@
 import {
+  compareQuadPlacements,
   compareRenderFrame,
+  getOriginalQuads,
   getOriginalTriangles,
   getCandidateMatrices,
   matchTextures,
@@ -19,6 +21,7 @@ import { getPortWorldTriangles } from './port-triangles.ts'
 import type {
   AggregatedGroup,
   FrameTotals,
+  HudFrameResult,
   RenderScenarioResult,
 } from './render-comparison.types.ts'
 import { createPresentationScenario } from './trace-scenarios.ts'
@@ -50,6 +53,7 @@ const getSceneTextures = (assets: RaceAssets): ReadonlyMap<string, PortTexture> 
   )
 
 const CANDIDATE_COUNT = 6
+const HUD_TOLERANCE_PIXELS = 1
 const TOLERANCES = Object.freeze({ positionPixels: 0.25, textureCoordinate: 0.001, colorLevels: 2 })
 
 // Runs the original and the port through a scenario and compares the recorded frames: the mismatches of every frame,
@@ -78,6 +82,13 @@ export const runRenderComparison = async (
   const sceneTextures = getSceneTextures(assets)
   const allTextures = (used: ReadonlyMap<string, PortTexture>): ReadonlyMap<string, PortTexture> =>
     new Map([...sceneTextures, ...used])
+  const hudTextures = new Map(
+    [...assets.hudImages].map(
+      ([name, image]) =>
+        [name, { width: image.width, height: image.height, colors: image.colors }] as const
+    )
+  )
+  const hudResults: HudFrameResult[] = []
   const groups = new Map<string, AggregatedGroup>()
   const totals: FrameTotals[] = []
   runPortRace(assets, scenario.frames, (portFrame) => {
@@ -108,6 +119,28 @@ export const runRenderComparison = async (
     const comparison = comparisons.reduce((best, candidate) =>
       candidate.matchedCount > best.matchedCount ? candidate : best
     )
+    if (presentation.hudFrame !== null) {
+      const hud = compareQuadPlacements({
+        original: getOriginalQuads(originalFrame),
+        port: presentation.hudFrame.commands.flatMap((command) =>
+          command.kind === 'image'
+            ? [
+                {
+                  left: command.x,
+                  top: command.y,
+                  right: command.x + command.width,
+                  bottom: command.y + command.height,
+                  textureKey: command.imageName,
+                  source: command.imageName,
+                },
+              ]
+            : []
+        ),
+        textureMatches: matchTextures(original.textures, hudTextures),
+        tolerancePixels: HUD_TOLERANCE_PIXELS,
+      })
+      hudResults.push({ frame, ...hud })
+    }
     totals.push({
       frame,
       originalCount: comparison.originalCount,
@@ -132,6 +165,7 @@ export const runRenderComparison = async (
     }
   })
   return Object.freeze({
+    hudResults,
     totals,
     groups: [...groups.values()].sort((left, right) => right.count - left.count),
   })

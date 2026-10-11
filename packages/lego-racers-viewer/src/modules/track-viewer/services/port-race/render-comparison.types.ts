@@ -1,4 +1,7 @@
-import type { RenderMismatchGroup } from '@lego-games/lego-racers/presentation-trace'
+import type {
+  QuadComparison,
+  RenderMismatchGroup,
+} from '@lego-games/lego-racers/presentation-trace'
 
 // One kind of mismatch of one object, over the recorded frames it appears in.
 export type AggregatedGroup = Pick<RenderMismatchGroup, 'kind' | 'source' | 'firstDetail'> & {
@@ -15,7 +18,11 @@ export type FrameTotals = {
   readonly farthestOriginalDepth: number
 }
 
+// The HUD of one frame: the rectangles the original drew against the port's image commands.
+export type HudFrameResult = QuadComparison & { readonly frame: number }
+
 export type RenderScenarioResult = {
+  readonly hudResults: readonly HudFrameResult[]
   readonly totals: readonly FrameTotals[]
   readonly groups: readonly AggregatedGroup[]
 }

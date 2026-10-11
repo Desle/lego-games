@@ -8,6 +8,8 @@ Records what the original game shows and plays during a race, so the port can be
 
 - **Run it**: `pnpm run audio-trace` and `pnpm run render-trace` at the repository root; both skip without the virtualenv or the original files and are not part of `pnpm run check`.
 - **Read the original**: `readOriginalPresentation(scenario)` starts the emulator and returns the textures, the recorded render frames and the audio frames.
+- **Read the front end**: `readOriginalFrontEnd(scenario)` runs the original's menus with tapped keys.
+- **Compare pictures**: `getOriginalTriangles`, `getCandidateMatrices`, `projectWorldTriangle` and `compareRenderFrame` match the original's triangles with the port's by their place on the screen; `matchTextures` identifies surfaces by their pixels; `compareQuadPlacements` does the same for rectangles (HUD, menus). Method and findings: `.docs/reverse-engineering/render-trace.md`.
 - **Compare audio**: `getOriginalAudioCalls` turns the audio frames into sound and music calls; `compareAudioCalls(original, port)` summarises them per sound id and lists the tune differences.
 
 ## Invariants
@@ -17,4 +19,4 @@ Records what the original game shows and plays during a race, so the port can be
 
 ## Out of scope
 
-Pixel-level rasterisation (the trace stops at the vertices Direct3D receives), and the volume, pan and frequency curves of individual sounds (recorded in the original's trace, not compared).
+Pixel-level rasterisation (the trace stops at the vertices Direct3D receives) and the camera's field of view, and the volume, pan and frequency curves of individual sounds (recorded in the original's trace, not compared).

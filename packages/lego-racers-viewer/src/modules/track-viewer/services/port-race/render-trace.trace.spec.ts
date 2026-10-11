@@ -5,6 +5,10 @@ import type { TraceScenarioRequest } from './trace-scenarios.types.ts'
 
 const isGamePresent = () => getIsOriginalGamePresent() && getIsOriginalPresentationAvailable()
 
+// Of the triangles the original drew, this share has a partner in the port on every recorded frame. What is left over is
+// listed in render-trace.md (draw distance of the track, lit models' colours, animation clocks); a mirrored track drawn
+// the wrong way round halves it.
+const MINIMUM_MATCHED_SHARE = 0.85
 const RECORD_FRAMES = [5, 100, 170, 250, 320]
 const RENDER_CASES: readonly TraceScenarioRequest[] = [
   { name: 'Royal Knights', raceFolder: 'RACEC0R0', recordFrames: RECORD_FRAMES },
@@ -30,22 +34,24 @@ describe.skipIf(!isGamePresent())('render trace', () => {
     // Assert
     console.log(
       renderCase.name,
-      result.totals
+      result.hudResults
         .map(
-          (total) =>
-            `${String(total.frame)}: ${String(total.matchedCount)}/${String(total.originalCount)} (port ${String(total.portCount)})`
-        )
-        .join(' | '),
-      '\n',
-      result.groups
-        .filter((group) => !['extra_in_port', 'state', 'color'].includes(group.kind))
-        .slice(0, 30)
-        .map(
-          (group) =>
-            `${group.kind} ${group.source} x${String(group.count)} in ${String(group.frames.length)} frames: ${group.firstDetail}`
+          (hud) =>
+            `HUD ${String(hud.frame)}: original ${String(hud.originalCount)} port ${String(hud.portCount)} matched ${String(hud.matchedCount)} ` +
+            hud.groups
+              .slice(0, 8)
+              .map(
+                (group) =>
+                  `${group.kind} ${group.source} x${String(group.count)} ${group.firstDetail}`
+              )
+              .join('; ')
         )
         .join('\n')
     )
-    expect(result.totals.length).toBeGreaterThan(0)
+    const lowest = Math.min(
+      ...result.totals.map((total) => total.matchedCount / total.originalCount)
+    )
+    expect(result.totals.length).toBe(RECORD_FRAMES.length)
+    expect(lowest).toBeGreaterThan(MINIMUM_MATCHED_SHARE)
   })
 })
