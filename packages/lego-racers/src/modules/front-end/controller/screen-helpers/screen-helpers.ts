@@ -76,3 +76,16 @@ export const getFirstEnabledIndex = (isDisabled: readonly boolean[]): number =>
 
 export const getClampedStep = (value: number, input: FrontEndInput, maximum: number): number =>
   Math.min(maximum, Math.max(0, value + (input === 'right' ? 1 : -1)))
+
+// Up and down move the focus over three always-enabled widgets, with the highlight sound when it moved.
+export const getThreeWidgetFocusResult = (
+  runtime: ScreenRuntime,
+  input: FrontEndInput
+): ScreenResult => {
+  const { selection } = runtime
+  const focusIndex = getMovedFocusIndex(selection.focusIndex, [false, false, false], input)
+  return createResult(runtime, {
+    selection: { ...selection, focusIndex },
+    soundNames: focusIndex === selection.focusIndex ? [] : [MenuSound.HIGHLIGHT],
+  })
+}

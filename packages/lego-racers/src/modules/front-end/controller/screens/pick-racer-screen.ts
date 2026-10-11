@@ -9,7 +9,7 @@ import type {
 import {
   createResult,
   getClampedStep,
-  getMovedFocusIndex,
+  getThreeWidgetFocusResult,
   MenuSound,
 } from '../screen-helpers/screen-helpers.ts'
 
@@ -99,11 +99,7 @@ const handleInput = (runtime: ScreenRuntime, input: FrontEndInput): ScreenResult
   const { selection, settings } = runtime
   const names = getRacerNames(runtime)
   if (input === 'up' || input === 'down') {
-    const focusIndex = getMovedFocusIndex(selection.focusIndex, [false, false, false], input)
-    return createResult(runtime, {
-      selection: { ...selection, focusIndex },
-      soundNames: focusIndex === selection.focusIndex ? [] : [MenuSound.HIGHLIGHT],
-    })
+    return getThreeWidgetFocusResult(runtime, input)
   }
   if (input === 'left' || input === 'right') {
     const racerIndex = getClampedStep(selection.racerIndex, input, names.length - 1)

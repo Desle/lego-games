@@ -1,4 +1,5 @@
 import type { Bitmap } from '../../../bitmap/index.ts'
+import type { GlyphScan } from '../../types/font-rendering.types.ts'
 import type { FontDefinition } from '../../../font-database/index.ts'
 import {
   IncompleteFontImageError,
@@ -50,11 +51,7 @@ const getIsSeparatorColumn = (
 }
 
 // 0x1001e190 and the sort of 0x1001e070 (qsort with 0x1001f140, ascending by code).
-const getGlyphs = (
-  bitmap: Bitmap,
-  characters: readonly number[],
-  fontName: string
-): { readonly glyphs: readonly FontGlyph[]; readonly spaceWidth: number } => {
+const getGlyphs = (bitmap: Bitmap, characters: readonly number[], fontName: string): GlyphScan => {
   const separator = getSeparatorColumn(bitmap)
   let column = 0
   while (column < bitmap.width && getIsSeparatorColumn(bitmap, column, separator)) column += 1

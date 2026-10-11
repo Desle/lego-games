@@ -40,3 +40,22 @@ export type ScreenDefinition = {
   readonly getWidgets: (runtime: ScreenRuntime) => readonly FrontEndWidget[]
   readonly handleInput: (runtime: ScreenRuntime, input: FrontEndInput) => ScreenResult
 }
+
+export type MainMenuButton = {
+  readonly itemName: string
+  readonly labelId: number
+  // The screen the button opens (0x00481150); 0 asks to quit.
+  readonly targetScreenId: number
+  // What the button does to the versus flag: "vs" sets it, "circuit" and "single" clear it, the rest keep it.
+  readonly versusFlag: 'set' | 'clear' | 'keep'
+}
+
+export type OptionsButton = {
+  readonly itemName: string
+  readonly labelId: number
+  // The tab the button opens (0x004832d0 sets 0x369 of the screen) or the screen it pushes.
+  readonly tabIndex: number | null
+  readonly targetScreenId: number | null
+}
+
+export type RaceSelectionKind = 'circuit_race' | 'single_race' | 'time_trial'

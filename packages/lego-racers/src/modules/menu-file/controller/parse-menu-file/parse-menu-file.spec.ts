@@ -10,7 +10,7 @@ import {
 } from '../../../../shared/token-encoding/token-encoding.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import { TokenReaderError } from '../../../token-reader/index.ts'
-import { parseMenuDescription, parseMenuStyles } from '../../index.ts'
+import { parseMenuDescription, parseMenuStyles } from '../read-menu-files/read-menu-files.ts'
 
 const FILE = 0x27
 

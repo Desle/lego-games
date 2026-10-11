@@ -61,3 +61,9 @@ export type MenuSectionGrammar = {
 export type MenuFileGrammar = {
   readonly sections: ReadonlyMap<number, MenuSectionGrammar>
 }
+
+// The entry counts a section must reach or equal, as (keyword, count) pairs.
+export type MenuSectionCounts = {
+  readonly minimum?: readonly (readonly [number, number])[]
+  readonly exact?: readonly (readonly [number, number])[]
+}

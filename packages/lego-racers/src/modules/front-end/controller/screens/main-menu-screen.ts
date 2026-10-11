@@ -1,6 +1,7 @@
 import type { FrontEndInput } from '../../types/front-end.types.ts'
 import type { FrontEndWidget } from '../../types/front-end-widget.types.ts'
 import { FrontEndScreen, FrontEndText } from '../../types/front-end-screen/front-end-screen.ts'
+import type { MainMenuButton } from '../../types/front-end-screen.types.ts'
 import type {
   ScreenDefinition,
   ScreenResult,
@@ -12,15 +13,6 @@ import {
   getMovedFocusIndex,
   MenuSound,
 } from '../screen-helpers/screen-helpers.ts'
-
-type MainMenuButton = {
-  readonly itemName: string
-  readonly labelId: number
-  // The screen the button opens (0x00481150); 0 asks to quit.
-  readonly targetScreenId: number
-  // What the button does to the versus flag: "vs" sets it, "circuit" and "single" clear it, the rest keep it.
-  readonly versusFlag: 'set' | 'clear' | 'keep'
-}
 
 // 0x00480f20: the buttons in the order the original creates them, with the label strings and the targets of 0x00481150.
 const BUTTONS: readonly MainMenuButton[] = Object.freeze([

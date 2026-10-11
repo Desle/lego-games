@@ -6,6 +6,7 @@ import type {
   FrontEndRaceRequest,
   FrontEndResources,
   FrontEndState,
+  FrontEndStep,
 } from '../../types/front-end.types.ts'
 import { FrontEndScreen } from '../../types/front-end-screen/front-end-screen.ts'
 import type { ScreenRuntime } from '../../types/front-end-screen.types.ts'
@@ -57,11 +58,6 @@ export const createFrontEnd = (
     outcome: 'running',
     screenMilliseconds: 0,
   })
-}
-
-export type FrontEndStep = {
-  readonly state: FrontEndState
-  readonly soundNames: readonly string[]
 }
 
 // One pass of the loop of 0x0042d510: the time advances and the input, if any, reaches the current screen, which

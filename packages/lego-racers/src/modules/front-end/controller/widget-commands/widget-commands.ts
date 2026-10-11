@@ -2,13 +2,15 @@ import { getTextWidth, layoutText } from '../../../font-rendering/index.ts'
 import type { FontDrawCommand } from '../../../font-rendering/index.ts'
 import type { MenuEntry } from '../../../menu-file/index.ts'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
+import type { FrontEndDrawCommand, FrontEndRectangle } from '../../types/front-end.types.ts'
 import type {
-  FrontEndDrawCommand,
-  FrontEndRectangle,
-  FrontEndResources,
-  FrontEndScreenFiles,
-} from '../../types/front-end.types.ts'
-import type { ButtonState, FrontEndWidget } from '../../types/front-end-widget.types.ts'
+  ButtonState,
+  ButtonWidget,
+  FontStyle,
+  FrameFill,
+  FrontEndWidget,
+  ScreenContext,
+} from '../../types/front-end-widget.types.ts'
 import {
   findEntry,
   getAbsoluteRectangle,
@@ -21,11 +23,6 @@ export const MENU_SURFACE = Object.freeze({ width: 640, height: 480 })
 // MSB 0x3e styles keep a gap of 14 pixels (their first 0x2b value) between a button's image and its text.
 const BUTTON_IMAGE_GAP = 14
 const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
-
-export type ScreenContext = {
-  readonly resources: FrontEndResources
-  readonly files: FrontEndScreenFiles
-}
 
 // The states of a button in the order of its style's six images, fonts and colours (hypothesis for the roles; the
 // focused colour is the bright one the menus show).
@@ -54,10 +51,7 @@ const getStringValue = (value: number | string | undefined): string =>
   typeof value === 'string' ? value : ''
 
 // What a font style names: the font (0x29) and the colour (0x2a) of its text.
-const getFontStyle = (
-  context: ScreenContext,
-  styleName: string
-): { readonly fontName: string; readonly color: number } => {
+const getFontStyle = (context: ScreenContext, styleName: string): FontStyle => {
   const entry = getStyleEntry(context, styleName)
   const fontName = getStringValue(entry === null ? undefined : getPropertyValues(entry, 0x29)?.[0])
   const colors = entry === null ? null : getPropertyValues(entry, 0x2a)
@@ -137,7 +131,7 @@ const EMPTY_ENTRY: MenuEntry = Object.freeze({ keyword: 0, name: '', properties:
 const getButtonCommands = (
   context: ScreenContext,
   entry: MenuEntry,
-  widget: Extract<FrontEndWidget, { kind: 'button' }>
+  widget: ButtonWidget
 ): readonly FrontEndDrawCommand[] => {
   const style = getStyleEntry(context, widget.styleName)
   if (style === null) return []
@@ -188,24 +182,73 @@ const getFrameDrawing = (
   context: ScreenContext,
   rectangle: FrontEndRectangle,
   names: readonly string[],
-  fill: { readonly color: number; readonly bottomColor: number } | null
+  fill: FrameFill | null
 ): readonly FrontEndDrawCommand[] => {
   const commands: FrontEndDrawCommand[] = []
   if (fill !== null) commands.push({ kind: 'fill', rectangle, ...fill })
-  const [cornerTopLeft, edgeTop, cornerTopRight, edgeRight, cornerBottomRight, edgeBottom, cornerBottomLeft, edgeLeft] =
-    names
+  const [
+    cornerTopLeft,
+    edgeTop,
+    cornerTopRight,
+    edgeRight,
+    cornerBottomRight,
+    edgeBottom,
+    cornerBottomLeft,
+    edgeLeft,
+  ] = names
   const step = context.resources.getImage(cornerTopLeft ?? '')?.width ?? 0
   if (step === 0) return commands
-  const place = (name: string | undefined, left: number, top: number, right: number, bottom: number) =>
-    commands.push(...getImageCommand(context, name ?? '', { left, top, right, bottom }))
+  const place = (
+    name: string | undefined,
+    left: number,
+    top: number,
+    right: number,
+    bottom: number
+  ) => commands.push(...getImageCommand(context, name ?? '', { left, top, right, bottom }))
   place(edgeTop, rectangle.left + step, rectangle.top, rectangle.right - step, rectangle.top + step)
-  place(edgeBottom, rectangle.left + step, rectangle.bottom - step, rectangle.right - step, rectangle.bottom)
-  place(edgeLeft, rectangle.left, rectangle.top + step, rectangle.left + step, rectangle.bottom - step)
-  place(edgeRight, rectangle.right - step, rectangle.top + step, rectangle.right, rectangle.bottom - step)
+  place(
+    edgeBottom,
+    rectangle.left + step,
+    rectangle.bottom - step,
+    rectangle.right - step,
+    rectangle.bottom
+  )
+  place(
+    edgeLeft,
+    rectangle.left,
+    rectangle.top + step,
+    rectangle.left + step,
+    rectangle.bottom - step
+  )
+  place(
+    edgeRight,
+    rectangle.right - step,
+    rectangle.top + step,
+    rectangle.right,
+    rectangle.bottom - step
+  )
   place(cornerTopLeft, rectangle.left, rectangle.top, rectangle.left + step, rectangle.top + step)
-  place(cornerTopRight, rectangle.right - step, rectangle.top, rectangle.right, rectangle.top + step)
-  place(cornerBottomRight, rectangle.right - step, rectangle.bottom - step, rectangle.right, rectangle.bottom)
-  place(cornerBottomLeft, rectangle.left, rectangle.bottom - step, rectangle.left + step, rectangle.bottom)
+  place(
+    cornerTopRight,
+    rectangle.right - step,
+    rectangle.top,
+    rectangle.right,
+    rectangle.top + step
+  )
+  place(
+    cornerBottomRight,
+    rectangle.right - step,
+    rectangle.bottom - step,
+    rectangle.right,
+    rectangle.bottom
+  )
+  place(
+    cornerBottomLeft,
+    rectangle.left,
+    rectangle.bottom - step,
+    rectangle.left + step,
+    rectangle.bottom
+  )
   return commands
 }
 
@@ -216,10 +259,12 @@ const getFrameCommands = (
   entry: MenuEntry,
   rectangle: FrontEndRectangle
 ): readonly FrontEndDrawCommand[] => {
-  const source = getPropertyValues(entry, 0x28) === null ? (getStyleEntry(context, entry.name) ?? entry) : entry
+  const source =
+    getPropertyValues(entry, 0x28) === null ? (getStyleEntry(context, entry.name) ?? entry) : entry
   const names = (getPropertyValues(source, 0x28) ?? []).map(getStringValue)
   const colors = getPropertyValues(source, 0x2a) ?? []
-  const fill = colors.length >= 8 ? { color: getColor(colors, 0), bottomColor: getColor(colors, 1) } : null
+  const fill =
+    colors.length >= 8 ? { color: getColor(colors, 0), bottomColor: getColor(colors, 1) } : null
   return getFrameDrawing(context, rectangle, names, fill)
 }
 
@@ -239,7 +284,13 @@ export const getWidgetCommands = (
   }
   if (widget.kind === 'placed_text') {
     const style = getFontStyle(context, widget.styleName)
-    const glyphs = getTextGlyphs(context, style.fontName, widget.text, widget.rectangle, widget.alignment)
+    const glyphs = getTextGlyphs(
+      context,
+      style.fontName,
+      widget.text,
+      widget.rectangle,
+      widget.alignment
+    )
     const color = widget.color ?? style.color
     return glyphs.length === 0 ? [] : [{ kind: 'text', fontName: style.fontName, glyphs, color }]
   }

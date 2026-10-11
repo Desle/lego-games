@@ -152,7 +152,11 @@ const getStubBuffers = (layoutCase: LayoutCase): readonly EmulatorBuffer[] => [
   },
   { name: 'log', size: 4 + 4 * WORDS_PER_RECORD * LOG_RECORD_CAPACITY, isRead: true },
   { name: 'surface', words: [{ buffer: 'surfaceTable' }, { buffer: 'dimensions' }], isRead: false },
-  { name: 'surfaceTable', words: [0, 0, 0, 0, 0, { buffer: 'stubs', offset: STUB_OFFSETS.getDimensions }], isRead: false },
+  {
+    name: 'surfaceTable',
+    words: [0, 0, 0, 0, 0, { buffer: 'stubs', offset: STUB_OFFSETS.getDimensions }],
+    isRead: false,
+  },
   {
     name: 'dimensions',
     words: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, layoutCase.surfaceWidth << 16, layoutCase.surfaceHeight],

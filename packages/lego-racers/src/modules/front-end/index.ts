@@ -4,7 +4,6 @@ export {
   getFrontEndRaceRequest,
   stepFrontEnd,
 } from './controller/front-end/front-end.ts'
-export type { FrontEndStep } from './controller/front-end/front-end.ts'
 export { getRaceLoadOptions } from './controller/race-launch/get-race-load-options.ts'
 export { loadFrontEndResources } from './services/load-front-end-resources/load-front-end-resources.ts'
 export { MENU_SURFACE } from './controller/widget-commands/widget-commands.ts'
@@ -32,6 +31,7 @@ export type {
   FrontEndSelection,
   FrontEndSettings,
   FrontEndState,
+  FrontEndStep,
   FrontEndTextCommand,
   FrontEndViewportCommand,
 } from './types/front-end.types.ts'

@@ -7,8 +7,8 @@ import {
   integers,
   operands,
   strings,
-} from '../../controller/menu-grammar-builders/menu-grammar-builders.ts'
-import type { MenuFileGrammar } from '../menu-file.types.ts'
+} from '../menu-grammar-builders/menu-grammar-builders.ts'
+import type { MenuFileGrammar } from '../../types/menu-file.types.ts'
 
 // The keywords of a menu description (`.MIB`), read by LEGORacers.exe 0x0046b130 (root), 0x00469950 (sections)
 // and the item readers 0x00469a20 .. 0x0046af50. The section names are this port's; the original has only the

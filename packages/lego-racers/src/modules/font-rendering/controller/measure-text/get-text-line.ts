@@ -5,7 +5,6 @@ const SPACE_CODE = 0x20
 const LINE_FEED = 0x0a
 const CARRIAGE_RETURN = 0x0d
 
-
 // 0x00449e50 hands out a pointer into the string; reading the terminator gives 0.
 const getCode = (text: readonly number[], index: number): number => text[index] ?? 0
 

@@ -1,34 +1,14 @@
 import { getFloatFromBits, getTruncatedInteger } from '../../../simulation-math/index.ts'
-import type { FloatArithmetic } from '../../../simulation-math/index.ts'
 import { clipGlyphRectangles, getClipRectangle } from '../clip-text/clip-text.ts'
 import type {
-  BitmapFont,
   FontDrawCommand,
-  TextRectangle,
-  TextScale,
-  TextSurface,
+  GlyphRun,
+  GlyphRunParameters,
 } from '../../types/font-rendering.types.ts'
 
 // The float at 0x004af300: a scale at or below it draws nothing.
 const MINIMUM_SCALE = getFloatFromBits(0x30800000)
 const ONE = 1
-
-export type GlyphRunParameters = {
-  readonly font: BitmapFont
-  readonly glyphIndices: readonly number[]
-  readonly surface: TextSurface
-  readonly x: number
-  readonly y: number
-  readonly scale: TextScale
-  readonly clip: TextRectangle | null
-  readonly arithmetic: FloatArithmetic
-}
-
-export type GlyphRun = {
-  readonly commands: readonly FontDrawCommand[]
-  // What 0x00409300 returns: the x where the next glyph would start.
-  readonly nextX: number
-}
 
 // LEGORacers.exe 0x00409300: places a run of glyphs left to right. Each advance is the glyph width times the scale
 // (truncated for the rectangle, kept as a float for the position) plus the scaled letter spacing.

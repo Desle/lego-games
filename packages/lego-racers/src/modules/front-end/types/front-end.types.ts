@@ -168,3 +168,14 @@ export type FrontEndRaceRequest = {
   readonly lapCount: number
   readonly playerRacerNames: readonly string[]
 }
+
+export type FrontEndStep = {
+  readonly state: FrontEndState
+  readonly soundNames: readonly string[]
+}
+
+// A font of the menus with the image its glyphs are drawn from.
+export type FrontEndFontEntry = {
+  readonly font: BitmapFont
+  readonly image: FrontEndImage
+}

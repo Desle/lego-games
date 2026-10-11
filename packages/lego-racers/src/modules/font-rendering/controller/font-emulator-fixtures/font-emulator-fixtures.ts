@@ -1,3 +1,4 @@
+import type { FontWord } from './font-emulator-fixtures.types.ts'
 import type { EmulatorBuffer } from '../../../../shared/emulator/emulator-client.types.ts'
 import type { SeededRandom } from '../../../../shared/emulator/seeded-random.types.ts'
 import type { BitmapFont } from '../../types/font-rendering.types.ts'
@@ -53,7 +54,7 @@ export const getFontCase = (random: SeededRandom): FontCase => {
 // and the wide string object 0x00449e10 builds (characters +0, start +6, end +8; two 16-bit characters per word).
 export const getFontBuffers = (
   fontCase: FontCase,
-  fontWords: readonly (number | { readonly buffer: string })[]
+  fontWords: readonly FontWord[]
 ): readonly EmulatorBuffer[] => {
   const { font, text } = fontCase
   const characterWords: number[] = []

@@ -1,6 +1,11 @@
 import { getTruncatedInteger } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic } from '../../../simulation-math/index.ts'
-import type { TextRectangle, TextSurface } from '../../types/font-rendering.types.ts'
+import type {
+  ClippedGlyphRectangles,
+  InverseScale,
+  TextRectangle,
+  TextSurface,
+} from '../../types/font-rendering.types.ts'
 
 // LEGORacers.exe 0x00409560: the part of the surface a clip rectangle leaves; null (no clip) is the whole surface.
 // A clip that is empty or lies outside the surface leaves nothing.
@@ -27,9 +32,9 @@ export const clipGlyphRectangles = (
   clip: TextRectangle,
   source: TextRectangle,
   destination: TextRectangle,
-  inverseScale: { readonly x: number; readonly y: number },
+  inverseScale: InverseScale,
   arithmetic: FloatArithmetic
-): { readonly source: TextRectangle; readonly destination: TextRectangle } => {
+): ClippedGlyphRectangles => {
   const getScaledDistance = (distance: number, factor: number): number =>
     getTruncatedInteger(arithmetic.multiply(distance, factor))
   let { left: sourceLeft, top: sourceTop, right: sourceRight, bottom: sourceBottom } = source

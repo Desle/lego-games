@@ -1,22 +1,7 @@
 import { getBitmapColors } from '../../../bitmap/index.ts'
 import type { Bitmap } from '../../../bitmap/index.ts'
+import { getColorKeyPaletteIndex } from '../../../scene/index.ts'
 import type { FontColorKey } from '../../types/font-rendering.types.ts'
-
-// Texture flag 0x20 (GolDP.dll 0x100200f0): the first palette entry equal to the key colour gets alpha 0.
-const getTransparentPaletteIndex = (bitmap: Bitmap, colorKey: FontColorKey): number => {
-  const entryCount = 1 << bitmap.bitsPerPixel
-  for (let index = 0; index < entryCount; index++) {
-    const start = index * 4
-    if (
-      bitmap.palette[start] === colorKey[0] &&
-      bitmap.palette[start + 1] === colorKey[1] &&
-      bitmap.palette[start + 2] === colorKey[2]
-    ) {
-      return index
-    }
-  }
-  return -1
-}
 
 const getPaletteIndex = (bitmap: Bitmap, column: number, row: number): number => {
   const rowStart = row * bitmap.stride
@@ -43,7 +28,7 @@ export const getFontImagePixels = (bitmap: Bitmap, colorKey: FontColorKey | null
     }
     return colors
   }
-  const transparentIndex = getTransparentPaletteIndex(bitmap, colorKey)
+  const transparentIndex = getColorKeyPaletteIndex(bitmap, colorKey)
   for (let row = 0; row < bitmap.height; row++) {
     for (let column = 0; column < bitmap.width; column++) {
       if (getPaletteIndex(bitmap, column, row) === transparentIndex) {

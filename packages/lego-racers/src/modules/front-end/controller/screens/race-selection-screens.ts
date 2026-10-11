@@ -1,5 +1,6 @@
 import type { Circuit } from '../../../circuit-database/index.ts'
 import type { RaceCatalogEntry } from '../../../race-catalog/index.ts'
+import type { RaceSelectionKind } from '../../types/front-end-screen.types.ts'
 import type {
   FrontEndInput,
   FrontEndRaceSlot,
@@ -26,8 +27,6 @@ const GONEXT_INDEX = 0
 const GOBACK_INDEX = 1
 const SELECTOR_RECTANGLE = Object.freeze({ left: 3, top: 29, right: 220, bottom: 72 })
 const LOGO_WIDTH = 150
-
-export type RaceSelectionKind = 'circuit_race' | 'single_race' | 'time_trial'
 
 const getCircuit = (resources: FrontEndResources, index: number): Circuit | null =>
   resources.circuits.circuits[index] ?? null

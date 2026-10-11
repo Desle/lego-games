@@ -1,4 +1,8 @@
-import type { FrontEndRectangle } from './front-end.types.ts'
+import type {
+  FrontEndRectangle,
+  FrontEndResources,
+  FrontEndScreenFiles,
+} from './front-end.types.ts'
 
 // An image item: the style's image (MSB 0x32) at the item's rectangle.
 export type ImageWidget = {
@@ -83,3 +87,29 @@ export type FrontEndWidget =
   | PlacedImageWidget
   | PlacedTextWidget
   | PlacedFrameWidget
+
+export type ItemSize = {
+  readonly width: number
+  readonly height: number
+}
+
+export type ItemPosition = {
+  // 0x2f: left, top, right, bottom in the parent's coordinates; a zero right or bottom takes the item's own size.
+  readonly rectangle: readonly [number, number, number, number]
+  readonly parentName: string | null
+}
+
+export type FontStyle = {
+  readonly fontName: string
+  readonly color: number
+}
+
+export type FrameFill = {
+  readonly color: number
+  readonly bottomColor: number
+}
+
+export type ScreenContext = {
+  readonly resources: FrontEndResources
+  readonly files: FrontEndScreenFiles
+}

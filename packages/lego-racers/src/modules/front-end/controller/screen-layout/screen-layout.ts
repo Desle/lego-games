@@ -1,5 +1,6 @@
 import type { MenuEntry, MenuFile, MenuProperty, MenuValue } from '../../../menu-file/index.ts'
 import type { FrontEndRectangle } from '../../types/front-end.types.ts'
+import type { ItemPosition, ItemSize } from '../../types/front-end-widget.types.ts'
 
 const NAME_LENGTH = 8
 
@@ -7,8 +8,6 @@ const NAME_LENGTH = 8
 const POSITION_BLOCK_KEYWORD = 0x36
 const RECTANGLE_KEYWORD = 0x2f
 const PARENT_KEYWORD = 0x31
-
-export type ItemSize = { readonly width: number; readonly height: number }
 
 // FUN_004119a0: the name table looks names up over eight characters.
 const getKey = (name: string) => name.slice(0, NAME_LENGTH)
@@ -33,12 +32,6 @@ export const getPropertyValues = (entry: MenuEntry, keyword: number): readonly M
 // The position block of an entry: the entry's own properties for a fill (section 0x37), else the nested 0x36.
 const getPositionBlock = (entry: MenuEntry): readonly MenuProperty[] =>
   getProperty(entry.properties, POSITION_BLOCK_KEYWORD)?.block ?? entry.properties
-
-export type ItemPosition = {
-  // 0x2f: left, top, right, bottom in the parent's coordinates; a zero right or bottom takes the item's own size.
-  readonly rectangle: readonly [number, number, number, number]
-  readonly parentName: string | null
-}
 
 export const getItemPosition = (entry: MenuEntry): ItemPosition => {
   const block = getPositionBlock(entry)

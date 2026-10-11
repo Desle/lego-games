@@ -3,6 +3,7 @@ import type {
   MenuOperandKind,
   MenuPropertyGrammar,
   MenuSectionGrammar,
+  MenuSectionCounts,
 } from '../../types/menu-file.types.ts'
 
 export const repeatOperand = (kind: MenuOperandKind, count: number): readonly MenuOperandKind[] =>
@@ -38,10 +39,7 @@ export const createBlockGrammar = (
 export const createSectionGrammar = (
   entryKeyword: number,
   body: MenuBlockGrammar,
-  counts: {
-    readonly minimum?: readonly (readonly [number, number])[]
-    readonly exact?: readonly (readonly [number, number])[]
-  } = {}
+  counts: MenuSectionCounts = {}
 ): MenuSectionGrammar =>
   Object.freeze({
     entryKeyword,

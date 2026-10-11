@@ -1,6 +1,7 @@
 import type { FrontEndInput } from '../../types/front-end.types.ts'
 import type { FrontEndWidget } from '../../types/front-end-widget.types.ts'
 import { FrontEndScreen, FrontEndText } from '../../types/front-end-screen/front-end-screen.ts'
+import type { OptionsButton } from '../../types/front-end-screen.types.ts'
 import type {
   ScreenDefinition,
   ScreenResult,
@@ -9,18 +10,11 @@ import type {
 import {
   createResult,
   getMovedFocusIndex,
+  getThreeWidgetFocusResult,
   MAXIMUM_LAP_COUNT,
   MAXIMUM_OPPONENT_COUNT,
   MenuSound,
 } from '../screen-helpers/screen-helpers.ts'
-
-type OptionsButton = {
-  readonly itemName: string
-  readonly labelId: number
-  // The tab the button opens (0x004832d0 sets 0x369 of the screen) or the screen it pushes.
-  readonly tabIndex: number | null
-  readonly targetScreenId: number | null
-}
 
 const MENU_TAB = 0
 const GAME_TAB = 1
@@ -136,11 +130,7 @@ const handleGameTabInput = (runtime: ScreenRuntime, input: FrontEndInput): Scree
     })
   }
   if (input === 'up' || input === 'down') {
-    const focusIndex = getMovedFocusIndex(selection.focusIndex, [false, false, false], input)
-    return createResult(runtime, {
-      selection: { ...selection, focusIndex },
-      soundNames: focusIndex === selection.focusIndex ? [] : [MenuSound.HIGHLIGHT],
-    })
+    return getThreeWidgetFocusResult(runtime, input)
   }
   if (input !== 'left' && input !== 'right') return createResult(runtime)
   const step = input === 'right' ? 1 : -1

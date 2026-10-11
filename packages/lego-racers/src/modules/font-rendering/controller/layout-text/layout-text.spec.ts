@@ -20,7 +20,8 @@ const font: BitmapFont = {
   imageWidth: 30,
 }
 const arithmetic = createFloatArithmetic(FpuPrecision.SINGLE)
-const codes = (text: string): readonly number[] => Array.from(text, (letter) => letter.charCodeAt(0))
+const codes = (text: string): readonly number[] =>
+  Array.from(text, (letter) => letter.charCodeAt(0))
 
 const getParameters = (text: string, overrides: Partial<TextLayoutParameters> = {}) => ({
   font,

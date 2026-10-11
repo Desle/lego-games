@@ -2,7 +2,6 @@ import { decodeBitmap } from '../../../bitmap/index.ts'
 import { parseCircuitDatabase } from '../../../circuit-database/index.ts'
 import { parseFontDatabase } from '../../../font-database/index.ts'
 import { buildBitmapFont, getFontImagePixels } from '../../../font-rendering/index.ts'
-import type { BitmapFont } from '../../../font-rendering/index.ts'
 import { IMAGE_KEYWORD_2B_FLAG, parseImageDatabase } from '../../../image-database/index.ts'
 import type { ImageDefinition } from '../../../image-database/index.ts'
 import type { JamArchive } from '../../../jam-archive/index.ts'
@@ -11,6 +10,7 @@ import { parseRaceCatalog } from '../../../race-catalog/index.ts'
 import { getString, parseStringTable } from '../../../string-table/index.ts'
 import type { StringTable } from '../../../string-table/index.ts'
 import type {
+  FrontEndFontEntry,
   FrontEndImage,
   FrontEndResources,
   FrontEndScreenFiles,
@@ -78,14 +78,14 @@ export const loadFrontEndResources = (
     return image
   }
 
-  const fontCache = new Map<string, { font: BitmapFont; image: FrontEndImage } | null>()
+  const fontCache = new Map<string, FrontEndFontEntry | null>()
   const getFontEntry = (name: string) => {
     const key = name.toLowerCase()
     const cached = fontCache.get(key)
     if (cached !== undefined) return cached
     const definition = fontDatabase.fonts.find((candidate) => candidate.name === key)
     const path = getPath(MENU_DIRECTORY, language, `${key.toUpperCase()}.BMP`)
-    let entry: { font: BitmapFont; image: FrontEndImage } | null = null
+    let entry: FrontEndFontEntry | null = null
     if (definition !== undefined && paths.has(path)) {
       const bitmap = decodeBitmap(archive.readFile(path))
       const font = buildBitmapFont(definition, bitmap)

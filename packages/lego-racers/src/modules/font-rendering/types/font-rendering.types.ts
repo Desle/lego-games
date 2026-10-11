@@ -105,3 +105,36 @@ export type TextLine = {
   // True when the line ended at a line break (the next line keeps its leading spaces).
   readonly isNextLineStart: boolean
 }
+
+// The result of scanning a font image: the glyph table and the width of the space (0x1001e190).
+export type GlyphScan = {
+  readonly glyphs: readonly FontGlyph[]
+  readonly spaceWidth: number
+}
+
+export type InverseScale = {
+  readonly x: number
+  readonly y: number
+}
+
+export type ClippedGlyphRectangles = {
+  readonly source: TextRectangle
+  readonly destination: TextRectangle
+}
+
+export type GlyphRunParameters = {
+  readonly font: BitmapFont
+  readonly glyphIndices: readonly number[]
+  readonly surface: TextSurface
+  readonly x: number
+  readonly y: number
+  readonly scale: TextScale
+  readonly clip: TextRectangle | null
+  readonly arithmetic: FloatArithmetic
+}
+
+export type GlyphRun = {
+  readonly commands: readonly FontDrawCommand[]
+  // What 0x00409300 returns: the x where the next glyph would start.
+  readonly nextX: number
+}

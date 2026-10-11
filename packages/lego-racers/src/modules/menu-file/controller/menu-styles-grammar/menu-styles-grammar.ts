@@ -5,8 +5,8 @@ import {
   createSectionGrammar,
   integers,
   strings,
-} from '../../controller/menu-grammar-builders/menu-grammar-builders.ts'
-import type { MenuFileGrammar } from '../menu-file.types.ts'
+} from '../menu-grammar-builders/menu-grammar-builders.ts'
+import type { MenuFileGrammar } from '../../types/menu-file.types.ts'
 
 // The keywords of a menu styles file (`.MSB`), read by LEGORacers.exe 0x0046b130 (root), 0x0046fd80 (sections),
 // 0x00480740 (the button styles of GSTYLES.MSB) and the style readers 0x0046fe20 .. 0x00470dc0. The names are this

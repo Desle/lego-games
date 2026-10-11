@@ -50,3 +50,4 @@ export type {
   ShadeMode as ShadeModeValue,
   TextureOperation as TextureOperationValue,
 } from './types/scene.types.ts'
+export { getColorKeyPaletteIndex } from './types/texture-colors/texture-colors.ts'

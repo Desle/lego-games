@@ -10,3 +10,6 @@ export type FontCase = {
   readonly scaleY: number
   readonly probeCode: number
 }
+
+// A word of a font's emulator buffers: a number, or the name of the buffer whose address it holds.
+export type FontWord = number | { readonly buffer: string }
