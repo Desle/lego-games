@@ -11,7 +11,6 @@ import { createTrackSession } from '../track-session/track-session.ts'
 // A world that never animates: no scene object is known, no material animation plays, and every sound slot and
 // emitter can be taken. Callers that simulate the world replace it.
 export const STATIC_TRACK_WORLD: TrackWorld = Object.freeze({
-  getObject: () => null,
   getIsAnimationPlaying: () => false,
   getIsSoundAvailable: () => true,
 })

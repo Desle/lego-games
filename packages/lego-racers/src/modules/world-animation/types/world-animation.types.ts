@@ -72,6 +72,13 @@ export type WorldAnimationInput = {
   readonly animations: readonly SkeletalAnimation[]
   // In the order of `world.materialAnimations`.
   readonly materialAnimations: readonly MaterialAnimation[]
+  // A mirrored race (Race_LoadTrackContent's flag): 0x00416140 negates the y of every instance's position (0x00411040).
+  readonly isMirrored?: boolean
+}
+
+// What the mirror needs of an instance: its position.
+export type PositionedInstance = {
+  readonly position: Vector3
 }
 
 export type InstanceLevel = {

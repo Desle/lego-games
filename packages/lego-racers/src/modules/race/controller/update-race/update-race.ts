@@ -1,5 +1,5 @@
 import { recordGhostSample } from '../../../ghost/index.ts'
-import { advanceSky } from '../../../sky/index.ts'
+import { advanceSky, switchSkySetting } from '../../../sky/index.ts'
 import { updateTrackHazardsAfterRacers, updateTrackLogicFrame } from '../../../track-logic/index.ts'
 import { advanceWorldAnimation } from '../../../world-animation/index.ts'
 import { updatePowerUpsWithProjectiles } from '../../../projectiles/index.ts'
@@ -30,18 +30,25 @@ const TIME_SCALE_FLAG = 0x100
 // Race_Update 0x00435220: race +0x334c becomes 1,000 when the time step exceeds it.
 const COUNTDOWN_RESET_MILLISECONDS = 1000
 
-// Sky_Update 0x0041ccb0, the last world update of Race_Update: the background world animates and the sky's settings
-// advance.
-const getStateWithSkyUpdated = (state: RaceState, milliseconds: number): RaceState =>
-  state.sky === null
-    ? state
-    : Object.freeze({
-        ...state,
-        sky: Object.freeze({
-          state: advanceSky(state.sky.state, milliseconds),
-          background: advanceWorldAnimation(state.sky.background, milliseconds),
-        }),
-      })
+// Sky_Update 0x0041ccb0, the last world update of Race_Update: the setting the 42 events switched to (0x0041d150)
+// is current, the background world animates and the sky's settings advance.
+const getStateWithSkyUpdated = (state: RaceState, milliseconds: number): RaceState => {
+  if (state.sky === null) return state
+  const switched = state.trackEffects.reduce(
+    (skyState, effect) =>
+      effect.type === 'track.sky_setting_switched'
+        ? switchSkySetting(skyState, effect.name, effect.durationMilliseconds)
+        : skyState,
+    state.sky.state
+  )
+  return Object.freeze({
+    ...state,
+    sky: Object.freeze({
+      state: advanceSky(switched, milliseconds),
+      background: advanceWorldAnimation(state.sky.background, milliseconds),
+    }),
+  })
+}
 
 export const getIsTimeScaled = (state: RaceState): boolean =>
   (state.raceModeFlags & TIME_SCALE_FLAG) !== 0

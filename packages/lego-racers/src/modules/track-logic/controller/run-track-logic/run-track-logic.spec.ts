@@ -7,7 +7,11 @@ import {
   LEFT_CURLY,
   RIGHT_CURLY,
 } from '../../../../shared/testing/token-bytes.ts'
-import { encodeArrayHeader, encodeFloat } from '../../../../shared/token-encoding/token-encoding.ts'
+import {
+  encodeArrayHeader,
+  encodeFloat,
+  encodeString,
+} from '../../../../shared/token-encoding/token-encoding.ts'
 import { TrackEventKind, TrackEventState } from '../../types/track-event-state/track-event-state.ts'
 import type { TrackEvent, TrackLogicContext } from '../../types/track-logic.types.ts'
 import { createTrackLogic } from '../create-track-logic/create-track-logic.ts'
@@ -224,5 +228,25 @@ describe('the random ambient sound (0x004643e0)', () => {
 
     // Assert
     expect(step.state.random.position).toBe(began.state.random.position)
+  })
+})
+
+describe('the 42 event (0x0045e2a0)', () => {
+  it('asks the sky to switch to the named setting over its duration', () => {
+    // Arrange
+    const bytes = section(0x42, [
+      block(20, [0x43, ...encodeString('night'), 0x44, ...integerTokens([2500])]),
+    ])
+    const logic = createLogic(bytes)
+
+    // Act
+    const step = runTrackLogic(logic, CONTEXT, (session) => session.startSignal(20, null))
+
+    // Assert
+    expect(step.effects).toContainEqual({
+      type: 'track.sky_setting_switched',
+      name: 'night',
+      durationMilliseconds: 2500,
+    })
   })
 })

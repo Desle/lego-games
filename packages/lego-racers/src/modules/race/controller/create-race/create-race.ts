@@ -19,6 +19,14 @@ import { drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
 import { createSkyState } from '../../../sky/index.ts'
 import { NO_EMITTER_POOLS } from '../../../emitter/index.ts'
+import {
+  findSkeletonInstanceIndex,
+  getSkeletonInstanceWithFlagsChanged,
+  getWorldWithSkeletonInstance,
+  INSTANCE_LOOPING_FLAG,
+} from '../../../world-animation/index.ts'
+import type { SkeletonInstanceRuntime } from '../../../world-animation/index.ts'
+import type { Vector3 } from '../../../skeletal-animation/index.ts'
 import { createTrackLogic } from '../../../track-logic/index.ts'
 import type { TrackLogicState } from '../../../track-logic/index.ts'
 import { CLOSED_PAUSE_MENU } from '../../types/pause-menu/pause-menu.ts'
@@ -116,6 +124,61 @@ const createRacerFromDefinition = (
   })
 }
 
+// The camera follows the track world's skeleton instance named by the race description (RAB keyword 0x49); the
+// original's trace shows the instance without the looping flag from the first frame, which is what lets its clip
+// finish (0x0040e360). **Hypothesis**: the camera's attachment clears the flag; the writer is not traced.
+// The trace shows the mirrored race's camera instance with the y of its velocity and of its clip's velocity at -0:
+// the camera takes its clip's (mirrored) velocities. **Hypothesis**: the attachment copies them.
+const getMirroredClipVelocity = (
+  instance: SkeletonInstanceRuntime,
+  isMirrored: boolean
+): SkeletonInstanceRuntime => {
+  const { clip } = instance
+  if (!isMirrored || clip === null) return instance
+  const flip = (vector: Vector3): Vector3 =>
+    Object.freeze([vector[0], -vector[1], vector[2]] as const)
+  return Object.freeze({
+    ...instance,
+    clip: Object.freeze({
+      ...clip,
+      velocity: flip(clip.velocity),
+      clip: Object.freeze({ ...clip.clip, velocity: flip(clip.clip.velocity) }),
+    }),
+  })
+}
+
+const getTrackLogicWithIntroductionCamera = (
+  trackLogic: TrackLogicState,
+  name: string | null,
+  isMirrored: boolean
+): TrackLogicState => {
+  const world = trackLogic.worlds.track
+  const index = name === null ? -1 : findSkeletonInstanceIndex(world, name)
+  const instance = world.skeletonInstances[index]
+  return instance === undefined
+    ? trackLogic
+    : Object.freeze({
+        ...trackLogic,
+        worlds: Object.freeze({
+          ...trackLogic.worlds,
+          track: getWorldWithSkeletonInstance(
+            world,
+            index,
+            getMirroredClipVelocity(
+              getSkeletonInstanceWithFlagsChanged(instance, 0, INSTANCE_LOOPING_FLAG),
+              isMirrored
+            )
+          ),
+        }),
+      })
+}
+
+const getFoundIntroductionCameraObject = (
+  trackLogic: TrackLogicState,
+  name: string | null
+): string | null =>
+  name !== null && findSkeletonInstanceIndex(trackLogic.worlds.track, name) >= 0 ? name : null
+
 // Race_LoadRaceDescription 0x00431e00 and Race_LoadTrackContent 0x00433480, as far as the simulation is
 // concerned: the lap count (0x004327f0), the racers (RacerSet_Setup 0x0043b190), the timers' draws and the
 // power-ups (PowerUps_Initialize 0x00457c20), ending in the state Race_RunLoop starts from.
@@ -151,7 +214,7 @@ export const createRace = (definition: RaceDefinition): RaceState => {
       : made.racer
   )
   const afterRacers = setups.at(-1)?.position ?? definition.randomPosition
-  const createdTrackLogic = createTrackLogic(
+  const loadedTrackLogic = createTrackLogic(
     {
       eventSet: definition.events,
       timerList: definition.timers,
@@ -164,6 +227,11 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     },
     definition.arithmetic,
     { table: definition.tables.randomTable, position: afterRacers }
+  )
+  const createdTrackLogic = getTrackLogicWithIntroductionCamera(
+    loadedTrackLogic,
+    definition.introductionCameraObject,
+    definition.isMirrored
   )
   // The pools belong to the racer set: vehicles spawn into them as well. The track logic gets them back whenever it
   // runs (changeTrackLogic).
@@ -219,9 +287,10 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     isCountdownSkipped: definition.isCountdownSkipped,
     ghost: definition.ghost,
     musicTuneCount: definition.musicTuneCount,
-    introductionCameraLimit: definition.introductionCameraLimit,
-    introductionCameraRate: definition.introductionCameraRate,
-    introductionCameraTime: 0,
+    introductionCameraObject: getFoundIntroductionCameraObject(
+      createdTrackLogic,
+      definition.introductionCameraObject
+    ),
     tuneIndex: definition.musicTuneCount > 0 ? INTRODUCTION_TUNE_INDEX : null,
     unidentifiedCountdownMilliseconds: 0,
     raceModeFlags: definition.raceModeFlags,
