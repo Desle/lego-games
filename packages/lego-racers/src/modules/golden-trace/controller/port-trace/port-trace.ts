@@ -8,7 +8,8 @@ import {
 } from '../../../race/index.ts'
 import type { RaceDefinition, RaceState } from '../../../race/index.ts'
 import { DEFAULT_KEYBOARD_BINDINGS, getRacerControls } from '../../../race-input/index.ts'
-import { getRacerSphere } from '../../../racer/index.ts'
+import { getRacerSphere, getRacerVolume, getRacerVolumeParts } from '../../../racer/index.ts'
+import type { BoundingSphere } from '../../../racer-collision/index.ts'
 import type { Racer, RacerSetContext } from '../../../racer/index.ts'
 import type { Matrix3, Vector3 } from '../../../simulation-math/index.ts'
 import type {
@@ -27,6 +28,9 @@ const getVectorWords = (vector: Vector3): readonly number[] =>
   getFloatWords([vector.x, vector.y, vector.z])
 
 const getMatrixWords = (matrix: Matrix3): readonly number[] => getFloatWords(matrix)
+
+const getSphereWords = (sphere: BoundingSphere | null): readonly number[] =>
+  sphere === null ? [] : [...getVectorWords(sphere.centre), ...getFloatWords([sphere.radius])]
 
 const getIntegerWords = (value: number): readonly number[] => [value >>> 0]
 
@@ -47,6 +51,8 @@ const getPackedBytes = (bytes: readonly number[]): readonly number[] =>
 const getRacerFields = (racer: Racer, index: number, context: RacerSetContext): TraceFields => {
   const { rigidBody } = racer.carBody
   const sphere = getRacerSphere(context, racer)
+  const volume = racer.vehicle.volume ?? getRacerVolume(context.arithmetic, racer)
+  const parts = getRacerVolumeParts(context.arithmetic, racer)
   const prefix = `racer${String(index)}`
   return {
     [`${prefix}.body.position`]: getVectorWords(rigidBody.frame.position),
@@ -105,9 +111,13 @@ const getRacerFields = (racer: Racer, index: number, context: RacerSetContext): 
       ...getFloatWords([wheel.surfaceDrag, wheel.surfaceGrip, wheel.surfaceSkidGrip, wheel.grip]),
     ]),
     [`${prefix}.volume.sphere`]: [
-      ...getVectorWords(sphere.centre),
-      ...getFloatWords([sphere.radius]),
+      ...getVectorWords(volume.centre),
+      ...getFloatWords([volume.radius]),
     ],
+    [`${prefix}.volume.body`]: getSphereWords(parts.body),
+    [`${prefix}.volume.driver`]: getSphereWords(parts.driver),
+    [`${prefix}.vehicle.bodyRotation`]: getMatrixWords(racer.vehicle.bodyRotation),
+    [`${prefix}.vehicle.driverPosition`]: getVectorWords(racer.vehicle.driverPosition),
     [`${prefix}.display.sphere`]: [
       ...getVectorWords(sphere.centre),
       ...getFloatWords([sphere.radius]),
@@ -167,7 +177,8 @@ const getControls = (frame: TraceFrameInput) =>
 // Steps the port with the scenario's frame times and keys and records the same fields the original trace holds.
 export const getPortTrace = (
   scenario: GoldenTraceScenario,
-  definition: RaceDefinition
+  definition: RaceDefinition,
+  onFrame: (raceState: RaceState, frame: number) => void = () => undefined
 ): readonly TraceFrame[] => {
   let raceState = createRace(definition)
   return scenario.frames.map((input, frame) => {
@@ -179,6 +190,7 @@ export const getPortTrace = (
       { controls, contacts: NO_RACE_CONTACTS },
       input.milliseconds
     ).raceState
+    onFrame(raceState, frame)
     return {
       frame,
       milliseconds: input.milliseconds,

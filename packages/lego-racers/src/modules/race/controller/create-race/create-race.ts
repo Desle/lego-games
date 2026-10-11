@@ -12,6 +12,7 @@ import {
   createRacer,
   createRacerSet,
   createVehicle,
+  getVehicleLeanAtReset,
 } from '../../../racer/index.ts'
 import type { Racer, RacerSet } from '../../../racer/index.ts'
 import { drawRandomValue } from '../../../random-table/index.ts'
@@ -66,6 +67,12 @@ const createRacerFromDefinition = (
   const timers = createComputerTimers(tables.randomTable, position)
   const vehicleDraw = drawRandomValue(tables.randomTable, timers.position)
   const carBody = createCarBody(racerDefinition.carBody)
+  const vehicle = createVehicle(
+    racerDefinition.figures.driver,
+    racerDefinition.appearance.seatPoint,
+    vehicleDraw.value % VEHICLE_LOOK_MILLISECONDS,
+    racerDefinition.figures.bodyBounds
+  )
   const base = createRacer(
     racerDefinition.route === null
       ? carBody
@@ -79,11 +86,14 @@ const createRacerFromDefinition = (
     powerUpChances: personality.chances,
     proximityCheckMilliseconds: timers.tauntMilliseconds,
     voiceMilliseconds: timers.voiceMilliseconds,
-    vehicle: createVehicle(
-      racerDefinition.figures.driver,
-      racerDefinition.appearance.seatPoint,
-      vehicleDraw.value % VEHICLE_LOOK_MILLISECONDS
-    ),
+    vehicle: Object.freeze({
+      ...vehicle,
+      ...getVehicleLeanAtReset(
+        arithmetic,
+        base.carBody.rigidBody.displayFrame,
+        racerDefinition.appearance.seatPoint
+      ),
+    }),
     flags: getRaceModeRacerFlags(definition.raceModeFlags),
     controllerKind: racerDefinition.controllerKind,
     racePosition: racerIndex + 1,

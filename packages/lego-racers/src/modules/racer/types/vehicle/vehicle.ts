@@ -17,10 +17,12 @@ import {
   updateFigure,
 } from '../figure/figure.ts'
 import { playRacerVoice } from '../racer-ranking/racer-ranking.ts'
+import { getRacerVolume } from '../racer-volume/racer-volume.ts'
 import { getVehicleLean } from './vehicle-lean.ts'
 import { getRacer, setRacer, setRandomPosition } from '../racer-state/racer-state.ts'
 import type {
   Figure,
+  FigureBounds,
   Racer,
   RacerBoundary,
   RacerSet,
@@ -75,10 +77,13 @@ const hasId = (id: number, ids: readonly number[]): boolean => ids.includes(id)
 export const createVehicle = (
   driverFigure: Figure = createFigure([], null),
   seatPoint: Vector3 = ZERO_VECTOR3,
-  lookMilliseconds = 0
+  lookMilliseconds = 0,
+  bodyBounds: FigureBounds | null = null
 ): Vehicle =>
   Object.freeze({
     driverFigure,
+    bodyBounds,
+    volume: null,
     secondFigure: null,
     reactionFlags: 0,
     lookMilliseconds,
@@ -422,5 +427,17 @@ export const updateVehicle: RacerBoundary = (context, racerSet, racerIndex, step
     })
   )
   const driven = updateVehicleDriver(context, wheels, racerIndex, stepMilliseconds)
-  return drawEmitterValues(context, driven, racerIndex)
+  const drivenRacer = getRacer(driven, racerIndex)
+  const measured = setRacer(
+    driven,
+    racerIndex,
+    Object.freeze({
+      ...drivenRacer,
+      vehicle: Object.freeze({
+        ...drivenRacer.vehicle,
+        volume: getRacerVolume(arithmetic, drivenRacer),
+      }),
+    })
+  )
+  return drawEmitterValues(context, measured, racerIndex)
 }

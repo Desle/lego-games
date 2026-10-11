@@ -13,7 +13,7 @@ import {
   endTimedEffect,
   followDriverRoute,
   getRacer,
-  getRacerSphere,
+  getRacerVolume,
   keepRacerSetNotYetPorted,
   transferTimedEffect,
   updateVehicle,
@@ -60,11 +60,12 @@ const RACE_COLLISION_DEPENDENCIES: RacerPassDependencies = Object.freeze({
   getIsTouchingRegistryEntry: (context, racerSet, racerIndex, entry) => {
     const raced = getRaceRacerSetOf(racerSet)
     const object = raced.registryObjects[entry.id]
+    const racer = getRacer(raced, racerIndex)
     return (
       object !== undefined &&
       getSpheresOverlap(
         context.arithmetic,
-        getRacerSphere(context, getRacer(raced, racerIndex)),
+        racer.vehicle.volume ?? getRacerVolume(context.arithmetic, racer),
         getRegistrySphere(raced, object)
       )
     )

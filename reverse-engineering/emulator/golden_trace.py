@@ -98,6 +98,13 @@ def snapshot_fields(machine, race: int, racer_count: int, local_players: int) ->
             probe_words += read_words(machine, base + 0x18, 6) + read_words(machine, base + 0x00, 3) + read_words(machine, base + 0x50, 4)
         fields[f"racer{index}.body.wheelProbes"] = probe_words
         fields[f"racer{index}.volume.sphere"] = read_words(machine, racer + 0x1C + 4, 4)
+        vehicle = racer + 0x18
+        body = machine.read_u32(vehicle + 0x3C)
+        driver = machine.read_u32(vehicle + 0x48)
+        fields[f"racer{index}.volume.body"] = read_words(machine, body + 0x04, 4)
+        fields[f"racer{index}.volume.driver"] = read_words(machine, driver + 0x04, 4)
+        fields[f"racer{index}.vehicle.bodyRotation"] = read_words(machine, body + 0x28, 9)
+        fields[f"racer{index}.vehicle.driverPosition"] = read_words(machine, driver + 0x4C, 3)
         fields[f"racer{index}.display.sphere"] = read_words(machine, display + 0x04, 4)
         fields[f"racer{index}.display.position"] = read_words(machine, display + 0x4C, 3)
         fields[f"racer{index}.display.rotation"] = read_words(machine, display + 0x28, 9)

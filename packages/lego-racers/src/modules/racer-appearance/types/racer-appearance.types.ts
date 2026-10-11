@@ -1,4 +1,4 @@
-import type { Figure } from '../../racer/index.ts'
+import type { Figure, FigureBounds } from '../../racer/index.ts'
 import type { Vector3 } from '../../simulation-math/index.ts'
 
 // The five files one drawn thing is made of, each named without its extension and read from GAMEDATA\COMMON: the
@@ -39,6 +39,8 @@ export type RacerAppearance = {
 
 // The animated figures of a racer, ready to hand to `createRacer` and `createVehicle`.
 export type RacerFigures = {
+  // The car body model's bounding sphere (0x100278c0), null for a car built from bricks.
+  readonly bodyBounds: FigureBounds | null
   readonly wheels: Figure
   readonly secondWheels: Figure | null
   readonly driver: Figure
@@ -52,6 +54,7 @@ export type FigureSource = {
 }
 
 export type RacerFigureSources = {
+  readonly bodyBounds: FigureBounds | null
   readonly wheels: FigureSource
   readonly secondWheels: FigureSource | null
   readonly driver: FigureSource

@@ -19,6 +19,7 @@ describe('createRacerFigures', () => {
 
       // Act
       const figures = createRacerFigures({
+        bodyBounds: null,
         wheels: {
           animationBytes: archive.readFile(getRacerFilePath('dajmw', 'ADB')),
           modelScale: MODEL_SCALE,
@@ -52,6 +53,7 @@ describe('createRacerFigures', () => {
 
       // Act
       const figures = createRacerFigures({
+        bodyBounds: null,
         wheels: {
           animationBytes: archive.readFile(getRacerFilePath('dajmw', 'ADB')),
           modelScale: MODEL_SCALE,
@@ -80,6 +82,7 @@ describe('createRacerFigures', () => {
 
       // Act
       const figures = createRacerFigures({
+        bodyBounds: null,
         wheels: {
           animationBytes: archive.readFile(getRacerFilePath('dajmw', 'ADB')),
           modelScale: MODEL_SCALE,

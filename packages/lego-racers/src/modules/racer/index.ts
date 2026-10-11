@@ -4,6 +4,7 @@ export {
   getRacerSphere,
   RACER_COLLISION_DEPENDENCIES_NOT_YET_PORTED,
 } from './controller/collide-racers/collide-racers.ts'
+export { getRacerVolume, getRacerVolumeParts } from './types/racer-volume/racer-volume.ts'
 export { endRacerKick, respondToRacerContact } from './controller/racer-contact/racer-contact.ts'
 export { followDriverRoute } from './controller/follow-driver-route/follow-driver-route.ts'
 export { notifyRacerContact } from './controller/notify-racer-contact/notify-racer-contact.ts'
@@ -68,6 +69,7 @@ export {
   playFigureAnimation,
   updateFigure,
 } from './types/figure/figure.ts'
+export { getVehicleLeanAtReset } from './types/vehicle/vehicle-lean.ts'
 export { createVehicle, updateVehicle, updateVehicleDriver } from './types/vehicle/vehicle.ts'
 export { COSINE_TABLE_ADDRESS, getTableCosine } from './types/cosine-table/cosine-table.ts'
 export {

@@ -3,6 +3,7 @@ import type { CollisionObject } from '../../collision/index.ts'
 import type { ComputerRacerRoute } from '../../computer-racer-route/index.ts'
 import type { RegistryContact, RegistryEntry } from '../../projectiles/index.ts'
 import type { RouteFollower, RubberBand } from '../../racer-ai/index.ts'
+import type { BoundingSphere } from '../../racer-collision/index.ts'
 import type { CarRigidBody } from '../../racer-physics/index.ts'
 import type { RandomTable, RandomTablePosition } from '../../random-table/index.ts'
 import type { FloatArithmetic, Matrix3, Quaternion, Vector3 } from '../../simulation-math/index.ts'
@@ -283,6 +284,12 @@ export type Vehicle = {
   readonly smokeEmitterAge: number | null
   readonly dustEmitterAge: number | null
   readonly boostEmitterAge: number | null
+  // +0x3c's model part (+0x78): the car body's bounding sphere in the model frame (0x100278c0), null while the
+  // car body has no model the port knows (a car built from bricks).
+  readonly bodyBounds: FigureBounds | null
+  // The racer's collision volume (+0x1c, composite of the vehicle's frames): Vehicle_Update 0x0043e070 recomputes it
+  // once per update, so the registry tests (0x0043d270) see the value of the last update. Null until that first update.
+  readonly volume: BoundingSphere | null
   // +0x4c..+0x54: where the driver sits, in the car model frame (the chassis's `vehiclePoint`, 0x0043d7a0).
   readonly seatPoint: Vector3
   // +0x3c: the car model frame's rotation. 0x0043e740 leans it towards the display frame every update; it starts

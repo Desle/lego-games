@@ -192,7 +192,7 @@ export const loadRaceDefinition = (
   const appearances = describeAppearances(request)
   const figures = appearances.map((appearance) =>
     createRacerFigures(
-      loadRacerFigureSources(archive.readFile, appearance, BUILT_DRIVER_MODEL_SCALE)
+      loadRacerFigureSources(arithmetic, archive.readFile, appearance, BUILT_DRIVER_MODEL_SCALE)
     )
   )
   const isMultiplayer = localPlayerCount >= 2
