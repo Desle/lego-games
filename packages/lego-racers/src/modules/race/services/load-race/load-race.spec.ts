@@ -157,4 +157,36 @@ describe('loadRaceDefinition', () => {
     // Assert
     expect(load).toThrow(UnknownRaceError)
   })
+
+  it.skipIf(!getIsGamePresent())(
+    'negates the y of the track data when the race is mirrored and keeps the options it was given',
+    () => {
+      // Arrange
+      const jam = readOriginalJam()
+      const executable = readOriginalExecutable()
+
+      // Act
+      const forward = loadRaceDefinition(jam, executable)
+      const mirrored = loadRaceDefinition(jam, executable, {
+        isMirrored: true,
+        multiplayerLapCount: 2,
+        isPointsRecordPresent: true,
+        musicTuneCount: 0,
+      })
+
+      // Assert
+      expect(forward.isMirrored).toBe(false)
+      expect(mirrored.isMirrored).toBe(true)
+      expect(mirrored.multiplayerLapCount).toBe(2)
+      expect(mirrored.isPointsRecordPresent).toBe(true)
+      expect(forward.musicTuneCount).toBe(7)
+      expect(mirrored.musicTuneCount).toBe(0)
+      expect(mirrored.startPositions[0]?.position?.[1]).toBe(
+        -(forward.startPositions[0]?.position?.[1] ?? 0)
+      )
+      expect(mirrored.startPositions[0]?.position?.[0]).toBe(
+        forward.startPositions[0]?.position?.[0]
+      )
+    }
+  )
 })
