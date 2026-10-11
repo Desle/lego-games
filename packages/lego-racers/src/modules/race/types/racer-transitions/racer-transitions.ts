@@ -36,6 +36,7 @@ const LAP_GAP_COUNTDOWN_MILLISECONDS = 2000
 const RACER_TUMBLING_FLAG = 0x8
 const TUMBLING_TURBO_LEVEL = 2
 const SPIN_RATE = getFloatFromBits(0x3be56042) // 0x004575db, 0x00457002: the spin of a slick or a rocket
+const VEHICLE_HIT_REACTION = 2
 const WAND_THROW_POWER = 1 // 0x00455440 throws a struck racer like a blast at full power
 
 // 0x004374c0, the racer fields: flag 0x2 set and 0x1000..0x4000 cleared, no checkpoint, zone history 0, 2, 1, no lap.
@@ -332,6 +333,15 @@ export const getRacerAfterPowerUpEvent = (
           SPIN_RATE,
           event.spinTime
         ),
+      })
+    case 'power_ups.racer_hit':
+      // Racer +0x39c (vehicle +0x384) |= 2: the driver and the car play the hit reaction.
+      return Object.freeze({
+        ...racer,
+        vehicle: Object.freeze({
+          ...racer.vehicle,
+          reactionFlags: racer.vehicle.reactionFlags | VEHICLE_HIT_REACTION,
+        }),
       })
     case 'power_ups.racer_flipped':
       return Object.freeze({
