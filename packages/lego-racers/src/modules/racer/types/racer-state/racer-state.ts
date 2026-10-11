@@ -75,6 +75,9 @@ export const createRacer = (carBody: CarBody, figure: Figure = createFigure([], 
     guidanceTarget: ZERO_VECTOR3,
     collisionObjectIndices: Object.freeze([0]),
     colourShift: null,
+    isColourShiftOverridden: false,
+    colourShiftOverrideMilliseconds: 0,
+    overridingColourShift: null,
     contactTimerMilliseconds: null,
   })
 

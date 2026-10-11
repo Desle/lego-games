@@ -1,3 +1,4 @@
+import { getDisplayedColourShift } from '../../../racer/index.ts'
 import type { RaceState } from '../../../race/index.ts'
 import { getFigureAnimationState } from '../get-figure-animation-state/get-figure-animation-state.ts'
 import type { RacerPose } from '../../types/race-presentation.types.ts'
@@ -16,7 +17,7 @@ export const getRacerPoses = (raceState: RaceState): readonly RacerPose[] =>
         driverPosition: racer.vehicle.driverPosition,
         wheelAnimation: getFigureAnimationState(racer.figure),
         driverAnimation: getFigureAnimationState(racer.vehicle.driverFigure),
-        colourShift: racer.colourShift,
+        colourShift: getDisplayedColourShift(racer),
       })
     )
   )
