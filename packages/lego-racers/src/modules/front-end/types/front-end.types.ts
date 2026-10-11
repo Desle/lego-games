@@ -6,6 +6,8 @@ import type {
   SavedCar,
 } from '../../car-builder/index.ts'
 import type { BodyPartCatalog, DriverSession } from '../../figure-builder/index.ts'
+import type { SkeletalAnimation, SkeletonAnimationState } from '../../skeletal-animation/index.ts'
+import type { MenuFigureAnimation } from './menu-figure/menu-figure-animation.types.ts'
 import type { DriverDatabase } from '../../driver-database/index.ts'
 import type { CircuitDatabase } from '../../circuit-database/index.ts'
 import type { MenuFile } from '../../menu-file/index.ts'
@@ -53,6 +55,8 @@ export type FrontEndResources = {
   readonly getDriverCatalog: () => BodyPartCatalog
   // `DRIVERS.DDB` of the menus: the main menu shows the figure of one of its drivers.
   readonly getDriverDatabase: () => DriverDatabase
+  // `MENUDATA\LEGOMAN.ADB`: the clips of the main menu's figure.
+  readonly getMenuFigureAnimation: () => SkeletalAnimation
 }
 
 // What the menus read from the machine: the original's input manager (`+0x98` of it counts the controllers).
@@ -136,7 +140,13 @@ export type FrontEndMemory = Pick<
   'playerCar' | 'randomPosition' | 'saveFile' | 'racerIndex'
 >
 
-export type FrontEndOutcome = 'running' | 'race' | 'quit'
+// `demonstration`: the main menu waited 60 seconds (0x00481450) and the game starts the attract-mode race.
+export type FrontEndOutcome = 'running' | 'race' | 'quit' | 'demonstration'
+
+// What the front end hands over when its idle timer runs out: where the shared random cursor stands.
+export type FrontEndDemonstrationRequest = {
+  readonly randomPosition: number
+}
 
 export type FrontEndSelection = {
   readonly focusIndex: number
@@ -167,6 +177,8 @@ export type FrontEndState = {
   readonly screenMilliseconds: number
   // The entry of MENUDATA\LEGOMSC the music stream plays (FrontEnd_SetMusic 0x00480470), or null before any.
   readonly musicListIndex: number | null
+  // The main menu's figure and its timers; they run only while that screen is the top one.
+  readonly menuFigure: MenuFigureAnimation | null
 }
 
 export type FrontEndRectangle = {
@@ -221,6 +233,8 @@ export type DriverPreview = {
   // Where the figure stands in the screen's world and the way it faces (its frame's forward vector).
   readonly position: readonly [number, number, number]
   readonly forward: readonly [number, number, number]
+  // The pose the screen's behaviour has put the figure in; null leaves the viewer to play the first clip.
+  readonly animation: SkeletonAnimationState | null
 }
 
 export type BuilderPreview = {

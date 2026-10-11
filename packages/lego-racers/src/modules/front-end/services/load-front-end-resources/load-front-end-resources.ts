@@ -1,6 +1,9 @@
 import { decodeBitmap } from '../../../bitmap/index.ts'
 import { loadBuilderCatalog, loadSavedCars } from '../../../car-builder/index.ts'
 import type { BuilderCatalog, SavedCar } from '../../../car-builder/index.ts'
+import { parseAnimation } from '../../../animation/index.ts'
+import { getSkeletalAnimation } from '../../../skeletal-animation/index.ts'
+import type { SkeletalAnimation } from '../../../skeletal-animation/index.ts'
 import { parseDriverDatabase } from '../../../driver-database/index.ts'
 import type { DriverDatabase } from '../../../driver-database/index.ts'
 import { parseBodyPartCatalog } from '../../../figure-builder/index.ts'
@@ -26,6 +29,7 @@ import type {
 
 const MENU_DIRECTORY = 'MENUDATA'
 const DEFAULT_SAVE_PATH = 'MENUDATA\\DEFAULT.LRS'
+const MENU_FIGURE_ANIMATION_PATH = 'MENUDATA\\LEGOMAN.ADB'
 const DRIVER_DATABASE_PATH = 'MENUDATA\\PARTDB\\DRIVERS.DDB'
 const BODY_PART_CATALOG_PATH = 'MENUDATA\\PARTDB\\BODYPART.PCB'
 const SEPARATOR = '\\'
@@ -161,9 +165,18 @@ export const loadFrontEndResources = (
     return driverDatabase
   }
 
+  let menuFigureAnimation: SkeletalAnimation | null = null
+  const getMenuFigureAnimation = (): SkeletalAnimation => {
+    menuFigureAnimation ??= getSkeletalAnimation(
+      parseAnimation(archive.readFile(MENU_FIGURE_ANIMATION_PATH))
+    )
+    return menuFigureAnimation
+  }
+
   return Object.freeze({
     getBuilderCatalog,
     getDriverDatabase,
+    getMenuFigureAnimation,
     getRacerTemplate,
     getDefaultCar,
     getDriverCatalog,

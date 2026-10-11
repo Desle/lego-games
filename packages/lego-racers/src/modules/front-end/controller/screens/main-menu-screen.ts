@@ -67,6 +67,7 @@ const getFigure = (runtime: ScreenRuntime): DriverPreview | null => {
     partBytes: driver.unreadBytes,
     position: MAIN_MENU_FIGURE_POSITION,
     forward: MAIN_MENU_FIGURE_FORWARD,
+    animation: runtime.menuFigureAnimation,
   }
 }
 

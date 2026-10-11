@@ -1,6 +1,7 @@
 import type { HudCommand } from '@lego-games/lego-racers/race-hud'
 import type {
   FrontEndMemory,
+  FrontEndDemonstrationRequest,
   FrontEndRaceRequest,
   FrontEndStandingRow,
 } from '@lego-games/lego-racers/front-end'
@@ -42,6 +43,7 @@ export type RaceController = RaceScreen & {
   // The menus changed what they keep (the car, the racer, the save); the controller stores it and writes the save.
   readonly onMenuMemoryChanged: (memory: FrontEndMemory) => void
   readonly onRaceRequested: (request: FrontEndRaceRequest) => void
+  readonly onDemonstrationRequested: (request: FrontEndDemonstrationRequest) => void
   // The menus were left (the quit question answered yes): back to the file choice.
   readonly onGameClosed: () => void
   // The race is stopped: back to the menus.
