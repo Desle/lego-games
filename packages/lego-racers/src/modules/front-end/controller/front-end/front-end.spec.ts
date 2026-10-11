@@ -18,6 +18,7 @@ import type {
 import { getRaceLoadOptions } from '../race-launch/get-race-load-options.ts'
 import {
   createFrontEnd,
+  getFrontEndDemonstrationRequest,
   getFrontEndFrame,
   getFrontEndRaceRequest,
   stepFrontEnd,
@@ -122,6 +123,25 @@ const getScreenIds = (state: FrontEndState): readonly number[] =>
   state.screens.map((screen) => screen.screenId)
 
 describe('the front end', () => {
+  it('asks for a demonstration when the main menu has waited 60 seconds', () => {
+    // Arrange
+    const idleFrames = Math.ceil(60000 / 16)
+    const wait = (frames: number): FrontEndState =>
+      Array.from({ length: frames }).reduce<FrontEndState>(
+        (current) => stepFrontEnd(current, resources, environment, null, 16).state,
+        createFrontEnd(resources, environment)
+      )
+
+    // Act
+    const early = wait(idleFrames - 2)
+    const waited = wait(idleFrames)
+
+    // Assert
+    expect(getFrontEndDemonstrationRequest(early)).toBeNull()
+    expect(waited.outcome).toBe('demonstration')
+    expect(getFrontEndDemonstrationRequest(waited)).toEqual({ randomPosition: 0 })
+  })
+
   it('starts on the main menu with the garage button focused', () => {
     // Arrange / Act
     const state = createFrontEnd(resources, environment)

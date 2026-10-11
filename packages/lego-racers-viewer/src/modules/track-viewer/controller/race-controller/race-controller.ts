@@ -4,7 +4,11 @@ import {
   NO_FRONT_END_MEMORY,
   getStandingRows,
 } from '@lego-games/lego-racers/front-end'
-import type { FrontEndMemory, FrontEndRaceRequest } from '@lego-games/lego-racers/front-end'
+import type {
+  FrontEndDemonstrationRequest,
+  FrontEndMemory,
+  FrontEndRaceRequest,
+} from '@lego-games/lego-racers/front-end'
 import { loadRandomTable } from '@lego-games/lego-racers/random-table'
 import { parseSaveFile, serializeSaveFile } from '@lego-games/lego-racers/save-data'
 import type { SaveFile } from '@lego-games/lego-racers/save-data'
@@ -12,6 +16,7 @@ import { advanceFrameClock, createFrameClock } from '@lego-games/lego-racers/fra
 import {
   abortSession,
   applySessionOutcomeToSave,
+  createDemonstrationSettings,
   createGameSession,
   finishRace,
   getIsFirstRace,
@@ -326,6 +331,20 @@ export const useRaceController = (): RaceController => {
     [advanceSession, gameResources, showFailure]
   )
 
+  // The main menu's idle timer ran out: the demonstration plays (the computer drives racer 0; any key ends it).
+  const startDemonstration = useCallback(
+    (request: FrontEndDemonstrationRequest) => {
+      if (gameResources === null) return
+      try {
+        const settings = createDemonstrationSettings(gameResources, request)
+        advanceSession(createGameSession(gameResources, settings), settings.racerCount)
+      } catch (error) {
+        showFailure(error)
+      }
+    },
+    [advanceSession, gameResources, showFailure]
+  )
+
   useEffect(() => {
     const container = containerReference.current
     if (assets === null || container === null) return undefined
@@ -449,6 +468,7 @@ export const useRaceController = (): RaceController => {
       : () => undefined,
     onGameFilesChosen: (files) => openGame(() => getChosenGameFiles(files)),
     onRaceRequested: startRace,
+    onDemonstrationRequested: startDemonstration,
     onMenuMemoryChanged: (memory) => {
       if (memory.saveFile !== null && memory.saveFile !== memoryReference.current.saveFile) {
         persistSave(memory.saveFile)
