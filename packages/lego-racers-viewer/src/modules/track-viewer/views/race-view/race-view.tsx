@@ -32,6 +32,7 @@ const RaceView = () => {
           {race.status === RaceStatus.MENU && race.gameJam !== null ? (
             <FrontEndView
               jam={race.gameJam}
+              readTune={race.readTune}
               firstScreenId={race.menuScreenId}
               standingRows={race.standingRows}
               width={RACE_STAGE_SIZE.width}

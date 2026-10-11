@@ -6,39 +6,48 @@ import {
 import type { FrontEndRaceRequest } from '@lego-games/lego-racers/front-end'
 import { advanceFrameClock, createFrameClock } from '@lego-games/lego-racers/frame-clock'
 import {
+  abortSession,
   createGameSession,
   finishRace,
+  getIsFirstRace,
   loadGameResources,
   recordRaceStep,
+  requestCircuitRestart,
+  restartRace,
   startNextRace,
 } from '@lego-games/lego-racers/game-session'
-import type { GameResources, GameSession } from '@lego-games/lego-racers/game-session'
+import type {
+  GameResources,
+  GameSession,
+  RaceStart,
+  SessionEnd,
+} from '@lego-games/lego-racers/game-session'
 import {
   createRace,
   IDLE_RACER_CONTROLS,
   NO_RACE_CONTACTS,
+  PauseMenuMode,
+  RaceExit,
   stepRace,
 } from '@lego-games/lego-racers/race'
 import type { RaceState } from '@lego-games/lego-racers/race'
-import { getHudLayout } from '@lego-games/lego-racers/race-hud'
 import { getRacerControls } from '@lego-games/lego-racers/race-input'
 import {
   createRacePresentation,
   getEffectViews,
+  getPauseMenuCommands,
   getRacerPoses,
   stepRacePresentation,
 } from '@lego-games/lego-racers/race-presentation'
-import type { HudContext, RacePresentation } from '@lego-games/lego-racers/race-presentation'
+import type { RacePresentation } from '@lego-games/lego-racers/race-presentation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { DEVELOPMENT_GAME_FILE_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
-import {
-  createHudImageUrls,
-  createHudTextMeasure,
-} from '../../services/hud-resources/hud-resources.ts'
+import { createHudImageUrls, getHudContext } from '../../services/hud-resources/hud-resources.ts'
 import { getDevelopmentJam } from '../../services/jam-file/jam-file.ts'
 import { createRaceAudioPlayer } from '../../services/race-audio-player/race-audio-player.ts'
 import { loadRaceAssets } from '../../services/race-assets/race-assets.ts'
 import type { LoadedGameFiles, RaceAssets } from '../../services/race-assets/race-assets.types.ts'
+import { createRaceMenuInputSource } from '../../services/race-menu-input-source/race-menu-input-source.ts'
 import { createRaceInputSource } from '../../services/race-input-source/race-input-source.ts'
 import { createRaceViewport } from '../../services/race-viewport/race-viewport.ts'
 import { RaceStatus } from '../../types/race-status/race-status.ts'
@@ -48,8 +57,6 @@ import type { RaceController, RaceScreen } from './race-controller.types.ts'
 export const RACE_STAGE_SIZE = Object.freeze({ width: 800, height: 600 })
 const EXECUTABLE_NAME = 'LEGORacers.exe'
 const JAM_NAME = 'LEGO.JAM'
-const HOLDER_IMAGE_NAME = 'HOLDER'
-const FALLBACK_HOLDER_SIZE = Object.freeze({ width: 64, height: 64 })
 
 const INITIAL_SCREEN: RaceScreen = Object.freeze({
   status: RaceStatus.IDLE,
@@ -72,19 +79,34 @@ const fetchBytes = async (url: string): Promise<Uint8Array> => {
   return new Uint8Array(await response.arrayBuffer())
 }
 
-// The dev server hands out LEGORacers.exe and the tunes next to the local LEGO.JAM.
+// The dev server hands out LEGORacers.exe and the tunes next to the local LEGO.JAM; a race fetches the tunes its music
+// list names (every track has its own list).
 const getDevelopmentGameFiles = async (): Promise<LoadedGameFiles> => {
   const jam = await getDevelopmentJam()
   const executable = await fetchBytes(`${DEVELOPMENT_GAME_FILE_ROUTE}/${EXECUTABLE_NAME}`)
-  const tuneNames = ['start', 'royal', 'lose', 'win', 'knight', 'moat', 'armor'].map(
-    (name) => `${name}.tun`
+  return {
+    jam,
+    files: { executable, tunes: new Map() },
+    readTune: (name) => fetchBytes(`${DEVELOPMENT_GAME_FILE_ROUTE}/${name}`).catch(() => null),
+  }
+}
+
+// The race's assets with the tunes of its music list (`LEGOMSC`) added; a tune that cannot be read stays silent.
+const loadRaceTunes = async (
+  assets: RaceAssets,
+  gameFiles: LoadedGameFiles
+): Promise<RaceAssets> => {
+  const tunes = new Map(assets.tunes)
+  await Promise.all(
+    assets.musicNames
+      .map((name) => name.toLowerCase())
+      .filter((name) => !tunes.has(name))
+      .map(async (name) => {
+        const bytes = await gameFiles.readTune(name)
+        if (bytes !== null) tunes.set(name, bytes)
+      })
   )
-  const tunes = await Promise.all(
-    tuneNames.map(
-      async (name) => [name, await fetchBytes(`${DEVELOPMENT_GAME_FILE_ROUTE}/${name}`)] as const
-    )
-  )
-  return { jam, files: { executable, tunes: new Map(tunes) } }
+  return { ...assets, tunes }
 }
 
 const getChosenGameFiles = async (files: readonly File[]): Promise<LoadedGameFiles> => {
@@ -108,25 +130,7 @@ const getChosenGameFiles = async (files: readonly File[]): Promise<LoadedGameFil
       executable: new Uint8Array(await executableFile.arrayBuffer()),
       tunes: new Map(tunes),
     },
-  }
-}
-
-const getHudContext = (assets: RaceAssets): HudContext => {
-  const measureText = createHudTextMeasure(assets.hudFonts)
-  const getString = (stringId: number) => assets.getString(stringId)
-  const holder = assets.hudImages.get(HOLDER_IMAGE_NAME) ?? FALLBACK_HOLDER_SIZE
-  return {
-    layout: getHudLayout({
-      screenWidth: RACE_STAGE_SIZE.width,
-      screenHeight: RACE_STAGE_SIZE.height,
-      measureText,
-      getString,
-      holderSize: { width: holder.width, height: holder.height },
-    }),
-    getString,
-    imageNames: assets.imageNames,
-    getImageSize: (name) => assets.hudImages.get(name.toUpperCase()) ?? null,
-    measureText,
+    readTune: (name) => Promise.resolve(new Map(tunes).get(name.toLowerCase()) ?? null),
   }
 }
 
@@ -185,36 +189,55 @@ export const useRaceController = (): RaceController => {
     })
   }, [])
 
-  // RaceSession_Play 0x0042c330: the session says which race is next, or that it is over.
-  const advanceSession = useCallback(
-    (session: GameSession, racerCount: number) => {
+  // The race the session started is loaded and run.
+  const beginRace = useCallback(
+    (next: RaceStart) => {
       if (gameFiles === null) return
-      const next = startNextRace(session)
-      if (next.kind === 'finished') {
-        returnToMenu(next.session, racerCount)
-        return
-      }
       sessionReference.current = next.session
       setScreen({ ...INITIAL_SCREEN, status: RaceStatus.LOADING })
       // Lets the loading state paint before the synchronous load.
       window.setTimeout(() => {
         try {
-          setAssets(
-            loadRaceAssets(
-              gameFiles.jam,
-              gameFiles.files,
-              { raceFolder: next.race.folder },
-              next.definition
-            )
+          const loaded = loadRaceAssets(
+            gameFiles.jam,
+            gameFiles.files,
+            { raceFolder: next.race.folder },
+            next.definition
           )
+          loadRaceTunes(loaded, gameFiles).then(setAssets).catch(showFailure)
         } catch (error) {
           showFailure(error)
         }
       }, 0)
     },
-    [gameFiles, returnToMenu, showFailure]
+    [gameFiles, showFailure]
+  )
+
+  // RaceSession_Play 0x0042c330: the session says which race is next, or that it is over.
+  const advanceSession = useCallback(
+    (session: GameSession, racerCount: number) => {
+      const next = startNextRace(session)
+      if (next.kind === 'finished') returnToMenu(next.session, racerCount)
+      else beginRace(next)
+    },
+    [beginRace, returnToMenu]
   )
   advanceReference.current = advanceSession
+
+  // The pause menu's restart (0x00436160 with 0x004362e0): the same race starts over, or the whole circuit does.
+  const restartReference = useRef<(session: GameSession, raceState: RaceState) => void>(
+    () => undefined
+  )
+  restartReference.current = (session: GameSession, raceState: RaceState) => {
+    const racerCount = raceState.racerSet.racers.length
+    if (session.standings !== null && !getIsFirstRace(session)) {
+      advanceSession(finishRace(requestCircuitRestart(session), raceState), racerCount)
+      return
+    }
+    const restarted: RaceStart | SessionEnd = restartRace(session, raceState)
+    if (restarted.kind === 'race') beginRace(restarted)
+    else returnToMenu(restarted.session, racerCount)
+  }
 
   // The menus chose a race, a circuit or a time trial: the game session plays it.
   const startRace = useCallback(
@@ -238,8 +261,9 @@ export const useRaceController = (): RaceController => {
     if (assets === null || container === null) return undefined
     const viewport = createRaceViewport(container, assets, RACE_STAGE_SIZE)
     const input = createRaceInputSource()
+    const menuInput = createRaceMenuInputSource()
     const audio = createRaceAudioPlayer(assets)
-    const hudContext = getHudContext(assets)
+    const hudContext = getHudContext(assets, RACE_STAGE_SIZE)
     const hudImageUrls = createHudImageUrls(assets.hudImages)
     const resumeAudio = () => audio.resume()
     window.addEventListener('keydown', resumeAudio)
@@ -266,18 +290,19 @@ export const useRaceController = (): RaceController => {
         const controls = getRacerControls(input.read())
         const step = stepRace(
           raceState,
-          { controls: [controls], contacts: NO_RACE_CONTACTS },
+          { controls: [controls], contacts: NO_RACE_CONTACTS, menu: menuInput.read() },
           advance.frameMilliseconds
         )
         raceState = step.raceState
         if (sessionReference.current !== null) {
           sessionReference.current = recordRaceStep(sessionReference.current, step)
         }
+        const isMenuOpen = raceState.pauseMenu.mode !== PauseMenuMode.NONE
         const frame = stepRacePresentation(
           presentation,
           step,
           { ...IDLE_RACER_CONTROLS, ...controls },
-          advance.frameMilliseconds,
+          isMenuOpen ? 0 : advance.frameMilliseconds,
           hudContext
         )
         presentation = frame.presentation
@@ -292,14 +317,26 @@ export const useRaceController = (): RaceController => {
         setScreen((previous) => ({
           ...previous,
           phase: raceState.phase,
-          hudCommands: frame.hudFrame?.commands ?? [],
+          hudCommands: [
+            ...(frame.hudFrame?.commands ?? []),
+            ...getPauseMenuCommands(raceState, hudContext),
+          ],
         }))
         if (!raceState.isRunning && sessionReference.current !== null) {
-          // finishRace and the next turn of the session's loop (Race_RunLoop 0x00432540 ends, PlayCircuit continues).
-          const finished = finishRace(sessionReference.current, raceState)
+          // The loop ended (Race_RunLoop 0x00432540): the pause menu's restart and quit are answered by the session,
+          // anything else finishes the race and PlayCircuit continues.
+          const session = sessionReference.current
           sessionReference.current = null
           cancelAnimationFrame(animationFrame)
-          advanceReference.current(finished, raceState.racerSet.racers.length)
+          if (raceState.exit === RaceExit.RESTART) {
+            restartReference.current(session, raceState)
+          } else {
+            const isQuit = raceState.exit === RaceExit.QUIT
+            const finished = finishRace(isQuit ? abortSession(session) : session, raceState, {
+              isAborted: isQuit,
+            })
+            advanceReference.current(finished, raceState.racerSet.racers.length)
+          }
           return
         }
       }
@@ -310,6 +347,7 @@ export const useRaceController = (): RaceController => {
       cancelAnimationFrame(animationFrame)
       window.removeEventListener('keydown', resumeAudio)
       input.dispose()
+      menuInput.dispose()
       audio.dispose()
       viewport.dispose()
     }
@@ -320,6 +358,7 @@ export const useRaceController = (): RaceController => {
     containerReference,
     isDevelopmentFilesAvailable: import.meta.env.DEV,
     gameJam: screen.status === RaceStatus.MENU ? (gameFiles?.jam ?? null) : null,
+    readTune: screen.status === RaceStatus.MENU ? (gameFiles?.readTune ?? null) : null,
     // A production build replaces DEV with false and drops the development fetches entirely.
     onDevelopmentGameRequested: import.meta.env.DEV
       ? () => openGame(getDevelopmentGameFiles)

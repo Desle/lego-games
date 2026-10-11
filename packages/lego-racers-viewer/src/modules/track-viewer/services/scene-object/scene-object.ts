@@ -2,6 +2,7 @@ import type { Scene, SceneInstance } from '@lego-games/lego-racers/scene'
 import { SceneInstanceKind } from '@lego-games/lego-racers/scene'
 import { AmbientLight, Box3, Color, DirectionalLight, Group } from 'three'
 import type { BufferGeometry, Material } from 'three'
+import type { Vector3Like } from '../race-viewport/race-viewport.types.ts'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import { createSkeletonInstanceObject } from './skeleton-instance-object.ts'
 import { createStaticInstanceObject } from './static-instance-object.ts'
@@ -25,9 +26,13 @@ const createLights = (scene: Scene): readonly (AmbientLight | DirectionalLight)[
   }),
 ]
 
-// The nearest level of an instance and its mesh; a skeleton instance without a mesh (a camera's skeleton) has none.
-const getInstanceLevelMesh = (scene: Scene, instance: SceneInstance): InstanceLevelMesh | null => {
-  const level = instance.levels[0]
+// The mesh of one level of an instance; a skeleton instance without a mesh (a camera's skeleton) has none.
+const getInstanceLevelMesh = (
+  scene: Scene,
+  instance: SceneInstance,
+  levelIndex: number
+): InstanceLevelMesh | null => {
+  const level = instance.levels[levelIndex]
   const mesh = level === undefined ? undefined : scene.meshes[level.meshIndex]
   return level === undefined || mesh === undefined
     ? null
@@ -43,9 +48,19 @@ const createInstanceObject = (
     ? createSkeletonInstanceObject(context, instance, levelMesh)
     : createStaticInstanceObject(context, instance, levelMesh)
 
-// Builds the three.js objects for a scene: one mesh per draw batch of each instance's nearest level, using
-// that level's material assignment in place of the model's materials when it has one (0x10006c50). Skeleton
-// instances follow the bone matrices of their animation.
+// FUN_10027cc0: the level an instance draws at a camera position is the first whose squared distance the squared
+// distance to the camera does not exceed; past the last level the instance is not drawn (null).
+export const getLevelIndex = (
+  squaredDistances: readonly number[],
+  squaredCameraDistance: number
+): number | null => {
+  const index = squaredDistances.findIndex((distance) => squaredCameraDistance <= distance)
+  return index === -1 ? null : index
+}
+
+// Builds the three.js objects for a scene: one mesh per draw batch of each level of each instance, using that
+// level's material assignment in place of the model's materials when it has one (0x10006c50), and only the level
+// the camera's distance selects is shown. Skeleton instances follow the bone matrices of their animation.
 export const createSceneObject = (scene: Scene, options: SceneObjectOptions): SceneObject => {
   let drawOrder = 0
   const context: SceneObjectContext = {
@@ -62,14 +77,41 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
   const group = new Group()
   const animators: ((deltaMilliseconds: number) => void)[] = []
   const stateSetters = new Map<string, NonNullable<InstanceObject['setState']>>()
+  const levelSelectors: ((camera: Vector3Like) => void)[] = []
   for (const instance of scene.instances.filter(options.includeInstance)) {
-    const levelMesh = getInstanceLevelMesh(scene, instance)
-    const instanceObject =
-      levelMesh === null ? null : createInstanceObject(context, instance, levelMesh)
-    if (instanceObject === null) continue
-    group.add(instanceObject.group)
-    if (instanceObject.animate !== null) animators.push(instanceObject.animate)
-    if (instanceObject.setState !== null) stateSetters.set(instance.name, instanceObject.setState)
+    const levelObjects = instance.levels.flatMap((_level, levelIndex) => {
+      const levelMesh = getInstanceLevelMesh(scene, instance, levelIndex)
+      const instanceObject =
+        levelMesh === null ? null : createInstanceObject(context, instance, levelMesh)
+      return instanceObject === null ? [] : [{ levelIndex, instanceObject }]
+    })
+    for (const { levelIndex, instanceObject } of levelObjects) {
+      // Level 0 is shown until a camera says otherwise.
+      instanceObject.group.visible = levelIndex === 0
+      group.add(instanceObject.group)
+      if (instanceObject.animate !== null) animators.push(instanceObject.animate)
+    }
+    const setters = levelObjects.flatMap(({ instanceObject }) =>
+      instanceObject.setState === null ? [] : [instanceObject.setState]
+    )
+    if (setters.length > 0) {
+      stateSetters.set(instance.name, (state) => {
+        for (const setState of setters) setState(state)
+      })
+    }
+    if (levelObjects.length > 1 && !options.isBackground) {
+      const distances = instance.levels.map((level) => level.squaredDistance)
+      levelSelectors.push((camera) => {
+        const squaredDistance =
+          (camera.x - instance.position.x) ** 2 +
+          (camera.y - instance.position.y) ** 2 +
+          (camera.z - instance.position.z) ** 2
+        const selected = getLevelIndex(distances, squaredDistance)
+        for (const { levelIndex, instanceObject } of levelObjects) {
+          instanceObject.group.visible = levelIndex === selected
+        }
+      })
+    }
   }
   group.updateMatrixWorld(true)
   const bounds = new Box3().setFromObject(group)
@@ -87,6 +129,9 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
     bounds,
     animate: (deltaMilliseconds: number) => {
       for (const animator of animators) animator(deltaMilliseconds)
+    },
+    selectLevels: (camera: Vector3Like) => {
+      for (const select of levelSelectors) select(camera)
     },
     setSkeletonState: (name: string, state: SkeletonAnimationState) =>
       stateSetters.get(name)?.(state),

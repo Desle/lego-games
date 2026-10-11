@@ -24,10 +24,18 @@ const RaceHudOverlay = ({
   const painter = useMemo(() => createBitmapFontPainter(), [])
   useEffect(() => {
     const context = canvasReference.current?.getContext('2d') ?? null
-    if (context === null || fonts === null) return
+    if (context === null) return
     context.clearRect(0, 0, width, height)
+    if (fonts === null) return
     context.imageSmoothingEnabled = false
+    const getCssColor = (color: number) =>
+      `rgba(${String((color >>> 16) & 0xff)}, ${String((color >>> 8) & 0xff)}, ${String(color & 0xff)}, ${String(((color >>> 24) & 0xff) / 255)})`
     for (const command of commands) {
+      if (command.kind === 'fill') {
+        context.fillStyle = getCssColor(command.color)
+        context.fillRect(command.x, command.y, command.width, command.height)
+        continue
+      }
       if (command.kind !== 'text') continue
       const hudFont = fonts.get(command.font)
       if (hudFont === undefined) continue
@@ -58,6 +66,7 @@ const RaceHudOverlay = ({
       />
       {commands.map((command, index) => {
         const key = `${String(index)}-${command.kind}`
+        if (command.kind === 'fill') return null
         if (command.kind === 'text') {
           return (
             <span key={key} className="sr-only">

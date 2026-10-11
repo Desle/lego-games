@@ -23,7 +23,7 @@ Port: `parseMenuDescription`, `parseMenuStyles` (one reader `parseMenuFile` driv
 
 Item facts used by the port: position block `0x36 { 0x2f left top right bottom, 0x31 "parent" ... }` (coordinates in the parent; a zero right or bottom takes the image's or text's own size, `0x0046f150`; absolute = sum of the ancestors' left and top, `0x00472e90`); images name `0x28`; boxes name eight border images (`0x28`) and two colours (`0x2a`); viewports (`0x42`) name a world of `MENUDATA` (`0x2d "tt"` = `TT.WDB`) and nine camera floats; `0x45` items name a cinema (`singrace` → `SINGRACE\PST.*`). Colours are `A R G B` (`0x0046b210`).
 
-Button styles (MSB `0x3e`): six images, six fonts and 13 colours (`0x2a`: one, then six, then six); the last six are the text colours of the six states (`nubutton`: grey, grey, dark yellow, green, yellow, green). The gap between a button's 32-pixel image and its text is 14 (first value of `0x2b`, hypothesis for the role). The port maps normal, disabled and focused to states 0, 1 and 5 (hypothesis).
+Button styles (MSB `0x3e`): six images, six fonts and 13 colours (`0x2a`: one, then six, then six); the last six are the text colours of the six states (`nubutton`: grey, grey, dark yellow, green, yellow, green). The text of a button starts at the right edge of its 32-pixel image: the render trace shows the original's first glyph at x 35 for an image at x 3 (the first `0x2b` value, 14, is not a gap). The port maps normal, disabled and focused to states 0, 1 and 5 (hypothesis).
 
 ## Port of the screens
 
@@ -52,4 +52,4 @@ Button styles (MSB `0x3e`): six images, six fonts and 13 colours (`0x2a`: one, t
 - The animated 3D backdrops (`TT.WDB`, racer showcase) and the cinemas (`.CDB`): the viewer draws a dim panel; draw commands carry the model name, rectangle and camera floats.
 - Menu sounds: the original plays ids of `GENC0R0.SBK` through `0x0046e970` (`base - 1 + id`) from the styles' sound tables; the port plays `hilight1`, `ok`, `cancel`, `cantdo2` by role (hypothesis).
 - Mouse input (the original's menus take device events `0x10000014` ...); the port takes keyboard and gamepad.
-- Splash and introductions (screens 1, 0x26, 0x28, 0x29, 0x2b), save/load profile screens (0x2d..0x31), pause menu, results screens.
+- Splash and introductions (screens 1, 0x26, 0x28, 0x29, 0x2b), save/load profile screens (0x2d..0x31). The in-race pause menu is in [pause-menu.md](pause-menu.md).

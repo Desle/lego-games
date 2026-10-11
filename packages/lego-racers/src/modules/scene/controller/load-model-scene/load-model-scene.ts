@@ -17,12 +17,17 @@ const LARGEST_FLOAT = 3.4028234663852886e38
 // the way a world loads its files: textures, then materials, then models, all looked up in the same directory
 // (GolDP.dll 0x10017ac0). Each model becomes a mesh instance at the origin so a renderer can place it itself; when
 // the files name a skeleton and an animation the instances are skeleton instances following them.
-export const loadModelScene = (archive: JamArchive, files: ModelFiles): ModelScene => {
+export const loadModelScene = (
+  archive: JamArchive,
+  files: ModelFiles,
+  earlier: Scene | null = null
+): ModelScene => {
   const source = Object.freeze({ archive, directory: files.directory })
   const { textures, materials } = linkModelResources(
     source,
     files.textureNames,
-    files.materialNames
+    files.materialNames,
+    earlier
   )
   const meshes = linkMeshes(source, files.meshNames, materials)
   const skeletons = files.skeletonName === null ? [] : linkSkeletons(source, [files.skeletonName])

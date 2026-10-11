@@ -37,7 +37,7 @@ export const useFrontEndController = (options: FrontEndControllerOptions): Front
       const resources = loadFrontEndResources(archive)
       const renderer = createFrontEndRenderer(canvas, resources)
       const input = createFrontEndInputSource()
-      const audio = createFrontEndAudioPlayer(archive)
+      const audio = createFrontEndAudioPlayer(archive, callbacksReference.current.readTune)
       const resumeAudio = () => audio.resume()
       window.addEventListener('keydown', resumeAudio)
       const getEnvironment = (): FrontEndEnvironment => ({
@@ -51,6 +51,7 @@ export const useFrontEndController = (options: FrontEndControllerOptions): Front
         getEnvironment(),
         callbacksReference.current.firstScreenId
       )
+      audio.playMusic(state.musicListIndex)
       let lastTime: number | null = null
       const onFrame = (time: number) => {
         animationFrame = requestAnimationFrame(onFrame)
@@ -70,6 +71,7 @@ export const useFrontEndController = (options: FrontEndControllerOptions): Front
           )
           state = result.state
           for (const soundName of result.soundNames) audio.playSound(soundName)
+          if (result.musicListIndex !== null) audio.playMusic(result.musicListIndex)
         })
         renderer.draw(getFrontEndFrame(state, resources, environment).commands)
         const request = getFrontEndRaceRequest(state)

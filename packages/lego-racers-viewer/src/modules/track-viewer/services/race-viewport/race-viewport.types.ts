@@ -3,6 +3,7 @@ import type { EmitterPool } from '@lego-games/lego-racers/emitter'
 import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
+import type { PerspectiveCamera, Scene as ThreeScene } from 'three'
 import type { EffectViews, RacerPose } from '@lego-games/lego-racers/race-presentation'
 
 // The WebGL view of a race: the track, sky and backdrop, a car and a driver per racer, and the player's camera.
@@ -42,4 +43,12 @@ export type RacerRig = {
   readonly body: ModelObject | null
   readonly driver: ModelObject | null
   readonly objects: readonly SceneObject[]
+}
+
+// The scene graphs of a race and the camera, ready to be rendered or read (the render trace reads them).
+export type RaceStage = Pick<RaceViewport, 'update' | 'showHazards' | 'animate' | 'dispose'> & {
+  readonly backgroundScene: ThreeScene
+  readonly trackScene: ThreeScene
+  readonly camera: PerspectiveCamera
+  readonly racerRigs: readonly RacerRig[]
 }

@@ -269,7 +269,8 @@ const SCAN_CODE_KEYS = new Map(
   ])
 )
 
-const getControls = (frame: TraceFrameInput) =>
+// The racer controls a frame's held scan codes make (the DirectInput codes the emulator is fed).
+export const getFrameControls = (frame: TraceFrameInput) =>
   getRacerControls({
     pressedKeyCodes: new Set(
       frame.scanCodes.flatMap((scanCode) => {
@@ -327,7 +328,7 @@ export const getPortTrace = (
   let raceState = createRace(definition)
   return scenario.frames.map((input, frame) => {
     const controls = Array.from({ length: Math.max(scenario.localPlayerCount, 1) }, (_, index) =>
-      index === 0 ? getControls(input) : IDLE_RACER_CONTROLS
+      index === 0 ? getFrameControls(input) : IDLE_RACER_CONTROLS
     )
     raceState = stepRace(
       getRaceStateWithGrants(

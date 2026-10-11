@@ -1,4 +1,5 @@
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
+import type { ModelResourceNames } from '@lego-games/lego-racers/racer-appearance'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import type { RaceDefinition } from '@lego-games/lego-racers/race'
 import type { Scene } from '@lego-games/lego-racers/scene'
@@ -30,7 +31,8 @@ export type EffectModels = {
   readonly barrel: ModelScene
   readonly magnet: ModelScene
   readonly spikedExplosion: ModelScene
-  readonly powerUpBrick: ModelScene
+  // The power-up brick in the colour of each kind (projectile, shield, turbo, hazard).
+  readonly powerUpBricks: Readonly<Record<string, ModelScene>>
   readonly enhancementBrick: ModelScene
 }
 
@@ -56,6 +58,11 @@ export type RaceAssets = {
 export type LoadedGameFiles = {
   readonly jam: Uint8Array
   readonly files: RaceGameFiles
+  // Reads a music file (e.g. `knight.tun`) next to LEGO.JAM; null when it is missing.
+  readonly readTune: (name: string) => Promise<Uint8Array | null>
 }
 
 export type { HudBitmapFont, HudFonts, HudImage } from '../../types/hud-fonts/hud-fonts.types.ts'
+
+// Loads a racer's model into the race's container (see createModelLoader).
+export type ModelLoader = (names: ModelResourceNames) => ModelScene
