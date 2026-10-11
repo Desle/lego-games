@@ -20,6 +20,12 @@ const WITHOUT_RIGID_BODY_STEP: RacerSetStepDependencies = {
   stepRigidBody: keepRacerSetNotYetPorted,
 }
 
+// The vehicle's lean (0x0043e740) integrates the slide angle in the same frame, so the slide test leaves it out.
+const WITHOUT_VEHICLE_UPDATE: RacerSetStepDependencies = {
+  ...WITHOUT_RIGID_BODY_STEP,
+  updateVehicle: keepRacerSetNotYetPorted,
+}
+
 const changeRacer = (racerSet: RacerSet, racerIndex: number, change: Partial<Racer>): RacerSet =>
   setRacer(racerSet, racerIndex, { ...getRacer(racerSet, racerIndex), ...change })
 
@@ -204,7 +210,7 @@ describe('stepRacerSet (0x0043c030)', () => {
       context: createTestContext(),
       racerSet: sliding,
       stepMilliseconds: 40,
-      dependencies: WITHOUT_RIGID_BODY_STEP,
+      dependencies: WITHOUT_VEHICLE_UPDATE,
     })
 
     // Assert
