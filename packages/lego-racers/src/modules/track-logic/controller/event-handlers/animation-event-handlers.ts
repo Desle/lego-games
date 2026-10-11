@@ -42,20 +42,23 @@ const requestAnimation = (
   animation: number,
   keepMask: number,
   setFlags: number
-): void =>
+): void => {
+  const flags = ((object.flags & keepMask) | setFlags) >>> 0
+  session.requestObjectAnimation(reference, animation & SHORT_MASK, flags)
   session.emit({
     type: 'track.object_animation_requested',
     reference,
     requestedAnimation: animation & SHORT_MASK,
-    flags: ((object.flags & keepMask) | setFlags) >>> 0,
+    flags,
   })
+}
 
 const getAnimationView = (event: TrackEvent, session: TrackSession): AnimationView | null => {
   if (event.kind !== TrackEventKind.KIND_28) return null
   const { record } = event
   const reference = record.objectReference
   if (reference === null) return null
-  const object = session.context.world.getObject(reference)
+  const object = session.getObject(reference)
   if (object === null) return null
   return {
     reference,

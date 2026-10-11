@@ -5,11 +5,13 @@ import type {
   MeshInstance,
   SkeletonInstance,
   SkeletonLevel,
+  Sprite,
 } from '../../../world/index.ts'
 import type {
   InstanceLevel,
   MaterialAnimationRuntime,
   MeshInstanceRuntime,
+  PositionedInstance,
   SkeletonInstanceRuntime,
   WorldAnimation,
   WorldAnimationInput,
@@ -25,6 +27,8 @@ import { advanceSkeletonInstance } from '../skeleton-instance/skeleton-instance.
 const LARGEST_FLOAT = 3.4028234663852886e38
 const LEVEL_COUNT = 3
 // The world's keywords 0x42 and 0x4c set flags 2 and 4 of the instance (0x1002e640).
+// 0x100234c0 (the instance's level set-up) ORs 1 into +0x5c for every level the loader sets up.
+const FLAG_LEVEL_SET_UP = 1
 const FLAG_KEYWORD_42 = 2
 const FLAG_KEYWORD_4C = 4
 // The skeleton name table keys on eight characters (0x100283e0).
@@ -105,7 +109,7 @@ const createSkeletonInstance = (
     animation,
     clip,
     isAnimated: clip !== null,
-    otherFlags: getFlags(instance),
+    otherFlags: getFlags(instance) | (used.length > 0 ? FLAG_LEVEL_SET_UP : 0),
     position: Object.freeze([
       instance.position.x,
       instance.position.y,
@@ -135,20 +139,27 @@ const createMeshInstance = (instance: MeshInstance): MeshInstanceRuntime =>
     otherFlags: getFlags(instance),
   })
 
-// 0x1002e640 starts every material animation entry an instance refers to, looping (0x10025da0).
+// 0x1002e640 starts every material animation entry an instance refers to, looping (0x10025da0); so does 0x1002e250
+// for the entry a sprite names (keyword 0x3e).
 const createMaterialAnimations = (
   names: readonly string[],
   definitions: WorldAnimationInput['materialAnimations'],
-  instances: readonly (SkeletonInstance | MeshInstance | BspTreeInstance)[]
+  instances: readonly (SkeletonInstance | MeshInstance | BspTreeInstance)[],
+  sprites: readonly Sprite[]
 ): readonly MaterialAnimationRuntime[] =>
   definitions.map((definition, animationIndex) => {
-    const started = new Set(
-      instances.flatMap((instance) =>
+    const started = new Set([
+      ...instances.flatMap((instance) =>
         instance.materialAnimationReferences
           .filter((reference) => reference.materialAnimationIndex === animationIndex)
           .map((reference) => reference.entryIndex)
-      )
-    )
+      ),
+      ...sprites.flatMap((sprite) =>
+        sprite.materialAnimation?.materialAnimationIndex === animationIndex
+          ? [sprite.materialAnimation.entryIndex]
+          : []
+      ),
+    ])
     return Object.freeze({
       name: names[animationIndex] ?? '',
       definition,
@@ -166,15 +177,31 @@ const createMaterialAnimations = (
 // clips, the mesh instances' positions and level distances, and the material animation entries instances play.
 export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation => {
   const { world } = input
+  const getMirrored = <Instance extends PositionedInstance>(instance: Instance): Instance =>
+    input.isMirrored === true
+      ? Object.freeze({
+          ...instance,
+          position: Object.freeze([
+            instance.position[0],
+            -instance.position[1],
+            instance.position[2],
+          ] as const),
+        })
+      : instance
   return Object.freeze({
     skeletonInstances: Object.freeze(
-      world.skeletonInstances.map((instance) => createSkeletonInstance(instance, input.animations))
+      world.skeletonInstances.map((instance) =>
+        getMirrored(createSkeletonInstance(instance, input.animations))
+      )
     ),
-    meshInstances: Object.freeze(world.meshInstances.map(createMeshInstance)),
+    meshInstances: Object.freeze(
+      world.meshInstances.map((instance) => getMirrored(createMeshInstance(instance)))
+    ),
     materialAnimations: createMaterialAnimations(
       world.materialAnimations,
       input.materialAnimations,
-      [...world.meshInstances, ...world.skeletonInstances, ...world.bspTreeInstances]
+      [...world.meshInstances, ...world.skeletonInstances, ...world.bspTreeInstances],
+      world.sprites
     ),
   })
 }

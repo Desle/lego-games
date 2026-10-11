@@ -9,7 +9,13 @@ import { createHazardRuntime, EMPTY_HAZARD_RUNTIME } from '../../../hazard/index
 import type { HazardSession } from '../../../hazard/index.ts'
 import { drawRandomValue } from '../../../random-table/index.ts'
 import { NO_EMITTER_POOLS } from '../../../emitter/index.ts'
-import { EMPTY_WORLD_ANIMATION } from '../../../world-animation/index.ts'
+import {
+  EMPTY_WORLD_ANIMATION,
+  findSkeletonInstanceIndex,
+  getSkeletonInstanceFlags,
+  getSkeletonInstanceWithFlags,
+  getWorldWithSkeletonInstance,
+} from '../../../world-animation/index.ts'
 import type { RaceWorlds } from '../../../world-animation/index.ts'
 import type { FloatArithmetic } from '../../../simulation-math/index.ts'
 import { getTruncatedInteger } from '../../../simulation-math/index.ts'
@@ -308,6 +314,31 @@ const createHazards = (
   return { hazards, worlds: Object.freeze(worlds), position }
 }
 
+// The 28 events' initialiser 0x00463330 ORs 0x200000 into the flags (+0x5c) of the scene object the event drives.
+const EVENT_DRIVEN_FLAG = 0x200000
+
+const getWorldsWithEventObjects = (worlds: RaceWorlds, eventSet: EventSet | null): RaceWorlds =>
+  (eventSet?.events28 ?? []).reduce((current, record) => {
+    const reference = record.objectReference
+    if (reference === null) return current
+    const key = reference.isFromSecondWorld ? 'blended' : 'track'
+    const world = current[key]
+    const index = findSkeletonInstanceIndex(world, reference.name)
+    const instance = world.skeletonInstances[index]
+    if (instance === undefined) return current
+    return Object.freeze({
+      ...current,
+      [key]: getWorldWithSkeletonInstance(
+        world,
+        index,
+        getSkeletonInstanceWithFlags(
+          instance,
+          (getSkeletonInstanceFlags(instance) | EVENT_DRIVEN_FLAG) >>> 0
+        )
+      ),
+    })
+  }, worlds)
+
 // Race_LoadTrackContent 0x00433480 after the racers: Events_Load (the 2A events' draws), Hazards_Load, then
 // Timers_Load (the marked second values' draws). Triggers and emitters draw nothing while they load.
 export const createTrackLogic = (
@@ -325,7 +356,7 @@ export const createTrackLogic = (
   return Object.freeze({
     ...events,
     timers: timers.state,
-    worlds: loadedHazards.worlds,
+    worlds: getWorldsWithEventObjects(loadedHazards.worlds, eventSet),
     hazards: loadedHazards.hazards,
     emitters: input.emitters ?? NO_EMITTER_POOLS,
     triggers: createTriggers(mainTriggers, environmentTriggers),

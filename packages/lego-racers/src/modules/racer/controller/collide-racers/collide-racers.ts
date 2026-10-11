@@ -12,7 +12,6 @@ import type {
   OrientedBox,
 } from '../../../racer-collision/index.ts'
 import { getFigureBounds } from '../../types/figure/figure.ts'
-import { getRacerVolume } from '../../types/racer-volume/racer-volume.ts'
 import { getRacer, setRacer } from '../../types/racer-state/racer-state.ts'
 import type {
   Racer,
@@ -150,10 +149,12 @@ const touchRegistryEntries = (
 ): RacerSet => {
   const racers = racerSet.collisionOrder.map((racerIndex) => {
     const racer = getRacer(racerSet, racerIndex)
-    const interval = getBoundingInterval(
-      context.arithmetic,
-      racer.vehicle.volume ?? getRacerVolume(context.arithmetic, racer)
-    )
+    // 0x0043aaf0: the registry walk reads the racer's composite volume (racer +0x1c) and its cached x extents, as
+    // the touch test does; the sort and the racer pairs read the figure's sphere.
+    const interval =
+      racer.vehicle.volume === null
+        ? getInterval(context, racer)
+        : getBoundingInterval(context.arithmetic, racer.vehicle.volume)
     return {
       racer: racerIndex,
       isComputer: racer.controllerKind === COMPUTER_CONTROLLER,

@@ -77,6 +77,12 @@ export type TrackEvent =
   | TrackEventBase<'kind_55', Event55>
   | TrackEventBase<'kind_59', Event59>
 
+// Where a scene object an event names sits: the world and the skeleton instance in it.
+export type TrackObjectLocation = {
+  readonly key: 'track' | 'blended'
+  readonly index: number
+}
+
 export type TrackEventAction = 'begin' | 'end' | 'fire' | 'release'
 
 export type TrackEventSet = Readonly<Record<TrackEventKind, readonly TrackEvent[]>>
@@ -98,6 +104,12 @@ export type TrackEffect =
       readonly kind: TrackEventKind
       readonly identifier: number
       readonly action: TrackEventAction
+    }
+  | {
+      // 0x0045e2a0 (a 42 event's begin) asks Sky_SwitchSetting 0x0041d150 for the named setting.
+      readonly type: 'track.sky_setting_switched'
+      readonly name: string
+      readonly durationMilliseconds: number
     }
   | {
       readonly type: 'track.tagged_position_touched'
@@ -131,8 +143,6 @@ export type TrackWorldObject = {
 
 // The parts of the world that events read; the default answers as a world that never animates.
 export type TrackWorld = {
-  // The animation index (+0xbc) and flags (+0x5c) of a scene object, or null when the name is unknown.
-  readonly getObject: (reference: ObjectReference) => TrackWorldObject | null
   // 29: the material animation (entry +0x14 bit 2) is still playing.
   readonly getIsAnimationPlaying: (identifier: number) => boolean
   // 2A: a sound slot could be taken for a looped sound.
@@ -263,6 +273,16 @@ export type TrackSession = HazardBus & {
     racerIndex: number | null
   ) => void
   readonly releaseTrigger: (identifier: number, racerIndex: number | null) => void
+  // The animation index (+0xbc) and flags (+0x5c) of the scene object (a skeleton instance of the track world, or of
+  // the blended world) an event names, or null when the name is unknown.
+  readonly getObject: (reference: ObjectReference) => TrackWorldObject | null
+  // 0x00463570, 0x004635c0 and 0x004633f0 write the requested animation (+0xd8, the second clip) and the flag word
+  // (+0x5c) of the scene object; the instance's next update starts the clip (0x10023b10).
+  readonly requestObjectAnimation: (
+    reference: ObjectReference,
+    animation: number,
+    flags: number
+  ) => void
   // Events_Update 0x00461cc0
   readonly updateEvents: (milliseconds: number) => void
   // 0x00416090 for the three worlds (track, local, blended), the first of Race_Update's per-frame updates.

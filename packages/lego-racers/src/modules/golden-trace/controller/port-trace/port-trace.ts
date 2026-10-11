@@ -18,6 +18,7 @@ import type { Matrix3 } from '../../../simulation-math/index.ts'
 import { getFloatWords, getVectorWords } from '../trace-words/trace-words.ts'
 import { getPowerUpTraceFields } from '../power-up-trace/power-up-trace.ts'
 import { getComputerTraceFields } from '../computer-trace/computer-trace.ts'
+import { getTrackFields } from '../track-trace/track-trace.ts'
 import type {
   GoldenTraceScenario,
   PowerUpGrant,
@@ -252,6 +253,7 @@ export const TRACE_FIELD_PROVIDERS: readonly TraceFieldProvider[] = [
   getRacerSetFields,
   getPlayerFields,
   getRaceFields,
+  getTrackFields,
 ]
 
 export const getTraceFields = (raceState: RaceState, localPlayerCount: number): TraceFields =>

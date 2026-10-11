@@ -55,9 +55,6 @@ describe('golden trace debug', () => {
         fpuPrecision: FpuPrecision.SINGLE,
         isPlayerChampionCar: true,
         musicTuneCount: 0,
-        introductionCameraLimit:
-          original.introductionCameraLimit < 0 ? null : original.introductionCameraLimit,
-        introductionCameraRate: original.introductionCameraRate,
       })
       const port = getPortTrace(scenario, definition)
       const lines: string[] = []

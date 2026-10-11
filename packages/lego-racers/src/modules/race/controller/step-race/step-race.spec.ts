@@ -1,4 +1,6 @@
 import { createGhostSession } from '../../../ghost/index.ts'
+import { createSkeletonAnimationState } from '../../../skeletal-animation/index.ts'
+import type { SkeletalAnimation } from '../../../skeletal-animation/index.ts'
 import { getRacer, setRacer } from '../../../racer/index.ts'
 import {
   COUNTDOWN_MILLISECONDS,
@@ -66,22 +68,58 @@ describe('stepRace', () => {
     expect(getRacer(step.raceState.racerSet, PLAYER).flags & 0x400).toBe(0x400)
   })
 
-  it('keeps the introduction while the camera animation runs, then restarts the timer once (0x00434a55)', () => {
+  it('keeps the introduction while the camera instance plays, then restarts the timer once (0x00434a55)', () => {
     // Arrange
-    const state = {
-      ...createFixtureRace(),
-      introductionCameraLimit: 60,
-      introductionCameraRate: 0.03,
+    const animation: SkeletalAnimation = {
+      positions: [],
+      rotations: [],
+      times: [],
+      tracks: [],
+      clips: [
+        {
+          name: 'camera',
+          framesPerMillisecond: 0,
+          velocity: [0, 0, 0],
+          firstTrackIndex: 0,
+          frameCount: 60,
+          loopLength: 60,
+        },
+      ],
+    }
+    const clip = { ...createSkeletonAnimationState(animation, 0), isLooping: false }
+    const getRaceWithCameraTime = (timeInFrames: number): RaceState => {
+      const base = createFixtureRace()
+      const instance = {
+        name: 'camera',
+        animation,
+        clip: { ...clip, clip: { ...clip.clip, timeInFrames } },
+        isAnimated: true,
+        otherFlags: 0,
+        position: [0, 0, 0] as const,
+        levelSquaredDistances: [],
+      }
+      return {
+        ...base,
+        introductionCameraObject: 'camera',
+        trackLogic: {
+          ...base.trackLogic,
+          worlds: {
+            ...base.trackLogic.worlds,
+            track: { ...base.trackLogic.worlds.track, skeletonInstances: [instance] },
+          },
+        },
+      }
     }
 
     // Act
-    const held = stepRace(state, IDLE_INPUTS, INTRODUCTION_MILLISECONDS)
-    const finished = stepRace(held.raceState, IDLE_INPUTS, INTRODUCTION_MILLISECONDS)
+    const held = stepRace(getRaceWithCameraTime(0), IDLE_INPUTS, INTRODUCTION_MILLISECONDS)
+    const finished = stepRace(getRaceWithCameraTime(59), IDLE_INPUTS, 16)
 
     // Assert
     expect(held.raceState.phase).toBe(RacePhase.INTRODUCTION)
+    expect(held.raceState.introductionCameraObject).toBe('camera')
     expect(finished.raceState.phase).toBe(RacePhase.INTRODUCTION)
-    expect(finished.raceState.introductionCameraLimit).toBeNull()
+    expect(finished.raceState.introductionCameraObject).toBeNull()
     expect(finished.raceState.phaseMilliseconds).toBe(0)
   })
 

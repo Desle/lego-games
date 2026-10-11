@@ -6,7 +6,7 @@ import {
 } from '../../../emitter/index.ts'
 import type { EmitterPlacement, EmitterReference } from '../../../emitter/index.ts'
 import type { EmitterPool } from '../../../emitter/index.ts'
-import type { Vector3 } from '../../../event/index.ts'
+import type { ObjectReference, Vector3 } from '../../../event/index.ts'
 import {
   fireHazardTrigger,
   fireReleaseHazardTrigger,
@@ -20,7 +20,15 @@ import {
 } from '../../../hazard/index.ts'
 import type { HazardSession, HazardStore } from '../../../hazard/index.ts'
 import { drawRandomScaledRange, drawRandomValue } from '../../../random-table/index.ts'
-import { advanceWorldAnimation } from '../../../world-animation/index.ts'
+import {
+  advanceWorldAnimation,
+  findSkeletonInstanceIndex,
+  getSkeletonInstanceClipIndex,
+  getSkeletonInstanceFlags,
+  getSkeletonInstanceWithFlags,
+  getWorldWithSkeletonInstance,
+} from '../../../world-animation/index.ts'
+import type { SkeletonInstanceRuntime } from '../../../world-animation/index.ts'
 import {
   EVENT_HELD_FLAG,
   EVENT_PULSE_FLAG,
@@ -33,6 +41,8 @@ import type {
   TrackLogicContext,
   TrackLogicState,
   TrackSession,
+  TrackObjectLocation,
+  TrackWorldObject,
   SessionBuild,
   SessionReference,
 } from '../../types/track-logic.types.ts'
@@ -419,8 +429,55 @@ export const createTrackSession = (
     emitters = { common, track: update(emitters.track) }
   }
 
+  const getObjectInstance = (reference: ObjectReference): TrackObjectLocation | null => {
+    const key = reference.isFromSecondWorld ? 'blended' : 'track'
+    const index = findSkeletonInstanceIndex(worlds[key], reference.name)
+    return index < 0 ? null : { key, index }
+  }
+
+  const getObject = (reference: ObjectReference): TrackWorldObject | null => {
+    const found = getObjectInstance(reference)
+    const instance = found === null ? undefined : worlds[found.key].skeletonInstances[found.index]
+    return instance === undefined
+      ? null
+      : {
+          animationIndex: getSkeletonInstanceClipIndex(instance),
+          flags: getSkeletonInstanceFlags(instance),
+        }
+  }
+
+  const requestObjectAnimation = (
+    reference: ObjectReference,
+    animation: number,
+    flags: number
+  ): void => {
+    const found = getObjectInstance(reference)
+    const instance = found === null ? undefined : worlds[found.key].skeletonInstances[found.index]
+    if (found === null || instance === undefined) return
+    const requested: SkeletonInstanceRuntime =
+      instance.clip === null
+        ? instance
+        : {
+            ...instance,
+            clip: {
+              ...instance.clip,
+              secondClip: { ...instance.clip.secondClip, clipIndex: animation },
+            },
+          }
+    worlds = {
+      ...worlds,
+      [found.key]: getWorldWithSkeletonInstance(
+        worlds[found.key],
+        found.index,
+        getSkeletonInstanceWithFlags(requested, flags)
+      ),
+    }
+  }
+
   const session: TrackSession = {
     context,
+    getObject,
+    requestObjectAnimation,
     drawRandomValue: () => {
       const draw = drawRandomValue(state.random.table, position)
       position = draw.position

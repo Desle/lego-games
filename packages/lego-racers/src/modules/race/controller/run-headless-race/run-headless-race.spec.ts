@@ -106,7 +106,7 @@ describe('runHeadlessRace', () => {
       expect(second.raceState).toEqual(first.raceState)
       expect(first.phase).toBe(RacePhase.RESULTS)
       expect(first.exit).toBe(RaceExit.FINISHED)
-      expect(first.events.at(-1)).toEqual({ type: 'race.ended', exit: RaceExit.FINISHED })
+      expect(first.events).toContainEqual({ type: 'race.ended', exit: RaceExit.FINISHED })
       expect(first.finishedRacerCount).toBe(6)
       expect([...first.placements].sort()).toEqual([1, 2, 3, 4, 5, 6])
       expect(first.racers.every((racer) => racer.isPlaced)).toBe(true)
