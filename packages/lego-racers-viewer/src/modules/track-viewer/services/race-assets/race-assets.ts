@@ -5,8 +5,9 @@ import type { ImageDefinition } from '@lego-games/lego-racers/image-database'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import { loadRaceDefinition } from '@lego-games/lego-racers/race'
-import { RACER_FILE_DIRECTORY } from '@lego-games/lego-racers/racer-appearance'
-import type { ModelResourceNames, RacerAppearance } from '@lego-games/lego-racers/racer-appearance'
+import type { RaceRacerDefinition } from '@lego-games/lego-racers/race'
+import { loadBuiltCarScene, RACER_FILE_DIRECTORY } from '@lego-games/lego-racers/racer-appearance'
+import type { ModelResourceNames } from '@lego-games/lego-racers/racer-appearance'
 import { parseRaceDescription } from '@lego-games/lego-racers/race-description'
 import {
   COMMON_DIRECTORY,
@@ -39,13 +40,22 @@ const loadResourceModel = (archive: JamArchive, names: ModelResourceNames): Mode
 
 // The files a racer's appearance names (RacerSet_SetupRacer 0x0043b480): the champion's body, the chassis's wheels and
 // the driver's model.
-const getRacerModels = (archive: JamArchive, appearance: RacerAppearance): RacerModels =>
-  Object.freeze({
-    body: appearance.bodyModel === null ? null : loadResourceModel(archive, appearance.bodyModel),
+const getBodyModel = (archive: JamArchive, racer: RaceRacerDefinition): ModelScene | null => {
+  if (racer.appearance.bodyModel !== null)
+    return loadResourceModel(archive, racer.appearance.bodyModel)
+  const design = racer.savedCar?.design ?? null
+  return design === null ? null : loadBuiltCarScene(archive, design)
+}
+
+const getRacerModels = (archive: JamArchive, racer: RaceRacerDefinition): RacerModels => {
+  const { appearance } = racer
+  return Object.freeze({
+    body: getBodyModel(archive, racer),
     wheels: loadResourceModel(archive, appearance.wheelModel),
     driver:
       appearance.driverModel === null ? null : loadResourceModel(archive, appearance.driverModel),
   })
+}
 
 const getHudImage = (archive: JamArchive, definition: ImageDefinition): HudImage | null => {
   const path = `${COMMON_DIRECTORY}${SEPARATOR}${definition.name.toUpperCase()}.BMP`
@@ -101,9 +111,7 @@ export const loadRaceAssets = (jam: Uint8Array, files: RaceGameFiles): RaceAsset
       sky: skyPath === null ? null : parseSky(archive.readFile(skyPath)),
       backgroundWorldPath: getRaceBackgroundWorldPath(RACE_DIRECTORY, description),
     }),
-    racerModels: Object.freeze(
-      definition.racers.map((racer) => getRacerModels(archive, racer.appearance))
-    ),
+    racerModels: Object.freeze(definition.racers.map((racer) => getRacerModels(archive, racer))),
     getString: (stringId: number) => getString(table, stringId) ?? '',
     imageNames: Object.freeze(imageDatabase.images.map((image) => image.name.toUpperCase())),
     hudImages: new Map(

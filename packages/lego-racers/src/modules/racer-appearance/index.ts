@@ -2,6 +2,7 @@ export {
   getBuiltRacerAppearance,
   getChampionRacerAppearance,
 } from './controller/get-racer-appearance/get-racer-appearance.ts'
+export { loadBuiltCarScene } from './controller/load-built-car-scene/load-built-car-scene.ts'
 export { createRacerFigures } from './controller/create-racer-figures/create-racer-figures.ts'
 export {
   getRacerFilePath,

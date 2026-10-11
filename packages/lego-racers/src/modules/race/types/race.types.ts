@@ -22,6 +22,7 @@ import type {
   PowerUpStep,
   RacerPowerUpAbilities,
 } from '../../power-ups/index.ts'
+import type { SavedCar } from '../../car-builder/index.ts'
 import type { PowerUpPlacements } from '../../power-up/index.ts'
 import type { RacerAppearance, RacerFigures } from '../../racer-appearance/index.ts'
 import type {
@@ -58,6 +59,8 @@ export type RaceRacerDefinition = {
   // The files the car is drawn from, and the figures (wheels, driver) that 0x0043d7a0 binds to them.
   readonly appearance: RacerAppearance
   readonly figures: RacerFigures
+  // The racer save a local player's car was built from (its design draws the car body); null for a computer racer.
+  readonly savedCar: SavedCar | null
 }
 
 // Everything the race is built from; the parsed files and the settings Race_LoadRaceDescription reads.

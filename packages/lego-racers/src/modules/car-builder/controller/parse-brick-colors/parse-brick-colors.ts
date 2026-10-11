@@ -23,3 +23,21 @@ export const findBrickColorIndex = (colors: readonly BrickColor[], name: string)
   colors.find(
     (color) => color.name.slice(0, COLOR_NAME_LENGTH) === name.slice(0, COLOR_NAME_LENGTH)
   )?.index ?? -1
+
+// The material length the colour lookup compares (0x00497980 strncmp over eight characters).
+const MATERIAL_NAME_LENGTH = 8
+
+// 0x00497980: for each colour (by index) the first material of the brick material library whose name is the colour's
+// (eight characters compared), or -1.
+export const getBrickColorMaterialIndices = (
+  colors: readonly BrickColor[],
+  materialNames: readonly string[]
+): readonly number[] =>
+  Object.freeze(
+    colors.map((color) =>
+      materialNames.findIndex(
+        (name) =>
+          name.slice(0, MATERIAL_NAME_LENGTH) === color.name.slice(0, MATERIAL_NAME_LENGTH)
+      )
+    )
+  )

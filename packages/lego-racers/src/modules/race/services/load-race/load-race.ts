@@ -22,6 +22,7 @@ import {
 } from '../../../racer-setup/index.ts'
 import type { BuiltCar } from '../../../racer-setup/index.ts'
 import { DEFAULT_SAVE_PATH, getCarWeight, loadSavedCars } from '../../../car-builder/index.ts'
+import type { SavedCar } from '../../../car-builder/index.ts'
 import { parseRaceDescription } from '../../../race-description/index.ts'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic } from '../../../simulation-math/index.ts'
@@ -56,22 +57,16 @@ const getJamFileName = (name: string): string => `${name.slice(0, -1)}b`.toUpper
 
 // 0x0042d730 → 0x0042dcb0: the front end takes each local player's car from its racer save (`default.lrs` when the player
 // has not saved one): the chassis, and the weight and centre offsets of the design on the grid (0x0049c6a0).
-const getDefaultPlayerCars = (
-  readFile: (path: string) => Uint8Array,
-  arithmetic: FloatArithmetic
-): readonly BuiltCar[] =>
-  loadSavedCars(readFile, DEFAULT_SAVE_PATH).flatMap((saved) => {
-    if (saved.design === null) return []
-    const { weight, centreOffsetX, centreOffsetY } = getCarWeight(arithmetic, saved.design)
-    return [
-      Object.freeze({
-        chassisName: saved.record.chassisName,
-        weight,
-        centreOffsetX,
-        centreOffsetY,
-      }),
-    ]
+const getBuiltCar = (arithmetic: FloatArithmetic, saved: SavedCar): BuiltCar | null => {
+  if (saved.design === null) return null
+  const { weight, centreOffsetX, centreOffsetY } = getCarWeight(arithmetic, saved.design)
+  return Object.freeze({
+    chassisName: saved.record.chassisName,
+    weight,
+    centreOffsetX,
+    centreOffsetY,
   })
+}
 
 // Race_LoadAiRoutes 0x00433190: each computer racer draws its route variant from the random table.
 const loadRoutes = (
@@ -156,7 +151,13 @@ export const loadRaceDefinition = (
       : readFile(`${description.firstCollisionObject.toUpperCase()}.BVB`)
   const startPositions =
     startPositionBytes === null ? [] : parseStartPositions(startPositionBytes, false).startPositions
-  const playerCars = options.playerCars ?? getDefaultPlayerCars(archive.readFile, arithmetic)
+  const defaultCars = loadSavedCars(archive.readFile, DEFAULT_SAVE_PATH)
+  const playerCars =
+    options.playerCars ??
+    defaultCars.flatMap((saved) => {
+      const car = getBuiltCar(arithmetic, saved)
+      return car === null ? [] : [car]
+    })
   const request = {
     arithmetic,
     databases: readRacerDatabases(archive.readFile),
@@ -200,6 +201,8 @@ export const loadRaceDefinition = (
       voiceBase: description.voiceBase,
       appearance,
       figures: racerFigures,
+      // A local player's car is the save's racer of its slot (the first when the save has fewer).
+      savedCar: index < localPlayerCount ? (defaultCars[index] ?? defaultCars[0] ?? null) : null,
     }
   })
   return Object.freeze({

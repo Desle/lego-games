@@ -6,6 +6,7 @@ export {
 export {
   COLOR_NAME_LENGTH,
   findBrickColorIndex,
+  getBrickColorMaterialIndices,
   parseBrickColors,
 } from './controller/parse-brick-colors/parse-brick-colors.ts'
 export { parseCarSet, parseCarSetFileNames } from './controller/parse-car-sets/parse-car-sets.ts'
@@ -27,6 +28,7 @@ export {
   loadCarDesign,
   MAXIMUM_BUILD_HEIGHT,
 } from './controller/load-car-design/load-car-design.ts'
+export { buildCarGeometry, getBrickFaces } from './controller/build-car-geometry/build-car-geometry.ts'
 export { getCarWeight } from './controller/get-car-weight/get-car-weight.ts'
 export { parseSaveFile } from './controller/parse-save-file/parse-save-file.ts'
 export { SaveFileError } from './types/save-file-error.ts'
@@ -37,6 +39,10 @@ export type {
   BrickPiece,
   BuildGrid,
   CarDesign,
+  CarFace,
+  CarGeometry,
+  CarGeometryBatch,
+  CarVertex,
   CarSet,
   CarSetBrick,
   CarWeight,

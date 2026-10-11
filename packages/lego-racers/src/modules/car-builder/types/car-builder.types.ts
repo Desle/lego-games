@@ -172,3 +172,55 @@ export type LogicalBytes = {
   readonly data: Uint8Array
   readonly end: number
 }
+
+// The triangles of a car, grouped by the material that draws them (an index into the brick material library,
+// `LPieceLo.mdb`), over one vertex list.
+export type CarGeometry = {
+  // x, y, z per vertex, in studs; z up. The car's origin (the chassis part's origin vertex) is at 0, 0, 0.
+  readonly positions: Float32Array
+  readonly normals: Float32Array
+  readonly textureCoordinates: Float32Array
+  readonly batches: readonly CarGeometryBatch[]
+}
+
+export type CarGeometryBatch = {
+  readonly materialIndex: number
+  // Three vertex indices per triangle.
+  readonly vertexIndices: Uint32Array
+}
+
+// A vertex of the car as the builder welds them (0x00495030): where, which way it faces and its texture coordinate.
+export type CarVertex = {
+  readonly x: number
+  readonly y: number
+  readonly z: number
+  readonly normalX: number
+  readonly normalY: number
+  readonly normalZ: number
+  readonly u: number
+  readonly v: number
+}
+
+// A face before it is cut into triangles (the builder's 0x10-byte face record): three or four vertices in the order the
+// geometry lists them, the material that draws it and the flags of its source record (0xfff of the face word).
+export type CarFace = {
+  readonly vertices: readonly CarVertex[]
+  readonly materialIndex: number
+  readonly flags: number
+}
+
+// Where the geometry of a brick goes: its place on the grid and the quarter turns.
+export type BrickTransform = {
+  readonly x: number
+  readonly y: number
+  readonly baseHeight: number
+  readonly orientation: number
+}
+
+// What the face words carry from one record to the next (0x0049a450's locals): whether the current face has texture
+// coordinates and a normal for every vertex, and the last normal index.
+export type FaceReadState = {
+  readonly isTextured: boolean
+  readonly isNormalPerVertex: boolean
+  readonly normalIndex: number
+}

@@ -3,6 +3,12 @@ export type {
   ModelFiles,
   ModelScene,
 } from './controller/load-model-scene/load-model-scene.types.ts'
+export { loadGeometryScene } from './controller/load-geometry-scene/load-geometry-scene.ts'
+export type {
+  GeometryBatch,
+  GeometryFiles,
+  ModelGeometry,
+} from './controller/load-geometry-scene/load-geometry-scene.types.ts'
 export { getWorldPaths, loadScene } from './controller/load-scene/load-scene.ts'
 export {
   COMMON_DIRECTORY,
