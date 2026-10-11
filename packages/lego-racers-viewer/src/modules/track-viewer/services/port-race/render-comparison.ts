@@ -1,6 +1,7 @@
 import {
   compareQuadPlacements,
   compareRenderFrameByRoot,
+  getBoundingRectangle,
   getOriginalQuads,
   getOriginalTriangles,
   getCandidateMatrices,
@@ -194,14 +195,9 @@ export const runRenderComparison = async (
               ]
             }
             if (command.kind === 'polygon') {
-              const xs = command.vertices.map((vertex) => vertex.x)
-              const ys = command.vertices.map((vertex) => vertex.y)
               return [
                 {
-                  left: Math.min(...xs),
-                  top: Math.min(...ys),
-                  right: Math.max(...xs),
-                  bottom: Math.max(...ys),
+                  ...getBoundingRectangle(command.vertices),
                   textureKey: command.imageName,
                   source: command.imageName ?? 'fill',
                 },

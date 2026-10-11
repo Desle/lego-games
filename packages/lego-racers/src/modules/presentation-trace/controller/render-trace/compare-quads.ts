@@ -1,10 +1,30 @@
 import { TextureOperation } from '../../../scene/index.ts'
 import type { OriginalRenderFrame } from '../../types/presentation-trace.types.ts'
 import { getDrawState } from './original-triangles.ts'
-import type { QuadComparison, QuadGroup, QuadPlacement, QuadsInput } from './render-trace.types.ts'
+import type {
+  QuadComparison,
+  QuadGroup,
+  QuadPlacement,
+  QuadsInput,
+  ScreenPoint,
+} from './render-trace.types.ts'
 
 const QUAD_VERTEX_COUNT = 4
 const TRIANGLE_VERTEX_COUNT = 3
+
+// The rectangle around some screen points.
+export const getBoundingRectangle = (
+  points: readonly ScreenPoint[]
+): Pick<QuadPlacement, 'left' | 'top' | 'right' | 'bottom'> => {
+  const xs = points.map((point) => point.x)
+  const ys = points.map((point) => point.y)
+  return {
+    left: Math.min(...xs),
+    top: Math.min(...ys),
+    right: Math.max(...xs),
+    bottom: Math.max(...ys),
+  }
+}
 
 // The textured rectangles the original drew in a frame: every four-vertex draw (the menu's images, glyphs and fills; the
 // front end's 3D scenes have more vertices), by the corners it covers. With `isTriangleIncluded` a three-vertex draw
@@ -21,14 +41,9 @@ export const getOriginalQuads = (
     const state = states[draw.stateIndex]
     const isTextured =
       state !== undefined && state.colorOperation !== TextureOperation.SELECT_DIFFUSE
-    const xs = draw.vertices.map((vertex) => vertex.x)
-    const ys = draw.vertices.map((vertex) => vertex.y)
     return [
       {
-        left: Math.min(...xs),
-        top: Math.min(...ys),
-        right: Math.max(...xs),
-        bottom: Math.max(...ys),
+        ...getBoundingRectangle(draw.vertices),
         textureKey: isTextured ? draw.textureHash : null,
         source: isTextured ? (draw.textureHash ?? 'untextured') : 'fill',
       },

@@ -191,3 +191,9 @@ export type QuadComparison = {
   readonly matchedCount: number
   readonly groups: readonly QuadGroup[]
 }
+
+// A point on the screen.
+export type ScreenPoint = {
+  readonly x: number
+  readonly y: number
+}
