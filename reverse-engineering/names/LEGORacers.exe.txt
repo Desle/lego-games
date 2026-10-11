@@ -740,3 +740,11 @@
 00429380 CarBody_Hold
 00429c30 CarBody_EndFlaggedState
 004397b0 Racer_EndCarBodyEffect
+004292e0 CarBody_StartBoost
+00446fa0 CarRigidBody_SetHeadingFromFrame
+004396c0 Racer_StartTurbo
+00430100 PlayerController_Arm
+00440030 Vehicle_BuildBounds
+00411ef0 SphereGroup_Update
+00411ec0 SphereGroup_AddChild
+0040e360 Animation_GetIsFinished

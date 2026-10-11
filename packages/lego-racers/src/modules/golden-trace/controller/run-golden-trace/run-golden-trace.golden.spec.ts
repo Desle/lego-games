@@ -24,11 +24,13 @@ const ROYAL_KNIGHTS_RACEWAY = 'RACEC0R0'
 // The introduction camera of Royal Knights Raceway ends after 7 ticks (the original's trace reports it).
 const ROYAL_KNIGHTS_INTRODUCTION_CAMERA_LIMIT = 7
 const OTHER_TRACKS = [
-  { folder: 'RACEC0R1', expected: { frame: 235, field: 'racer0.body.position' } },
-  { folder: 'RACEC0R2', expected: { frame: 0, field: 'racer0.body.wheels' } },
-  { folder: 'RACEC0R3', expected: { frame: 2, field: 'racer0.body.position' } },
-  { folder: 'RACEC1R0', expected: { frame: 2, field: 'racer0.body.position' } },
-  { folder: 'RACEC3R0', expected: { frame: 194, field: 'racer0.body.position' } },
+  { folder: 'RACEC0R1', expected: null },
+  // The heading of a drifting car (0x00446fd0) leaves the original by 160 float32 units in the last place in the
+  // 43rd frame of steering, with every input of the step equal (golden-trace.md, open).
+  { folder: 'RACEC0R2', expected: { frame: 278, field: 'racer0.body.forwardSpeed' } },
+  { folder: 'RACEC0R3', expected: null },
+  { folder: 'RACEC1R0', expected: null },
+  { folder: 'RACEC3R0', expected: null },
 ] as const
 // The player collects a power-up brick the original lets it touch and the port does not: the collision registry
 // tests the vehicle's composite volume (0x00440030), the port only the wheels figure's sphere (golden-trace.md).
