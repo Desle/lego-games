@@ -77,6 +77,9 @@ const getVertices = (
   const uv = mesh.geometry.getAttribute('uv') as BufferAttribute
   const color = mesh.geometry.getAttribute('color') as BufferAttribute | undefined
   const point = new Vector3()
+  const map = (mesh.material as MeshBasicMaterial).map
+  const offset = map?.offset ?? { x: 0, y: 0 }
+  const repeat = map?.repeat ?? { x: 1, y: 1 }
   const corners = [0, 1, 2].map((corner): WorldVertex => {
     const index = triangleIndex * CORNERS_PER_TRIANGLE + corner
     point.fromBufferAttribute(position, index).applyMatrix4(matrix)
@@ -84,8 +87,8 @@ const getVertices = (
       x: point.x,
       y: point.y,
       z: point.z,
-      u: uv.getX(index),
-      v: uv.getY(index),
+      u: uv.getX(index) * repeat.x + offset.x,
+      v: uv.getY(index) * repeat.y + offset.y,
       diffuse:
         color === undefined
           ? [BYTE_MAXIMUM, BYTE_MAXIMUM, BYTE_MAXIMUM, BYTE_MAXIMUM]

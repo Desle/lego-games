@@ -1,6 +1,7 @@
 import type { EffectViews, RacerPose, WarpView } from '@lego-games/lego-racers/race-presentation'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type { Matrix3 } from '@lego-games/lego-racers/simulation-math'
+import type { Mesh, MeshBasicMaterial } from 'three'
 import {
   Color,
   Group,
@@ -33,6 +34,9 @@ import type {
 // The Direct3D camera's field of view is not traced yet; the track viewer's 60 degrees stand in for it.
 const FIELD_OF_VIEW_DEGREES = 60
 const BACKGROUND_COLOR = 0x101820
+const MILLISECONDS_PER_SECOND = 1000
+// The scroll the original adds stays below 1 (it wraps).
+const getWrappedFraction = (value: number): number => value - Math.floor(value)
 const NEAR_PLANE = 0.5
 const FAR_PLANE = 20000
 // Rows of a frame's rotation are the images of the model's axes; three.js takes them as columns.
@@ -124,6 +128,15 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
       tunnelMilliseconds = 0
     }
     tunnel.animate(warpView.tunnelMilliseconds - tunnelMilliseconds)
+    const [scrollU, scrollV] = assets.effectModels.warpTextureScroll
+    tunnel.group.traverse((object) => {
+      if (object.type !== 'Mesh') return
+      const { map } = (object as Mesh).material as MeshBasicMaterial
+      map?.offset.set(
+        getWrappedFraction((scrollU * warpView.tunnelMilliseconds) / MILLISECONDS_PER_SECOND),
+        getWrappedFraction((scrollV * warpView.tunnelMilliseconds) / MILLISECONDS_PER_SECOND)
+      )
+    })
     tunnelMilliseconds = warpView.tunnelMilliseconds
     warpGroup.visible = true
   }

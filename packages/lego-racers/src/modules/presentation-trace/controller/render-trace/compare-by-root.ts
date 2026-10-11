@@ -2,12 +2,11 @@ import { compareRenderFrame } from './compare-render-frame.ts'
 import { projectWorldTriangle } from './screen-projection.ts'
 import type {
   DrawnTriangle,
-  RenderFrameComparison,
   RenderFrameInput,
   ScreenMatrix,
   WorldTriangle,
 } from './render-trace.types.ts'
-import type { RootChoice, RootComparisonInput } from './compare-by-root.types.ts'
+import type { RootChoice, RootComparison, RootComparisonInput } from './compare-by-root.types.ts'
 
 const SPACES = ['world', 'local'] as const
 
@@ -37,9 +36,7 @@ const getRootInput = (
 // matrix of its own (its frame times the camera's). Every object tree of the port takes, in turn, the candidate matrix
 // and the space (the world's or its own) under which it lands on the most of the original's triangles that no earlier
 // tree matched; the whole frame is then compared with every tree under its choice.
-export const compareRenderFrameByRoot = (
-  input: RootComparisonInput
-): RenderFrameComparison & { readonly choices: readonly RootChoice[] } => {
+export const compareRenderFrameByRoot = (input: RootComparisonInput): RootComparison => {
   const rootIndices = [...new Set(input.port.map((triangle) => triangle.root))]
   const getTriangles = (root: number) => input.port.filter((triangle) => triangle.root === root)
   const ordered = [...rootIndices].sort(

@@ -1,4 +1,9 @@
-import type { RenderFrameInput, ScreenMatrix, WorldTriangle } from './render-trace.types.ts'
+import type {
+  RenderFrameComparison,
+  RenderFrameInput,
+  ScreenMatrix,
+  WorldTriangle,
+} from './render-trace.types.ts'
 
 export type RootComparisonInput = Omit<RenderFrameInput, 'port'> & {
   readonly port: readonly WorldTriangle[]
@@ -12,3 +17,5 @@ export type RootChoice = {
   readonly space: 'world' | 'local'
   readonly matchedCount: number
 }
+
+export type RootComparison = RenderFrameComparison & { readonly choices: readonly RootChoice[] }

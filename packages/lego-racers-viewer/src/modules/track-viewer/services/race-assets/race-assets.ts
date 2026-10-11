@@ -29,6 +29,7 @@ import {
   loadSceneOnto,
 } from '@lego-games/lego-racers/scene'
 import { parseSky } from '@lego-games/lego-racers/sky'
+import { readWorld } from '@lego-games/lego-racers/world'
 import { getString, parseStringTable } from '@lego-games/lego-racers/string-table'
 import type { ModelScene, Scene } from '@lego-games/lego-racers/scene'
 import { HUD_FONT_NAMES } from '../../types/hud-fonts/hud-fonts.ts'
@@ -158,6 +159,13 @@ const getBrickInMaterial = (model: ModelScene, materialName: string): ModelScene
 const getWarpTunnel = (archive: JamArchive, scene: Scene): Scene =>
   loadSceneOnto(archive, scene, [WARP_WORLD_PATH])
 
+const getWarpTextureScroll = (archive: JamArchive): readonly [number, number] => {
+  const values = readWorld(archive.readFile(WARP_WORLD_PATH)).skeletonInstances.find(
+    (instance) => instance.name === 'dtube'
+  )?.keyword3fValues
+  return [values?.[0] ?? 0, values?.[1] ?? 0]
+}
+
 const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
   Object.freeze({
     rocket: loadEffectModel(archive, 'DMISSILE', true),
@@ -174,6 +182,7 @@ const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
     ),
     enhancementBrick: loadEffectModel(archive, 'ENHABRIK', true),
     warpTunnel: getWarpTunnel(archive, raceScene),
+    warpTextureScroll: getWarpTextureScroll(archive),
   })
 
 const getHudImage = (archive: JamArchive, definition: ImageDefinition): HudImage | null => {
