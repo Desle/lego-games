@@ -17,6 +17,7 @@ import {
   CAR_RIGID_BODY_HOOKS,
   CarRigidBodyFlag,
   clearContacts,
+  getBodyWithTwoPointOffsets,
   getWithVelocitySplit,
   getWorldInverseInertia,
   saveStepStart,
@@ -32,11 +33,7 @@ import {
   getMatrixFromQuaternion,
 } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
-import {
-  getBodyWithTwoPointOffsets,
-  getScriptedBodyOriented,
-  getScriptedBodyWithTargetTilt,
-} from './scripted-orientation.ts'
+import { getScriptedBodyOriented, getScriptedBodyWithTargetTilt } from './scripted-orientation.ts'
 
 const DEFAULT_SPEED_FACTOR = 1
 

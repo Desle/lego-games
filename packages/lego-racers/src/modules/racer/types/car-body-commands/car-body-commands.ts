@@ -11,7 +11,10 @@ import type { ComputerSpeedState } from '../../../racer-ai/index.ts'
 import {
   addScaledImpulse,
   CarRigidBodyFlag,
+  getBodyInTwoPointMode,
+  getBodyOutOfTwoPointMode,
   setExtraForce,
+  setPitchRate,
   startSpin,
 } from '../../../racer-physics/index.ts'
 import {
@@ -32,6 +35,12 @@ const FORWARD_RATE = getFloatFromBits(0x3d4ccccd) // 0x004b0544, 0.05
 const BACKWARD_RATE = getFloatFromBits(0x3e800000) // 0x004b053c, 0.25
 const MAXIMUM_SPEED_FACTOR = getFloatFromBits(0x40300000) // 0x004b04a0, 2.75
 const MINIMUM_SPEED_FACTOR = getFloatFromBits(0xbf000000) // 0x004b04a4, -0.5
+
+const TWO_POINT_FLIP_RATE = getFloatFromBits(0xbb449ba6) // -0.003, pushed by 0x00429b40
+const TWO_POINT_FLIP_MILLISECONDS = 250 // 0xfa
+const TWO_POINT_TARGET_HEIGHT = getFloatFromBits(0x40c00000) // 0x004b04a8, 6
+const TWO_POINT_HEIGHT_RATE = getFloatFromBits(0x40400000) // 0x004b04ac, 3
+const TWO_POINT_RELEASED_HEIGHT_RATE = getFloatFromBits(0x41700000) // 0x004b04b0, 15
 
 const getAlongHeading = (
   arithmetic: FloatArithmetic,
@@ -228,3 +237,73 @@ export const resetCarBodyRoute = (arithmetic: FloatArithmetic, body: CarBody): C
     bounceVerticalSpeed: 0,
     targetSpeedFactor: 1,
   })
+
+// Car body slot 9's neighbour 0x00429cf0 (thiscall: rate, milliseconds): a flip. A free body takes the car rigid body's
+// 0x00445bb0. A scripted body that is not flipping already gets a flip rate of -rate, an angle of 0 and the pitch
+// timer; its orientation code (0x0042a290) turns the display frame.
+export const startCarBodyFlip = (
+  arithmetic: FloatArithmetic,
+  body: CarBody,
+  rate: number,
+  milliseconds: number
+): CarBody => {
+  if (!body.isScripted) {
+    return Object.freeze({
+      ...body,
+      rigidBody: setPitchRate(arithmetic, body.rigidBody, rate, milliseconds),
+    })
+  }
+  if (body.rigidBody.pitchTimer !== 0) return body
+  return Object.freeze({
+    ...body,
+    flipAngle: 0,
+    flipRate: -rate,
+    rigidBody: Object.freeze({ ...body.rigidBody, pitchTimer: milliseconds }),
+  })
+}
+
+// Car body slot 12 (0x00429b40): two-point mode on. A free body takes 0x00448660. A scripted body that is not in it
+// yet flips (-0.003 for 250 ms), its height and tilt return to 0 and its targets are set to 6 and 0 at 3 per
+// millisecond-thousandth.
+export const setCarBodyTwoPointMode = (arithmetic: FloatArithmetic, body: CarBody): CarBody => {
+  if (!body.isScripted) {
+    return Object.freeze({ ...body, rigidBody: getBodyInTwoPointMode(arithmetic, body.rigidBody) })
+  }
+  if ((body.rigidBody.flags & CarRigidBodyFlag.TWO_POINT) !== 0) return body
+  const flipped = startCarBodyFlip(
+    arithmetic,
+    body,
+    TWO_POINT_FLIP_RATE,
+    TWO_POINT_FLIP_MILLISECONDS
+  )
+  return Object.freeze({
+    ...flipped,
+    rigidBody: Object.freeze({
+      ...flipped.rigidBody,
+      twoPointHeight: 0,
+      twoPointTilt: 0,
+      flags: flipped.rigidBody.flags | CarRigidBodyFlag.TWO_POINT,
+      twoPointTargetTilt: 0,
+      twoPointTargetHeight: TWO_POINT_TARGET_HEIGHT,
+      twoPointHeightRate: TWO_POINT_HEIGHT_RATE,
+    }),
+  })
+}
+
+// Car body slot 13 (0x00429bc0): two-point mode off. A free body takes 0x00448730. A scripted body keeps its height
+// and tilt and moves them back to 0 (target 0, 15 per millisecond-thousandth).
+export const clearCarBodyTwoPointMode = (body: CarBody): CarBody => {
+  if (!body.isScripted) {
+    return Object.freeze({ ...body, rigidBody: getBodyOutOfTwoPointMode(body.rigidBody) })
+  }
+  return Object.freeze({
+    ...body,
+    rigidBody: Object.freeze({
+      ...body.rigidBody,
+      twoPointTargetHeight: 0,
+      twoPointTargetTilt: 0,
+      twoPointHeightRate: TWO_POINT_RELEASED_HEIGHT_RATE,
+      flags: body.rigidBody.flags & ~CarRigidBodyFlag.TWO_POINT,
+    }),
+  })
+}

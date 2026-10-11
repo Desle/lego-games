@@ -12,7 +12,6 @@ import {
   removeAngularMomentumAgainstForce,
   removeAngularMomentumAlongAxis,
 } from '../rigid-body-forces/rigid-body-forces.ts'
-import { TwoPointModeNotPortedError } from '../two-point-mode/two-point-mode.ts'
 import type { CarRigidBody, CarWheel, TurnYawRate } from '../racer-physics.types.ts'
 
 // Constants of 0x00445500, by address.
@@ -27,6 +26,7 @@ const CREEP_SPEED = getFloatFromBits(0x3a03126f) // 0x004b0d1c, 0.0005
 export const YAW_RATE_DURATION = 200
 
 // The wheel paired with each wheel for 0x00440cb0, from the table at 0x004b0d40.
+const TWO_POINT_COUNT = 2
 const OPPOSITE_WHEELS = Object.freeze([3, 2, 1, 0])
 
 const getRow = (body: CarRigidBody, row: 0 | 1 | 2): Vector3 => {
@@ -55,6 +55,29 @@ export const setYawRate = (
     up
   )
   return addAngularVelocity(arithmetic, withoutYaw, getStoredScaledVector(arithmetic, up, rate))
+}
+
+// 0x00445bb0 (thiscall: rate, milliseconds): the same about rotation row 1, but only while the roll timer (+0x5d8) is
+// not running: the pitch timer = milliseconds, and the angular momentum about the row is replaced by the momentum that
+// turns the body about it at the rate.
+export const setPitchRate = (
+  arithmetic: FloatArithmetic,
+  body: CarRigidBody,
+  rate: number,
+  milliseconds: number
+): CarRigidBody => {
+  if (body.rollTimer !== 0) return body
+  const across = getRow(body, 1)
+  const withoutPitch = removeAngularMomentumAlongAxis(
+    arithmetic,
+    Object.freeze({ ...body, pitchTimer: milliseconds }),
+    across
+  )
+  return addAngularVelocity(
+    arithmetic,
+    withoutPitch,
+    getStoredScaledVector(arithmetic, across, rate)
+  )
 }
 
 // 0x00448990 and 0x004489c0: the four values summed on the FPU stack from 0, times 0.25.
@@ -130,6 +153,24 @@ const getWheelTorques = (arithmetic: FloatArithmetic, body: CarRigidBody): CarRi
     )
   }, body)
 }
+
+// 0x00445500's loop over the two probed wheels with flag 0x8 (0x004456c8): a grounded wheel pushes at its pair's
+// midpoint only when no wheel was down (never in this branch), and the momentum against the other midpoint is removed.
+const getTwoPointTorques = (arithmetic: FloatArithmetic, body: CarRigidBody): CarRigidBody =>
+  body.wheels.slice(0, TWO_POINT_COUNT).reduce((current, wheel, index) => {
+    if (!wheel.isOnGround) return current
+    const point = current.twoPointPositions[index] ?? current.groundNormal
+    const pushed =
+      current.groundedWheelCount === 0
+        ? addTorqueOfForceAtPoint(arithmetic, current, wheel.groundForce, point)
+        : current
+    return removeAngularMomentumAgainstForce(
+      arithmetic,
+      pushed,
+      pushed.groundNormal,
+      pushed.twoPointPositions[index === 0 ? 1 : 0] ?? pushed.groundNormal
+    )
+  }, body)
 
 // The yaw rate of 0x00445500's turning branch (0x004459a0..0x00445a2c).
 const getTurnYawRate = (
@@ -226,9 +267,9 @@ const getGroundedForces = (
   )
   const holding = multiply(multiply(body.gravity, body.scaledMass), averageGrip)
   const sliding = getIsBelow(holding, slope) ? addForce(arithmetic, body, slopeForce) : body
-  if (getHasFlag(sliding, CarRigidBodyFlag.TWO_POINT))
-    throw new TwoPointModeNotPortedError(0x004456c8)
-  const steadied = getWheelTorques(arithmetic, sliding)
+  const steadied = getHasFlag(sliding, CarRigidBodyFlag.TWO_POINT)
+    ? getTwoPointTorques(arithmetic, sliding)
+    : getWheelTorques(arithmetic, sliding)
   const isBraking = getHasFlag(steadied, CarRigidBodyFlag.DRIFTING | CarRigidBodyFlag.SPINNING)
   const braked = isBraking
     ? addForce(

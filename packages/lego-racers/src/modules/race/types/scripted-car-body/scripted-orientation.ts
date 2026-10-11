@@ -1,6 +1,5 @@
 import { advanceRouteFollower } from '../../../racer-ai/index.ts'
 import { CarRigidBodyFlag } from '../../../racer-physics/index.ts'
-import type { CarRigidBody } from '../../../racer-physics/index.ts'
 import type { CarBody } from '../../../racer/index.ts'
 import {
   getDotProduct,
@@ -13,8 +12,6 @@ import {
 } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Matrix3, Vector3 } from '../../../simulation-math/index.ts'
 
-const THOUSANDTH = getFloatFromBits(0x3a83126f) // 0x004af220
-const TILT_RATE = getFloatFromBits(0x3ba3d70a) // 0x004b0d28, 0.005 per millisecond
 const MAXIMUM_TILT = getFloatFromBits(0x3f490fdb) // 0x004b0480, a quarter turn halved
 const TILT_SCALE = getFloatFromBits(0x41000000) // 0x004b0098, 8
 const FLIP_DAMPING = getFloatFromBits(0x3e800000) // 0x004b053c, 0.25
@@ -63,35 +60,6 @@ export const getScriptedBodyWithTargetTilt = (
       twoPointTargetTilt: storeFloat(multiply(MAXIMUM_TILT, limited)),
     }),
   })
-}
-
-// 0x004464a0 (thiscall: step): the two-point height and tilt move toward their targets, by rate · step · 0.001 and
-// by step · 0.005, and stop there.
-export const getBodyWithTwoPointOffsets = (
-  arithmetic: FloatArithmetic,
-  body: CarRigidBody,
-  stepMilliseconds: number
-): CarRigidBody => {
-  const { add, subtract, multiply, storeFloat, getIsBelow, getIsBelowOrEqual } = arithmetic
-  const heightChange = multiply(multiply(body.twoPointHeightRate, stepMilliseconds), THOUSANDTH)
-  let height = body.twoPointHeight
-  if (getIsBelow(height, body.twoPointTargetHeight)) {
-    height = storeFloat(add(heightChange, height))
-    if (!getIsBelowOrEqual(height, body.twoPointTargetHeight)) height = body.twoPointTargetHeight
-  } else if (!getIsBelowOrEqual(height, body.twoPointTargetHeight)) {
-    height = storeFloat(subtract(height, heightChange))
-    if (getIsBelow(height, body.twoPointTargetHeight)) height = body.twoPointTargetHeight
-  }
-  const tiltChange = multiply(stepMilliseconds, TILT_RATE)
-  let tilt = body.twoPointTilt
-  if (getIsBelow(tilt, body.twoPointTargetTilt)) {
-    tilt = storeFloat(add(tiltChange, tilt))
-    if (!getIsBelowOrEqual(tilt, body.twoPointTargetTilt)) tilt = body.twoPointTargetTilt
-  } else if (!getIsBelowOrEqual(tilt, body.twoPointTargetTilt)) {
-    tilt = storeFloat(subtract(tilt, tiltChange))
-    if (getIsBelow(tilt, body.twoPointTargetTilt)) tilt = body.twoPointTargetTilt
-  }
-  return Object.freeze({ ...body, twoPointHeight: height, twoPointTilt: tilt })
 }
 
 // 0x0042a290, the flip part (pitch timer +0x5dc, rate +0x7dc, angle +0x7e0, height +0x7e4): the angle moves by

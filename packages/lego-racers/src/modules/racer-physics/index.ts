@@ -13,7 +13,12 @@ export {
   startSpin,
 } from './types/car-commands/car-commands.ts'
 export { moveOutOfContact } from './types/contact-separation/contact-separation.ts'
-export { applyCarForces, endDrift, setYawRate } from './types/car-forces/car-forces.ts'
+export {
+  applyCarForces,
+  endDrift,
+  setPitchRate,
+  setYawRate,
+} from './types/car-forces/car-forces.ts'
 export {
   CarRigidBodyFlag,
   createCarRigidBody,
@@ -52,7 +57,14 @@ export {
   getBoxInertia,
   getWorldInverseInertia,
 } from './types/rigid-body/rigid-body.ts'
-export { TwoPointModeNotPortedError } from './types/two-point-mode/two-point-mode.ts'
+export {
+  getBodyInTwoPointMode,
+  getBodyOutOfTwoPointMode,
+  getBodyWithTwoPointOffsets,
+  getBodyWithTwoPointPositions,
+  getBodyWithTwoPointTargetTilt,
+  probeTwoPoints,
+} from './types/two-point-mode/two-point-mode.ts'
 export type {
   BoxInertia,
   BoxRigidBodyDefinition,
@@ -68,6 +80,7 @@ export type {
   RaceTimeStepInput,
   RigidBody,
   RigidBodyFrame,
+  SegmentQuery,
   StepStartSnapshot,
   TriangleCacheEntry,
   WheelSnapshot,

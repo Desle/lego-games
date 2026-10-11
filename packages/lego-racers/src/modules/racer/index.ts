@@ -26,7 +26,10 @@ export {
 export { readRacerTables } from './services/read-racer-tables/read-racer-tables.ts'
 export {
   addCarBodyImpulse,
+  clearCarBodyTwoPointMode,
   setCarBodyPush,
+  setCarBodyTwoPointMode,
+  startCarBodyFlip,
   startCarBodySpin,
 } from './types/car-body-commands/car-body-commands.ts'
 export {

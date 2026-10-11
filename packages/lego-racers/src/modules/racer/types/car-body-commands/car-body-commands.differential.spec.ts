@@ -17,7 +17,14 @@ import { createFloatArithmetic } from '../../../simulation-math/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
 import { createTestCarBody } from '../racer-fixtures/racer-fixtures.ts'
 import type { CarBody } from '../racer.types.ts'
-import { addCarBodyImpulse, setCarBodyPush, startCarBodySpin } from './car-body-commands.ts'
+import {
+  addCarBodyImpulse,
+  clearCarBodyTwoPointMode,
+  setCarBodyPush,
+  setCarBodyTwoPointMode,
+  startCarBodyFlip,
+  startCarBodySpin,
+} from './car-body-commands.ts'
 
 const CAR_BODY_VTABLE = 0x004b04e4
 const FRAME_VTABLE = 0x004af700
@@ -27,11 +34,13 @@ const PRECISIONS: readonly EmulatorPrecision[] = ['single', 'double']
 const TEST_TIMEOUT_IN_MILLISECONDS = 120_000
 const FLOAT_OFFSETS: readonly number[] = [
   0x08, 0x0c, 0x10, 0xa4, 0xa8, 0xac, 0x630, 0x634, 0x638, 0x63c, 0x640, 0x644, 0x778, 0x7ec, 0x7e8,
-  0x7d4, 0x7d8,
+  0x7d4, 0x7d8, 0x658, 0x65c, 0x660, 0x664, 0x668, 0x66c, 0x670, 0x674, 0x678, 0x67c, 0x680, 0x7dc,
+  0x7e0,
 ]
-const INTEGER_OFFSETS: readonly number[] = [0x6c0, 0x5e0, 0x5e8, 0x5e4]
+const INTEGER_OFFSETS: readonly number[] = [0x6c0, 0x5e0, 0x5e8, 0x5e4, 0x5d8, 0x5dc]
 
-// Slots 8, 9, 16, 17, 18 and 19 of the car body's vtable: 0x00429770, 0x00429c40, 0x004298a0, 0x004298d0, 0x004298f0, 0x00429920.
+// Slots 8, 9, 12, 13, 16, 17, 18 and 19 of the car body's vtable: 0x00429770, 0x00429c40, 0x00429b40, 0x00429bc0,
+// 0x004298a0, 0x004298d0, 0x004298f0, 0x00429920; and the flip 0x00429cf0 they call.
 const Command = Object.freeze({
   IMPULSE: { address: 0x00429770 },
   SPIN: { address: 0x00429c40 },
@@ -39,6 +48,9 @@ const Command = Object.freeze({
   RELEASE_FIRST: { address: 0x004298d0 },
   PUSH_SECOND: { address: 0x004298f0 },
   RELEASE_SECOND: { address: 0x00429920 },
+  FLIP: { address: 0x00429cf0 },
+  TWO_POINT_ON: { address: 0x00429b40 },
+  TWO_POINT_OFF: { address: 0x00429bc0 },
 })
 type CommandName = keyof typeof Command
 const COMMAND_NAMES = Object.keys(Command) as readonly CommandName[]
@@ -59,6 +71,10 @@ type CommandCase = {
   readonly vector: readonly number[]
   readonly amount: number
   readonly arguments: readonly number[]
+  readonly twoPoint: readonly number[]
+  readonly timers: readonly number[]
+  readonly wheelGeometry: readonly number[]
+  readonly flip: readonly number[]
 }
 
 const buildWords = (length: number, entries: readonly Entry[]): readonly EmulatorArgument[] => {
@@ -81,7 +97,7 @@ const sampleCase = (sampler: FloatSampler): CommandCase => {
   return {
     command: COMMAND_NAMES[sampler.sampleIntegerBelow(COMMAND_NAMES.length)] ?? 'IMPULSE',
     isScripted: sampler.getIsChance(60),
-    flags: sampleChoice(sampler, 0, 0, 0x2, 0x20, 0x40, 0x40000, 0x40002),
+    flags: sampleChoice(sampler, 0, 0, 0x2, 0x20, 0x40, 0x40000, 0x40002, 0x8, 0x8, 0x28),
     heading: heading.map((value) => Math.fround(value / length)),
     speedFactor: Math.abs(sampler.sampleUniform(2)),
     defaultTarget: sampleChoice(sampler, -1, 0.5, 1),
@@ -96,6 +112,14 @@ const sampleCase = (sampler: FloatSampler): CommandCase => {
       Math.fround(0.0089 + Math.abs(sampler.sampleUniform(0.01))),
       sampleChoice(sampler, 0, 0, 0.5, 3),
     ],
+    twoPoint: Array.from({ length: 5 }, () => Math.fround(sampler.sampleUniform(8))),
+    timers: [sampleChoice(sampler, 0, 0, 50), sampleChoice(sampler, 0, 0, 100)],
+    wheelGeometry: [
+      ...sampleVector(sampler, 3),
+      sampler.sampleUniform(3),
+      sampler.sampleUniform(5),
+    ],
+    flip: [Math.fround(sampler.sampleUniform(0.01)), sampleChoice(sampler, 125, 150, 250)],
   }
 }
 
@@ -115,6 +139,16 @@ const getBodyWords = (item: CommandCase): readonly EmulatorArgument[] => {
     [at(0x36c), item.grounded],
     [at(0x6c0), item.flags],
     [at(0x744), item.isScripted ? 1 : 0],
+    ...getFloatEntries(at(0x658), [
+      item.twoPoint[0] ?? 0,
+      item.twoPoint[1] ?? 0,
+      item.twoPoint[2] ?? 0,
+    ]),
+    ...getFloatEntries(at(0x67c), [item.twoPoint[3] ?? 0, item.twoPoint[4] ?? 0]),
+    [at(0x5d8), item.timers[0] ?? 0],
+    [at(0x5dc), item.timers[1] ?? 0],
+    ...getFloatEntries(at(0x358), item.wheelGeometry.slice(0, 3)),
+    ...getFloatEntries(at(0x364), item.wheelGeometry.slice(3)),
     ...getFloatEntries(at(0x778), [item.speedFactor]),
     ...getFloatEntries(at(0x7e8), [item.defaultTarget, item.target]),
   ])
@@ -128,7 +162,9 @@ const getEmulatorCall = (precision: EmulatorPrecision, item: CommandCase): Emula
         ? item.arguments.map(getBitsFromFloat)
         : item.command === 'PUSH_FIRST' || item.command === 'PUSH_SECOND'
           ? [{ buffer: 'vector' }]
-          : []
+          : item.command === 'FLIP'
+            ? [getBitsFromFloat(item.flip[0] ?? 0), item.flip[1] ?? 0]
+            : []
   return {
     address: Command[item.command].address,
     convention: 'thiscall',
@@ -166,11 +202,21 @@ const getPortWords = (body: CarBody): readonly number[] => {
       body.defaultTargetSpeedFactor,
       body.scriptedSpinPeriod,
       body.scriptedSpinTime,
+      rigidBody.twoPointHeight,
+      rigidBody.twoPointTargetHeight,
+      rigidBody.twoPointHeightRate,
+      ...rigidBody.twoPointPositions.flatMap((point) => [point.x, point.y, point.z]),
+      rigidBody.twoPointTargetTilt,
+      rigidBody.twoPointTilt,
+      body.flipRate,
+      body.flipAngle,
     ].map(getBitsFromFloat),
     rigidBody.flags,
     rigidBody.yawTimer,
     rigidBody.spinPeriod,
     rigidBody.spinTimer,
+    rigidBody.rollTimer,
+    rigidBody.pitchTimer,
   ].map((bits) => bits >>> 0)
 }
 
@@ -194,6 +240,20 @@ const getPortBody = (item: CommandCase): CarBody => {
       scaledMass: Math.fround(0.003),
       linearVelocity: { x: vx, y: vy, z: vz },
       angularMomentum: { x: mx, y: my, z: mz },
+      twoPointHeight: item.twoPoint[0] ?? 0,
+      twoPointTargetHeight: item.twoPoint[1] ?? 0,
+      twoPointHeightRate: item.twoPoint[2] ?? 0,
+      twoPointTargetTilt: item.twoPoint[3] ?? 0,
+      twoPointTilt: item.twoPoint[4] ?? 0,
+      rollTimer: item.timers[0] ?? 0,
+      pitchTimer: item.timers[1] ?? 0,
+      localWheelAnchor: {
+        x: item.wheelGeometry[0] ?? 0,
+        y: item.wheelGeometry[1] ?? 0,
+        z: item.wheelGeometry[2] ?? 0,
+      },
+      trackWidth: item.wheelGeometry[3] ?? 0,
+      wheelbase: item.wheelGeometry[4] ?? 0,
     }),
   })
 }
@@ -217,6 +277,12 @@ const getPortResult = (precision: EmulatorPrecision, item: CommandCase): CarBody
       return setCarBodyPush(arithmetic, body, 'extraForceB', vector)
     case 'RELEASE_SECOND':
       return setCarBodyPush(arithmetic, body, 'extraForceB', undefined)
+    case 'FLIP':
+      return startCarBodyFlip(arithmetic, body, item.flip[0] ?? 0, item.flip[1] ?? 0)
+    case 'TWO_POINT_ON':
+      return setCarBodyTwoPointMode(arithmetic, body)
+    case 'TWO_POINT_OFF':
+      return clearCarBodyTwoPointMode(body)
   }
 }
 
@@ -241,7 +307,7 @@ const expectMatchesOriginal = async (precision: EmulatorPrecision): Promise<void
 
 describe.skipIf(!getIsEmulatorAvailable())('car body commands against the original', () =>
   it.each(PRECISIONS)(
-    'slots 8, 9 and 16 to 19 match the original bit for bit in %s precision',
+    'slots 8, 9, 12, 13 and 16 to 19 and the flip match the original bit for bit in %s precision',
     (precision) => expectMatchesOriginal(precision),
     TEST_TIMEOUT_IN_MILLISECONDS
   )

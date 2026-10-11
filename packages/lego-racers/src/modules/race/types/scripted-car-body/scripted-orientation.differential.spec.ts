@@ -23,11 +23,7 @@ import type {
 } from '../../../computer-racer-route/index.ts'
 import { createFloatArithmetic } from '../../../simulation-math/index.ts'
 import { createFixtureRacerDefinition } from '../race-fixtures/race-fixtures.ts'
-import {
-  getBodyWithTwoPointOffsets,
-  getScriptedBodyOriented,
-  getScriptedBodyWithTargetTilt,
-} from './scripted-orientation.ts'
+import { getScriptedBodyOriented, getScriptedBodyWithTargetTilt } from './scripted-orientation.ts'
 
 const CAR_BODY_VTABLE = 0x004b04e4
 const FRAME_VTABLE = 0x004af700
@@ -37,7 +33,6 @@ const CASE_COUNT = 1500
 const PRECISIONS: readonly EmulatorPrecision[] = ['single', 'double']
 const TEST_TIMEOUT_IN_MILLISECONDS = 120_000
 const ORIENT_ADDRESS = 0x0042a290
-const TWO_POINT_ADDRESS = 0x004464a0
 
 // Byte offsets in the car body (physics.md, racer.md).
 const At = Object.freeze({
@@ -255,88 +250,6 @@ describe.skipIf(!getIsEmulatorAvailable())(
       (precision) => expectOrientationMatchesOriginal(precision),
       TEST_TIMEOUT_IN_MILLISECONDS
     )
-)
-
-type TwoPointCase = {
-  readonly height: number
-  readonly targetHeight: number
-  readonly rate: number
-  readonly tilt: number
-  readonly targetTilt: number
-  readonly step: number
-}
-
-const sampleTwoPointCase = (sampler: FloatSampler): TwoPointCase => ({
-  height: sampler.sampleUniform(10),
-  targetHeight: sampler.getIsChance(20) ? 0 : sampler.sampleUniform(10),
-  rate: sampler.sampleUniform(5000),
-  tilt: sampler.sampleUniform(1),
-  targetTilt: sampler.getIsChance(20) ? 0 : sampler.sampleUniform(1),
-  step: sampleChoice(sampler, 0, 1, 16, 33, 40, sampler.sampleIntegerBelow(500)),
-})
-
-const getTwoPointCall = (precision: EmulatorPrecision, item: TwoPointCase): EmulatorCall => {
-  const words = new Array<EmulatorArgument>(0x700 / 4).fill(0)
-  const set = (offset: number, value: number): void => {
-    words[offset / 4] = getBitsFromFloat(value)
-  }
-  set(At.twoPointHeight, item.height)
-  set(At.twoPointTargetHeight, item.targetHeight)
-  set(At.twoPointHeightRate, item.rate)
-  set(At.twoPointTilt, item.tilt)
-  set(At.twoPointTargetTilt, item.targetTilt)
-  return {
-    address: TWO_POINT_ADDRESS,
-    convention: 'thiscall',
-    precision,
-    arguments: [{ buffer: 'body' }, item.step],
-    buffers: [{ name: 'body', words, isRead: true }],
-  }
-}
-
-const expectTwoPointMatchesOriginal = async (precision: EmulatorPrecision): Promise<void> => {
-  // Arrange
-  const arithmetic = createFloatArithmetic(precision)
-  const sampler = createFloatSampler(createSeededRandom(0x4464a0 + precision.length))
-  const cases = Array.from({ length: CASE_COUNT }, () => sampleTwoPointCase(sampler))
-  const session = openEmulatorSession()
-
-  // Act
-  const results = await session.callBatch(cases.map((item) => getTwoPointCall(precision, item)))
-  await session.close()
-  const mismatches = cases.flatMap((item, index) => {
-    const body = createCarBody(createFixtureRacerDefinition(2).carBody).rigidBody
-    const moved = getBodyWithTwoPointOffsets(
-      arithmetic,
-      Object.freeze({
-        ...body,
-        twoPointHeight: item.height,
-        twoPointTargetHeight: item.targetHeight,
-        twoPointHeightRate: item.rate,
-        twoPointTilt: item.tilt,
-        twoPointTargetTilt: item.targetTilt,
-      }),
-      item.step
-    )
-    const words = results[index]?.buffers['body'] ?? []
-    const isSame =
-      getIsSameFloatBits(
-        words[At.twoPointHeight / 4] ?? 0,
-        getBitsFromFloat(moved.twoPointHeight)
-      ) && getIsSameFloatBits(words[At.twoPointTilt / 4] ?? 0, getBitsFromFloat(moved.twoPointTilt))
-    return isSame ? [] : [index]
-  })
-
-  // Assert
-  expect(mismatches).toEqual([])
-}
-
-describe.skipIf(!getIsEmulatorAvailable())('the two-point offsets against the original', () =>
-  it.each(PRECISIONS)(
-    '0x004464a0 matches the original bit for bit in %s precision',
-    (precision) => expectTwoPointMatchesOriginal(precision),
-    TEST_TIMEOUT_IN_MILLISECONDS
-  )
 )
 
 const TARGET_TILT_ADDRESS = 0x0042a100
