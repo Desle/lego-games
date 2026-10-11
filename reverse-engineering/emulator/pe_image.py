@@ -32,6 +32,8 @@ class PeImage:
     image_size: int
     sections: tuple
     imports: tuple
+    entry_point: int = 0
+    exports: tuple = ()
 
 
 def read_c_string(data: bytes) -> str:
@@ -71,6 +73,20 @@ def parse_imports(sections: list, image_base: int, directory_rva: int) -> list:
         descriptor_rva += 20
 
 
+def parse_exports(sections: list, image_base: int, directory_rva: int) -> dict:
+    if directory_rva == 0:
+        return {}
+    (name_count,) = struct.unpack("<I", read_at_rva(sections, directory_rva + 24, 4))
+    functions_rva, names_rva, ordinals_rva = struct.unpack("<III", read_at_rva(sections, directory_rva + 28, 12))
+    exports = {}
+    for index in range(name_count):
+        (name_rva,) = struct.unpack("<I", read_at_rva(sections, names_rva + index * 4, 4))
+        (ordinal,) = struct.unpack("<H", read_at_rva(sections, ordinals_rva + index * 2, 2))
+        (function_rva,) = struct.unpack("<I", read_at_rva(sections, functions_rva + ordinal * 4, 4))
+        exports[read_c_string(read_at_rva(sections, name_rva, 256))] = image_base + function_rva
+    return exports
+
+
 def load_pe_image(path: str) -> PeImage:
     with open(path, "rb") as file:
         data = file.read()
@@ -82,10 +98,13 @@ def load_pe_image(path: str) -> PeImage:
     (image_base,) = struct.unpack_from("<I", data, optional + 28)
     (image_size,) = struct.unpack_from("<I", data, optional + 56)
     (import_rva,) = struct.unpack_from("<I", data, optional + 104)
+    (export_rva,) = struct.unpack_from("<I", data, optional + 96)
+    (entry_rva,) = struct.unpack_from("<I", data, optional + 16)
     sections = []
     table = optional + optional_size
     for index in range(section_count):
         name, virtual_size, virtual_address, raw_size, raw_pointer = struct.unpack_from("<8sIIII", data, table + index * 40)
         sections.append(Section(name.rstrip(b"\0").decode("ascii"), virtual_address, virtual_size, data[raw_pointer : raw_pointer + raw_size]))
     imports = parse_imports(sections, image_base, import_rva)
-    return PeImage(path.rsplit("/", 1)[-1], image_base, image_size, tuple(sections), tuple(imports))
+    exports = parse_exports(sections, image_base, export_rva)
+    return PeImage(path.rsplit("/", 1)[-1], image_base, image_size, tuple(sections), tuple(imports), image_base + entry_rva, tuple(exports.items()))

@@ -90,6 +90,10 @@ The LZSS test decodes every compressed block of every bitmap in `LEGO.JAM` (1037
 
 No other mismatch was found: in particular every operand order, stored-versus-unstored intermediate and branch described in `physics.md` for these functions reproduces the original bit for bit in both precision modes.
 
+## The whole process
+
+Besides single calls the emulator boots both images the way Windows does and runs the real race loop frame by frame with scripted time and keys: Win32, C runtime, DirectDraw, Direct3D and DirectInput are stubbed, `GolDP.dll`'s device initialisation, the JAM archive, the loaders and the input manager are the game's own code. See [golden-trace.md](golden-trace.md) (`pnpm run golden-trace`). It showed that the race runs with a **24-bit** significand (`DDSCL_FPUSETUP`, control word `0x7f`), which settles `RACE_FPU_PRECISION`.
+
 ## What is still open
 
-The precision a race really runs in (`RACE_FPU_PRECISION`): both modes now match the original, so the choice needs the control word of a running game. Sine and cosine against the real FPU (see Limits). Functions that call imports or other unported code are not covered: the rest of `RigidBody_Step`, `RacerSet_Step`, `Race_Update`.
+Sine and cosine against the real FPU (see Limits). Functions that call imports or other unported code are not covered: the rest of `RigidBody_Step`, `RacerSet_Step`, `Race_Update`.

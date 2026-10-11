@@ -40,6 +40,9 @@ import type { RacerSetup } from './create-race.types.ts'
 
 // The laps of a race with one local player (0x004327f0).
 const SINGLE_PLAYER_LAP_COUNT = 3
+// 0x004300d0 (Race_AcquireControllers) calls 0x00430100, which arms each player controller: state bit 0x1 (before the
+// start), boost window and accelerate time 0.
+const CONTROLLER_BEFORE_START_FLAG = 0x1
 // Race_LoadTrackContent sets it on the demonstration's racer (0x00433a2d).
 const DEMONSTRATION_FLAG = 0x800000
 // float32 0.05 at 0x004b07f0, the rubber band's bias on a mirrored track (0x00433773).
@@ -197,6 +200,8 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     isCountdownSkipped: definition.isCountdownSkipped,
     ghost: definition.ghost,
     musicTuneCount: definition.musicTuneCount,
+    introductionCameraLimit: definition.introductionCameraLimit,
+    introductionCameraMilliseconds: 0,
     tuneIndex: definition.musicTuneCount > 0 ? INTRODUCTION_TUNE_INDEX : null,
     unidentifiedCountdownMilliseconds: 0,
     raceModeFlags: definition.raceModeFlags,
@@ -216,7 +221,14 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     }),
     routes: Object.freeze(routes),
     playerRacerIndices: Object.freeze(playerRacerIndices),
-    playerControllers: Object.freeze(playerRacerIndices.map(() => createPlayerController(false))),
+    playerControllers: Object.freeze(
+      playerRacerIndices.map(() =>
+        Object.freeze({
+          ...createPlayerController(false),
+          stateFlags: CONTROLLER_BEFORE_START_FLAG,
+        })
+      )
+    ),
     powerUpStep,
     powerUpSetups: Object.freeze(setups.map((made) => made.setup)),
     getGroundPoint: definition.getGroundPoint,

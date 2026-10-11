@@ -7,6 +7,7 @@ import {
   clearCarBodyTwoPointMode,
   setCarBodyPush,
   setCarBodyTwoPointMode,
+  startCarBodyBoost,
   startCarBodyFlip,
   startCarBodySpin,
 } from './car-body-commands.ts'
@@ -213,5 +214,42 @@ describe('the flip and the two-point mode', () => {
     expect(released.rigidBody.flags & CarRigidBodyFlag.TWO_POINT).toBe(0)
     expect(released.rigidBody.twoPointTargetHeight).toBe(0)
     expect(released.rigidBody.twoPointHeightRate).toBe(15)
+  })
+})
+
+describe('startCarBodyBoost, 0x004292e0', () => {
+  it('sets flag 0x10000, a grip scale of 1.5 and a top speed of 176 times the top speed scale', () => {
+    // Arrange
+    const body = { ...createTestCarBodyWith({ flags: 0 }), topSpeedScale: 0.5 }
+
+    // Act
+    const boosted = startCarBodyBoost(arithmetic, body)
+
+    // Assert
+    expect(boosted.rigidBody.flags & 0x10000).toBe(0x10000)
+    expect(boosted.rigidBody.gripScale).toBe(1.5)
+    expect(boosted.rigidBody.topSpeed).toBe(88)
+  })
+
+  it('gives a scripted body the speed factor 1.7', () => {
+    // Arrange
+    const body = createScripted(1)
+
+    // Act
+    const boosted = startCarBodyBoost(arithmetic, body)
+
+    // Assert
+    expect(boosted.speedFactor).toBe(Math.fround(1.7))
+  })
+
+  it('does nothing to a body that an effect holds (flag 0x80000)', () => {
+    // Arrange
+    const body = createTestCarBodyWith({ flags: 0x80000 })
+
+    // Act
+    const boosted = startCarBodyBoost(arithmetic, body)
+
+    // Assert
+    expect(boosted).toBe(body)
   })
 })

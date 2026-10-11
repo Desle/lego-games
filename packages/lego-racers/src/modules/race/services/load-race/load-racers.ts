@@ -55,7 +55,7 @@ const getPlayerCar = (request: RacerDescriptionRequest, index: number): BuiltCar
 // 0x0043b480 for every racer of the race.
 export const describeRacers = (request: RacerDescriptionRequest): readonly RacerDescription[] =>
   Array.from({ length: request.racerCount }, (_, index) => {
-    if (index < request.localPlayerCount) {
+    if (index < request.localPlayerCount && !request.isPlayerChampionCar) {
       return describeBuiltRacer(
         request.arithmetic,
         request.databases,
@@ -71,7 +71,7 @@ export const describeRacers = (request: RacerDescriptionRequest): readonly Racer
 // The files each racer's car and driver are drawn from, for the racers of 0x0043b480.
 export const describeAppearances = (request: RacerDescriptionRequest): readonly RacerAppearance[] =>
   Array.from({ length: request.racerCount }, (_, index) => {
-    if (index < request.localPlayerCount) {
+    if (index < request.localPlayerCount && !request.isPlayerChampionCar) {
       return getBuiltRacerAppearance(
         request.databases,
         getPlayerCar(request, index).chassisName,

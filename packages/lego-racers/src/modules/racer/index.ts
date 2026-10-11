@@ -36,8 +36,10 @@ export {
   endCarBodyFlaggedState,
   holdCarBody,
   releaseCarBody,
+  setCarBodyHeadingFromFrame,
   setCarBodyPush,
   setCarBodyTwoPointMode,
+  startCarBodyBoost,
   startCarBodyFlip,
   startCarBodySpin,
 } from './types/car-body-commands/car-body-commands.ts'

@@ -128,7 +128,7 @@ export const loadRaceDefinition = (
   const getIsPresent = (path: string): boolean => paths.has(`GAMEDATA${JAM_SEPARATOR}${path}`)
   const description = parseRaceDescription(readFile(`${folder}.RAB`), isMirrored)
   const tables = readRacerTables(executable)
-  const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
+  const arithmetic = createFloatArithmetic(options.fpuPrecision ?? RACE_FPU_PRECISION)
   const kinds = Array.from({ length: racerCount }, (_, index) =>
     index < Math.max(1, localPlayerCount) ? PLAYER_CONTROLLER : COMPUTER_CONTROLLER
   )
@@ -186,6 +186,7 @@ export const loadRaceDefinition = (
     localPlayerCount,
     playerCars,
     racerCodes,
+    isPlayerChampionCar: options.isPlayerChampionCar ?? false,
   }
   const descriptions = describeRacers(request)
   const appearances = describeAppearances(request)
@@ -206,11 +207,13 @@ export const loadRaceDefinition = (
     return {
       controllerKind,
       carBody: createCarBodySetup(arithmetic, description.car, {
+        // The car body attaches at its start slot (0x00444d90 copies the model frame); the route placement
+        // 0x0042a670 moves only the display frame afterwards (placeCarBodyOnRoute).
         displayFrame: getStartFrame(
           arithmetic,
           startPositions,
           getStartSlot(index, isMultiplayer),
-          route
+          null
         ),
         displayBoundingRadius: getFigureBounds(arithmetic, racerFigures.wheels)?.radius ?? 0,
         isRaceModeFlagged: getIsCarBodyFlagged(raceModeFlags),
@@ -238,6 +241,7 @@ export const loadRaceDefinition = (
     isMirrored,
     isPointsRecordPresent: options.isPointsRecordPresent ?? false,
     ghost: options.ghost ?? null,
+    introductionCameraLimit: options.introductionCameraLimit ?? null,
     musicTuneCount:
       options.musicTuneCount ??
       (description.musicList === null

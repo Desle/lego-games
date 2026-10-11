@@ -9,11 +9,11 @@ import type {
   EmulatorSession,
 } from './emulator-client.types.ts'
 
-const REPOSITORY_ROOT = resolve(import.meta.dirname, '../../../../..')
-const EMULATOR_DIRECTORY = resolve(REPOSITORY_ROOT, 'reverse-engineering/emulator')
-const EMULATOR_PYTHON_PATH = resolve(EMULATOR_DIRECTORY, '.venv/bin/python')
+export const REPOSITORY_ROOT = resolve(import.meta.dirname, '../../../../..')
+export const EMULATOR_DIRECTORY = resolve(REPOSITORY_ROOT, 'reverse-engineering/emulator')
+export const EMULATOR_PYTHON_PATH = resolve(EMULATOR_DIRECTORY, '.venv/bin/python')
 const EMULATOR_BRIDGE_PATH = resolve(EMULATOR_DIRECTORY, 'bridge.py')
-const GAME_FILES_DIRECTORY = resolve(
+export const GAME_FILES_DIRECTORY = resolve(
   REPOSITORY_ROOT,
   'original-files/Lego_Racers_Win_Files_EN/Game Files'
 )

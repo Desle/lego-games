@@ -4,9 +4,16 @@ import type { GhostSession } from '../../../ghost/index.ts'
 import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
 import type { RandomDraw, RandomTablePosition } from '../../../random-table/index.ts'
 import type { BuiltCar, RacerDatabases } from '../../../racer-setup/index.ts'
-import type { FloatArithmetic } from '../../../simulation-math/index.ts'
+import type { FloatArithmetic, FpuPrecisionValue } from '../../../simulation-math/index.ts'
 
 export type LoadRaceOptions = {
+  // The x87 precision the race runs in; the default is RACE_FPU_PRECISION.
+  readonly fpuPrecision?: FpuPrecisionValue
+  // The local players drive the champion car of their racer code instead of a car built from bricks (the golden
+  // trace needs this: a built car's model comes from the car builder, which the emulator does not run).
+  readonly isPlayerChampionCar?: boolean
+  // See RaceDefinition.introductionCameraLimit; the golden trace reads it from the original's camera.
+  readonly introductionCameraLimit?: number | null
   // The race's folder below GAMEDATA; the first race is RACEC0R0.
   readonly raceFolder?: string
   // Game settings +0x100: racer 0 is the player, the others are computer racers.
@@ -68,6 +75,7 @@ export type RacerDescriptionRequest = {
   readonly playerCars: readonly BuiltCar[]
   // The driver code of every racer slot (0x0042d730 fills slot i with code i; the players overwrite theirs).
   readonly racerCodes: readonly string[]
+  readonly isPlayerChampionCar: boolean
 }
 
 // The BVB instances of a race's collision world, in world order, with their names.
