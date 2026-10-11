@@ -174,7 +174,7 @@ export const loadRaceDefinition = (
     tables,
     raceModeFlags,
     localPlayerCount,
-    multiplayerLapCount: DEFAULT_LAP_COUNT,
+    multiplayerLapCount: options.multiplayerLapCount ?? DEFAULT_LAP_COUNT,
     isCountdownSkipped: false,
     isMirrored: false,
     racers,
