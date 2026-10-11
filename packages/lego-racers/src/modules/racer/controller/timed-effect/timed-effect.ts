@@ -61,23 +61,21 @@ export const transferTimedEffect = (
 // 0x00439b00 (fastcall): the timed effect ends. The effect object is released and the figure and the vehicle return
 // to their own look (presentation, not modelled); the countdown, the racer and driver flags and the car body's hold
 // (0x004293c0) are undone.
-export const endTimedEffect: RacerBoundary = (_context, racerSet, racerIndex) => {
-  const racer = getRacer(racerSet, racerIndex)
-  return setRacer(
-    racerSet,
-    racerIndex,
-    Object.freeze({
-      ...racer,
-      timedEffectMilliseconds: 0,
-      flags: racer.flags & ~RACER_TIMED_EFFECT_FLAG,
-      driver: Object.freeze({
-        ...racer.driver,
-        flags: racer.driver.flags & ~DRIVER_TIMED_EFFECT_FLAG,
-      }),
-      carBody: releaseCarBody(racer.carBody),
-    })
-  )
-}
+// The racer's side of 0x00439b00: no timed effect, no flags for it, the car body released.
+export const getRacerWithoutTimedEffect = (racer: Racer): Racer =>
+  Object.freeze({
+    ...racer,
+    timedEffectMilliseconds: 0,
+    flags: racer.flags & ~RACER_TIMED_EFFECT_FLAG,
+    driver: Object.freeze({
+      ...racer.driver,
+      flags: racer.driver.flags & ~DRIVER_TIMED_EFFECT_FLAG,
+    }),
+    carBody: releaseCarBody(racer.carBody),
+  })
+
+export const endTimedEffect: RacerBoundary = (_context, racerSet, racerIndex) =>
+  setRacer(racerSet, racerIndex, getRacerWithoutTimedEffect(getRacer(racerSet, racerIndex)))
 
 // 0x004397b0 (fastcall): car body slot 15 (0x00429c30), called while a free body's flagged state (0x80) lasts.
 export const endCarBodyEffect: RacerBoundary = (_context, racerSet, racerIndex) => {

@@ -147,6 +147,8 @@ export const loadRaceDefinition = (
   const readNamed = (name: string | null): Uint8Array | null =>
     name === null ? null : readFile(getJamFileName(name))
   const checkpointBytes = readNamed(description.checkpoints)
+  const checkpoints =
+    checkpointBytes === null ? [] : parseCheckpoints(checkpointBytes, isMirrored).checkpoints
   const startPositionBytes = readNamed(description.startPositions)
   const powerUpBytes = readNamed(description.powerUpPlacements)
   const eventBytes = readNamed(description.events)
@@ -250,8 +252,7 @@ export const loadRaceDefinition = (
         ? 0
         : decodeSoundBank(readFile(description.musicList.toUpperCase())).declaredSoundCount),
     racers,
-    checkpoints:
-      checkpointBytes === null ? [] : parseCheckpoints(checkpointBytes, isMirrored).checkpoints,
+    checkpoints,
     // The collision world's instances in world order (race +0x3a0). 0x004371c0 hands every car the track (race +0x3b0)
     // and the checkpoint object (+0x3b8, when the race names one); the other instances join a car's list while it is
     // in the trigger that names them (0x0045e520).
@@ -289,6 +290,6 @@ export const loadRaceDefinition = (
     randomPosition: routeDraws.position,
     getGroundPoint: null,
     trackTargets: [],
-    projectileModelData: loadProjectileModelData(arithmetic, readArchiveFile),
+    projectileModelData: loadProjectileModelData(arithmetic, readArchiveFile, checkpoints),
   })
 }
