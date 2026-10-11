@@ -23,3 +23,5 @@ Anything else is error 0; `+0x25bc` is cleared afterwards. A sample is three `in
 Unknown: the three integers of `0x2a` and the integer of `0x2b`, and the scale of the orientation bytes.
 
 Verified: all 12 `.GHB` files parse to their last byte.
+
+The ghost object that holds three such runs (the champion's, the session's best and the one being recorded), its clocks, the recorder's timer, the playback interpolation and the hold at the menu after a ghost race are in [game-progression.md](game-progression.md). The three leading integers are the lap times in milliseconds; the playback and recording are ported in `ghost` (`recordGhostSample`, `stepGhostPlayback`, `finishGhostRun`); `encodeGhost` writes a run as a `.GHB` (not in the original, which keeps the best run in memory only).

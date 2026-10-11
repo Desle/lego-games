@@ -5,7 +5,7 @@ import type { RegistryContact, RegistryEntry } from '../../projectiles/index.ts'
 import type { RouteFollower, RubberBand } from '../../racer-ai/index.ts'
 import type { CarRigidBody } from '../../racer-physics/index.ts'
 import type { RandomTable, RandomTablePosition } from '../../random-table/index.ts'
-import type { FloatArithmetic, Quaternion, Vector3 } from '../../simulation-math/index.ts'
+import type { FloatArithmetic, Matrix3, Quaternion, Vector3 } from '../../simulation-math/index.ts'
 
 // The two lookup tables in LEGORacers.exe that the racer code reads.
 export type RacerTables = {
@@ -166,6 +166,11 @@ export type CarBody = {
   // +0x7c8, +0x7d0: float32 bounce height above the route and its vertical speed.
   readonly bounceHeight: number
   readonly bounceVerticalSpeed: number
+  // +0x7dc, +0x7e0, +0x7e4: float32 rate, angle and height of a scripted body's pitch flip (0x00429cf0 starts it, the
+  // pitch timer +0x5dc runs it, 0x0042a290 turns the body and measures how far the flip lifted the wheel).
+  readonly flipRate: number
+  readonly flipAngle: number
+  readonly flipHeight: number
 }
 
 // The two forces a car body can carry (car rigid body +0x630 and +0x63c).
@@ -278,6 +283,15 @@ export type Vehicle = {
   readonly smokeEmitterAge: number | null
   readonly dustEmitterAge: number | null
   readonly boostEmitterAge: number | null
+  // +0x4c..+0x54: where the driver sits, in the car model frame (the chassis's `vehiclePoint`, 0x0043d7a0).
+  readonly seatPoint: Vector3
+  // +0x3c: the car model frame's rotation. 0x0043e740 leans it towards the display frame every update; it starts
+  // as the identity (the frame constructor 0x004108c0). Its position is the display frame's.
+  readonly bodyRotation: Matrix3
+  // +0x398: float32, the lean's forward spring. The side spring is +0x39c, which is `Racer.vehicleSlideAngle`.
+  readonly forwardLean: number
+  // The driver figure's world position, the seat point carried by the car model frame (0x0043e740 ends with it).
+  readonly driverPosition: Vector3
 }
 
 // The racer (0xe34 bytes; constructor 0x00436990, field reset 0x00436bd0). Only the fields the ported passes touch.
@@ -353,6 +367,9 @@ export type Racer = {
   readonly timedEffectCharge: number
   // +0xdf8: the point a player is guided to (0x00439e60 sets it with flag 0x8000, 0x00439e90 clears the flag).
   readonly guidanceTarget: Vector3
+  // The car rigid body's collision list (+0x140, count +0x154, at most five; 0x00444d90 sets the first two, 0x004488e0
+  // adds and 0x00448930 removes): positions in RacerSetContext.collisionObjects. The first is the track.
+  readonly collisionObjectIndices: readonly number[]
   // The 750 ms timer 0x00438e60 adds to the collision manager (milliseconds counted so far), or null when none runs.
   readonly contactTimerMilliseconds: number | null
 }
@@ -447,6 +464,14 @@ export type RacerSetStepDependencies = {
 export type RacerCollisionDependencies = {
   // 0x00429680 on a scripted car body: the route follower is moved by the displacement (0x004a5750, 0x0042a290, 0x0042a570).
   readonly separateScriptedCarBody: (
+    context: RacerSetContext,
+    racerSet: RacerSet,
+    racerIndex: number,
+    displacement: Vector3
+  ) => RacerSet
+  // 0x00429680 on a free car body is 0x004490b0: the body moves out of contact by the displacement. Without it the car
+  // rigid body's own move (with its default contact filter) runs.
+  readonly separateFreeCarBody?: (
     context: RacerSetContext,
     racerSet: RacerSet,
     racerIndex: number,

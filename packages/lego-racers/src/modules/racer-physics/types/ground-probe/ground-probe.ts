@@ -53,7 +53,11 @@ const LANDING_AIR_TIME = 400
 const LENGTHWISE_WHEELS = Object.freeze([2, 3, 0, 1])
 const CROSSWISE_WHEELS = Object.freeze([1, 0, 3, 2])
 
-const replaceWheel = (body: CarRigidBody, index: number, change: Partial<CarWheel>): CarRigidBody =>
+export const replaceWheel = (
+  body: CarRigidBody,
+  index: number,
+  change: Partial<CarWheel>
+): CarRigidBody =>
   Object.freeze({
     ...body,
     wheels: Object.freeze(
@@ -63,7 +67,7 @@ const replaceWheel = (body: CarRigidBody, index: number, change: Partial<CarWhee
     ),
   })
 
-const replaceAllWheels = (
+export const replaceAllWheels = (
   body: CarRigidBody,
   getChange: (wheel: CarWheel) => Partial<CarWheel>
 ): CarRigidBody =>
@@ -98,7 +102,7 @@ export const getWithTiltLimit = (arithmetic: FloatArithmetic, body: CarRigidBody
 
 // 0x00448a70 (thiscall: triangle, material): a free entry while there are fewer than eight,
 // otherwise the first of the oldest.
-const insertTriangle = (
+export const insertTriangle = (
   cache: readonly TriangleCacheEntry[],
   triangle: CollisionTriangle,
   material: string | undefined
@@ -132,7 +136,7 @@ const getWithFreshEntry = (body: CarRigidBody, index: number): CarRigidBody =>
 
 // 0x00448ae0 (thiscall: wheel): tries the wheel's last triangle, then every other cached one,
 // with 0x00448b80 (each try writes its crossing point to the wheel's +0x30).
-const findCachedTriangle = (
+export const findCachedTriangle = (
   arithmetic: FloatArithmetic,
   body: CarRigidBody,
   wheelIndex: number
@@ -170,7 +174,7 @@ const findCachedTriangle = (
 }
 
 // The squared distance of 0x00446045 / 0x004461d5: the differences stay on the FPU stack.
-const getUnstoredSquaredDistance = (
+export const getUnstoredSquaredDistance = (
   arithmetic: FloatArithmetic,
   end: Vector3,
   point: Vector3
@@ -181,7 +185,7 @@ const getUnstoredSquaredDistance = (
     z: arithmetic.subtract(end.z, point.z),
   })
 
-const getDeeper = (
+export const getDeeper = (
   arithmetic: FloatArithmetic,
   deepest: DeepestWheel | undefined,
   wheelIndex: number,
@@ -442,13 +446,15 @@ const getBounced = (arithmetic: FloatArithmetic, body: CarRigidBody): CarRigidBo
   return replaceAllWheels(bounced, () => ({ isOnGround: false }))
 }
 
-// 0x004463e0..0x00446488: gravity along the ground, and each grounded wheel's share of the weight.
-const getGroundLoads = (arithmetic: FloatArithmetic, body: CarRigidBody): CarRigidBody => {
-  const { multiply, divide, subtract, storeFloat } = arithmetic
+// Gravity along the ground (0x004463e0, 0x00446dbc): the weight minus its part along the ground normal.
+export const getBodyWithSlopeForce = (
+  arithmetic: FloatArithmetic,
+  body: CarRigidBody
+): CarRigidBody => {
+  const { multiply, subtract, storeFloat } = arithmetic
   const { groundNormal, weight } = body
   const normalWeight = multiply(weight, groundNormal.z)
-  const share = storeFloat(multiply(weight, -divide(1, body.groundedWheelCount + 8)))
-  const loaded = Object.freeze({
+  return Object.freeze({
     ...body,
     slopeForce: Object.freeze({
       x: storeFloat(-multiply(groundNormal.x, normalWeight)),
@@ -456,6 +462,29 @@ const getGroundLoads = (arithmetic: FloatArithmetic, body: CarRigidBody): CarRig
       z: storeFloat(subtract(weight, multiply(groundNormal.z, normalWeight))),
     }),
   })
+}
+
+// Without a hit the body sinks 0.008 per pass when it had ground before (0x00446488, 0x00446b04).
+export const getBodyAfterMissingGround = (
+  arithmetic: FloatArithmetic,
+  body: CarRigidBody,
+  previousCount: number
+): CarRigidBody =>
+  previousCount === 0
+    ? body
+    : Object.freeze({
+        ...body,
+        linearVelocity: Object.freeze({
+          ...body.linearVelocity,
+          z: arithmetic.storeFloat(arithmetic.subtract(body.linearVelocity.z, AIRBORNE_SINK)),
+        }),
+      })
+
+// 0x004463e0..0x00446488: gravity along the ground, and each grounded wheel's share of the weight.
+const getGroundLoads = (arithmetic: FloatArithmetic, body: CarRigidBody): CarRigidBody => {
+  const { multiply, divide, storeFloat } = arithmetic
+  const share = storeFloat(multiply(body.weight, -divide(1, body.groundedWheelCount + 8)))
+  const loaded = getBodyWithSlopeForce(arithmetic, body)
   const load = Object.freeze({ x: 0, y: 0, z: share })
   return replaceAllWheels(loaded, (wheel) => (wheel.isOnGround ? { groundForce: load } : {}))
 }
@@ -513,6 +542,28 @@ const getGrounded = (
   return landed === undefined ? getBounced(arithmetic, aligned) : getGroundLoads(arithmetic, landed)
 }
 
+// The start of 0x00445dc0 and 0x004465c0: a body at rest (flag 0x100, no velocity) is left alone, any other loses the
+// flag, and the triangle cache ages by one sub-step (0x00448a50).
+export const getAwakeBody = (
+  arithmetic: FloatArithmetic,
+  body: CarRigidBody
+): CarRigidBody | undefined => {
+  const { getIsEqual } = arithmetic
+  const isAtRest =
+    getIsFlagSet(body, CarRigidBodyFlag.AT_REST) &&
+    [body.linearVelocity, body.angularVelocity].every(
+      (vector) => getIsEqual(vector.x, 0) && getIsEqual(vector.y, 0) && getIsEqual(vector.z, 0)
+    )
+  if (isAtRest) return undefined
+  return Object.freeze({
+    ...body,
+    flags: body.flags & ~CarRigidBodyFlag.AT_REST,
+    triangleCache: Object.freeze(
+      body.triangleCache.map((entry) => Object.freeze({ ...entry, age: entry.age + 1 }))
+    ),
+  })
+}
+
 // 0x00445dc0 (thiscall: step): finds the ground under the four wheels. A body at rest (flag 0x100,
 // no velocity) is left alone. Probes reach from the model's bounding radius plus the drop since the
 // pass started above each anchor to 0.04 × step below it (0 when airborne or flag 0x80).
@@ -522,20 +573,9 @@ export const probeGround = (
   stepMilliseconds: number,
   collisionObjects: readonly CollisionObject[]
 ): CarRigidBody => {
-  const { add, subtract, multiply, storeFloat, getIsBelow, getIsEqual } = arithmetic
-  const isAtRest =
-    getIsFlagSet(body, CarRigidBodyFlag.AT_REST) &&
-    [body.linearVelocity, body.angularVelocity].every(
-      (vector) => getIsEqual(vector.x, 0) && getIsEqual(vector.y, 0) && getIsEqual(vector.z, 0)
-    )
-  if (isAtRest) return body
-  const awake = Object.freeze({
-    ...body,
-    flags: body.flags & ~CarRigidBodyFlag.AT_REST,
-    triangleCache: Object.freeze(
-      body.triangleCache.map((entry) => Object.freeze({ ...entry, age: entry.age + 1 }))
-    ),
-  })
+  const { add, subtract, multiply, storeFloat, getIsBelow } = arithmetic
+  const awake = getAwakeBody(arithmetic, body)
+  if (awake === undefined) return body
   const previousCount = awake.groundedWheelCount
   const drop = -subtract(awake.frame.position.z, awake.stepStart.position.z)
   const storedDrop = getIsBelow(drop, 0) ? 0 : storeFloat(drop)
@@ -571,15 +611,7 @@ export const probeGround = (
       ? afterObjects
       : probeTrack(arithmetic, afterObjects, track, probeHeight, probeDepth)
   if (probed.deepest === undefined) {
-    if (previousCount === 0) return probed.body
-    const { linearVelocity } = probed.body
-    return Object.freeze({
-      ...probed.body,
-      linearVelocity: Object.freeze({
-        ...linearVelocity,
-        z: storeFloat(subtract(linearVelocity.z, AIRBORNE_SINK)),
-      }),
-    })
+    return getBodyAfterMissingGround(arithmetic, probed.body, previousCount)
   }
   return getGrounded(arithmetic, probed.body, probed.deepest, isLanding)
 }

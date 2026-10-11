@@ -26,6 +26,8 @@ export type BuiltCar = {
 
 // What 0x0043b480 collects for 0x004371c0 about one car (the description's +0x1c..+0x5c and +0x84..+0x86).
 export type CarDescription = {
+  // The chassis the car sits on (the record whose first variant gives the car's model, skeleton and animations).
+  readonly chassisName: string
   // Description +0x58: the rigid body's mass.
   readonly mass: number
   // Description +0x4c: the local centre of mass.

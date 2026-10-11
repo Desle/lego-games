@@ -18,3 +18,9 @@ export type LinkedMaterials = {
   // The world's material chain searched newest library first (0x10028c20 over the list 0x10028bc0 prepends to).
   readonly indexByName: ReadonlyMap<string, number>
 }
+
+// The textures and materials a loose model's files give.
+export type LinkedModelResources = {
+  readonly textures: LinkedTextures
+  readonly materials: LinkedMaterials
+}

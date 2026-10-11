@@ -49,6 +49,9 @@ export const createCarBody = (definition: CarBodyDefinition): CarBody =>
     lateralOffset: 0,
     bounceHeight: 0,
     bounceVerticalSpeed: 0,
+    flipRate: 0,
+    flipAngle: 0,
+    flipHeight: 0,
   })
 
 const setRigidBody = (body: CarBody, rigidBody: CarRigidBody): CarBody =>

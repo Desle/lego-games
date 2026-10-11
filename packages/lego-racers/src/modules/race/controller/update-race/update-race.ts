@@ -1,3 +1,4 @@
+import { recordGhostSample } from '../../../ghost/index.ts'
 import { advanceSky } from '../../../sky/index.ts'
 import { updateTrackHazardsAfterRacers, updateTrackLogicFrame } from '../../../track-logic/index.ts'
 import { advanceWorldAnimation } from '../../../world-animation/index.ts'
@@ -20,6 +21,7 @@ import {
   getRacerSetOf,
   IDLE_RACER_CONTROLS,
   NO_RACE_CONTACTS,
+  updateTaggedPositions,
 } from '../race-world/race-world.ts'
 import type { PlayerControllerProgress, PlayerControllerRun } from './update-race.types.ts'
 
@@ -82,6 +84,7 @@ const getStateWithProgress = (state: RaceState, progress: PlayerControllerProgre
     powerUpStep: progress.racerSet.powerUpStep,
     trackLogic: progress.racerSet.trackLogic,
     trackEffects: progress.racerSet.trackEffects,
+    taggedPositionMilliseconds: progress.racerSet.taggedPositionMilliseconds,
     playerControllers: progress.controllers,
   })
 
@@ -134,8 +137,9 @@ export const updateRace = (
     return projected.step
   })
   const projected = getRacerSetAfterProjectileEvents(changed, projectileWorld.events)
-  const powered = changeTrackLogic(counted.context, projected, (trackLogic, trackContext) =>
-    updateTrackLogicFrame(trackLogic, trackContext, stepMilliseconds, projected.racers.length)
+  const tagged = updateTaggedPositions(projected, stepMilliseconds)
+  const powered = changeTrackLogic(counted.context, tagged, (trackLogic, trackContext) =>
+    updateTrackLogicFrame(trackLogic, trackContext, stepMilliseconds, tagged.racers.length)
   )
   const controlled = counted.isDemonstration
     ? { controllers: counted.playerControllers, racerSet: powered }
@@ -146,12 +150,14 @@ export const updateRace = (
           stepMilliseconds
         )
       )
+  const ghostRacerIndex = counted.playerRacerIndices[0]
+  let ghost = counted.ghost
   const stepped = updateRacePhysics(
     arithmetic,
     controlled.racerSet,
     timeInput,
-    (racerSet, subStepMilliseconds) =>
-      getRaceRacerSetOf(
+    (racerSet, subStepMilliseconds) => {
+      const steppedSet = getRaceRacerSetOf(
         stepRacerSet({
           context: counted.context,
           racerSet,
@@ -159,13 +165,24 @@ export const updateRace = (
           dependencies: RACE_STEP_DEPENDENCIES,
         })
       )
+      const ghostRacer =
+        ghostRacerIndex === undefined ? undefined : steppedSet.racers[ghostRacerIndex]
+      if (ghost !== null && ghostRacer !== undefined) {
+        const { position, rotation } = ghostRacer.carBody.rigidBody.displayFrame
+        ghost = recordGhostSample(arithmetic, ghost, subStepMilliseconds, { position, rotation })
+      }
+      return steppedSet
+    }
   )
   const hazardsFollowed = changeTrackLogic(counted.context, stepped, (trackLogic, trackContext) =>
     updateTrackHazardsAfterRacers(trackLogic, trackContext, NO_CAMERA_POSITIONS)
   )
-  const progressed = getStateWithProgress(Object.freeze({ ...counted, projectileWorld }), {
-    controllers: controlled.controllers,
-    racerSet: hazardsFollowed,
+  const progressed = Object.freeze({
+    ...getStateWithProgress(Object.freeze({ ...counted, projectileWorld }), {
+      controllers: controlled.controllers,
+      racerSet: hazardsFollowed,
+    }),
+    ghost,
   })
   return getStateWithSkyUpdated(progressed, stepMilliseconds)
 }

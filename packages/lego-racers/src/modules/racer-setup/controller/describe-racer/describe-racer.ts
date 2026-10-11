@@ -27,7 +27,8 @@ const CENTRE_OFFSET_SCALE = getFloatFromBits(0x3e800000)
 
 const toVector = ([x, y, z]: FloatTriple): Vector3 => Object.freeze({ x, y, z })
 
-const getRecord = <Entry extends NamedRecord>(
+// The record a racer's database holds under a name; 0x0043b480 reads through a null pointer for an unknown one.
+export const getRacerRecord = <Entry extends NamedRecord>(
   records: readonly Entry[],
   databaseName: string,
   recordName: string
@@ -44,6 +45,7 @@ const getCarDescription = (
   weight: number
 ): CarDescription =>
   Object.freeze({
+    chassisName: chassis.name,
     mass,
     centreOfMass,
     wheelPoints: Object.freeze(chassis.wheelPoints.map(toVector)),
@@ -61,9 +63,9 @@ export const describeChampionRacer = (
   databases: RacerDatabases,
   driverName: string
 ): RacerDescription => {
-  const driver = getRecord(databases.drivers.drivers, 'driver', driverName)
-  const champion = getRecord(databases.champions.champions, 'champion', driver.championName)
-  const chassis = getRecord(databases.chassis.chassis, 'chassis', champion.chassisName)
+  const driver = getRacerRecord(databases.drivers.drivers, 'driver', driverName)
+  const champion = getRacerRecord(databases.champions.champions, 'champion', driver.championName)
+  const chassis = getRacerRecord(databases.chassis.chassis, 'chassis', champion.chassisName)
   const isPreferredCodeKnown =
     driver.preferredPowerUpCode >= 1 &&
     driver.preferredPowerUpCode <= CHAMPION_PREFERRED_POWER_UP_CODES
@@ -90,7 +92,7 @@ export const describeBuiltRacer = (
   racerIndex: number
 ): RacerDescription => {
   const { add, multiply, storeFloat } = arithmetic
-  const chassis = getRecord(databases.chassis.chassis, 'chassis', builtCar.chassisName)
+  const chassis = getRacerRecord(databases.chassis.chassis, 'chassis', builtCar.chassisName)
   const [baseX, baseY, baseZ] = chassis.builtCentreOfMassBase
   const centreOfMass = Object.freeze({
     x: storeFloat(add(multiply(builtCar.centreOffsetX, CENTRE_OFFSET_SCALE), baseX)),

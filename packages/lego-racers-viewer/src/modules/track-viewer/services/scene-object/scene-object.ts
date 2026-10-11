@@ -61,7 +61,7 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
   }
   const group = new Group()
   const animators: ((deltaMilliseconds: number) => void)[] = []
-  const stateSetters = new Map<string, NonNullable<InstanceObject['setAnimationState']>>()
+  const stateSetters = new Map<string, NonNullable<InstanceObject['setState']>>()
   for (const instance of scene.instances.filter(options.includeInstance)) {
     const levelMesh = getInstanceLevelMesh(scene, instance)
     const instanceObject =
@@ -69,9 +69,7 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
     if (instanceObject === null) continue
     group.add(instanceObject.group)
     if (instanceObject.animate !== null) animators.push(instanceObject.animate)
-    if (instanceObject.setAnimationState !== null) {
-      stateSetters.set(instance.name, instanceObject.setAnimationState)
-    }
+    if (instanceObject.setState !== null) stateSetters.set(instance.name, instanceObject.setState)
   }
   group.updateMatrixWorld(true)
   const bounds = new Box3().setFromObject(group)
@@ -93,6 +91,9 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
     setSkeletonState: (name: string, state: SkeletonAnimationState) =>
       stateSetters.get(name)?.(state),
     animatedInstanceCount: animators.length,
+    setAnimationState: (state: SkeletonAnimationState) => {
+      for (const setState of stateSetters.values()) setState(state)
+    },
     dispose,
   })
 }

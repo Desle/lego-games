@@ -1,3 +1,4 @@
+import { RACER_PLACED_FLAG } from '../../types/racer-transitions/racer-transitions.ts'
 import { createRace } from '../create-race/create-race.ts'
 import { IDLE_RACER_CONTROLS, NO_RACE_CONTACTS } from '../race-world/race-world.ts'
 import { stepRace } from '../step-race/step-race.ts'
@@ -22,7 +23,9 @@ const getRacerReport = (raceState: RaceState, racerIndex: number): HeadlessRacer
     routeSampleIndex: routeFollower === null ? null : routeFollower.previousSampleIndex,
     checkpointIndex: racer.checkpointIndex,
     lap: racer.lap,
+    currentLap: racer.currentLap,
     racePosition: racer.racePosition,
+    isPlaced: (racer.flags & RACER_PLACED_FLAG) !== 0,
   })
 }
 
@@ -49,6 +52,9 @@ export const runHeadlessRace = (
     racers: Object.freeze(
       raceState.racerSet.racers.map((_, index) => getRacerReport(raceState, index))
     ),
+    finishedRacerCount: raceState.finishedRacerCount,
+    placements: raceState.placements,
+    exit: raceState.exit,
     events: Object.freeze(events),
     raceState,
   })

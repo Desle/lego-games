@@ -11,13 +11,17 @@ import {
   createPlayerController,
   createRacer,
   createRacerSet,
+  createVehicle,
 } from '../../../racer/index.ts'
 import type { Racer, RacerSet } from '../../../racer/index.ts'
 import { drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
 import { createSkyState } from '../../../sky/index.ts'
 import { createTrackLogic } from '../../../track-logic/index.ts'
-import { RacePhase } from '../../types/race-phase/race-phase.ts'
+import { CLOSED_PAUSE_MENU } from '../../types/pause-menu/pause-menu.ts'
+import { createPointsRecord } from '../../types/points-record/points-record.ts'
+import { RaceExit } from '../../types/race-exit/race-exit.ts'
+import { INTRODUCTION_TUNE_INDEX, RacePhase } from '../../types/race-phase/race-phase.ts'
 import type {
   RaceDefinition,
   RaceRacerDefinition,
@@ -30,6 +34,8 @@ import {
   resetRacerForRace,
 } from '../../types/racer-transitions/racer-transitions.ts'
 import { placeCarBodyOnRoute } from '../../types/scripted-car-body/scripted-car-body.ts'
+import { createSurfaceMaterials } from '../../types/surface-materials/surface-materials.ts'
+import { createRegistryObjects, getRegistryEntries } from '../registry-objects/registry-objects.ts'
 import type { RacerSetup } from './create-race.types.ts'
 
 // The laps of a race with one local player (0x004327f0).
@@ -38,6 +44,9 @@ const SINGLE_PLAYER_LAP_COUNT = 3
 const DEMONSTRATION_FLAG = 0x800000
 // float32 0.05 at 0x004b07f0, the rubber band's bias on a mirrored track (0x00433773).
 const MIRRORED_RUBBER_BAND_BIAS = Math.fround(0.05)
+
+// 0x0043d7a0 draws `% 2000` for the vehicle's +0x388, the time before the driver may look at another racer.
+const VEHICLE_LOOK_MILLISECONDS = 2000
 
 // 0x00436df0 and 0x004371c0 for one racer, then 0x004374c0: the computer racer's chances and its two timers
 // (two random table draws, even for a player), the vehicle's animation timer (0x0043d7a0, a third draw), the
@@ -57,14 +66,21 @@ const createRacerFromDefinition = (
   const base = createRacer(
     racerDefinition.route === null
       ? carBody
-      : placeCarBodyOnRoute(arithmetic, carBody, racerDefinition.route)
+      : placeCarBodyOnRoute(arithmetic, carBody, racerDefinition.route),
+    racerDefinition.figures.wheels
   )
   const racer: Racer = Object.freeze({
     ...base,
+    collisionObjectIndices: definition.carCollisionObjectIndices,
     lapCount,
     powerUpChances: personality.chances,
     proximityCheckMilliseconds: timers.tauntMilliseconds,
     voiceMilliseconds: timers.voiceMilliseconds,
+    vehicle: createVehicle(
+      racerDefinition.figures.driver,
+      racerDefinition.appearance.seatPoint,
+      vehicleDraw.value % VEHICLE_LOOK_MILLISECONDS
+    ),
     flags: getRaceModeRacerFlags(definition.raceModeFlags),
     controllerKind: racerDefinition.controllerKind,
     racePosition: racerIndex + 1,
@@ -110,10 +126,11 @@ export const createRace = (definition: RaceDefinition): RaceState => {
       ),
     ]
   }, [])
+  const routes = racerDefinitions.map((racerDefinition) => racerDefinition.route)
   const racers = setups.map((made, index) =>
     isDemonstration && index === 0
       ? Object.freeze({
-          ...convertRacerToComputer(made.racer),
+          ...convertRacerToComputer(definition.arithmetic, made.racer, routes),
           flags: (made.racer.flags | DEMONSTRATION_FLAG) >>> 0,
         })
       : made.racer
@@ -153,15 +170,34 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     racerDefinition.controllerKind === PLAYER_CONTROLLER ? [index] : []
   )
   const powerUpStep = setBrickSoundsEnabled(powerUps, false)
+  const registryObjects = createRegistryObjects(
+    definition.mainTriggers,
+    definition.environmentTriggers,
+    powerUps.world.bricks.length,
+    powerUps.world.enhancementBricks.length
+  )
+  const registryEntries = getRegistryEntries(
+    definition.arithmetic,
+    { registryObjects, trackLogic, powerUpStep },
+    []
+  )
   return Object.freeze({
     phase: RacePhase.INTRODUCTION,
     phaseMilliseconds: 0,
     isRunning: true,
+    exit: RaceExit.NONE,
+    pauseMenu: CLOSED_PAUSE_MENU,
+    pointsRecord:
+      definition.pointsRecord ?? (definition.isPointsRecordPresent ? createPointsRecord() : null),
+    isSettingsFlag40Set: definition.isSettingsFlag40Set,
     finishedRacerCount: 0,
     lapCount,
     isMultiplayer,
     isDemonstration,
     isCountdownSkipped: definition.isCountdownSkipped,
+    ghost: definition.ghost,
+    musicTuneCount: definition.musicTuneCount,
+    tuneIndex: definition.musicTuneCount > 0 ? INTRODUCTION_TUNE_INDEX : null,
     unidentifiedCountdownMilliseconds: 0,
     raceModeFlags: definition.raceModeFlags,
     placements: Object.freeze(racers.map(() => 0)),
@@ -174,15 +210,26 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     }),
     racerSet: Object.freeze({
       ...racerSet,
+      registryEntries,
       randomPosition: powerUps.world.random.position,
       rubberBand: createRubberBand(racerSet.rubberBand.bias),
     }),
+    routes: Object.freeze(routes),
     playerRacerIndices: Object.freeze(playerRacerIndices),
     playerControllers: Object.freeze(playerRacerIndices.map(() => createPlayerController(false))),
     powerUpStep,
     powerUpSetups: Object.freeze(setups.map((made) => made.setup)),
     getGroundPoint: definition.getGroundPoint,
     trackTargets: definition.trackTargets,
+    surfaces: createSurfaceMaterials(
+      definition.trackMaterials,
+      definition.collisionObjects[definition.carCollisionObjectIndices[1] ?? -1]
+    ),
+    collisionObjectNames: definition.collisionObjectNames,
+    taggedPositionMilliseconds: Object.freeze(
+      racers.map(() => Object.freeze(definition.collisionObjects.map(() => 0)))
+    ),
+    registryObjects,
     projectileWorld: createProjectileWorld(powerUpStep),
     projectileModelData: definition.projectileModelData,
     trackLogic,

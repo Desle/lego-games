@@ -1,3 +1,4 @@
+import type { CollisionObject } from '../../../collision/index.ts'
 import { createRubberBand, getRacerProgress } from '../../../racer-ai/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
 import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
@@ -69,6 +70,7 @@ export const createRacer = (carBody: CarBody, figure: Figure = createFigure([], 
     reactionKind: 0,
     timedEffectCharge: 0,
     guidanceTarget: ZERO_VECTOR3,
+    collisionObjectIndices: Object.freeze([0]),
     contactTimerMilliseconds: null,
   })
 
@@ -93,6 +95,16 @@ export const getRacer = (racerSet: RacerSet, racerIndex: number): Racer => {
   if (racer === undefined) throw new RangeError(`No racer ${String(racerIndex)}`)
   return racer
 }
+
+// The objects of the racer's car rigid body list (+0x140): the world instances at its indices, the track first.
+export const getRacerCollisionObjects = (
+  context: RacerSetContext,
+  racer: Racer
+): readonly CollisionObject[] =>
+  racer.collisionObjectIndices.flatMap((index) => {
+    const object = context.collisionObjects[index]
+    return object === undefined ? [] : [object]
+  })
 
 export const setRacer = (racerSet: RacerSet, racerIndex: number, racer: Racer): RacerSet =>
   Object.freeze({

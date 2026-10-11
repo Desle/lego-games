@@ -8,7 +8,7 @@ import type {
   RacerPowerUpStatus,
 } from '../../../power-ups/index.ts'
 import { STATIC_TRACK_WORLD } from '../../../track-logic/index.ts'
-import type { TrackLogicContext, TrackLogicStep } from '../../../track-logic/index.ts'
+import type { TrackEffect, TrackLogicContext, TrackLogicStep } from '../../../track-logic/index.ts'
 import { createTrackLineProbe } from '../../../projectiles/index.ts'
 import type {
   FlightRacer,
@@ -16,11 +16,15 @@ import type {
   ProjectileContext,
   ProjectileEvent,
 } from '../../../projectiles/index.ts'
-import { getRacer, getTableCosine, setRacer } from '../../../racer/index.ts'
+import { getRacer, getTableCosine, setCarBodyPush, setRacer } from '../../../racer/index.ts'
 import type { Racer, RacerControls, RacerSet, RacerSetContext } from '../../../racer/index.ts'
 import type { RaceContacts, RaceRacerSet, RaceState } from '../../types/race.types.ts'
+import { getLapGapMilliseconds } from '../../types/lap-gap/lap-gap.ts'
 import {
   COMPUTER_CONTROLLER,
+  enterZoneOne,
+  enterZoneTwo,
+  enterZoneZero,
   getRacerAfterPowerUpEvent,
 } from '../../types/racer-transitions/racer-transitions.ts'
 import type { RaceWorldChange } from './race-world.types.ts'
@@ -65,6 +69,10 @@ export const getRaceRacerSet = (state: RaceState, contacts: RaceContacts): RaceR
     powerUpSetups: state.powerUpSetups,
     getGroundPoint: state.getGroundPoint,
     trackTargets: state.trackTargets,
+    surfaces: state.surfaces,
+    collisionObjectNames: state.collisionObjectNames,
+    taggedPositionMilliseconds: state.taggedPositionMilliseconds,
+    registryObjects: state.registryObjects,
     raceModeFlags: state.raceModeFlags,
     pendingContacts: contacts,
     trackLogic: state.trackLogic,
@@ -232,7 +240,7 @@ export const getProjectileContext = (
   racerSet: RaceRacerSet,
   powerUps: PowerUpContext
 ): ProjectileContext => {
-  const track = state.context.collisionObjects[0]
+  const track = state.context.collisionObjects[racerSet.racers[0]?.collisionObjectIndices[0] ?? 0]
   return Object.freeze({
     powerUps,
     racers: Object.freeze(racerSet.racers.map(getFlightRacer)),
@@ -281,8 +289,199 @@ const getHazardRacer = (racer: Racer | undefined, racerIndex: number): HazardRac
   })
 }
 
+const ZONE_ZERO = 0
+const ZONE_ONE = 1
+const TARGET_SET_FLAG = 0x8000
+const FORCE_SLOTS = Object.freeze({
+  0x40: 'extraForceA',
+  0x44: 'extraForceA',
+  0x48: 'extraForceB',
+  0x4c: 'extraForceB',
+} as const)
+
+export const changeRacer = (
+  racerSet: RaceRacerSet,
+  racerIndex: number,
+  change: (racer: Racer) => Racer
+): RaceRacerSet =>
+  getRaceRacerSetOf(setRacer(racerSet, racerIndex, change(getRacer(racerSet, racerIndex))))
+
+// 0x00464680 (the zone event of a trigger): the racer enters zone 0 (0x00439b70), 1 (0x00439ba0, the lap line) or 2
+// (0x00439c40).
+export const getRacerSetInZone = (
+  racerSet: RaceRacerSet,
+  racerIndex: number,
+  zone: number
+): RaceRacerSet =>
+  changeRacer(racerSet, racerIndex, (racer) => {
+    if (zone === ZONE_ZERO) return enterZoneZero(racer)
+    if (zone !== ZONE_ONE) return enterZoneTwo(racer)
+    return enterZoneOne(racer, (next) =>
+      getLapGapMilliseconds(setRacer(racerSet, racerIndex, next), racerIndex, next.lapCount)
+    )
+  })
+
+// What the track logic's events do to the racers they were fired for: the zone (above), the guidance target
+// (0x00439e60 sets racer +0xdf8 and flag 0x8000, 0x00439e90 clears the flag) and the car body's forces (slots 16..19).
+const TAGGED_POSITION_MILLISECONDS = 150 // 0x96 at 0x0045e55b
+const TAGGED_POSITION_CHUNK_MILLISECONDS = 255
+const COLLISION_LIST_CAPACITY = 5
+
+// 0x004488e0: the object joins the racer's collision list unless it is there or the list holds five.
+const getListWith = (indices: readonly number[], index: number): readonly number[] =>
+  indices.includes(index) || indices.length >= COLLISION_LIST_CAPACITY
+    ? indices
+    : Object.freeze([...indices, index])
+
+// 0x00448930: the first entry of the object leaves the list, the others keep their order.
+const getListWithout = (indices: readonly number[], index: number): readonly number[] => {
+  const position = indices.indexOf(index)
+  return position === -1
+    ? indices
+    : Object.freeze([...indices.slice(0, position), ...indices.slice(position + 1)])
+}
+
+const getRacerSetWithTaggedPositions = (
+  racerSet: RaceRacerSet,
+  racerIndex: number,
+  instanceIndex: number,
+  milliseconds: number
+): RaceRacerSet =>
+  Object.freeze({
+    ...racerSet,
+    taggedPositionMilliseconds: Object.freeze(
+      racerSet.taggedPositionMilliseconds.map((countdowns, index) =>
+        index === racerIndex
+          ? Object.freeze(
+              countdowns.map((current, instance) =>
+                instance === instanceIndex ? milliseconds : current
+              )
+            )
+          : countdowns
+      )
+    ),
+  })
+
+// 0x0045e520 (a racer is inside a trigger that names a collision world instance): the instance joins the racer's
+// collision list when it was not already there for this trigger, and stays for another 150 ms.
+const getRacerSetWithTaggedPosition = (
+  racerSet: RaceRacerSet,
+  racerIndex: number,
+  triggerIndex: number
+): RaceRacerSet => {
+  const name = racerSet.trackLogic.triggers.main[triggerIndex]?.definition.objectName
+  const instanceIndex =
+    name === null || name === undefined ? -1 : racerSet.collisionObjectNames.indexOf(name)
+  const countdown = racerSet.taggedPositionMilliseconds[racerIndex]?.[instanceIndex]
+  if (countdown === undefined) return racerSet
+  const listed =
+    countdown === 0
+      ? changeRacer(racerSet, racerIndex, (racer) =>
+          Object.freeze({
+            ...racer,
+            collisionObjectIndices: getListWith(racer.collisionObjectIndices, instanceIndex),
+          })
+        )
+      : racerSet
+  return getRacerSetWithTaggedPositions(
+    listed,
+    racerIndex,
+    instanceIndex,
+    TAGGED_POSITION_MILLISECONDS
+  )
+}
+
+// 0x0045e470 (once per frame with the frame's time step, from Race_Update): the countdowns run in chunks of at most
+// 255 ms; an instance whose countdown ends leaves the racer's collision list (0x00448930).
+export const updateTaggedPositions = (
+  racerSet: RaceRacerSet,
+  stepMilliseconds: number
+): RaceRacerSet => {
+  let current = racerSet
+  for (let remaining = stepMilliseconds; remaining > 0;) {
+    const chunk = Math.min(remaining, TAGGED_POSITION_CHUNK_MILLISECONDS)
+    current = current.taggedPositionMilliseconds.reduce(
+      (outer, countdowns, racerIndex) =>
+        countdowns.reduce((inner, countdown, instanceIndex) => {
+          if (countdown === 0) return inner
+          if (chunk < countdown) {
+            return getRacerSetWithTaggedPositions(
+              inner,
+              racerIndex,
+              instanceIndex,
+              countdown - chunk
+            )
+          }
+          return changeRacer(
+            getRacerSetWithTaggedPositions(inner, racerIndex, instanceIndex, 0),
+            racerIndex,
+            (racer) =>
+              Object.freeze({
+                ...racer,
+                collisionObjectIndices: getListWithout(racer.collisionObjectIndices, instanceIndex),
+              })
+          )
+        }, outer),
+      current
+    )
+    remaining -= chunk
+  }
+  return current
+}
+
+const getRacerSetAfterTrackEffect = (
+  context: RacerSetContext,
+  racerSet: RaceRacerSet,
+  effect: TrackEffect
+): RaceRacerSet => {
+  if (effect.type === 'track.racer_zone_entered') {
+    return racerSet.racers[effect.racerIndex] === undefined
+      ? racerSet
+      : getRacerSetInZone(racerSet, effect.racerIndex, effect.zone)
+  }
+  if (effect.type === 'track.tagged_position_touched') {
+    return racerSet.racers[effect.racerIndex] === undefined
+      ? racerSet
+      : getRacerSetWithTaggedPosition(racerSet, effect.racerIndex, effect.triggerIndex)
+  }
+  if (effect.type === 'track.racer_target_set') {
+    if (racerSet.racers[effect.racerIndex] === undefined) return racerSet
+    return changeRacer(racerSet, effect.racerIndex, (racer) =>
+      effect.target === null
+        ? Object.freeze({ ...racer, flags: (racer.flags & ~TARGET_SET_FLAG) >>> 0 })
+        : Object.freeze({
+            ...racer,
+            flags: (racer.flags | TARGET_SET_FLAG) >>> 0,
+            guidanceTarget: Object.freeze({
+              x: effect.target[0],
+              y: effect.target[1],
+              z: effect.target[2],
+            }),
+          })
+    )
+  }
+  if (effect.type === 'track.racer_force_changed') {
+    const slot = FORCE_SLOTS[effect.slot as keyof typeof FORCE_SLOTS]
+    if (racerSet.racers[effect.racerIndex] === undefined) return racerSet
+    const { vector } = effect
+    return changeRacer(racerSet, effect.racerIndex, (racer) =>
+      Object.freeze({
+        ...racer,
+        carBody: setCarBodyPush(
+          context.arithmetic,
+          racer.carBody,
+          slot,
+          vector === null ? undefined : Object.freeze({ x: vector[0], y: vector[1], z: vector[2] })
+        ),
+      })
+    )
+  }
+  return racerSet
+}
+
 // Runs a track logic operation on the racer set: the random table position goes in and comes out (the track logic
-// shares it with the racers), and the effects it asked for are kept for the race to report.
+// shares it with the racers), the effects it asked for are kept for the race to report, and the ones that change a
+// racer are applied to it.
 export const changeTrackLogic = (
   context: RacerSetContext,
   racerSet: RaceRacerSet,
@@ -303,10 +502,14 @@ export const changeTrackLogic = (
         ? NO_LINE_HIT
         : createTrackLineProbe(context.arithmetic, track.volume, () => false),
   })
-  return Object.freeze({
+  const changed: RaceRacerSet = Object.freeze({
     ...racerSet,
     trackLogic: step.state,
     randomPosition: step.state.random.position,
     trackEffects: Object.freeze([...racerSet.trackEffects, ...step.effects]),
   })
+  return step.effects.reduce(
+    (current, effect) => getRacerSetAfterTrackEffect(context, current, effect),
+    changed
+  )
 }

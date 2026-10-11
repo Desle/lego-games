@@ -55,6 +55,12 @@ Mechanically decidable; a green check is a proof.
 - **Enforced by**: `pnpm run duplicates` (jscpd, `.jscpd.json`, threshold 0) in the root `check` and `ci`
 - **Exception**: when the original binary itself contains two copies that must stay separately traceable, wrap one in `// jscpd:ignore-start` … `// jscpd:ignore-end` with a comment naming both addresses.
 
+### No committed symlinks
+
+- **Rule**: No symlink is committed. Local links (`original-files`, the emulator's `.venv`) stay untracked, and their `.gitignore` entries have no trailing slash so they match a link as well as a folder.
+- **Why**: A committed link replaces the real folder it shadows on every checkout; it twice wiped the local original game files.
+- **Enforced by**: `tooling verify` → `tracked-symlinks` (workspace root)
+
 ### Uniform formatting
 
 - **Rule**: Prettier formats every file.

@@ -25,6 +25,8 @@ export type SceneObject = {
   // Advances every animated instance by this many whole milliseconds.
   readonly animate: (deltaMilliseconds: number) => void
   readonly animatedInstanceCount: number
+  // Poses every skeleton instance from this animation state (a racer's figure, whose clock the race keeps).
+  readonly setAnimationState: (state: SkeletonAnimationState) => void
   readonly dispose: () => void
 }
 
@@ -52,8 +54,7 @@ export type SceneObjectContext = {
 export type InstanceObject = {
   readonly group: Group
   readonly animate: ((deltaMilliseconds: number) => void) | null
-  // Sets the clip state of a skeleton instance from outside; null for the others.
-  readonly setAnimationState: ((state: SkeletonAnimationState) => void) | null
+  readonly setState: ((state: SkeletonAnimationState) => void) | null
 }
 
 // The level of an instance that is drawn, with its mesh.

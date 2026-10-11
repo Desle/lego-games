@@ -1,3 +1,6 @@
+import type { CollisionObject } from '../../../collision/index.ts'
+import type { PointsRecord } from '../../types/points-record/points-record.types.ts'
+import type { GhostSession } from '../../../ghost/index.ts'
 import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
 import type { RandomDraw, RandomTablePosition } from '../../../random-table/index.ts'
 import type { BuiltCar, RacerDatabases } from '../../../racer-setup/index.ts'
@@ -15,10 +18,27 @@ export type LoadRaceOptions = {
   // The random table position (0x004c6ee4) when the race loads; the menus advance it before.
   readonly randomPosition?: number
   // The car builder's answer for each local player (the racer slot's chassis, weight and centre offsets); a player
-  // without one gets a car of the first chassis with no weight.
+  // without one drives the first racer of `default.lrs`.
   readonly playerCars?: readonly BuiltCar[]
   // The driver code of each racer slot, instead of the codes of the race's circuit in LEGORACE.CRB.
   readonly racerCodes?: readonly string[]
+  // Race +0x18: the circuit's points record when the race is part of a circuit.
+  readonly pointsRecord?: PointsRecord
+  // Game settings +0x1e & 0x40.
+  readonly isSettingsFlag40Set?: boolean
+  // Game settings +0x3c of the race (LEGORACE.RCB's flag, set for the mirrored second pass of a circuit): every
+  // loader negates the y of what it reads (Race_LoadTrackContent's argument).
+  readonly isMirrored?: boolean
+  // Game settings +0x2c: the laps of a race with two or more local players (the front end's option, 2 or 3 in the
+  // shipped save files); one local player always races 3.
+  readonly multiplayerLapCount?: number
+  // Race +0x18 != 0: the race is part of a circuit and its results stay on screen for 5 s.
+  readonly isPointsRecordPresent?: boolean
+  // Race +0x3364: the time trial's ghost object (the race session loads the champion into it first).
+  readonly ghost?: GhostSession | null
+  // The tunes the race's music stream can play; the default is the count of the race's music list. 0 is a race
+  // with no music stream (the music files are missing), which also spares the random draw for the racing tune.
+  readonly musicTuneCount?: number
 }
 
 // The routes chosen so far (null for a racer without one) and the table position after their draws.
@@ -29,6 +49,7 @@ export type RouteDraws = {
 
 export type RouteFiles = {
   readonly folder: string
+  readonly isMirrored: boolean
   readonly readFile: (path: string) => Uint8Array
   readonly getIsPresent: (path: string) => boolean
 }
@@ -45,7 +66,12 @@ export type RacerDescriptionRequest = {
   // Racers 0 to count − 1 drive cars built from bricks (an empty name in the racer slot).
   readonly localPlayerCount: number
   readonly playerCars: readonly BuiltCar[]
-  readonly defaultPlayerCar: BuiltCar
   // The driver code of every racer slot (0x0042d730 fills slot i with code i; the players overwrite theirs).
   readonly racerCodes: readonly string[]
+}
+
+// The BVB instances of a race's collision world, in world order, with their names.
+export type CollisionWorld = {
+  readonly objects: readonly CollisionObject[]
+  readonly names: readonly string[]
 }
