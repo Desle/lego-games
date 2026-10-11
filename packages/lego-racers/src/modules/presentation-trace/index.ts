@@ -3,7 +3,7 @@ export { compareRenderFrame } from './controller/render-trace/compare-render-fra
 export { getOriginalTriangles } from './controller/render-trace/original-triangles.ts'
 export {
   getIsFrontFacing,
-  getWorldToScreenMatrix,
+  getCandidateMatrices,
   projectWorldTriangle,
 } from './controller/render-trace/screen-projection.ts'
 export { matchTextures } from './controller/render-trace/texture-matching.ts'

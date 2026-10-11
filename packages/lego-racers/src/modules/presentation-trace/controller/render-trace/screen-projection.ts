@@ -21,9 +21,13 @@ export const getTurn = (triangle: ScreenTriangle): number => {
 
 export const getIsFrontFacing = (triangle: ScreenTriangle): boolean => getTurn(triangle) < 0
 
-// The matrix the original's most triangles were drawn with: the track and the objects that stand in the world,
-// whose model matrix is the identity, so it is the world to screen matrix of the camera (device +0xc8518).
-export const getWorldToScreenMatrix = (frame: OriginalRenderFrame): ScreenMatrix | null => {
+// The matrices the original drew with, the ones with most triangles first. The track and the objects that stand in the
+// world have the identity as model matrix, so theirs is the world to screen matrix of the camera (device +0xc8518); the
+// caller picks the candidate under which the port's world lands on the original's triangles.
+export const getCandidateMatrices = (
+  frame: OriginalRenderFrame,
+  limit: number
+): readonly ScreenMatrix[] => {
   const counts = new Map<string, MatrixCount>()
   for (const draw of frame.draws) {
     if (draw.modelMatrix.length !== MATRIX_SIZE) continue
@@ -32,11 +36,10 @@ export const getWorldToScreenMatrix = (frame: OriginalRenderFrame): ScreenMatrix
     const entry = counts.get(key) ?? { matrix: draw.modelMatrix, triangleCount: 0 }
     counts.set(key, { matrix: entry.matrix, triangleCount: entry.triangleCount + triangleCount })
   }
-  let best: MatrixCount | null = null
-  for (const entry of counts.values()) {
-    if (best === null || entry.triangleCount > best.triangleCount) best = entry
-  }
-  return best?.matrix ?? null
+  return [...counts.values()]
+    .sort((left, right) => right.triangleCount - left.triangleCount)
+    .slice(0, limit)
+    .map((entry) => entry.matrix)
 }
 
 const projectVertex = (vertex: WorldVertex, matrix: ScreenMatrix): ProjectedVertex => {
