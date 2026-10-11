@@ -66,6 +66,21 @@ const ALPHA_CONDITIONS: Readonly<Record<CompareFunctionValue, string>> = {
   [CompareFunction.NOT_EQUAL]: 'alphaByte != alphaReference',
 }
 
+// The surface the engine hands Direct3D holds the picture's last row first (GolDP.dll 0x10019da0 writes it with a
+// negative pitch), so a model's v = 0 is the picture's bottom edge. The render trace finds every texture the original
+// uploads equal to its bitmap with the rows reversed.
+export const getRowsReversed = (colors: Uint8Array, width: number, height: number): Uint8Array => {
+  const rowBytes = width * 4
+  const reversed = new Uint8Array(colors.length)
+  for (let row = 0; row < height; row++) {
+    reversed.set(
+      colors.subarray(row * rowBytes, (row + 1) * rowBytes),
+      (height - 1 - row) * rowBytes
+    )
+  }
+  return reversed
+}
+
 const getTextureKey = (textureIndex: number, material: SceneMaterial) =>
   `${String(textureIndex)}/${material.renderState.filter}/${material.renderState.addressing}`
 
@@ -82,7 +97,12 @@ const getTexture = (
   const key = getTextureKey(textureIndex, material)
   const cached = cache.get(key)
   if (cached !== undefined) return cached
-  const texture = new DataTexture(bitmap.colors, bitmap.width, bitmap.height, RGBAFormat)
+  const texture = new DataTexture(
+    getRowsReversed(bitmap.colors, bitmap.width, bitmap.height),
+    bitmap.width,
+    bitmap.height,
+    RGBAFormat
+  )
   const filter = material.renderState.filter === TextureFilter.POINT ? NearestFilter : LinearFilter
   const wrapping =
     material.renderState.addressing === TextureAddressing.CLAMP
