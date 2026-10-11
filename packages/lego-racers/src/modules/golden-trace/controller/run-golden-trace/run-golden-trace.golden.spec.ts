@@ -103,8 +103,10 @@ const getCases = (): readonly ScenarioCase[] => {
         frames: getSteeringSweepFrames(),
         precision: FpuPrecision.DOUBLE,
       }),
-      // Computers only, in the double-precision mode the game never runs: one unit in the last place at the start.
-      expected: { frame: 160, field: 'racer1.body.velocity' },
+      // The double-precision mode the game never runs: the world animation modules (skeleton clips, material
+      // animations) compute in the race's single precision whatever the race is given, so the introduction camera's
+      // clip time differs from frame 4 on. Computers' bodies differ by one unit in the last place from frame 160.
+      expected: { frame: 4, field: 'track.world.track.skeletons' },
     },
     ...OTHER_TRACKS.map(({ folder, expected }) => ({
       scenario: createTraceScenario({
