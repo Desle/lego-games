@@ -1,4 +1,14 @@
 export { compareAudioCalls, getOriginalAudioCalls } from './controller/audio-trace/audio-trace.ts'
+export { compareRenderFrame } from './controller/render-trace/compare-render-frame.ts'
+export type { RenderFrameInput } from './controller/render-trace/compare-render-frame.ts'
+export { getOriginalTriangles } from './controller/render-trace/original-triangles.ts'
+export {
+  getIsFrontFacing,
+  getWorldToScreenMatrix,
+  projectWorldTriangle,
+} from './controller/render-trace/screen-projection.ts'
+export { matchTextures } from './controller/render-trace/texture-matching.ts'
+export type { TextureMatch } from './controller/render-trace/texture-matching.types.ts'
 export {
   getIsOriginalPresentationAvailable,
   readOriginalPresentation,
@@ -12,6 +22,21 @@ export type {
   SoundCall,
   SoundSummary,
 } from './controller/audio-trace/audio-trace.types.ts'
+export { RenderMismatchKind } from './types/render-mismatch-kind/render-mismatch-kind.ts'
+export type {
+  DrawnTriangle,
+  DrawState,
+  PortTexture,
+  RenderFrameComparison,
+  RenderMismatchGroup,
+  RenderTolerances,
+  RenderViewportSize,
+  ScreenMatrix,
+  ScreenTriangle,
+  ScreenVertex,
+  WorldTriangle,
+  WorldVertex,
+} from './controller/render-trace/render-trace.types.ts'
 export type {
   OriginalAudioEvent,
   OriginalAudioFrame,

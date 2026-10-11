@@ -151,6 +151,8 @@ export const createSceneMaterial = (
         color: new Color(red / 255, green / 255, blue / 255),
       })
     : new MeshBasicMaterial(parameters)
+  // The render trace reads the state the material stands for.
+  material.userData['renderState'] = sceneMaterial.renderState
   const alphaTestCode = getAlphaTestCode(sceneMaterial)
   if (alphaTestCode !== null) {
     material.onBeforeCompile = (shader) => {

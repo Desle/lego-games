@@ -14,6 +14,8 @@ from unicorn.x86_const import UC_X86_REG_ECX
 DEVICE_MATRIX_OFFSET = 0xC8490
 DEVICE_MODEL_OFFSET = 0xC8518
 DEVICE_SCALE_OFFSET = 0xC8400
+# Slots FUN_10012f50 fills with the transform variant (+0xc8764) and the culling draw (+0xc8768).
+DEVICE_TRANSFORM_OFFSET = 0xC8764
 # The per-variant draw functions of GolDP.dll (FUN_10012f50 selects one); each is entered with the Gol device in ecx.
 DRAW_FUNCTION_ADDRESSES = (0x1000EBD0, 0x1000ECE0, 0x1000EDF0, 0x10010330, 0x10010500, 0x100106D0, 0x1000EB90)
 VERTEX_STRIDE = 32
@@ -154,11 +156,15 @@ class RenderRecorder:
         read = self.machine.read_bytes
         matrix_pointer = self.machine.read_u32(self.device + DEVICE_MATRIX_OFFSET)
         model_pointer = self.machine.read_u32(self.device + DEVICE_MODEL_OFFSET)
-        result = {"scale": list(struct.unpack("<4f", read(self.device + DEVICE_SCALE_OFFSET, 16)))}
+        result = {
+            "scale": list(struct.unpack("<4f", read(self.device + DEVICE_SCALE_OFFSET, 16))),
+            "transform": self.machine.read_u32(self.device + DEVICE_TRANSFORM_OFFSET),
+            "cull": self.machine.read_u32(self.device + DEVICE_TRANSFORM_OFFSET + 4),
+        }
         if matrix_pointer:
             result["clip"] = list(struct.unpack("<16f", read(matrix_pointer, 64)))
         if model_pointer:
-            result["model"] = list(struct.unpack("<12f", read(model_pointer, 48)))
+            result["model"] = list(struct.unpack("<16f", read(model_pointer, 64)))
         return result
 
     def record_draw(self, indexed: bool, argument) -> None:

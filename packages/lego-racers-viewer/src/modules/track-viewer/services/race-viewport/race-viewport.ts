@@ -18,7 +18,13 @@ import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import { showSceneObjects } from '../scene-viewport/scene-viewport.ts'
 import type { ShownScene } from '../scene-viewport/scene-viewport.types.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
-import type { RaceStageSize, RaceViewport, RacerRig, Vector3Like } from './race-viewport.types.ts'
+import type {
+  RaceStage,
+  RaceStageSize,
+  RaceViewport,
+  RacerRig,
+  Vector3Like,
+} from './race-viewport.types.ts'
 
 // The Direct3D camera's field of view is not traced yet; the track viewer's 60 degrees stand in for it.
 const FIELD_OF_VIEW_DEGREES = 60
@@ -49,20 +55,9 @@ const getFrameMatrix = (rotation: Matrix3, position: Vector3Like): Matrix4 => {
   )
 }
 
-// The race drawn as the engine does (LEGORacers.exe 0x004357b0): the sky and the backdrop first without the depth
-// test, then the track and the cars, from the player's chase camera.
-export const createRaceViewport = (
-  container: HTMLElement,
-  assets: RaceAssets,
-  size: RaceStageSize
-): RaceViewport => {
-  const renderer = new WebGLRenderer({ antialias: true })
-  // Direct3D 6 has no colour management: colours reach the screen as stored.
-  renderer.outputColorSpace = LinearSRGBColorSpace
-  renderer.setClearColor(new Color(BACKGROUND_COLOR))
-  renderer.autoClear = false
-  renderer.setSize(size.width, size.height)
-  container.appendChild(renderer.domElement)
+// The race's three.js scene graphs and camera, without a renderer: the sky and the backdrop first without the depth
+// test, then the track and the cars, from the player's chase camera. The render trace reads this directly.
+export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceStage => {
   const trackScene = new ThreeScene()
   const backgroundScene = new ThreeScene()
   const camera = new PerspectiveCamera(
@@ -135,16 +130,15 @@ export const createRaceViewport = (
   }
 
   return Object.freeze({
+    trackScene,
+    backgroundScene,
+    camera,
+    racerRigs,
     update,
     showHazards,
     animate: (deltaMilliseconds: number) => {
       shown.backdrop?.animate(deltaMilliseconds)
       shown.sky?.animate(deltaMilliseconds)
-    },
-    render: () => {
-      renderer.clear()
-      renderer.render(backgroundScene, camera)
-      renderer.render(trackScene, camera)
     },
     dispose: () => {
       particles.dispose()
@@ -153,6 +147,35 @@ export const createRaceViewport = (
       shown.sky?.dispose()
       effects.dispose()
       for (const { objects } of racerRigs) for (const object of objects) object.dispose()
+    },
+  })
+}
+
+// The race drawn as the engine does (LEGORacers.exe 0x004357b0).
+export const createRaceViewport = (
+  container: HTMLElement,
+  assets: RaceAssets,
+  size: RaceStageSize
+): RaceViewport => {
+  const renderer = new WebGLRenderer({ antialias: true })
+  // Direct3D 6 has no colour management: colours reach the screen as stored.
+  renderer.outputColorSpace = LinearSRGBColorSpace
+  renderer.setClearColor(new Color(BACKGROUND_COLOR))
+  renderer.autoClear = false
+  renderer.setSize(size.width, size.height)
+  container.appendChild(renderer.domElement)
+  const stage = createRaceStage(assets, size)
+  return Object.freeze({
+    update: stage.update,
+    showHazards: stage.showHazards,
+    animate: stage.animate,
+    render: () => {
+      renderer.clear()
+      renderer.render(stage.backgroundScene, stage.camera)
+      renderer.render(stage.trackScene, stage.camera)
+    },
+    dispose: () => {
+      stage.dispose()
       renderer.dispose()
       renderer.domElement.remove()
     },
