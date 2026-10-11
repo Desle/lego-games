@@ -14,6 +14,7 @@ const FrontEndView = ({
   standingRows,
   onMenuMemoryChanged,
   onRaceRequested,
+  onDemonstrationRequested,
   onQuit,
 }: FrontEndViewProps) => {
   const frontEnd = useFrontEndController({
@@ -25,6 +26,7 @@ const FrontEndView = ({
     standingRows,
     onMenuMemoryChanged,
     onRaceRequested,
+    onDemonstrationRequested,
     onQuit,
   })
   return (

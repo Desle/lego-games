@@ -1,5 +1,6 @@
 import type {
   FrontEndMemory,
+  FrontEndDemonstrationRequest,
   FrontEndDrawCommand,
   FrontEndEnvironment,
   FrontEndFrame,
@@ -234,6 +235,13 @@ export const stepFrontEnd = (
   }
   const figureSounds = figureStep?.soundNames ?? []
   const stepped = getInputStep(advanced, resources, environment, input)
+  if (
+    stepped.state.outcome === 'running' &&
+    stepped.state.screens.at(-1)?.screenId === FrontEndScreen.MAIN_MENU &&
+    figureStep?.figure.idleMilliseconds === 0
+  ) {
+    return { ...stepped, state: { ...stepped.state, outcome: 'demonstration' } }
+  }
   const entered: FrontEndState = {
     ...stepped.state,
     menuFigure:
@@ -261,6 +269,16 @@ export const getFrontEndFrame = (
     .flatMap((widget) => getWidgetCommands({ resources, files }, widget))
   return { commands, soundNames: [] }
 }
+
+// 0x00481450 with the idle timer out: the screen's done flag is set with no target, the front end returns and the game
+// starts a demonstration (`createDemonstrationSettings`, `FrontEnd_PrepareRaceSettings` 0x0042d730 with no local
+// player), which draws from the shared random table at the cursor the menus left.
+export const getFrontEndDemonstrationRequest = (
+  state: FrontEndState
+): FrontEndDemonstrationRequest | null =>
+  state.outcome === 'demonstration'
+    ? Object.freeze({ randomPosition: state.settings.randomPosition })
+    : null
 
 // What the menus leave in the game settings when a race starts (FrontEnd_PrepareRaceSettings 0x0042d730).
 export const getFrontEndRaceRequest = (state: FrontEndState): FrontEndRaceRequest | null => {

@@ -47,7 +47,7 @@ const getEffectScenes = (assets: RaceAssets): readonly Scene[] => {
   ]
 }
 
-const getSceneTextures = (assets: RaceAssets): ReadonlyMap<string, PortTexture> =>
+export const getSceneTextures = (assets: RaceAssets): ReadonlyMap<string, PortTexture> =>
   new Map(
     [assets.scene, ...getEffectScenes(assets)].flatMap((scene) =>
       scene.textures.flatMap((texture) =>

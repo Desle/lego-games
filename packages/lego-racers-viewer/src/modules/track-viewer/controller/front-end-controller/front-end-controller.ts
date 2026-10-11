@@ -1,5 +1,6 @@
 import {
   createFrontEnd,
+  getFrontEndDemonstrationRequest,
   getFrontEndFrame,
   getFrontEndRaceRequest,
   loadFrontEndResources,
@@ -102,8 +103,12 @@ export const useFrontEndController = (options: FrontEndControllerOptions): Front
           callbacksReference.current.onMenuMemoryChanged(memory)
         }
         renderer.draw(getFrontEndFrame(state, resources, environment).commands)
+        const demonstration = getFrontEndDemonstrationRequest(state)
         const request = getFrontEndRaceRequest(state)
-        if (request !== null) {
+        if (demonstration !== null) {
+          cancelAnimationFrame(animationFrame)
+          callbacksReference.current.onDemonstrationRequested(demonstration)
+        } else if (request !== null) {
           cancelAnimationFrame(animationFrame)
           callbacksReference.current.onRaceRequested(request)
         } else if (state.outcome === 'quit') {

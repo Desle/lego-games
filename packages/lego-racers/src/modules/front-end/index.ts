@@ -2,6 +2,7 @@ export {
   createFrontEnd,
   NO_FRONT_END_MEMORY,
   getFrontEndFrame,
+  getFrontEndDemonstrationRequest,
   getFrontEndRaceRequest,
   stepFrontEnd,
 } from './controller/front-end/front-end.ts'
@@ -34,6 +35,7 @@ export type {
   FrontEndMemory,
   FrontEndMode,
   FrontEndOutcome,
+  FrontEndDemonstrationRequest,
   FrontEndRaceRequest,
   FrontEndRaceSlot,
   FrontEndRectangle,
