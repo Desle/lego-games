@@ -1,6 +1,8 @@
 import { decodeBitmap } from '../../../bitmap/index.ts'
-import { loadBuilderCatalog } from '../../../car-builder/index.ts'
-import type { BuilderCatalog } from '../../../car-builder/index.ts'
+import { loadBuilderCatalog, loadSavedCars } from '../../../car-builder/index.ts'
+import type { BuilderCatalog, SavedCar } from '../../../car-builder/index.ts'
+import { parseBodyPartCatalog } from '../../../figure-builder/index.ts'
+import type { BodyPartCatalog } from '../../../figure-builder/index.ts'
 import { parseSaveFile } from '../../../save-data/index.ts'
 import type { SaveRacer } from '../../../save-data/index.ts'
 import { parseCircuitDatabase } from '../../../circuit-database/index.ts'
@@ -22,6 +24,7 @@ import type {
 
 const MENU_DIRECTORY = 'MENUDATA'
 const DEFAULT_SAVE_PATH = 'MENUDATA\\DEFAULT.LRS'
+const BODY_PART_CATALOG_PATH = 'MENUDATA\\PARTDB\\BODYPART.PCB'
 const SEPARATOR = '\\'
 
 const getPath = (...segments: readonly string[]): string => segments.join(SEPARATOR)
@@ -137,9 +140,23 @@ export const loadFrontEndResources = (
     return racerTemplate
   }
 
+  let defaultCar: SavedCar | null = null
+  const getDefaultCar = (): SavedCar => {
+    defaultCar ??= loadSavedCars((path) => archive.readFile(path), DEFAULT_SAVE_PATH)[0] ?? null
+    if (defaultCar === null) throw new RangeError('DEFAULT.LRS has no racer')
+    return defaultCar
+  }
+  let driverCatalog: BodyPartCatalog | null = null
+  const getDriverCatalog = (): BodyPartCatalog => {
+    driverCatalog ??= parseBodyPartCatalog(archive.readFile(BODY_PART_CATALOG_PATH))
+    return driverCatalog
+  }
+
   return Object.freeze({
     getBuilderCatalog,
     getRacerTemplate,
+    getDefaultCar,
+    getDriverCatalog,
     menuNames: getStrings(readTable(getPath(MENU_DIRECTORY, 'MENUNAME.SRF'))),
     getMenuText: (stringId: number) => getString(menuText, stringId) ?? '',
     getCircuitText: (stringId: number) => getString(circuitText, stringId) ?? '',

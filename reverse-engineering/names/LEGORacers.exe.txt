@@ -837,3 +837,9 @@
 00499cc0 BrickCursor_PutAtBrick
 0049a1e0 CarBuilder_CheckPlacement
 0049bd70 CarBuilder_RemoveBrick
+0047ce30 DriverEditScreen_Constructor
+0047dbf0 DriverEditScreen_OnButton
+0047dab0 DriverEditScreen_OnChooserChanged
+0049db90 FigureBuilder_BuildDriver
+0049dd50 FigureBuilder_MergeCommands
+0049d9b0 FigureBuilder_ReplaceMaterial

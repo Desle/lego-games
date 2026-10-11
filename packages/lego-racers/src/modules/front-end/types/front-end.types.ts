@@ -5,9 +5,11 @@ import type {
   CarDesign,
   SavedCar,
 } from '../../car-builder/index.ts'
+import type { BodyPartCatalog, DriverSession } from '../../figure-builder/index.ts'
 import type { CircuitDatabase } from '../../circuit-database/index.ts'
 import type { MenuFile } from '../../menu-file/index.ts'
 import type { RaceCatalog } from '../../race-catalog/index.ts'
+import type { RandomTable } from '../../random-table/index.ts'
 import type { SaveRacer } from '../../save-data/index.ts'
 
 // A decoded menu image (MENUDATA\<name>.BMP) with the image database's colour key applied.
@@ -44,6 +46,10 @@ export type FrontEndResources = {
   readonly getBuilderCatalog: () => BuilderCatalog
   // The racer record a new car is saved with: the driver, name and colours of the first racer of `DEFAULT.LRS`.
   readonly getRacerTemplate: () => SaveRacer
+  // The first racer of `DEFAULT.LRS` with his design loaded: the car and driver a player who built nothing has.
+  readonly getDefaultCar: () => SavedCar
+  // `BODYPART.PCB` (0x00498740): the hats, heads, torsos and legs of the driver editor.
+  readonly getDriverCatalog: () => BodyPartCatalog
 }
 
 // What the menus read from the machine: the original's input manager (`+0x98` of it counts the controllers).
@@ -51,6 +57,10 @@ export type FrontEndEnvironment = {
   readonly controllerCount: number
   // The progression hook (the save files and the circuit unlocks are another module): bit n set = circuit n open.
   readonly unlockedCircuitMask: number
+  // The game's random table (0x004befec, read from LEGORacers.exe): the mix button draws from it.
+  readonly randomTable: RandomTable
+  // Progression hook: the driver parts the save has earned. True offers every part (no save exists yet).
+  readonly isEveryPartUnlocked: boolean
   // The racers the player has built (the garage and the save files are another module); each is a driver code.
   readonly playerRacerNames: readonly string[]
   // The circuit just played, best first: what the circuit result screens (0x16..0x19) list. Empty otherwise.
@@ -110,7 +120,12 @@ export type FrontEndSettings = {
   readonly playerRacerNames: readonly string[]
   // The car the player built in this session (kept in memory; saving it is another task): null drives the save's racer.
   readonly playerCar: SavedCar | null
+  // The game's shared random position (0x004c6ee4) as the menus leave it (the mix button advances it).
+  readonly randomPosition: number
 }
+
+// What survives from one visit of the menus to the next.
+export type FrontEndMemory = Pick<FrontEndSettings, 'playerCar' | 'randomPosition'>
 
 export type FrontEndOutcome = 'running' | 'race' | 'quit'
 
@@ -131,6 +146,8 @@ export type FrontEndScreenState = {
 export type FrontEndState = {
   // The builder screen's car and cursor, kept while the menus run (the screen at `+0x2308`).
   readonly builder: BuilderSession | null
+  // The driver editor's choosers while it is open.
+  readonly driver: DriverSession | null
   // The front end's own stack (0x0047fa00): the screens below the current one.
   readonly screens: readonly FrontEndScreenState[]
   readonly settings: FrontEndSettings
@@ -183,6 +200,13 @@ export type FrontEndViewportCommand = {
   readonly camera: readonly number[]
   // The car the builder screen shows in the world, and the view it is seen from; null for any other viewport.
   readonly builder: BuilderPreview | null
+  // The driver the editor shows on the platform; null for any other viewport.
+  readonly driver: DriverPreview | null
+}
+
+export type DriverPreview = {
+  // The five part bytes the figure builder takes: hat, face, torso, legs, expression.
+  readonly partBytes: readonly number[]
 }
 
 export type BuilderPreview = {
@@ -214,6 +238,7 @@ export type FrontEndRaceRequest = {
   readonly lapCount: number
   readonly playerRacerNames: readonly string[]
   readonly playerCar: SavedCar | null
+  readonly randomPosition: number
 }
 
 export type FrontEndStep = {

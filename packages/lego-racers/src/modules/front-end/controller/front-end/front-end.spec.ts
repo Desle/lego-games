@@ -1,3 +1,4 @@
+import { createRandomTable } from '../../../random-table/index.ts'
 import {
   getIsOriginalJamPresent,
   readOriginalJam,
@@ -69,11 +70,19 @@ const resources: FrontEndResources = {
   getRacerTemplate: () => {
     throw new RangeError('The test has no racer record')
   },
+  getDefaultCar: () => {
+    throw new RangeError('The test has no default car')
+  },
+  getDriverCatalog: () => {
+    throw new RangeError('The test has no driver catalog')
+  },
 }
 
 const environment: FrontEndEnvironment = {
   controllerCount: 0,
   unlockedCircuitMask: 0x7f,
+  randomTable: createRandomTable(Array.from({ length: 1024 }, (_, index) => index)),
+  isEveryPartUnlocked: true,
   playerRacerNames: ['ALICE', 'BOB'],
   standingRows: [],
 }

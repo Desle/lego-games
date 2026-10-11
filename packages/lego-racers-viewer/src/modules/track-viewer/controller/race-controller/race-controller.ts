@@ -1,9 +1,11 @@
 import {
   FrontEndScreen,
   getSessionSettings,
+  NO_FRONT_END_MEMORY,
   getStandingRows,
 } from '@lego-games/lego-racers/front-end'
-import type { FrontEndRaceRequest } from '@lego-games/lego-racers/front-end'
+import type { FrontEndMemory, FrontEndRaceRequest } from '@lego-games/lego-racers/front-end'
+import { loadRandomTable } from '@lego-games/lego-racers/random-table'
 import { advanceFrameClock, createFrameClock } from '@lego-games/lego-racers/frame-clock'
 import {
   abortSession,
@@ -40,7 +42,7 @@ import {
   stepRacePresentation,
 } from '@lego-games/lego-racers/race-presentation'
 import type { RacePresentation } from '@lego-games/lego-racers/race-presentation'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DEVELOPMENT_GAME_FILE_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
 import { createHudImageUrls, getHudContext } from '../../services/hud-resources/hud-resources.ts'
 import { getDevelopmentJam } from '../../services/jam-file/jam-file.ts'
@@ -142,6 +144,12 @@ export const useRaceController = (): RaceController => {
   const [assets, setAssets] = useState<RaceAssets | null>(null)
   const [gameFiles, setGameFiles] = useState<LoadedGameFiles | null>(null)
   const [gameResources, setGameResources] = useState<GameResources | null>(null)
+  // What the menus keep between two visits: the car and driver the player made, and the shared random position.
+  const memoryReference = useRef<FrontEndMemory>(NO_FRONT_END_MEMORY)
+  const randomTable = useMemo(
+    () => (gameFiles === null ? null : loadRandomTable(gameFiles.files.executable)),
+    [gameFiles]
+  )
   // The session the race that runs belongs to: a circuit's four races, or the one race of a single race.
   const sessionReference = useRef<GameSession | null>(null)
   const advanceReference = useRef<(session: GameSession, racerCount: number) => void>(
@@ -179,6 +187,7 @@ export const useRaceController = (): RaceController => {
 
   // The session has ended: the menus open on the screen it names (2, the main menu, or a circuit's result screen).
   const returnToMenu = useCallback((session: GameSession, racerCount: number) => {
+    memoryReference.current = { ...memoryReference.current, randomPosition: session.randomPosition }
     sessionReference.current = null
     setAssets(null)
     setScreen({
@@ -243,10 +252,14 @@ export const useRaceController = (): RaceController => {
   const startRace = useCallback(
     (request: FrontEndRaceRequest) => {
       if (gameResources === null) return
+      memoryReference.current = {
+        playerCar: request.playerCar,
+        randomPosition: request.randomPosition,
+      }
       try {
         const session = createGameSession(
           gameResources,
-          getSessionSettings(gameResources, request, 0)
+          getSessionSettings(gameResources, request, request.randomPosition)
         )
         advanceSession(session, request.racerCount)
       } catch (error) {
@@ -358,6 +371,8 @@ export const useRaceController = (): RaceController => {
     containerReference,
     isDevelopmentFilesAvailable: import.meta.env.DEV,
     gameJam: screen.status === RaceStatus.MENU ? (gameFiles?.jam ?? null) : null,
+    randomTable: screen.status === RaceStatus.MENU ? randomTable : null,
+    menuMemory: memoryReference.current,
     readTune: screen.status === RaceStatus.MENU ? (gameFiles?.readTune ?? null) : null,
     // A production build replaces DEV with false and drops the development fetches entirely.
     onDevelopmentGameRequested: import.meta.env.DEV
@@ -368,6 +383,7 @@ export const useRaceController = (): RaceController => {
     onGameClosed: () => {
       setAssets(null)
       setGameFiles(null)
+      memoryReference.current = NO_FRONT_END_MEMORY
       setScreen(INITIAL_SCREEN)
     },
     onRaceStopped: () => {

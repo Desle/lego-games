@@ -47,6 +47,7 @@ export const IMPLEMENTED_SCREEN_IDS: readonly number[] = Object.freeze([
   FrontEndScreen.MAIN_MENU,
   FrontEndScreen.GARAGE,
   FrontEndScreen.CAR_BUILD,
+  FrontEndScreen.EDIT_DRIVER,
   FrontEndScreen.CIRCUIT_RACE,
   FrontEndScreen.SINGLE_RACE,
   FrontEndScreen.TIME_TRIAL,

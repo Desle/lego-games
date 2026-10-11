@@ -1,5 +1,6 @@
 import type {
   BuilderPreview,
+  DriverPreview,
   FrontEndRectangle,
   FrontEndResources,
   FrontEndScreenFiles,
@@ -52,6 +53,8 @@ export type ViewportWidget = {
   readonly itemName: string
   // The car the builder screen shows in it.
   readonly builder?: BuilderPreview | null
+  // The driver the editor shows in it.
+  readonly driver?: DriverPreview | null
 }
 
 // A rectangle the screen computed itself (a list row, a chooser).

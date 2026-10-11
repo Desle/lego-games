@@ -341,7 +341,14 @@ export const getWidgetCommands = (
       const frame = frameEntry === null ? [] : getFrameCommands(context, frameEntry, rectangle)
       return [
         ...frame,
-        { kind: 'viewport', modelName: model, rectangle, camera, builder: widget.builder ?? null },
+        {
+          kind: 'viewport',
+          modelName: model,
+          rectangle,
+          camera,
+          builder: widget.builder ?? null,
+          driver: widget.driver ?? null,
+        },
       ]
     }
   }

@@ -1,4 +1,6 @@
 import type {
+  FrontEndMemory,
+  FrontEndSettings,
   FrontEndDrawCommand,
   FrontEndEnvironment,
   FrontEndFrame,
@@ -10,6 +12,7 @@ import type {
   OpenedScreen,
 } from '../../types/front-end.types.ts'
 import { createBuilderSession } from '../../../car-builder/index.ts'
+import { getDriverForScreen } from '../driver-base/driver-base.ts'
 import { FrontEndScreen } from '../../types/front-end-screen/front-end-screen.ts'
 import type { ScreenRuntime } from '../../types/front-end-screen.types.ts'
 import {
@@ -34,6 +37,7 @@ const getRuntime = (
     settings: state.settings,
     selection: screen.selection,
     builder: state.builder,
+    driver: state.driver,
     screenMilliseconds: state.screenMilliseconds,
   }
 }
@@ -48,16 +52,25 @@ const getBuilderForScreen = (
     ? createBuilderSession(resources.getBuilderCatalog())
     : builder
 
+// What the menus keep between two visits of one game session: the car and driver the player made, and the shared random
+// position (the original keeps both in the application's settings object and global).
+export const NO_FRONT_END_MEMORY: FrontEndMemory = Object.freeze({
+  playerCar: null,
+  randomPosition: 0,
+})
+
 // GameApplication_RunFrontEnd 0x0042bdc0 → FrontEnd_Run 0x0042b1e0: the front end starts on the screen the application
 // names (`+0x1c`; the main menu once the introductions are over) with the settings of a new session.
 export const createFrontEnd = (
   resources: FrontEndResources,
   environment: FrontEndEnvironment,
-  firstScreenId: number = FrontEndScreen.MAIN_MENU
+  firstScreenId: number = FrontEndScreen.MAIN_MENU,
+  memory: FrontEndMemory = NO_FRONT_END_MEMORY
 ): FrontEndState => {
-  const settings = createFrontEndSettings()
+  const settings: FrontEndSettings = { ...createFrontEndSettings(), ...memory }
   return Object.freeze({
     builder: getBuilderForScreen(firstScreenId, null, resources),
+    driver: getDriverForScreen(firstScreenId, settings, resources, environment),
     screens: [
       {
         screenId: firstScreenId,
@@ -66,6 +79,7 @@ export const createFrontEnd = (
           environment,
           settings,
           builder: null,
+          driver: null,
           screenMilliseconds: 0,
         }),
       },
@@ -111,6 +125,7 @@ export const stepFrontEnd = (
     screens,
     settings: result.settings,
     builder: result.builder,
+    driver: result.driver,
   }
   switch (result.navigation.kind) {
     case 'push': {
@@ -124,6 +139,7 @@ export const stepFrontEnd = (
           ...navigated,
           screens: [...screens, next],
           builder: getBuilderForScreen(screenId, navigated.builder, resources),
+          driver: getDriverForScreen(screenId, navigated.settings, resources, environment),
           screenMilliseconds: 0,
         },
         screenId
@@ -191,5 +207,6 @@ export const getFrontEndRaceRequest = (state: FrontEndState): FrontEndRaceReques
     lapCount: settings.lapCount,
     playerRacerNames: settings.playerRacerNames,
     playerCar: settings.playerCar,
+    randomPosition: settings.randomPosition,
   })
 }

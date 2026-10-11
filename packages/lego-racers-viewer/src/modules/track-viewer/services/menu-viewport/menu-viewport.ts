@@ -14,11 +14,15 @@ import {
 } from 'three'
 import { createBuilderCarView } from '../builder-car-view/builder-car-view.ts'
 import type { BuilderCarView } from '../builder-car-view/builder-car-view.types.ts'
+import { createDriverView } from '../driver-view/driver-view.ts'
+import type { DriverView } from '../driver-view/driver-view.types.ts'
 import { createSceneObject } from '../scene-object/scene-object.ts'
 import type { MenuViewport, MenuWorld } from './menu-viewport.types.ts'
 
 // The engine's worlds are Z-up (default instance up (0, 0, 1), GolDP.dll 0x1002cc30).
 const WORLD_UP = new Vector3(0, 0, 1)
+// The editor's camera looks at the middle of the figure; his feet are this far below (**hypothesis**: the model is 3 units tall).
+const DRIVER_FEET_BELOW_TARGET = 1.5
 
 export const createMenuViewport = (archive: JamArchive): MenuViewport => {
   const renderer = new WebGLRenderer({ antialias: true, alpha: true })
@@ -39,7 +43,12 @@ export const createMenuViewport = (archive: JamArchive): MenuViewport => {
       const three = new ThreeScene()
       three.add(object.group)
       let carView: BuilderCarView | null = null
+      let driverView: DriverView | null = null
       return {
+        driverView: () => {
+          driverView ??= createDriverView(archive, three)
+          return driverView
+        },
         three,
         object,
         carView: () => {
@@ -65,6 +74,10 @@ export const createMenuViewport = (archive: JamArchive): MenuViewport => {
     const height = bottom - top
     if (world === null || width <= 0 || height <= 0) return false
     if (command.builder !== null) world.carView().show(command.builder)
+    if (command.driver !== null) {
+      const [x, y, z] = getMenuCamera(command.camera).target
+      world.driverView().show(command.driver, [x, y, z - DRIVER_FEET_BELOW_TARGET])
+    }
     const menuCamera =
       command.builder === null ? getMenuCamera(command.camera) : getBuilderCamera(command.builder)
     renderer.setSize(width, height, false)

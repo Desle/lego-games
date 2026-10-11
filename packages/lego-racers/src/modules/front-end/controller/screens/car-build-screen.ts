@@ -212,7 +212,8 @@ const handleMove = (
 // driver; **hypothesis**: the original's "edit driver" screens fill them, which the garage will).
 const getLeaveResult = (runtime: ScreenRuntime, session: BuilderSession): ScreenResult => {
   const catalog = runtime.resources.getBuilderCatalog()
-  const template = runtime.resources.getRacerTemplate()
+  // The driver the player already made (the driver editor) stays; a first car takes the record of DEFAULT.LRS.
+  const template = runtime.settings.playerCar?.record ?? runtime.resources.getRacerTemplate()
   const chassisName = catalog.sets[session.setIndex]?.chassisName ?? template.chassisName
   return createResult(runtime, {
     settings: {

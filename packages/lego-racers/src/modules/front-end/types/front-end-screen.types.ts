@@ -1,4 +1,5 @@
 import type { BuilderSession } from '../../car-builder/index.ts'
+import type { DriverSession } from '../../figure-builder/index.ts'
 import type {
   FrontEndEnvironment,
   FrontEndInput,
@@ -16,6 +17,7 @@ export type ScreenRuntime = {
   readonly selection: FrontEndSelection
   // The builder screen's car (null until it opens).
   readonly builder: BuilderSession | null
+  readonly driver: DriverSession | null
   // Milliseconds since the screen opened (the circuit race screen cycles its races on it).
   readonly screenMilliseconds: number
 }
@@ -33,6 +35,7 @@ export type ScreenResult = {
   readonly selection: FrontEndSelection
   readonly settings: FrontEndSettings
   readonly builder: BuilderSession | null
+  readonly driver: DriverSession | null
   readonly navigation: ScreenNavigation
   // Sounds of MENUDATA\SOUNDS by file name (without `.pcm`); see front-end.md for how they were chosen.
   readonly soundNames: readonly string[]
@@ -63,3 +66,10 @@ export type OptionsButton = {
 }
 
 export type RaceSelectionKind = 'circuit_race' | 'single_race' | 'time_trial'
+
+// An entry of the garage page: the button, its label string and the screen it opens (null: back).
+export type GarageEntry = {
+  readonly itemName: string
+  readonly labelId: number
+  readonly targetScreenId: number | null
+}

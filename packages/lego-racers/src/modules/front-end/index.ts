@@ -1,5 +1,6 @@
 export {
   createFrontEnd,
+  NO_FRONT_END_MEMORY,
   getFrontEndFrame,
   getFrontEndRaceRequest,
   stepFrontEnd,
@@ -22,6 +23,7 @@ export {
 } from './types/front-end-screen/front-end-screen.ts'
 export type {
   BuilderPreview,
+  DriverPreview,
   FrontEndDrawCommand,
   FrontEndEnvironment,
   FrontEndFillCommand,
@@ -29,6 +31,7 @@ export type {
   FrontEndImage,
   FrontEndImageCommand,
   FrontEndInput,
+  FrontEndMemory,
   FrontEndMode,
   FrontEndOutcome,
   FrontEndRaceRequest,

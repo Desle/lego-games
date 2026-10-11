@@ -1,3 +1,4 @@
+import { createRandomTable } from '../../../random-table/index.ts'
 import {
   getIsOriginalJamPresent,
   readOriginalJam,
@@ -18,6 +19,8 @@ const isPresent = getIsOriginalJamPresent()
 const environment: FrontEndEnvironment = {
   controllerCount: 0,
   unlockedCircuitMask: 0x7f,
+  randomTable: createRandomTable(Array.from({ length: 1024 }, (_, index) => index)),
+  isEveryPartUnlocked: true,
   playerRacerNames: [],
   standingRows: [],
 }
