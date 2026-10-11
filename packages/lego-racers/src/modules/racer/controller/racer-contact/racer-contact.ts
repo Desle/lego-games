@@ -11,6 +11,7 @@ import {
 import { getRestartedForceFeedback } from '../../types/force-feedback/force-feedback.ts'
 import { startCarBodySlide } from '../../types/car-body/car-body.ts'
 import { playRacerVoice } from '../../types/racer-ranking/racer-ranking.ts'
+import { startCollisionSparks } from '../../types/vehicle-emitters/vehicle-emitters.ts'
 import {
   getRacer,
   getRacerCollisionObjects,
@@ -361,6 +362,7 @@ export const respondToRacerContact = (
         draw.position
       )
     }
+    current = startCollisionSparks(context, current)
     current = playRacerVoice(context, current, secondIndex)
   } else {
     current = playRacerVoice(context, current, firstIndex)

@@ -2,7 +2,9 @@ import type { Checkpoint } from '../../checkpoint/index.ts'
 import type { CollisionObject } from '../../collision/index.ts'
 import type { ComputerRacerRoute } from '../../computer-racer-route/index.ts'
 import type { RegistryContact, RegistryEntry } from '../../projectiles/index.ts'
+import type { EmitterPools, EmitterReference } from '../../emitter/index.ts'
 import type { RouteFollower, RubberBand } from '../../racer-ai/index.ts'
+import type { BoundingSphere } from '../../racer-collision/index.ts'
 import type { CarRigidBody } from '../../racer-physics/index.ts'
 import type { RandomTable, RandomTablePosition } from '../../random-table/index.ts'
 import type { FloatArithmetic, Matrix3, Quaternion, Vector3 } from '../../simulation-math/index.ts'
@@ -159,8 +161,6 @@ export type CarBody = {
   readonly routeFollower: RouteFollower | null
   // +0x748: non-zero holds a scripted body still (0x004374c0 sets it, 0x00439340 clears it at the start).
   readonly isRouteHeld: boolean
-  // +0x77c: float32 time of the ramped target (flag 0x10000); nothing in the ported code writes it.
-  readonly rampMilliseconds: number
   // +0x7cc: float32 sideways offset from the route, returning to 0.
   readonly lateralOffset: number
   // +0x7c8, +0x7d0: float32 bounce height above the route and its vertical speed.
@@ -277,12 +277,25 @@ export type Vehicle = {
   readonly previousForwardSpeed: number
   // +0x380: index of the racer the driver looks at, or -1.
   readonly watchedRacerIndex: number
-  // +0x270, +0x274, +0x278: the effect emitters (smoke and dust) that exist, as the milliseconds they have lived
-  // (null when absent). Only the presentation layer creates them, so they stay null here; 0x0043e070 draws from the
-  // random table for the first two while they live.
-  readonly smokeEmitterAge: number | null
-  readonly dustEmitterAge: number | null
-  readonly boostEmitterAge: number | null
+  // +0x00: bit 0x8 the tire smoke runs, 0x100 the wheels spin (0x0043fd90), 0x200 the next landing counts; the others
+  // (0x2, 0x4, 0x10) are presentation. It starts at 6 (0x0043a780).
+  readonly flags: number
+  // +0x270, +0x274, +0x278: the dust, tire smoke and boost smoke emitters the vehicle holds (the handles of the common
+  // pool), or null. Where they sit and the sounds that go with them are presentation; the pool's births draw.
+  readonly dustEmitter: EmitterReference | null
+  readonly tireSmokeEmitter: EmitterReference | null
+  readonly boostEmitter: EmitterReference | null
+  // +0x230..+0x23c and +0x240..: the surface emitter of each wheel and the name it runs under (0x0043dd50).
+  readonly wheelEmitters: readonly (EmitterReference | null)[]
+  readonly wheelEmitterNames: readonly string[]
+  // +0x3cc: the wheels on the ground at the previous update, which a landing is measured against.
+  readonly previousGroundedWheelCount: number
+  // +0x3c's model part (+0x78): the car body's bounding sphere in the model frame (0x100278c0), null while the
+  // car body has no model the port knows (a car built from bricks).
+  readonly bodyBounds: FigureBounds | null
+  // The racer's collision volume (+0x1c, composite of the vehicle's frames): Vehicle_Update 0x0043e070 recomputes it
+  // once per update, so the registry tests (0x0043d270) see the value of the last update. Null until that first update.
+  readonly volume: BoundingSphere | null
   // +0x4c..+0x54: where the driver sits, in the car model frame (the chassis's `vehiclePoint`, 0x0043d7a0).
   readonly seatPoint: Vector3
   // +0x3c: the car model frame's rotation. 0x0043e740 leans it towards the display frame every update; it starts
@@ -346,6 +359,8 @@ export type Racer = {
   readonly collisionSoundMilliseconds: number
   // +0xd50: uint32 milliseconds with no wheel on the ground.
   readonly airborneMilliseconds: number
+  // +0xd68: the level of the turbo started last (0x004396c0); force feedback and presentation read it.
+  readonly turboLevel: number
   // +0xd74, +0xd84: uint32 countdowns whose meaning is not identified.
   readonly unidentifiedCountdownD74Milliseconds: number
   readonly unidentifiedCountdownD84Milliseconds: number
@@ -396,6 +411,9 @@ export type RacerSet = {
   // contacts the last pass 4 found in it (0x0043d270); whoever registers an entry answers its contacts.
   readonly registryEntries: readonly RegistryEntry[]
   readonly registryContacts: readonly RegistryContact[]
+  // The race's emitter pools (race +0x2150 and +0x248c): vehicles and power-ups spawn into the common one, the
+  // track logic into both. Whoever updates the emitters (Emitters_Update) works on this state.
+  readonly emitters: EmitterPools
 }
 
 // Constant inputs of a race step.

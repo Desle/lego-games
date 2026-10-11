@@ -121,3 +121,15 @@ export const getVehicleLean = (request: VehicleLeanRequest): VehicleLean => {
     driverPosition: getFrameTransformedPoint(arithmetic, modelFrame, request.seatPoint),
   })
 }
+
+// 0x0043e620 (run by the racer set's reset 0x0043a780 after the display frame takes its start position): the car model
+// frame takes the display frame's rotation, and the driver sits at the seat point carried by it.
+export const getVehicleLeanAtReset = (
+  arithmetic: FloatArithmetic,
+  displayFrame: Frame,
+  seatPoint: Vector3
+): Pick<VehicleLean, 'bodyRotation' | 'driverPosition'> =>
+  Object.freeze({
+    bodyRotation: displayFrame.rotation,
+    driverPosition: getFrameTransformedPoint(arithmetic, displayFrame, seatPoint),
+  })

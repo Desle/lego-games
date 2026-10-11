@@ -8,6 +8,10 @@ import {
 import { EmitterKeyword, NAME_MAXIMUM_LENGTH } from '../../types/emitter-keyword/emitter-keyword.ts'
 import type { Emitter, EmitterList, Vector3 } from '../../types/emitter.types.ts'
 
+// 0x0048a1b8: the period is `1000 / rate` (0x004af670) and 0x0048a1d2: the chance a byte, `fraction · 256` (0x004b40c0).
+const BIRTHS_PER_SECOND_NUMERATOR = 1000
+const CHANCE_SCALE = 256
+
 const INTEGER_INDEFINITE = -0x80000000
 
 // MSVCRT _ftol truncates toward zero; out-of-range values give the integer indefinite.
@@ -30,9 +34,17 @@ const readPoints = (reader: TokenReader): readonly Vector3[] => {
 const applyKeyword = (reader: TokenReader, keyword: number, emitter: Emitter): Emitter => {
   switch (keyword) {
     case EmitterKeyword.FIRST_TRUNCATED_VALUE:
-      return { ...emitter, firstTruncatedValue: truncateToInteger(reader.readFloat()) }
+      return {
+        ...emitter,
+        firstTruncatedValue: truncateToInteger(
+          Math.fround(BIRTHS_PER_SECOND_NUMERATOR / reader.readFloat())
+        ),
+      }
     case EmitterKeyword.SECOND_TRUNCATED_VALUE:
-      return { ...emitter, secondTruncatedValue: truncateToInteger(reader.readFloat()) & 0xff }
+      return {
+        ...emitter,
+        secondTruncatedValue: truncateToInteger(reader.readFloat() * CHANCE_SCALE) & 0xff,
+      }
     case EmitterKeyword.VECTOR:
       return { ...emitter, vector: readFloatTriple(reader) }
     case EmitterKeyword.POINTS:

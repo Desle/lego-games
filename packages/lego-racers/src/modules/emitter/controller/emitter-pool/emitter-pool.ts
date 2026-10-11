@@ -9,6 +9,7 @@ import type {
   EmitterPlacement,
   EmitterPool,
   EmitterPoolInput,
+  EmitterPools,
   EmitterRandom,
   EmitterSpawn,
   EmitterUpdate,
@@ -72,6 +73,9 @@ export const createEmitterPool = (input: EmitterPoolInput): EmitterPool => {
   })
 }
 
+// A race with no emitter file has no pools.
+export const NO_EMITTER_POOLS: EmitterPools = Object.freeze({ common: null, track: null })
+
 const IDLE_HANDLE: EmitterHandle = Object.freeze({ isTaken: false, instanceIndex: null })
 
 const getDefinitionIndex = (pool: EmitterPool, name: string): number => {
@@ -79,6 +83,12 @@ const getDefinitionIndex = (pool: EmitterPool, name: string): number => {
   const index = pool.list.emitters.findIndex((emitter) => getNameKey(emitter.name) === key)
   if (index === -1) throw new RangeError(`${name}: the emitter pool has no such emitter`)
   return index
+}
+
+// 0x00489d50: the pool holds an emitter of this name (the hash lookup 0x004119a0 finds it).
+export const getHasEmitterDefinition = (pool: EmitterPool, name: string): boolean => {
+  const key = getNameKey(name)
+  return pool.list.emitters.some((emitter) => getNameKey(emitter.name) === key)
 }
 
 const getDefinition = (pool: EmitterPool, instance: EmitterInstance): Emitter | null =>
@@ -224,6 +234,21 @@ const getPoolAfterHandleRelease = (
       : getPoolWithInstance(pool, instanceIndex, release(instance))
   return getPoolWithHandle(withInstance, handleIndex, IDLE_HANDLE)
 }
+
+// The handle's emitter (`*handle`), or null once the pool gave it to a newer one.
+const getHandleInstance = (pool: EmitterPool, handleIndex: number): EmitterInstance | null => {
+  const instanceIndex = getInstanceOfHandle(pool, handleIndex)
+  return instanceIndex === null ? null : (pool.instances[instanceIndex] ?? null)
+}
+
+// `*handle != 0`: the handle still refers to an emitter.
+export const getIsEmitterHandleLive = (pool: EmitterPool, handleIndex: number): boolean =>
+  getHandleInstance(pool, handleIndex) !== null
+
+// `*(uint *)(*handle + 0xf0)`: how many particles the handle's emitter has born since it started, or null while the
+// handle refers to none.
+export const getEmitterBornCount = (pool: EmitterPool, handleIndex: number): number | null =>
+  getHandleInstance(pool, handleIndex)?.system.bornCount ?? null
 
 // 0x00489f30: the owner lets go of its emitter; particles alive finish their lives.
 export const releaseEmitter = (pool: EmitterPool, handleIndex: number): EmitterPool =>

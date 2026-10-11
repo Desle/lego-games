@@ -77,6 +77,19 @@ export type EmitterPool = {
   readonly animation: MaterialAnimation | null
 }
 
+// The two pools of a race: the common one (race +0x2150, EMITTER.EMB, where vehicles and power-ups spawn) and the
+// track's (race +0x248c, the race's own file), each absent when the race has no emitter file.
+export type EmitterPools = {
+  readonly common: EmitterPool | null
+  readonly track: EmitterPool | null
+}
+
+// What an owner of a running emitter holds (the handle pointer 0x00489d70 returns): the pool and the handle slot.
+export type EmitterReference = {
+  readonly isCommonPool: boolean
+  readonly handleIndex: number
+}
+
 export type EmitterPoolInput = {
   readonly list: EmitterList
   // Emitters_Load's first argument (race +0x2150 holds 10, race +0x248c holds 4).

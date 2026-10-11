@@ -1,4 +1,6 @@
 import type { CollisionObject } from '../../../collision/index.ts'
+import { NO_EMITTER_POOLS } from '../../../emitter/index.ts'
+import type { EmitterPools } from '../../../emitter/index.ts'
 import { createRubberBand, getRacerProgress } from '../../../racer-ai/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
 import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
@@ -51,6 +53,7 @@ export const createRacer = (carBody: CarBody, figure: Figure = createFigure([], 
     fadeMilliseconds: 0,
     collisionSoundMilliseconds: 0,
     airborneMilliseconds: 0,
+    turboLevel: 0,
     unidentifiedCountdownD74Milliseconds: 0,
     unidentifiedCountdownD84Milliseconds: 0,
     wrongWayMilliseconds: 0,
@@ -79,7 +82,8 @@ export const createRacer = (carBody: CarBody, figure: Figure = createFigure([], 
 export const createRacerSet = (
   racers: readonly Racer[],
   randomPosition: RandomTablePosition,
-  rubberBandBias: number
+  rubberBandBias: number,
+  emitters: EmitterPools = NO_EMITTER_POOLS
 ): RacerSet =>
   Object.freeze({
     racers: Object.freeze([...racers]),
@@ -88,6 +92,7 @@ export const createRacerSet = (
     collisionOrder: Object.freeze(racers.map((_, index) => racers.length - 1 - index)),
     registryEntries: Object.freeze([]),
     registryContacts: Object.freeze([]),
+    emitters,
   })
 
 export const getRacer = (racerSet: RacerSet, racerIndex: number): Racer => {

@@ -65,7 +65,23 @@ RACER_FIELDS = (
     ("racer.checkpointSide", 0xCC8, 1),
     ("racer.heldPowerUp", 0xCCC, 1),
     ("racer.powerUpThink", 0xCD8, 2),
+    ("racer.turboLevel", 0xD68, 1),
 )
+# What a computer racer's route-driven body keeps (car body +0x6e8 + racer offset): the follower and the speed state.
+COMPUTER_FIELDS = (
+    ("ai.held", 0xB30, 1),
+    ("ai.follower.position", 0xB34, 3),
+    ("ai.follower.speedFactor", 0xB60, 1),
+    ("ai.follower.time", 0xB64, 1),
+    ("ai.follower.indices", 0xB68, 2),
+    ("ai.follower.previousTime", 0xBA8, 1),
+    ("ai.bounceOffset", 0xBB0, 3),
+    ("ai.targetSpeedFactors", 0xBD0, 2),
+    ("ai.flip", 0xBC4, 3),
+    ("ai.spin", 0xBBC, 2),
+)
+COMPUTER_KIND = 2
+KIND_OFFSET = 0xD08
 CONTROLLER_FIELDS = (
     ("controller.bindings", 0x5C, 1),
     ("controller.state", 0x60, 1),
@@ -80,6 +96,30 @@ def read_words(machine, address: int, count: int) -> list:
     return list(struct.unpack(f"<{count}I", machine.read_bytes(address, count * 4)))
 
 
+EMITTER_POOLS = (("common", 0x2150), ("track", 0x248C))
+EMITTER_INSTANCE_SIZE = 0x18C
+EMITTER_HANDLE_COUNT = 100
+
+
+def snapshot_emitter_pool(machine, pool: int) -> tuple:
+    """The instances' state and the taken handles of one emitter pool (Emitters_Load 0x00489af0 layout)."""
+    count = machine.read_u32(pool + 0x338)
+    instances_address = machine.read_u32(pool + 0xC)
+    instance_words = []
+    for index in range(count):
+        instance = instances_address + EMITTER_INSTANCE_SIZE * index
+        definition = machine.read_u32(instance)
+        flags = machine.read_bytes(instance + 0xC0, 1)[0] & 0x12
+        period = machine.read_u32(definition + 0x14) if definition else 0
+        chance_and_priority = (machine.read_u32(definition + 0x18) & 0xFFFF) if definition else 0
+        instance_words += [flags, period, chance_and_priority, machine.read_u32(instance + 0x184), machine.read_u32(instance + 0x188), machine.read_u32(instance + 0xF0)]
+    handle_words = [0] * 4
+    for index in range(EMITTER_HANDLE_COUNT):
+        if machine.read_bytes(pool + 0x18 + 8 * index, 1)[0] & 1:
+            handle_words[index // 32] |= 1 << (index % 32)
+    return instance_words, handle_words
+
+
 def snapshot_fields(machine, race: int, racer_count: int, local_players: int) -> dict:
     racers = machine.read_u32(race + RACER_SET_OFFSET + 0x140)
     fields = {}
@@ -87,6 +127,9 @@ def snapshot_fields(machine, race: int, racer_count: int, local_players: int) ->
         racer = racers + 0xE34 * index
         for name, offset, count in RACER_FIELDS:
             fields[f"racer{index}.{name}"] = read_words(machine, racer + offset, count)
+        if machine.read_u32(racer + KIND_OFFSET) == COMPUTER_KIND:
+            for name, offset, count in COMPUTER_FIELDS:
+                fields[f"racer{index}.{name}"] = read_words(machine, racer + offset, count)
         display = machine.read_u32(racer + DISPLAY_FRAME_POINTER_OFFSET)
         wheel_words = []
         for wheel in range(4):
@@ -99,6 +142,13 @@ def snapshot_fields(machine, race: int, racer_count: int, local_players: int) ->
             probe_words += read_words(machine, base + 0x18, 6) + read_words(machine, base + 0x00, 3) + read_words(machine, base + 0x50, 4)
         fields[f"racer{index}.body.wheelProbes"] = probe_words
         fields[f"racer{index}.volume.sphere"] = read_words(machine, racer + 0x1C + 4, 4)
+        vehicle = racer + 0x18
+        body = machine.read_u32(vehicle + 0x3C)
+        driver = machine.read_u32(vehicle + 0x48)
+        fields[f"racer{index}.volume.body"] = read_words(machine, body + 0x04, 4)
+        fields[f"racer{index}.volume.driver"] = read_words(machine, driver + 0x04, 4)
+        fields[f"racer{index}.vehicle.bodyRotation"] = read_words(machine, body + 0x28, 9)
+        fields[f"racer{index}.vehicle.driverPosition"] = read_words(machine, driver + 0x4C, 3)
         fields[f"racer{index}.display.sphere"] = read_words(machine, display + 0x04, 4)
         fields[f"racer{index}.display.position"] = read_words(machine, display + 0x4C, 3)
         fields[f"racer{index}.display.rotation"] = read_words(machine, display + 0x28, 9)
@@ -106,6 +156,10 @@ def snapshot_fields(machine, race: int, racer_count: int, local_players: int) ->
         controller = race + CONTROLLER_OFFSET + CONTROLLER_STRIDE * index
         for name, offset, count in CONTROLLER_FIELDS:
             fields[f"player{index}.{name}"] = read_words(machine, controller + offset, count)
+    for name, offset in EMITTER_POOLS:
+        instance_words, handle_words = snapshot_emitter_pool(machine, race + offset)
+        fields[f"emitters.{name}.instances"] = instance_words
+        fields[f"emitters.{name}.handles"] = handle_words
     fields["race.phase"] = [machine.read_u32(race + 0x3328)]
     fields["race.phaseMilliseconds"] = [machine.read_u32(race + 0x332C)]
     fields["race.randomPosition"] = [machine.read_u32(race_session.RANDOM_CURSOR)]

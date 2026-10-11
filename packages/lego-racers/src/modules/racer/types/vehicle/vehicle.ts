@@ -17,10 +17,13 @@ import {
   updateFigure,
 } from '../figure/figure.ts'
 import { playRacerVoice } from '../racer-ranking/racer-ranking.ts'
+import { getRacerVolume } from '../racer-volume/racer-volume.ts'
+import { updateVehicleEmitters } from '../vehicle-emitters/vehicle-emitters.ts'
 import { getVehicleLean } from './vehicle-lean.ts'
 import { getRacer, setRacer, setRandomPosition } from '../racer-state/racer-state.ts'
 import type {
   Figure,
+  FigureBounds,
   Racer,
   RacerBoundary,
   RacerSet,
@@ -28,9 +31,6 @@ import type {
   Vehicle,
 } from '../racer.types.ts'
 
-const RACER_DISABLED_FLAG = 0x10
-const SMOKE_EMITTER_MAXIMUM_AGE = 9 // 0x0043e070: an emitter older than this is released
-const BOOST_EMITTER_MAXIMUM_AGE = 3
 const STANDING_SPEED = getFloatFromBits(0x38d1b717) // 0x004b09c4, 0.0001
 const WHEEL_SPIN_SCALE = getFloatFromBits(0x3fe66666) // 0x004b01a4, 1.8
 const STOPPING_PREVIOUS_SPEED = getFloatFromBits(0x3d4ccccd) // 0x004b0544, 0.05
@@ -70,23 +70,33 @@ const DriverAnimation = Object.freeze({
 
 const hasId = (id: number, ids: readonly number[]): boolean => ids.includes(id)
 
+// The flags 0x0043a780 leaves: 0x0043db60 sets 2 and the reset itself 4.
+const INITIAL_VEHICLE_FLAGS = 6
+
 // 0x0043d5a0 and 0x0043d7a0: nothing is watched, no emitter exists, the car model frame is the identity and the driver
 // sits at the origin until the first update. `lookMilliseconds` is the draw 0x0043d7a0 makes (`% 2000`, +0x388).
 export const createVehicle = (
   driverFigure: Figure = createFigure([], null),
   seatPoint: Vector3 = ZERO_VECTOR3,
-  lookMilliseconds = 0
+  lookMilliseconds = 0,
+  bodyBounds: FigureBounds | null = null
 ): Vehicle =>
   Object.freeze({
     driverFigure,
+    bodyBounds,
+    volume: null,
     secondFigure: null,
     reactionFlags: 0,
     lookMilliseconds,
     previousForwardSpeed: 0,
     watchedRacerIndex: -1,
-    smokeEmitterAge: null,
-    dustEmitterAge: null,
-    boostEmitterAge: null,
+    flags: INITIAL_VEHICLE_FLAGS,
+    dustEmitter: null,
+    tireSmokeEmitter: null,
+    boostEmitter: null,
+    wheelEmitters: Object.freeze([null, null, null, null]),
+    wheelEmitterNames: Object.freeze(['', '', '', '']),
+    previousGroundedWheelCount: 0,
     seatPoint,
     bodyRotation: IDENTITY_MATRIX3,
     forwardLean: 0,
@@ -301,40 +311,6 @@ const chooseDriverAnimation = (
   )
 }
 
-// The emitter draws of 0x0043e070 (after 0x0043ec10): a racer that is not disabled draws once while its smoke
-// emitter lives (older than 9 it is released) and once while its dust emitter exists; the boost emitter, released
-// beyond 3, draws nothing.
-const drawEmitterValues = (
-  context: RacerSetContext,
-  racerSet: RacerSet,
-  racerIndex: number
-): RacerSet => {
-  const racer = getRacer(racerSet, racerIndex)
-  if ((racer.flags & RACER_DISABLED_FLAG) !== 0) return racerSet
-  const { vehicle } = racer
-  const isSmokeAlive =
-    vehicle.smokeEmitterAge !== null && vehicle.smokeEmitterAge <= SMOKE_EMITTER_MAXIMUM_AGE
-  const isBoostAlive =
-    vehicle.boostEmitterAge !== null && vehicle.boostEmitterAge <= BOOST_EMITTER_MAXIMUM_AGE
-  const drawCount = (isSmokeAlive ? 1 : 0) + (vehicle.dustEmitterAge === null ? 0 : 1)
-  const drawn = Array.from({ length: drawCount }).reduce<RacerSet>((current) => {
-    const draw = drawRandomValue(context.tables.randomTable, current.randomPosition)
-    return setRandomPosition(current, draw.position)
-  }, racerSet)
-  return setRacer(
-    drawn,
-    racerIndex,
-    Object.freeze({
-      ...racer,
-      vehicle: Object.freeze({
-        ...vehicle,
-        smokeEmitterAge: isSmokeAlive ? vehicle.smokeEmitterAge : null,
-        boostEmitterAge: isBoostAlive ? vehicle.boostEmitterAge : null,
-      }),
-    })
-  )
-}
-
 // 0x0043ec10 (thiscall on the vehicle: milliseconds): the driver figure is updated, the reactions asked for are
 // consumed, the look timer counts down, and the next driver animation is chosen.
 export const updateVehicleDriver: RacerBoundary = (
@@ -422,5 +398,17 @@ export const updateVehicle: RacerBoundary = (context, racerSet, racerIndex, step
     })
   )
   const driven = updateVehicleDriver(context, wheels, racerIndex, stepMilliseconds)
-  return drawEmitterValues(context, driven, racerIndex)
+  const drivenRacer = getRacer(driven, racerIndex)
+  const measured = setRacer(
+    driven,
+    racerIndex,
+    Object.freeze({
+      ...drivenRacer,
+      vehicle: Object.freeze({
+        ...drivenRacer.vehicle,
+        volume: getRacerVolume(arithmetic, drivenRacer),
+      }),
+    })
+  )
+  return updateVehicleEmitters(context, measured, racerIndex)
 }

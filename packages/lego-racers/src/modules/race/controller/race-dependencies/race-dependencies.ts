@@ -13,7 +13,10 @@ import {
   endTimedEffect,
   followDriverRoute,
   getRacer,
-  getRacerSphere,
+  endVehiclePowerSlideEffects,
+  getRacerVolume,
+  startVehicleBoostSmoke,
+  startVehiclePowerSlideEffects,
   keepRacerSetNotYetPorted,
   transferTimedEffect,
   updateVehicle,
@@ -60,11 +63,12 @@ const RACE_COLLISION_DEPENDENCIES: RacerPassDependencies = Object.freeze({
   getIsTouchingRegistryEntry: (context, racerSet, racerIndex, entry) => {
     const raced = getRaceRacerSetOf(racerSet)
     const object = raced.registryObjects[entry.id]
+    const racer = getRacer(raced, racerIndex)
     return (
       object !== undefined &&
       getSpheresOverlap(
         context.arithmetic,
-        getRacerSphere(context, getRacer(raced, racerIndex)),
+        racer.vehicle.volume ?? getRacerVolume(context.arithmetic, racer),
         getRegistrySphere(raced, object)
       )
     )
@@ -210,7 +214,7 @@ export const RACE_STEP_DEPENDENCIES: RacerSetStepDependencies = Object.freeze({
   stepRigidBody: stepRacerRigidBodyWithContacts,
   stepScriptedCarBody: stepRacerScriptWithContacts,
   updateEngineSound: keepRacerSetNotYetPorted,
-  endPowerSlideEffects: keepRacerSetNotYetPorted,
+  endPowerSlideEffects: endVehiclePowerSlideEffects,
   collideRacers: deliverContacts,
   updateVehicle,
   updateRacerSounds: keepRacerSetNotYetPorted,
@@ -241,11 +245,15 @@ const triggerStartBoost: PlayerControllerDependencies['triggerStartBoost'] = (
   racerIndex,
   isStrongBoost
 ) =>
-  changePowerUps(context, getRaceRacerSetOf(racerSet), (step, powerUpContext) =>
-    activatePowerUp(step, powerUpContext, racerIndex, {
-      category: BrickKind.TURBO,
-      level: isStrongBoost ? 1 : 0,
-    })
+  startVehicleBoostSmoke(
+    context,
+    changePowerUps(context, getRaceRacerSetOf(racerSet), (step, powerUpContext) =>
+      activatePowerUp(step, powerUpContext, racerIndex, {
+        category: BrickKind.TURBO,
+        level: isStrongBoost ? 1 : 0,
+      })
+    ),
+    racerIndex
   )
 
 // The player controller's calls into the rest of the race. The camera, the HUD and the sound and smoke of a
@@ -256,6 +264,6 @@ export const RACE_PLAYER_CONTROLLER_DEPENDENCIES: PlayerControllerDependencies =
   changeHudMode: keepRacerSetNotYetPorted,
   setLookBehind: (_context, racerSet) => racerSet,
   triggerStartBoost,
-  startPowerSlideEffects: keepRacerSetNotYetPorted,
-  endPowerSlideEffects: keepRacerSetNotYetPorted,
+  startPowerSlideEffects: startVehiclePowerSlideEffects,
+  endPowerSlideEffects: endVehiclePowerSlideEffects,
 })

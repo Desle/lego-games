@@ -2,7 +2,13 @@ import { runTrackLogic } from '../../../track-logic/index.ts'
 import type { TrackSession } from '../../../track-logic/index.ts'
 import { moveOutOfContact, stepCarRigidBody } from '../../../racer-physics/index.ts'
 import type { CarRigidBodyHooks } from '../../../racer-physics/index.ts'
-import { getRacer, getRacerCollisionObjects, setRacer } from '../../../racer/index.ts'
+import {
+  clearVehicleWheelEmitter,
+  getRacer,
+  getRacerCollisionObjects,
+  setRacer,
+  setVehicleWheelEmitter,
+} from '../../../racer/index.ts'
 import type {
   CarBody,
   Racer,
@@ -19,6 +25,7 @@ import {
 } from '../../types/scripted-car-body/scripted-car-body.ts'
 import type { RaceRacerSet } from '../../types/race.types.ts'
 import type { CarBodyContact } from '../../types/surface-materials/surface-materials.types.ts'
+import { COMPUTER_CONTROLLER } from '../../types/racer-transitions/racer-transitions.ts'
 import { changeRacer, changeTrackLogic, getRaceRacerSetOf } from '../race-world/race-world.ts'
 
 const getPoint = (vector: Vector3): readonly [number, number, number] => [
@@ -77,6 +84,12 @@ export const applyCarBodyContacts = (
           session.stopSignal(contact.identifier, getPoint(contact.position))
           session.releaseTrigger(contact.identifier, racerIndex)
         })
+      case 'wheel_emitter_started':
+        return getRaceRacerSetOf(
+          setVehicleWheelEmitter(context, current, racerIndex, contact.wheelIndex, contact.name)
+        )
+      case 'wheel_emitter_stopped':
+        return getRaceRacerSetOf(clearVehicleWheelEmitter(current, racerIndex, contact.wheelIndex))
       default:
         return current
     }
@@ -93,7 +106,9 @@ const stepRacerBodyWithContacts = (
   const contacts: CarBodyContact[] = []
   const carBody = getSteppedCarBody(
     racer,
-    createCarBodyContactHooks(raced.surfaces, (contact) => void contacts.push(contact))
+    createCarBodyContactHooks(raced.surfaces, (contact) => void contacts.push(contact), {
+      isComputer: racer.controllerKind === COMPUTER_CONTROLLER,
+    })
   )
   const stepped = getRaceRacerSetOf(
     setRacer(raced, racerIndex, Object.freeze({ ...racer, carBody }))

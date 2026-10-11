@@ -136,7 +136,7 @@ export const updateRace = (
     projectileWorld = projected.world
     return projected.step
   })
-  const projected = getRacerSetAfterProjectileEvents(changed, projectileWorld.events)
+  const projected = getRacerSetAfterProjectileEvents(arithmetic, changed, projectileWorld.events)
   const tagged = updateTaggedPositions(projected, stepMilliseconds)
   const powered = changeTrackLogic(counted.context, tagged, (trackLogic, trackContext) =>
     updateTrackLogicFrame(trackLogic, trackContext, stepMilliseconds, tagged.racers.length)

@@ -17,26 +17,24 @@ import {
   getWeavingFrames,
   holdBindings,
 } from '../trace-scenarios/trace-scenarios.ts'
-import { formatDivergence, getPlayerDivergences, runGoldenTrace } from './run-golden-trace.ts'
+import { formatDivergence, runGoldenTrace } from './run-golden-trace.ts'
 
 const TRACE_TIMEOUT_MILLISECONDS = 1_800_000
 const ROYAL_KNIGHTS_RACEWAY = 'RACEC0R0'
 // The introduction camera of Royal Knights Raceway ends after 7 ticks (the original's trace reports it).
 const ROYAL_KNIGHTS_INTRODUCTION_CAMERA_LIMIT = 7
+// The unported emitters of power-up objects and projectiles (oil slicks, cannon balls) draw from the random table in
+// the original; the race of each is named in golden-trace.md.
 const OTHER_TRACKS = [
-  { folder: 'RACEC0R1', expected: null },
-  // The heading of a drifting car (0x00446fd0) leaves the original by 160 float32 units in the last place in the
-  // 43rd frame of steering, with every input of the step equal (golden-trace.md, open).
-  { folder: 'RACEC0R2', expected: { frame: 278, field: 'racer0.body.forwardSpeed' } },
+  { folder: 'RACEC0R1', expected: { frame: 436, field: 'race.randomPosition' } },
+  { folder: 'RACEC0R2', expected: { frame: 220, field: 'race.randomPosition' } },
   { folder: 'RACEC0R3', expected: null },
-  { folder: 'RACEC1R0', expected: null },
-  { folder: 'RACEC3R0', expected: null },
+  { folder: 'RACEC1R0', expected: { frame: 417, field: 'race.randomPosition' } },
+  { folder: 'RACEC3R0', expected: { frame: 278, field: 'race.randomPosition' } },
 ] as const
-// The player collects a power-up brick the original lets it touch and the port does not: the collision registry
-// tests the vehicle's composite volume (0x00440030), the port only the wheels figure's sphere (golden-trace.md).
-const HELD_POWER_UP = 'racer0.racer.heldPowerUp'
+const RANDOM_CURSOR = 'race.randomPosition'
 
-// Where the port first leaves the original in what the player's car and controller hold, or null for a match.
+// Where the port first leaves the original in any compared field, or null for a match.
 type ExpectedDivergence = { readonly frame: number; readonly field: string } | null
 
 type ScenarioCase = {
@@ -81,24 +79,24 @@ const getCases = (): readonly ScenarioCase[] => {
     { scenario: royalKnights('royal-knights-steering', getSteeringSweepFrames()), expected: null },
     {
       scenario: royalKnights('royal-knights-weaving', getWeavingFrames(1200)),
-      expected: { frame: 369, field: HELD_POWER_UP },
+      expected: { frame: 539, field: RANDOM_CURSOR },
     },
     {
       scenario: royalKnights('royal-knights-frame-times', getFrameTimes()),
-      expected: { frame: 261, field: HELD_POWER_UP },
+      expected: { frame: 424, field: RANDOM_CURSOR },
     },
     {
       scenario: royalKnights('royal-knights-start-boost', [
         ...getIdleFrames(160),
         ...holdBindings(120, ['accelerate']),
       ]),
-      expected: { frame: 215, field: HELD_POWER_UP },
+      expected: null,
     },
     {
       scenario: royalKnights('royal-knights-route-driving', [
         ...getRouteDrivingFrames(drivingDefinition, 3000),
       ]),
-      expected: null,
+      expected: { frame: 539, field: RANDOM_CURSOR },
     },
     {
       scenario: createTraceScenario({
@@ -108,7 +106,8 @@ const getCases = (): readonly ScenarioCase[] => {
         frames: getSteeringSweepFrames(),
         precision: FpuPrecision.DOUBLE,
       }),
-      expected: null,
+      // Computers only, in the double-precision mode the game never runs: one unit in the last place at the start.
+      expected: { frame: 160, field: 'racer1.body.velocity' },
     },
     ...OTHER_TRACKS.map(({ folder, expected }) => ({
       scenario: createTraceScenario({
@@ -136,14 +135,13 @@ describe('golden trace: the original race and the port, frame for frame', () => 
       // Act
       for (const { scenario, expected: expectation } of getCases()) {
         const result = await runGoldenTrace(scenario, jam, executable)
-        const [first] = getPlayerDivergences(result.comparison)
-        actual[scenario.name] =
-          first === undefined ? null : { frame: first.frame, field: first.field }
+        const first = result.comparison.firstDivergence
+        actual[scenario.name] = first === null ? null : { frame: first.frame, field: first.field }
         expected[scenario.name] = expectation
         reports.push(
           `${scenario.name}: ${String(result.comparison.frameCount)} frames, control word 0x${result.controlWord.toString(16)}, frame times ${result.isFrameTimeKept ? 'kept' : 'CHANGED'}, ` +
             `${String(result.comparison.divergenceByField.length)} fields differ` +
-            (first === undefined ? '' : `, first for the player: ${formatDivergence(first)}`)
+            (first === null ? '' : `, first: ${formatDivergence(first)}`)
         )
       }
 

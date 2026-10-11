@@ -38,6 +38,7 @@ import { endCarBodyEffect, endTimedEffect } from '../timed-effect/timed-effect.t
 import { notifyRacerContact } from '../notify-racer-contact/notify-racer-contact.ts'
 import { updatePlayerGuidance } from '../update-player-guidance/update-player-guidance.ts'
 import { followDriverRoute } from '../follow-driver-route/follow-driver-route.ts'
+import { endVehiclePowerSlideEffects } from '../../types/vehicle-emitters/vehicle-emitters.ts'
 import { updateVehicle } from '../../types/vehicle/vehicle.ts'
 import { stopRacerPowerSlide } from '../racer-power-slide/racer-power-slide.ts'
 
@@ -94,7 +95,7 @@ export const RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED: RacerSetStepDependencie
   stepRigidBody: stepRacerRigidBody,
   stepScriptedCarBody: keepRacerSetNotYetPorted,
   updateEngineSound: keepRacerSetNotYetPorted,
-  endPowerSlideEffects: keepRacerSetNotYetPorted,
+  endPowerSlideEffects: endVehiclePowerSlideEffects,
   collideRacers: createCollideRacers(RACER_COLLISION_DEPENDENCIES_NOT_YET_PORTED),
   updateVehicle,
   updateRacerSounds: keepRacerSetNotYetPorted,
