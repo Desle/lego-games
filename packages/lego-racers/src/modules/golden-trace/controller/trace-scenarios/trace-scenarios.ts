@@ -4,6 +4,8 @@ import type { GoldenTraceScenario, TraceFrameInput } from '../../types/golden-tr
 
 // The introduction (2,000 ms) and the countdown (3,000 ms) pass before the racers are released.
 const FRAMES_BEFORE_START = 160
+// Accelerating within 100 ms of the start fires the start boost (0x00430790); the plain scenarios wait longer.
+const FRAMES_BEFORE_THROTTLE = 175
 const FRAME_MILLISECONDS = 33
 const DEFAULT_RACER_COUNT = 6
 
@@ -48,7 +50,7 @@ export const getIdleFrames = (count: number): readonly TraceFrameInput[] => hold
 
 // Full throttle after the start, hard left, hard right, then straight on.
 export const getSteeringSweepFrames = (): readonly TraceFrameInput[] => [
-  ...getIdleFrames(FRAMES_BEFORE_START),
+  ...getIdleFrames(FRAMES_BEFORE_THROTTLE),
   ...holdBindings(60, [RaceBinding.ACCELERATE]),
   ...holdBindings(90, [RaceBinding.ACCELERATE, RaceBinding.STEER_POSITIVE]),
   ...holdBindings(90, [RaceBinding.ACCELERATE, RaceBinding.STEER_NEGATIVE]),
@@ -64,7 +66,7 @@ export const getWeavingFrames = (count: number): readonly TraceFrameInput[] => {
     ...holdBindings(25, [RaceBinding.ACCELERATE, RaceBinding.STEER_NEGATIVE]),
   ]
   return [
-    ...getIdleFrames(FRAMES_BEFORE_START),
+    ...getIdleFrames(FRAMES_BEFORE_THROTTLE),
     ...Array.from({ length: count }, (_, index) => weave[index % weave.length] ?? weave[0]),
   ].filter((frame): frame is TraceFrameInput => frame !== undefined)
 }
