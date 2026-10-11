@@ -6,7 +6,14 @@ import type {
 } from '@lego-games/lego-racers/presentation-trace'
 import type { SceneRenderState } from '@lego-games/lego-racers/scene'
 import { Vector3 } from 'three'
-import type { BufferAttribute, DataTexture, Material, Mesh, Object3D } from 'three'
+import type {
+  BufferAttribute,
+  DataTexture,
+  Material,
+  Mesh,
+  MeshBasicMaterial,
+  Object3D,
+} from 'three'
 import type { PortTriangles } from './port-triangles.types.ts'
 
 const CORNERS_PER_TRIANGLE = 3
@@ -52,7 +59,11 @@ const getTextureKey = (
   textures.set(key, {
     width,
     height,
-    colors: new Uint8Array(data?.buffer ?? new ArrayBuffer(0), data?.byteOffset ?? 0, data?.byteLength ?? 0),
+    colors: new Uint8Array(
+      data?.buffer ?? new ArrayBuffer(0),
+      data?.byteOffset ?? 0,
+      data?.byteLength ?? 0
+    ),
   })
   return key
 }
@@ -105,8 +116,9 @@ export const getPortWorldTriangles = (roots: readonly Object3D[]): PortTriangles
       const material = mesh.material as Material
       const renderState = material.userData['renderState'] as SceneRenderState | undefined
       if (renderState === undefined) return
-      const map = (material as { map?: DataTexture | null }).map ?? null
-      const textureKey = map === null ? null : getTextureKey(map, keys, textures, material.name)
+      const map = (material as MeshBasicMaterial).map ?? null
+      const textureKey =
+        map === null ? null : getTextureKey(map as DataTexture, keys, textures, material.name)
       const state = getDrawState(renderState, material)
       const source = getSourceName(mesh, material.name)
       const count = mesh.geometry.getAttribute('position').count / CORNERS_PER_TRIANGLE

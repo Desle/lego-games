@@ -62,9 +62,6 @@ describe.skipIf(!isGamePresent())('audio trace', () => {
         isMirrored: scenario.isMirrored,
         fpuPrecision: FpuPrecision.SINGLE,
         isPlayerChampionCar: true,
-        introductionCameraLimit:
-          original.introductionCameraLimit < 0 ? null : original.introductionCameraLimit,
-        introductionCameraRate: original.introductionCameraRate,
       }
     )
     const portFrames: AudioFrameCalls[] = []

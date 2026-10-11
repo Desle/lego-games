@@ -1,6 +1,5 @@
 export { compareAudioCalls, getOriginalAudioCalls } from './controller/audio-trace/audio-trace.ts'
 export { compareRenderFrame } from './controller/render-trace/compare-render-frame.ts'
-export type { RenderFrameInput } from './controller/render-trace/compare-render-frame.ts'
 export { getOriginalTriangles } from './controller/render-trace/original-triangles.ts'
 export {
   getIsFrontFacing,
@@ -27,6 +26,7 @@ export type {
   DrawnTriangle,
   DrawState,
   PortTexture,
+  RenderFrameInput,
   RenderFrameComparison,
   RenderMismatchGroup,
   RenderTolerances,

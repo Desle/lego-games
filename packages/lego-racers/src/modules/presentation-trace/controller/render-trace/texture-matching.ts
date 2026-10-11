@@ -1,5 +1,5 @@
 import type { OriginalTexture } from '../../types/presentation-trace.types.ts'
-import type { PortTexture } from './render-trace.types.ts'
+import type { PortTexture, Rgb, TextureDifference } from './render-trace.types.ts'
 import type { TextureMatch } from './texture-matching.types.ts'
 
 const GRID_SIZE = 16
@@ -9,8 +9,6 @@ const BYTES_PER_COLOR = 4
 const QUANTISATION_LEVELS = 6
 // A picture further than this from every port texture has no counterpart.
 const MAXIMUM_DIFFERENCE = 32
-
-type Rgb = readonly [number, number, number]
 
 const getChannel = (value: number, mask: number): number => {
   if (mask === 0) return CHANNEL_MAXIMUM
@@ -72,7 +70,7 @@ export const matchTexture = (
     key,
     difference: getDifference(original, texture),
   }))
-  const best = differences.reduce<{ key: string; difference: number } | null>(
+  const best = differences.reduce<TextureDifference | null>(
     (current, candidate) =>
       current === null || candidate.difference < current.difference ? candidate : current,
     null

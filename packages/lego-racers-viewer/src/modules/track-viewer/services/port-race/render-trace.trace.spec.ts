@@ -23,6 +23,7 @@ import { createPresentationScenario } from './trace-scenarios.ts'
 const isGamePresent = () => getIsOriginalGamePresent() && getIsOriginalPresentationAvailable()
 
 describe.skipIf(!isGamePresent())('render trace', () => {
+  // eslint-disable-next-line no-restricted-syntax -- the lint rule knows `describe(...)`, not `describe.skipIf(...)(...)`
   it('compares Royal Knights', async () => {
     // Arrange
     const jam = readOriginalJam()
@@ -45,9 +46,6 @@ describe.skipIf(!isGamePresent())('render trace', () => {
         isMirrored: scenario.isMirrored,
         fpuPrecision: FpuPrecision.SINGLE,
         isPlayerChampionCar: true,
-        introductionCameraLimit:
-          original.introductionCameraLimit < 0 ? null : original.introductionCameraLimit,
-        introductionCameraRate: original.introductionCameraRate,
       }
     )
     const stage = createRaceStage(assets, ORIGINAL_STAGE_SIZE)

@@ -1,9 +1,10 @@
 import type { OriginalRenderFrame } from '../../types/presentation-trace.types.ts'
 import type {
   DrawnTriangle,
+  MatrixCount,
+  ProjectedVertex,
   ScreenMatrix,
   ScreenTriangle,
-  ScreenVertex,
   WorldTriangle,
   WorldVertex,
 } from './render-trace.types.ts'
@@ -23,7 +24,7 @@ export const getIsFrontFacing = (triangle: ScreenTriangle): boolean => getTurn(t
 // The matrix the original's most triangles were drawn with: the track and the objects that stand in the world,
 // whose model matrix is the identity, so it is the world to screen matrix of the camera (device +0xc8518).
 export const getWorldToScreenMatrix = (frame: OriginalRenderFrame): ScreenMatrix | null => {
-  const counts = new Map<string, { matrix: ScreenMatrix; triangleCount: number }>()
+  const counts = new Map<string, MatrixCount>()
   for (const draw of frame.draws) {
     if (draw.modelMatrix.length !== MATRIX_SIZE) continue
     const key = draw.modelMatrix.map((value) => value.toFixed(MATRIX_KEY_DIGITS)).join(' ')
@@ -31,14 +32,12 @@ export const getWorldToScreenMatrix = (frame: OriginalRenderFrame): ScreenMatrix
     const entry = counts.get(key) ?? { matrix: draw.modelMatrix, triangleCount: 0 }
     counts.set(key, { matrix: entry.matrix, triangleCount: entry.triangleCount + triangleCount })
   }
-  let best: { matrix: ScreenMatrix; triangleCount: number } | null = null
+  let best: MatrixCount | null = null
   for (const entry of counts.values()) {
     if (best === null || entry.triangleCount > best.triangleCount) best = entry
   }
   return best?.matrix ?? null
 }
-
-type ProjectedVertex = ScreenVertex & { readonly clipW: number }
 
 const projectVertex = (vertex: WorldVertex, matrix: ScreenMatrix): ProjectedVertex => {
   const at = (index: number): number => matrix[index] ?? 0

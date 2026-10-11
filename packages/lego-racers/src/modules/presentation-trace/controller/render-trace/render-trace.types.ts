@@ -1,5 +1,6 @@
 import type { EnumValues } from '../../../../shared/types/enum.types.ts'
 import type { SceneRenderState } from '../../../scene/index.ts'
+import type { TextureMatch } from './texture-matching.types.ts'
 import type { RenderMismatchKind as RenderMismatchKindValues } from '../../types/render-mismatch-kind/render-mismatch-kind.ts'
 
 // A vertex in screen space: pixels, 1/w, the texture coordinates and the diffuse colour (red, green, blue, alpha, 0..255).
@@ -110,3 +111,44 @@ export type RenderTolerances = {
   // 0..255
   readonly colorLevels: number
 }
+
+export type RenderFrameInput = {
+  readonly original: readonly DrawnTriangle[]
+  readonly port: readonly DrawnTriangle[]
+  readonly viewport: RenderViewportSize
+  // The port textures that look like each of the original's surfaces, by the surface's hash.
+  readonly textureMatches: ReadonlyMap<string, TextureMatch>
+  readonly tolerances: RenderTolerances
+}
+
+export type PixelPoint = { readonly x: number; readonly y: number }
+
+export type VertexPairing = {
+  readonly permutation: readonly [number, number, number]
+  readonly distance: number
+}
+
+export type MismatchGroupBuilder = {
+  count: number
+  readonly kind: RenderMismatchKind
+  readonly source: string
+  readonly firstDetail: string
+  readonly firstOriginal: DrawnTriangle | null
+  readonly firstPort: DrawnTriangle | null
+}
+
+export type PairingCandidate = { readonly index: number; readonly pairing: VertexPairing }
+
+export type TextureCoordinateWorst = {
+  readonly size: number
+  readonly left: ScreenVertex | undefined
+  readonly right: ScreenVertex | undefined
+}
+
+export type ProjectedVertex = ScreenVertex & { readonly clipW: number }
+
+export type MatrixCount = { readonly matrix: ScreenMatrix; readonly triangleCount: number }
+
+export type Rgb = readonly [number, number, number]
+
+export type TextureDifference = { readonly key: string; readonly difference: number }

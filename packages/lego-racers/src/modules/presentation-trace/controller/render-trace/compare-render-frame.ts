@@ -4,11 +4,16 @@ import type {
   DrawnTriangle,
   DrawState,
   RenderFrameComparison,
-  RenderMismatch,
+  RenderMismatchKind as RenderMismatchKindType,
   RenderMismatchGroup,
-  RenderTolerances,
   RenderViewportSize,
   ScreenTriangle,
+  MismatchGroupBuilder,
+  PairingCandidate,
+  PixelPoint,
+  RenderFrameInput,
+  TextureCoordinateWorst,
+  VertexPairing,
 } from './render-trace.types.ts'
 import type { TextureMatch } from './texture-matching.types.ts'
 
@@ -26,15 +31,6 @@ const PERMUTATIONS: readonly (readonly [number, number, number])[] = [
   [1, 0, 2],
 ]
 
-export type RenderFrameInput = {
-  readonly original: readonly DrawnTriangle[]
-  readonly port: readonly DrawnTriangle[]
-  readonly viewport: RenderViewportSize
-  // The port textures that look like each of the original's surfaces, by the surface's hash.
-  readonly textureMatches: ReadonlyMap<string, TextureMatch>
-  readonly tolerances: RenderTolerances
-}
-
 const getIsInside = (triangle: ScreenTriangle, viewport: RenderViewportSize): boolean =>
   triangle.every(
     (vertex) =>
@@ -47,23 +43,16 @@ const getIsInside = (triangle: ScreenTriangle, viewport: RenderViewportSize): bo
 
 const getCellKey = (column: number, row: number): string => `${String(column)}/${String(row)}`
 
-const getCentre = (triangle: ScreenTriangle): { readonly x: number; readonly y: number } => ({
+const getCentre = (triangle: ScreenTriangle): PixelPoint => ({
   x: (triangle[0].x + triangle[1].x + triangle[2].x) / 3,
   y: (triangle[0].y + triangle[1].y + triangle[2].y) / 3,
 })
 
-const getDistance = (
-  left: { readonly x: number; readonly y: number },
-  right: { readonly x: number; readonly y: number }
-): number => Math.hypot(left.x - right.x, left.y - right.y)
+const getDistance = (left: PixelPoint, right: PixelPoint): number =>
+  Math.hypot(left.x - right.x, left.y - right.y)
 
-type Pairing = {
-  readonly permutation: readonly [number, number, number]
-  readonly distance: number
-}
-
-const getPairing = (original: ScreenTriangle, port: ScreenTriangle): Pairing =>
-  PERMUTATIONS.map((permutation): Pairing => {
+const getVertexPairing = (original: ScreenTriangle, port: ScreenTriangle): VertexPairing =>
+  PERMUTATIONS.map((permutation): VertexPairing => {
     const distance = Math.max(
       ...permutation.map((portIndex, originalIndex) =>
         getDistance(original[originalIndex] ?? original[0], port[portIndex] ?? port[0])
@@ -101,10 +90,10 @@ const getTextureDifference = (
 const getTextureCoordinateDifference = (
   original: ScreenTriangle,
   port: ScreenTriangle,
-  pairing: Pairing,
+  pairing: VertexPairing,
   tolerance: number
 ): string | null => {
-  const worst = pairing.permutation.reduce(
+  const worst = pairing.permutation.reduce<TextureCoordinateWorst>(
     (current, portIndex, originalIndex) => {
       const left = original[originalIndex]
       const right = port[portIndex]
@@ -114,7 +103,7 @@ const getTextureCoordinateDifference = (
     },
     { size: 0, left: original[0], right: port[0] }
   )
-  return worst.size > tolerance
+  return worst.size > tolerance && worst.left !== undefined && worst.right !== undefined
     ? `uv (${worst.left.u.toFixed(4)}, ${worst.left.v.toFixed(4)}) -> (${worst.right.u.toFixed(4)}, ${worst.right.v.toFixed(4)})`
     : null
 }
@@ -122,7 +111,7 @@ const getTextureCoordinateDifference = (
 const getColorDifference = (
   original: DrawnTriangle,
   port: DrawnTriangle,
-  pairing: Pairing,
+  pairing: VertexPairing,
   tolerance: number
 ): string | null => {
   if (original.state.colorOperation === TextureOperation.SELECT_TEXTURE) return null
@@ -134,15 +123,6 @@ const getColorDifference = (
     if (size > tolerance) return `diffuse ${left.join(',')} -> ${right.join(',')}`
   }
   return null
-}
-
-type GroupBuilder = {
-  count: number
-  readonly kind: RenderMismatch['kind']
-  readonly source: string
-  readonly firstDetail: string
-  readonly firstOriginal: DrawnTriangle | null
-  readonly firstPort: DrawnTriangle | null
 }
 
 // Compares what the original drew in a frame with what the port draws, triangle by triangle, matched by where they land
@@ -158,9 +138,9 @@ export const compareRenderFrame = (input: RenderFrameInput): RenderFrameComparis
     cells.set(key, [...(cells.get(key) ?? []), index])
   })
   const used = new Set<number>()
-  const groups = new Map<string, GroupBuilder>()
+  const groups = new Map<string, MismatchGroupBuilder>()
   const report = (
-    kind: RenderMismatch['kind'],
+    kind: RenderMismatchKindType,
     source: string,
     detail: string,
     originalTriangle: DrawnTriangle | null,
@@ -186,14 +166,14 @@ export const compareRenderFrame = (input: RenderFrameInput): RenderFrameComparis
     const centre = getCentre(triangle.vertices)
     const column = Math.floor(centre.x / CELL_SIZE)
     const row = Math.floor(centre.y / CELL_SIZE)
-    let best: { index: number; pairing: Pairing } | null = null
+    let best: PairingCandidate | null = null
     for (let columnOffset = -1; columnOffset <= 1; columnOffset++) {
       for (let rowOffset = -1; rowOffset <= 1; rowOffset++) {
         const candidates = cells.get(getCellKey(column + columnOffset, row + rowOffset)) ?? []
         for (const index of candidates) {
           const candidate = port[index]
           if (used.has(index) || candidate === undefined) continue
-          const pairing = getPairing(triangle.vertices, candidate.vertices)
+          const pairing = getVertexPairing(triangle.vertices, candidate.vertices)
           if (best === null || pairing.distance < best.pairing.distance) best = { index, pairing }
         }
       }
@@ -215,7 +195,7 @@ export const compareRenderFrame = (input: RenderFrameInput): RenderFrameComparis
     }
     used.add(best.index)
     matchedCount += 1
-    const checks: readonly (readonly [RenderMismatch['kind'], string | null])[] = [
+    const checks: readonly (readonly [RenderMismatchKindType, string | null])[] = [
       [
         RenderMismatchKind.POSITION,
         best.pairing.distance > tolerances.positionPixels
