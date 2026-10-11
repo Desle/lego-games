@@ -67,6 +67,9 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     FAR_PLANE
   )
   const shown: ShownScene = showSceneObjects(assets.scene, assets.background)
+  // A mirrored race (Race_LoadTrackContent's flag) negates y in every loader; the world's instances sit where the
+  // simulation puts them, so the track is drawn as its mirror image. three.js flips the faces of a mirrored object.
+  if (assets.definition.isMirrored) shown.track.group.scale.set(1, -1, 1)
   trackScene.add(shown.track.group)
   const particles = createRaceParticles()
   trackScene.add(particles.points)
@@ -115,6 +118,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     // The engine's camera frames take a negated up vector (see the world's cameras).
     camera.up.set(-up.x, -up.y, -up.z)
     camera.lookAt(position.x + forward.x, position.y + forward.y, position.z + forward.z)
+    shown.track.selectLevels(camera.position)
     const placement = shown.sky?.place(camera.position)
     if (shown.backdrop !== null) {
       const point = placement?.backdrop ?? camera.position

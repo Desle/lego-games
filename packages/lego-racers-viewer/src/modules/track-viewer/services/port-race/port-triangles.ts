@@ -97,9 +97,9 @@ const getVertices = (
     }
   })
   const [first, second, third] = corners
-  return first === undefined || second === undefined || third === undefined
-    ? null
-    : [first, second, third]
+  if (first === undefined || second === undefined || third === undefined) return null
+  // A mirrored object (negative determinant) turns its faces inside out; three.js flips the front face for it.
+  return mesh.matrixWorld.determinant() < 0 ? [third, second, first] : [first, second, third]
 }
 
 // Every triangle of the three.js objects in world space, with the texture, the render state and the object it came from:

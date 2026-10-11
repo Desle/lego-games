@@ -10,10 +10,7 @@ import { getEffectViews, getRacerPoses } from '@lego-games/lego-racers/race-pres
 import { FpuPrecision } from '@lego-games/lego-racers/simulation-math'
 import { loadRaceAssets } from '../race-assets/race-assets.ts'
 import { createRaceStage } from '../race-viewport/race-viewport.ts'
-import {
-  readOriginalExecutable,
-  readOriginalJam,
-} from './original-game-files.ts'
+import { readOriginalExecutable, readOriginalJam } from './original-game-files.ts'
 import { ORIGINAL_STAGE_SIZE, runPortRace } from './port-race.ts'
 import { getPortWorldTriangles } from './port-triangles.ts'
 import type {
@@ -84,6 +81,11 @@ export const runRenderComparison = async (
       originalCount: comparison.originalCount,
       portCount: comparison.portCount,
       matchedCount: comparison.matchedCount,
+      farthestOriginalDepth: Math.max(
+        ...originalTriangles.flatMap((triangle) =>
+          triangle.vertices.map((vertex) => 1 / vertex.reciprocalW)
+        )
+      ),
     })
     for (const group of comparison.groups) {
       const key = `${group.kind}|${group.source}`

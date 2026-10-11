@@ -200,7 +200,7 @@ export const compareRenderFrame = (input: RenderFrameInput): RenderFrameComparis
       report(
         RenderMismatchKind.MISSING_IN_PORT,
         textureName,
-        'no triangle at that place',
+        `no triangle at that place (depth ${(1 / triangle.vertices[0].reciprocalW).toFixed(1)} at ${triangle.vertices[0].x.toFixed(0)},${triangle.vertices[0].y.toFixed(0)})`,
         triangle,
         null
       )
@@ -245,7 +245,7 @@ export const compareRenderFrame = (input: RenderFrameInput): RenderFrameComparis
       report(
         RenderMismatchKind.EXTRA_IN_PORT,
         triangle.source,
-        'no triangle in the original',
+        `no triangle in the original (depth ${(1 / triangle.vertices[0].reciprocalW).toFixed(1)} at ${triangle.vertices[0].x.toFixed(0)},${triangle.vertices[0].y.toFixed(0)})`,
         null,
         triangle
       )

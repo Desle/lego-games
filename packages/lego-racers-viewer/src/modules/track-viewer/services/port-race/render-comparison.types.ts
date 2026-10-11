@@ -11,6 +11,8 @@ export type FrameTotals = {
   readonly originalCount: number
   readonly portCount: number
   readonly matchedCount: number
+  // The largest distance (1/w) of a corner the original drew.
+  readonly farthestOriginalDepth: number
 }
 
 export type RenderScenarioResult = {
