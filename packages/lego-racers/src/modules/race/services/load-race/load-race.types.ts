@@ -3,6 +3,7 @@ import type { PointsRecord } from '../../types/points-record/points-record.types
 import type { GhostSession } from '../../../ghost/index.ts'
 import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
 import type { RandomDraw, RandomTablePosition } from '../../../random-table/index.ts'
+import type { SavedCar } from '../../../car-builder/index.ts'
 import type { BuiltCar, RacerDatabases } from '../../../racer-setup/index.ts'
 import type { FloatArithmetic, FpuPrecisionValue } from '../../../simulation-math/index.ts'
 
@@ -25,6 +26,9 @@ export type LoadRaceOptions = {
   // The car builder's answer for each local player (the racer slot's chassis, weight and centre offsets); a player
   // without one drives the first racer of `default.lrs`.
   readonly playerCars?: readonly BuiltCar[]
+  // The cars the local players built in this session (their designs): they take the place of the save's racers, for the
+  // physics (their weight) and for the model that is drawn.
+  readonly playerSavedCars?: readonly SavedCar[]
   // The driver code of each racer slot, instead of the codes of the race's circuit in LEGORACE.CRB.
   readonly racerCodes?: readonly string[]
   // Race +0x18: the circuit's points record when the race is part of a circuit.

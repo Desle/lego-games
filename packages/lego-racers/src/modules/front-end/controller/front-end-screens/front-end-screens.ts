@@ -1,6 +1,8 @@
 import { FrontEndScreen } from '../../types/front-end-screen/front-end-screen.ts'
 import type { FrontEndSelection } from '../../types/front-end.types.ts'
 import type { ScreenDefinition, ScreenRuntime } from '../../types/front-end-screen.types.ts'
+import { CAR_BUILD_SCREEN } from '../screens/car-build-screen.ts'
+import { GARAGE_ENTRY_SCREEN } from '../screens/garage-entry-screen.ts'
 import { MAIN_MENU_SCREEN } from '../screens/main-menu-screen.ts'
 import { OPTIONS_SCREEN } from '../screens/options-screen.ts'
 import { PICK_RACER_SCREEN } from '../screens/pick-racer-screen.ts'
@@ -14,6 +16,8 @@ import { createStaticScreen } from '../screens/static-screen.ts'
 
 const IMPLEMENTED_SCREENS: readonly ScreenDefinition[] = Object.freeze([
   MAIN_MENU_SCREEN,
+  GARAGE_ENTRY_SCREEN,
+  CAR_BUILD_SCREEN,
   CIRCUIT_RACE_SCREEN,
   SINGLE_RACE_SCREEN,
   TIME_TRIAL_SCREEN,

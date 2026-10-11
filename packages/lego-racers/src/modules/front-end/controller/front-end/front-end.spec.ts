@@ -63,6 +63,12 @@ const resources: FrontEndResources = {
   getFont: () => null,
   getImage: () => null,
   getFontImage: () => null,
+  getBuilderCatalog: () => {
+    throw new RangeError('The test has no brick catalog')
+  },
+  getRacerTemplate: () => {
+    throw new RangeError('The test has no racer record')
+  },
 }
 
 const environment: FrontEndEnvironment = {

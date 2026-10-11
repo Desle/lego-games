@@ -33,6 +33,7 @@ export const createFrontEndSettings = (): FrontEndSettings =>
     lapCount: DEFAULT_LAP_COUNT,
     localPlayerCount: 1,
     playerRacerNames: Object.freeze([]),
+    playerCar: null,
   })
 
 export const createSelection = (): FrontEndSelection =>
@@ -51,6 +52,7 @@ export const createResult = (
 ): ScreenResult => ({
   selection: runtime.selection,
   settings: runtime.settings,
+  builder: runtime.builder,
   navigation: { kind: 'none' },
   soundNames: [],
   ...changes,

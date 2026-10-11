@@ -30,6 +30,7 @@ const getRequest = (changes: Partial<FrontEndRaceRequest>): FrontEndRaceRequest 
   localPlayerCount: 1,
   lapCount: 3,
   playerRacerNames: [],
+  playerCar: null,
   ...changes,
 })
 

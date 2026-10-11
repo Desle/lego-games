@@ -730,6 +730,11 @@ exports[`RacePanel > renders the menus state with the keys of the menus 1`] = `
     >
       Menus: arrow keys or the d-pad move, Enter or button A chooses, Escape or button B goes back.
     </p>
+    <p
+      class="text-slate-400"
+    >
+      Car builder: arrows move the brick, R turns it, Enter adds it, U takes the last one off, Page Up / Page Down (or Q / E) change the brick, Insert / Delete (or Z / C) the set, A / D turn the view, S / X raise and lower it. Escape keeps the car for the next race.
+    </p>
     <dl
       class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs"
     >
