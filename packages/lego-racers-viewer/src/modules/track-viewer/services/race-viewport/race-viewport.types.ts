@@ -29,6 +29,12 @@ export type RaceStageSize = {
   readonly height: number
 }
 
+// A track event's colour shift as the simulation gives it (red, green, blue, alpha).
+export type ColourShiftLike = {
+  readonly shifts: readonly number[]
+  readonly biases: readonly number[]
+}
+
 // A position as the simulation gives it.
 export type Vector3Like = {
   readonly x: number

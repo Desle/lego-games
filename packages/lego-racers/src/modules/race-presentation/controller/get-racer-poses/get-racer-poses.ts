@@ -16,6 +16,7 @@ export const getRacerPoses = (raceState: RaceState): readonly RacerPose[] =>
         driverPosition: racer.vehicle.driverPosition,
         wheelAnimation: getFigureAnimationState(racer.figure),
         driverAnimation: getFigureAnimationState(racer.vehicle.driverFigure),
+        colourShift: racer.colourShift,
       })
     )
   )

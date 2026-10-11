@@ -581,6 +581,16 @@ const getRacerSetAfterTrackEffect = (
           })
     )
   }
+  if (effect.type === 'track.racer_colour_shift_changed') {
+    if (racerSet.racers[effect.racerIndex] === undefined) return racerSet
+    const { shifts, biases } = effect
+    return changeRacer(racerSet, effect.racerIndex, (racer) =>
+      Object.freeze({
+        ...racer,
+        colourShift: shifts === null ? null : Object.freeze({ shifts, biases }),
+      })
+    )
+  }
   if (effect.type === 'track.racer_force_changed') {
     const slot = FORCE_SLOTS[effect.slot as keyof typeof FORCE_SLOTS]
     if (racerSet.racers[effect.racerIndex] === undefined) return racerSet

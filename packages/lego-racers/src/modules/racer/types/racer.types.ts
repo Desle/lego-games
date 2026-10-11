@@ -385,8 +385,18 @@ export type Racer = {
   // The car rigid body's collision list (+0x140, count +0x154, at most five; 0x00444d90 sets the first two, 0x004488e0
   // adds and 0x00448930 removes): positions in RacerSetContext.collisionObjects. The first is the track.
   readonly collisionObjectIndices: readonly number[]
+  // Vehicle +0x3a0..+0x3c0 (0x004400a0 sets it, 0x004400e0 clears it): the colour shift the track's 4D events put on the
+  // racer's car and driver, or null.
+  readonly colourShift: ColourShift | null
   // The 750 ms timer 0x00438e60 adds to the collision manager (milliseconds counted so far), or null when none runs.
   readonly contactTimerMilliseconds: number | null
+}
+
+// The eight integers of an event's keywords 0x4e and 0x4f: every colour channel of the racer's models becomes
+// (channel >> shift) + bias, clamped to 255 (the vertex buffer's 0x10017050; red, green, blue, alpha).
+export type ColourShift = {
+  readonly shifts: readonly [number, number, number, number]
+  readonly biases: readonly [number, number, number, number]
 }
 
 // One entry of the ranking array (0x004c67b0, stride 12: racer, distance, progress).

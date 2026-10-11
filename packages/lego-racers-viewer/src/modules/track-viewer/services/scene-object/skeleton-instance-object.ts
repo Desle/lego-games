@@ -37,7 +37,8 @@ const createSkeletonBatch = (
   const geometry = createBatchGeometry(
     levelMesh.mesh,
     sceneBatch,
-    batchMaterial.sceneMaterial.renderState
+    batchMaterial.sceneMaterial.renderState,
+    batchMaterial.sceneMaterial.ambientColor
   )
   const positions = geometry.getAttribute('position') as BufferAttribute
   const normals = geometry.getAttribute('normal') as BufferAttribute | undefined

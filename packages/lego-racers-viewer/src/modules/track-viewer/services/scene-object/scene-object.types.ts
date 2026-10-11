@@ -6,7 +6,7 @@ import type {
   SceneMesh,
 } from '@lego-games/lego-racers/scene'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
-import type { Vector3Like } from '../race-viewport/race-viewport.types.ts'
+import type { ColourShiftLike, Vector3Like } from '../race-viewport/race-viewport.types.ts'
 import type {
   Box3,
   BufferGeometry,
@@ -19,6 +19,9 @@ import type {
 
 export type SceneObject = {
   readonly group: Group
+  // Puts a track event's colour shift on the prelit meshes (the vertex buffer's 0x10017050: every channel becomes
+  // (channel >> shift) + bias, clamped to 255) or takes it off (null).
+  readonly setColourShift: (shift: ColourShiftLike | null) => void
   // Shows, for every instance with several levels, the level the squared distance to this camera position selects
   // (GolDP.dll 0x10027cc0), and none past the last.
   readonly selectLevels: (camera: Vector3Like) => void

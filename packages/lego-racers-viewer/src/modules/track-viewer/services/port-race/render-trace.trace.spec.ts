@@ -34,6 +34,14 @@ describe.skipIf(!isGamePresent())('render trace', () => {
     // Assert
     console.log(
       renderCase.name,
+      result.groups
+        .filter((group) => group.kind === 'color')
+        .slice(0, 12)
+        .map(
+          (group) =>
+            `color ${group.source} x${String(group.count)} in ${String(group.frames.length)} frames: ${group.firstDetail}`
+        )
+        .join('\n'),
       result.hudResults
         .map(
           (hud) =>
