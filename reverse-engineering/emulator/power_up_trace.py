@@ -17,6 +17,13 @@ POOL_STRIDES = (0x84, 0x190, 0x17C, 0x68, 0xE8, 0x290, 0x24C, 0x224, 0x2C, 0x34,
 EXPLOSION_HEADS = (0x193C, 0x1940)
 EXPLOSION_NEXT_OFFSET = 0x26C
 RACER_STRIDE = 0xE34
+COLLISION_MANAGER_OFFSET = 0x3BC + 0xF0
+REGISTRY_LIST_OFFSET = 0x48
+REGISTRY_ENTRY_ACTIVE_OFFSET = 0x24
+REGISTRY_ENTRY_NEXT_OFFSET = 0x28
+# The listener vtables of the moving power-up objects: oil slick, magnet, curse, ballistic body (cannon and barrel),
+# grapple hook, rocket, explosion.
+REGISTRY_LISTENER_TAGS = {0x4B16E0: 1, 0x4B15FC: 2, 0x4B13FC: 3, 0x4B0778: 4, 0x4B0CA8: 5, 0x4B0248: 6, 0x4B0164: 7}
 END_OF_LIST = 0xFFFFFFFF
 
 
@@ -89,6 +96,21 @@ def snapshot_power_up_fields(machine, fields: dict, race: int, racers: int, race
     fields["powerUps.enhancementBricks"] = enhancement_words
     fields["powerUps.effects"] = snapshot_effects(machine, system)
     fields["powerUps.explosions"] = snapshot_explosions(machine, system)
+    fields["powerUps.registry"] = snapshot_registry(machine, race)
     for index in range(racer_count):
         racer = racers + RACER_STRIDE * index
         fields[f"racer{index}.powerUps.level"] = [machine.read_u32(racer + 0xD58)]
+
+
+def snapshot_registry(machine, race: int) -> list:
+    """The active entries of the moving power-up objects, head of the list first: tag, centre and radius of the shape."""
+    words = []
+    entry = machine.read_u32(race + COLLISION_MANAGER_OFFSET + REGISTRY_LIST_OFFSET)
+    while entry != 0:
+        listener = machine.read_u32(entry)
+        tag = REGISTRY_LISTENER_TAGS.get(machine.read_u32(listener)) if listener else None
+        if tag is not None and machine.read_u32(entry + REGISTRY_ENTRY_ACTIVE_OFFSET) != 0:
+            shape = machine.read_u32(entry + 0x14)
+            words += [tag] + [machine.read_u32(shape + offset) for offset in (4, 8, 12, 0x10)]
+        entry = machine.read_u32(entry + REGISTRY_ENTRY_NEXT_OFFSET)
+    return words

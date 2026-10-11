@@ -34,6 +34,7 @@ import { updateGrapple } from '../grapple-effect/grapple-effect.ts'
 import { getIsSpeedNearZero } from '../../types/turbo-early-end/turbo-early-end.ts'
 import {
   createMagnetMotion,
+  getHazardPlacement,
   getMagnetLandingBoost,
   getMagnetPull,
 } from '../../types/magnet-pull/magnet-pull.ts'
@@ -239,6 +240,32 @@ const updateGrappleWithSmoke: EffectUpdate = (step, world, context, before, step
     : Object.freeze({ step: checkEffectEmitter(flown.step, before.id), world: flown.world })
 }
 
+// 0x004573a0 and 0x00452ae0: the slick or the curse lands on the ground under the racer it was thrown from (0x00456360)
+// as it leaves state 2.
+const updateHazard: EffectUpdate = (step, world, context, before, stepMilliseconds) => {
+  const counted = updatePowerUpEffect(step, context.powerUps, before.id, stepMilliseconds)
+  const after = getEffect(counted, before.id)
+  const placedRacer = before.targetRacer ?? before.ownerRacer
+  const racer = placedRacer === null ? undefined : context.racers[placedRacer]
+  const isLanding = before.state === EffectState.STARTING && after.state === EffectState.ACTIVE
+  if (!isLanding || racer === undefined) return Object.freeze({ step: counted, world })
+  return Object.freeze({
+    step: counted,
+    world: getWorldWithMotion(
+      world,
+      before.id,
+      Object.freeze({
+        kind: 'hazard',
+        position: getHazardPlacement(
+          context.powerUps.arithmetic,
+          racer.position,
+          context.powerUps.getGroundPoint
+        ),
+      })
+    ),
+  })
+}
+
 const updateWithPowerUps: EffectUpdate = (step, world, context, before, stepMilliseconds) =>
   Object.freeze({
     step: updatePowerUpEffect(step, context.powerUps, before.id, stepMilliseconds),
@@ -249,6 +276,8 @@ const updateWithPowerUps: EffectUpdate = (step, world, context, before, stepMill
 const EFFECT_UPDATES: Readonly<Partial<Record<PowerUpEffect['kind'], EffectUpdate>>> =
   Object.freeze({
     [PowerUpEffectKind.CANNON]: updateCannon,
+    [PowerUpEffectKind.OIL_SLICK]: updateHazard,
+    [PowerUpEffectKind.CURSE]: updateHazard,
     [PowerUpEffectKind.BARREL]: updateBarrel,
     [PowerUpEffectKind.ROCKET]: updateRocket,
     [PowerUpEffectKind.WARP]: updateWarp,

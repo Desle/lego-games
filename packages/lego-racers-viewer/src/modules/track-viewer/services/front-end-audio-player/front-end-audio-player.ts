@@ -1,39 +1,40 @@
-import { decodeSoundEffect } from '@lego-games/lego-racers/audio'
+import { decodeMusic, decodeSoundBank, decodeSoundEffect } from '@lego-games/lego-racers/audio'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
+import {
+  createAudioBuffer,
+  createAudioContext,
+  SILENT_PLAYER,
+} from '../audio-buffer/audio-buffer.ts'
 import type { FrontEndAudioPlayer } from './front-end-audio-player.types.ts'
 
 const SOUND_DIRECTORY = 'MENUDATA\\SOUNDS'
-const INT16_RANGE = 32768
+const MUSIC_LIST_PATH = 'MENUDATA\\LEGOMSC'
+// The volume FrontEnd_SetMusic passes is DirectSound's; Web Audio gain above 1 would clip.
+const MUSIC_GAIN = 1
 
-// The menu sounds (`.PCM` in MENUDATA\SOUNDS), decoded by the audio module and played through Web Audio.
-export const createFrontEndAudioPlayer = (archive: JamArchive): FrontEndAudioPlayer => {
-  const AudioContextConstructor = typeof AudioContext === 'undefined' ? null : AudioContext
-  if (AudioContextConstructor === null) {
-    return Object.freeze({
-      resume: () => undefined,
-      playSound: () => undefined,
-      dispose: () => undefined,
-    })
-  }
-  const context = new AudioContextConstructor()
+// The menu sounds (`.PCM` in MENUDATA\SOUNDS) and the menu music (the `.tun` files MENUDATA\LEGOMSC lists), decoded by
+// the audio module and played through Web Audio.
+export const createFrontEndAudioPlayer = (
+  archive: JamArchive,
+  readTune: ((name: string) => Promise<Uint8Array | null>) | null
+): FrontEndAudioPlayer => {
+  const context = createAudioContext()
+  if (context === null) return SILENT_PLAYER
   const buffers = new Map<string, AudioBuffer | null>()
+  const tuneNames = decodeSoundBank(archive.readFile(MUSIC_LIST_PATH)).soundPaths
+  let music: AudioBufferSourceNode | null = null
+  // A tune that finishes loading after another was asked for must not start.
+  let musicRequest = 0
   const getBuffer = (name: string): AudioBuffer | null => {
     if (buffers.has(name)) return buffers.get(name) ?? null
     try {
       const effect = decodeSoundEffect(
         archive.readFile(`${SOUND_DIRECTORY}\\${name.toUpperCase()}.PCM`)
       )
-      const frameCount = Math.floor(effect.samples.length / effect.channelCount)
-      let buffer: AudioBuffer | null = null
-      if (frameCount > 0) {
-        buffer = context.createBuffer(effect.channelCount, frameCount, effect.sampleRate)
-        for (let channel = 0; channel < effect.channelCount; channel += 1) {
-          const data = buffer.getChannelData(channel)
-          for (let frame = 0; frame < frameCount; frame += 1) {
-            data[frame] = (effect.samples[frame * effect.channelCount + channel] ?? 0) / INT16_RANGE
-          }
-        }
-      }
+      const buffer =
+        Math.floor(effect.samples.length / effect.channelCount) > 0
+          ? createAudioBuffer(context, effect.samples, effect.channelCount, effect.sampleRate)
+          : null
       buffers.set(name, buffer)
       return buffer
     } catch {
@@ -51,6 +52,37 @@ export const createFrontEndAudioPlayer = (archive: JamArchive): FrontEndAudioPla
       source.connect(context.destination)
       source.start()
     },
-    dispose: () => void context.close(),
+    playMusic: (listIndex: number | null) => {
+      musicRequest += 1
+      const request = musicRequest
+      music?.stop()
+      music = null
+      const tuneName = listIndex === null ? undefined : tuneNames[listIndex]
+      if (tuneName === undefined || readTune === null) return
+      readTune(tuneName.toLowerCase())
+        .then((bytes) => {
+          if (bytes === null || request !== musicRequest) return
+          const decoded = decodeMusic(bytes)
+          const source = context.createBufferSource()
+          const gain = context.createGain()
+          source.buffer = createAudioBuffer(
+            context,
+            decoded.samples,
+            decoded.channelCount,
+            decoded.sampleRate
+          )
+          source.loop = true
+          gain.gain.value = MUSIC_GAIN
+          source.connect(gain).connect(context.destination)
+          source.start()
+          music = source
+        })
+        .catch(() => undefined)
+    },
+    dispose: () => {
+      musicRequest += 1
+      music?.stop()
+      void context.close()
+    },
   })
 }

@@ -3,6 +3,7 @@ import type { BoundingSphere } from '../../../racer-collision/index.ts'
 import type { RegistryEntry } from '../../../projectiles/index.ts'
 import type { FloatArithmetic } from '../../../simulation-math/index.ts'
 import type { TriggerList } from '../../../trigger/index.ts'
+import { getProjectileRegistrySphere } from '../projectile-registry/projectile-registry.ts'
 import type { RegistryObject, RegistrySource } from '../../types/race.types.ts'
 
 // 0x004653f0: the flags a trigger registers with (1, or 9 when its flag 0x4 skips computer racers).
@@ -66,6 +67,13 @@ export const getRegistrySphere = (
     if (trigger === undefined) return { centre: origin, radius: 0 }
     const [x, y, z] = trigger.definition.position
     return { centre: Object.freeze({ x, y, z }), radius: trigger.definition.radius }
+  }
+  if (
+    object.type === 'effect_flight' ||
+    object.type === 'effect_hazard' ||
+    object.type === 'explosion'
+  ) {
+    return getProjectileRegistrySphere(source, object)
   }
   const { world } = source.powerUpStep
   const brick = (object.type === 'power_up_brick' ? world.bricks : world.enhancementBricks)[

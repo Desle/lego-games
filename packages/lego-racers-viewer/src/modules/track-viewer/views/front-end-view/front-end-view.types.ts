@@ -2,6 +2,8 @@ import type { FrontEndRaceRequest, FrontEndStandingRow } from '@lego-games/lego-
 
 export type FrontEndViewProps = {
   readonly jam: Uint8Array
+  // Reads a music file next to LEGO.JAM; null when the menus play no music.
+  readonly readTune: ((name: string) => Promise<Uint8Array | null>) | null
   readonly width: number
   readonly height: number
   readonly firstScreenId: number

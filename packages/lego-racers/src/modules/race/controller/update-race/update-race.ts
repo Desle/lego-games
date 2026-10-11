@@ -4,6 +4,7 @@ import { updateTrackHazardsAfterRacers, updateTrackLogicFrame } from '../../../t
 import { advanceWorldAnimation } from '../../../world-animation/index.ts'
 import { updatePowerUpsWithProjectiles } from '../../../projectiles/index.ts'
 import type { ProjectileWorld } from '../../../projectiles/index.ts'
+import { getRacerSetWithProjectileRegistry } from '../projectile-registry/projectile-registry.ts'
 import { getRaceTimeStep, updateRacePhysics } from '../../../racer-physics/index.ts'
 import { applyRacerControls, stepRacerSet, updatePlayerController } from '../../../racer/index.ts'
 import type { RaceInputs, RaceRacerSet, RaceState } from '../../types/race.types.ts'
@@ -89,6 +90,8 @@ const getStateWithProgress = (state: RaceState, progress: PlayerControllerProgre
     ...state,
     racerSet: getRacerSetOf(progress.racerSet),
     powerUpStep: progress.racerSet.powerUpStep,
+    projectileWorld: progress.racerSet.projectileWorld,
+    registryObjects: progress.racerSet.registryObjects,
     trackLogic: progress.racerSet.trackLogic,
     trackEffects: progress.racerSet.trackEffects,
     taggedPositionMilliseconds: progress.racerSet.taggedPositionMilliseconds,
@@ -143,7 +146,14 @@ export const updateRace = (
     projectileWorld = projected.world
     return projected.step
   })
-  const projected = getRacerSetAfterProjectileEvents(arithmetic, changed, projectileWorld.events)
+  const projected = getRacerSetWithProjectileRegistry(
+    arithmetic,
+    getRacerSetAfterProjectileEvents(
+      arithmetic,
+      Object.freeze({ ...changed, projectileWorld }),
+      projectileWorld.events
+    )
+  )
   const tagged = updateTaggedPositions(projected, stepMilliseconds)
   const powered = changeTrackLogic(counted.context, tagged, (trackLogic, trackContext) =>
     updateTrackLogicFrame(trackLogic, trackContext, stepMilliseconds, tagged.racers.length)

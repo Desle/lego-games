@@ -137,6 +137,8 @@ export type FrontEndState = {
   readonly outcome: FrontEndOutcome
   // Milliseconds since the current screen opened.
   readonly screenMilliseconds: number
+  // The entry of MENUDATA\LEGOMSC the music stream plays (FrontEnd_SetMusic 0x00480470), or null before any.
+  readonly musicListIndex: number | null
 }
 
 export type FrontEndRectangle = {
@@ -217,6 +219,8 @@ export type FrontEndRaceRequest = {
 export type FrontEndStep = {
   readonly state: FrontEndState
   readonly soundNames: readonly string[]
+  // The music list entry this step starts, or null when the tune playing goes on.
+  readonly musicListIndex: number | null
 }
 
 // A font of the menus with the image its glyphs are drawn from.
@@ -231,4 +235,10 @@ export type FrontEndStandingRow = {
   readonly racerName: string
   readonly points: number
   readonly isPlayer: boolean
+}
+
+// The front end after a screen opened, and the music list entry its opening started (null: none).
+export type OpenedScreen = {
+  readonly state: FrontEndState
+  readonly musicListIndex: number | null
 }
