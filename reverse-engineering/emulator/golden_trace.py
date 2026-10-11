@@ -87,6 +87,18 @@ def snapshot_fields(machine, race: int, racer_count: int, local_players: int) ->
         for name, offset, count in RACER_FIELDS:
             fields[f"racer{index}.{name}"] = read_words(machine, racer + offset, count)
         display = machine.read_u32(racer + DISPLAY_FRAME_POINTER_OFFSET)
+        wheel_words = []
+        for wheel in range(4):
+            base = racer + 0x3E8 + 0x198 + 0x70 * wheel
+            wheel_words += read_words(machine, base + 0x48, 2) + read_words(machine, base + 0x30, 3) + read_words(machine, base + 0x0C, 3)
+        fields[f"racer{index}.body.wheels"] = wheel_words
+        probe_words = []
+        for wheel in range(4):
+            base = racer + 0x3E8 + 0x198 + 0x70 * wheel
+            probe_words += read_words(machine, base + 0x18, 6) + read_words(machine, base + 0x00, 3) + read_words(machine, base + 0x50, 4)
+        fields[f"racer{index}.body.wheelProbes"] = probe_words
+        fields[f"racer{index}.volume.sphere"] = read_words(machine, racer + 0x1C + 4, 4)
+        fields[f"racer{index}.display.sphere"] = read_words(machine, display + 0x04, 4)
         fields[f"racer{index}.display.position"] = read_words(machine, display + 0x4C, 3)
         fields[f"racer{index}.display.rotation"] = read_words(machine, display + 0x28, 9)
     for index in range(local_players):

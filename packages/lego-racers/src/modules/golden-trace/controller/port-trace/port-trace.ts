@@ -8,7 +8,8 @@ import {
 } from '../../../race/index.ts'
 import type { RaceDefinition, RaceState } from '../../../race/index.ts'
 import { DEFAULT_KEYBOARD_BINDINGS, getRacerControls } from '../../../race-input/index.ts'
-import type { Racer } from '../../../racer/index.ts'
+import { getRacerSphere } from '../../../racer/index.ts'
+import type { Racer, RacerSetContext } from '../../../racer/index.ts'
 import type { Matrix3, Vector3 } from '../../../simulation-math/index.ts'
 import type {
   GoldenTraceScenario,
@@ -39,8 +40,9 @@ const getIntegerWords3 = (first: number, second: number, third: number): readonl
 const getPackedBytes = (bytes: readonly number[]): readonly number[] =>
   [0].map((start) => bytes.slice(start, start + 4).reduce((word, byte, index) => (word | (byte << (8 * index))) >>> 0, 0))
 
-const getRacerFields = (racer: Racer, index: number): TraceFields => {
+const getRacerFields = (racer: Racer, index: number, context: RacerSetContext): TraceFields => {
   const { rigidBody } = racer.carBody
+  const sphere = getRacerSphere(context, racer)
   const prefix = `racer${String(index)}`
   return {
     [`${prefix}.body.position`]: getVectorWords(rigidBody.frame.position),
@@ -86,6 +88,26 @@ const getRacerFields = (racer: Racer, index: number): TraceFields => {
       racer.powerUpThinkMilliseconds >>> 0,
       racer.powerUpThinkIntervalMilliseconds >>> 0,
     ],
+    [`${prefix}.body.wheels`]: rigidBody.wheels.flatMap((wheel) => [
+      (wheel.isOnGround ? 1 : 0) | (wheel.isProbed ? 2 : 0),
+      getBitsFromFloat(wheel.depthSquared),
+      ...getVectorWords(wheel.contactPoint),
+      ...getVectorWords(wheel.anchor),
+    ]),
+    [`${prefix}.body.wheelProbes`]: rigidBody.wheels.flatMap((wheel) => [
+      ...getVectorWords(wheel.probeStart),
+      ...getVectorWords(wheel.probeEnd),
+      ...getVectorWords(wheel.groundForce),
+      ...getFloatWords([wheel.surfaceDrag, wheel.surfaceGrip, wheel.surfaceSkidGrip, wheel.grip]),
+    ]),
+    [`${prefix}.volume.sphere`]: [
+      ...getVectorWords(sphere.centre),
+      ...getFloatWords([sphere.radius]),
+    ],
+    [`${prefix}.display.sphere`]: [
+      ...getVectorWords(sphere.centre),
+      ...getFloatWords([sphere.radius]),
+    ],
     [`${prefix}.display.position`]: getVectorWords(rigidBody.displayFrame.position),
     [`${prefix}.display.rotation`]: getMatrixWords(rigidBody.displayFrame.rotation),
   }
@@ -108,7 +130,10 @@ const getPlayerFields = (raceState: RaceState, localPlayerCount: number): TraceF
 // The same named fields the emulator side reads from the original's memory (golden_trace.py).
 export const getTraceFields = (raceState: RaceState, localPlayerCount: number): TraceFields => ({
   ...raceState.racerSet.racers.reduce<TraceFields>(
-    (fields, racer, index) => ({ ...fields, ...getRacerFields(racer, index) }),
+    (fields, racer, index) => ({
+      ...fields,
+      ...getRacerFields(racer, index, raceState.context),
+    }),
     {}
   ),
   ...getPlayerFields(raceState, localPlayerCount),

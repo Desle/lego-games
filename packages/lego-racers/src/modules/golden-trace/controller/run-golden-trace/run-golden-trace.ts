@@ -13,6 +13,11 @@ import { getPortTrace } from '../port-trace/port-trace.ts'
 // x87 control word bits 8 and 9: 0 is a 24-bit significand, 2 is 53 bits.
 const PRECISION_CONTROL_MASK = 0x300
 
+// Fields the port does not model yet and whose difference would hide the rest: the racer's collision volume, the
+// composite sphere of the vehicle's frames (0x00440030) that the collision registry tests, which needs the chassis
+// model's bounds (the car builder's model data).
+const KNOWN_UNPORTED_FIELDS = ['.volume.sphere']
+
 // Causes before effects: the input, the controller, the driver, the body, then what the body drives.
 const FIELD_GROUP_ORDER = ['race.', 'player', '.driver.', '.racer.', '.body.', '.display.']
 
@@ -56,7 +61,9 @@ export const runGoldenTrace = async (
   })
   const port = getPortTrace(scenario, definition)
   const first = original.frames[0]
-  const fieldNames = Object.keys(first?.fields ?? {}).sort(
+  const fieldNames = Object.keys(first?.fields ?? {})
+    .filter((field) => !KNOWN_UNPORTED_FIELDS.some((suffix) => field.endsWith(suffix)))
+    .sort(
     (left, right) => getFieldOrder(left) - getFieldOrder(right)
   )
   return {
@@ -68,6 +75,16 @@ export const runGoldenTrace = async (
     ),
   }
 }
+
+// The differences in what the player's car and controller hold (racer 0, player 0, the race's state and timer).
+export const getPlayerDivergences = (comparison: TraceComparison): readonly FieldDivergence[] =>
+  comparison.divergenceByField.filter(
+    (divergence) =>
+      divergence.field.startsWith('racer0.') ||
+      divergence.field.startsWith('player0.') ||
+      divergence.field === 'race.phase' ||
+      divergence.field === 'race.phaseMilliseconds'
+  )
 
 export const formatDivergence = (divergence: FieldDivergence): string =>
   `frame ${String(divergence.frame)} ${divergence.field}[${String(divergence.wordIndex)}]: original ` +
