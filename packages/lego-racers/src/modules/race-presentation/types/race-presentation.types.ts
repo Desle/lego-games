@@ -7,6 +7,7 @@ import type {
   HudMeasureText,
   HudState,
 } from '../../race-hud/index.ts'
+import type { SkeletonAnimationState } from '../../skeletal-animation/index.ts'
 import type { Matrix3, Vector3 } from '../../simulation-math/index.ts'
 import type { RacePhaseValue } from '../../race/index.ts'
 
@@ -48,12 +49,19 @@ export type RacePresentationFrame = {
   readonly music: MusicCue | null
 }
 
-// A racer on the track: where its display frame is.
+// A racer on the track: where its display frame is, and what hangs on it. The wheels (a skeleton instance) sit in the
+// display frame; the car model sits at the same position with the leaned rotation of vehicle +0x3c (0x0043e740); the
+// driver sits at `driverPosition` with the car model's rotation (vehicle +0x48).
 export type RacerPose = {
   readonly racerIndex: number
   readonly position: Vector3
   readonly rotation: Matrix3
   readonly isPlayer: boolean
+  readonly bodyRotation: Matrix3
+  readonly driverPosition: Vector3
+  // The bones of the wheels and of the driver: the figures' clips as the pose sampling reads them.
+  readonly wheelAnimation: SkeletonAnimationState
+  readonly driverAnimation: SkeletonAnimationState
 }
 
 // What the frame's race events change in the presentation.

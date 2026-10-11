@@ -5,6 +5,8 @@ import type { ImageDefinition } from '@lego-games/lego-racers/image-database'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import { loadRaceDefinition } from '@lego-games/lego-racers/race'
+import { RACER_FILE_DIRECTORY } from '@lego-games/lego-racers/racer-appearance'
+import type { ModelResourceNames, RacerAppearance } from '@lego-games/lego-racers/racer-appearance'
 import { parseRaceDescription } from '@lego-games/lego-racers/race-description'
 import {
   COMMON_DIRECTORY,
@@ -16,6 +18,7 @@ import {
 } from '@lego-games/lego-racers/scene'
 import { parseSky } from '@lego-games/lego-racers/sky'
 import { getString, parseStringTable } from '@lego-games/lego-racers/string-table'
+import type { ModelScene } from '@lego-games/lego-racers/scene'
 import type { HudImage, RaceAssets, RaceGameFiles, RacerModels } from './race-assets.types.ts'
 
 const RACE_DIRECTORY = 'GAMEDATA\\RACEC0R0'
@@ -24,24 +27,24 @@ const ENGLISH_DIRECTORY = `${COMMON_DIRECTORY}\\ENGLISH`
 const SEPARATOR = '\\'
 // The image database flag for a colour key (IMAGE_KEYWORD_2B_FLAG, 0x20).
 const COLOR_KEY_FLAG = 0x20
-// PLACEHOLDER: until the chassis and driver databases are ported every racer takes the next prefix; the car is
-// `<prefix>CM` and the driver `<prefix>PELVIS` (GAMEDATA\COMMON).
-const RACER_MODEL_PREFIXES: readonly string[] = Object.freeze(['RR', 'KK', 'VV', 'JT', 'BB', 'GM'])
+const loadResourceModel = (archive: JamArchive, names: ModelResourceNames): ModelScene =>
+  loadModelScene(archive, {
+    directory: RACER_FILE_DIRECTORY,
+    textureNames: [names.textureDatabaseName.toUpperCase()],
+    materialNames: [names.materialLibraryName.toUpperCase()],
+    meshNames: [names.modelName.toUpperCase()],
+    skeletonName: names.skeletonName === '' ? null : names.skeletonName.toUpperCase(),
+    animationName: names.animationName === '' ? null : names.animationName.toUpperCase(),
+  })
 
-const getRacerModels = (archive: JamArchive, prefix: string): RacerModels =>
+// The files a racer's appearance names (RacerSet_SetupRacer 0x0043b480): the champion's body, the chassis's wheels and
+// the driver's model.
+const getRacerModels = (archive: JamArchive, appearance: RacerAppearance): RacerModels =>
   Object.freeze({
-    car: loadModelScene(archive, {
-      directory: COMMON_DIRECTORY,
-      textureNames: [`${prefix}CM`],
-      materialNames: [`${prefix}CM`],
-      meshNames: [`${prefix}CM`],
-    }),
-    driver: loadModelScene(archive, {
-      directory: COMMON_DIRECTORY,
-      textureNames: [`${prefix}PELVIS`],
-      materialNames: [`${prefix}PELVIS`],
-      meshNames: [`${prefix}PELVIS`],
-    }),
+    body: appearance.bodyModel === null ? null : loadResourceModel(archive, appearance.bodyModel),
+    wheels: loadResourceModel(archive, appearance.wheelModel),
+    driver:
+      appearance.driverModel === null ? null : loadResourceModel(archive, appearance.driverModel),
   })
 
 const getHudImage = (archive: JamArchive, definition: ImageDefinition): HudImage | null => {
@@ -99,9 +102,7 @@ export const loadRaceAssets = (jam: Uint8Array, files: RaceGameFiles): RaceAsset
       backgroundWorldPath: getRaceBackgroundWorldPath(RACE_DIRECTORY, description),
     }),
     racerModels: Object.freeze(
-      definition.racers.map((_, index) =>
-        getRacerModels(archive, RACER_MODEL_PREFIXES[index % RACER_MODEL_PREFIXES.length] ?? 'RR')
-      )
+      definition.racers.map((racer) => getRacerModels(archive, racer.appearance))
     ),
     getString: (stringId: number) => getString(table, stringId) ?? '',
     imageNames: Object.freeze(imageDatabase.images.map((image) => image.name.toUpperCase())),

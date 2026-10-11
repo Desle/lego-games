@@ -99,7 +99,11 @@ export const createSkeletonInstanceObject = (
     for (const batch of batches) setBatchVertices(batch, matrices)
   }
   applyPose()
-  if (state === null) return Object.freeze({ group, animate: null })
+  const setState = (next: SkeletonAnimationState) => {
+    state = next
+    applyPose()
+  }
+  if (state === null) return Object.freeze({ group, animate: null, setState })
   return Object.freeze({
     group,
     animate: (deltaMilliseconds: number) => {
@@ -107,5 +111,6 @@ export const createSkeletonInstanceObject = (
       state = advanceSkeletonAnimation(state, animation, deltaMilliseconds)
       applyPose()
     },
+    setState,
   })
 }
