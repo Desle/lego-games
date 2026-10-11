@@ -5,7 +5,6 @@ import type {
   FieldDivergence,
   GoldenTraceResult,
   GoldenTraceScenario,
-  TraceComparison,
 } from '../../types/golden-trace.types.ts'
 import { compareTraces } from '../compare-traces/compare-traces.ts'
 import { getPortTrace } from '../port-trace/port-trace.ts'
@@ -61,16 +60,6 @@ export const runGoldenTrace = async (
     ),
   }
 }
-
-// The differences in what the player's car and controller hold (racer 0, player 0, the race's state and timer).
-export const getPlayerDivergences = (comparison: TraceComparison): readonly FieldDivergence[] =>
-  comparison.divergenceByField.filter(
-    (divergence) =>
-      divergence.field.startsWith('racer0.') ||
-      divergence.field.startsWith('player0.') ||
-      divergence.field === 'race.phase' ||
-      divergence.field === 'race.phaseMilliseconds'
-  )
 
 export const formatDivergence = (divergence: FieldDivergence): string =>
   `frame ${String(divergence.frame)} ${divergence.field}[${String(divergence.wordIndex)}]: original ` +
