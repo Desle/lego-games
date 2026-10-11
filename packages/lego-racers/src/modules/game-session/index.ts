@@ -21,10 +21,12 @@ export type {
 export { recordRaceTimes } from './controller/race-times/race-times.ts'
 export {
   applyCircuitResultToSave,
+  applySessionOutcomeToSave,
   applySessionTimesToProfile,
 } from './controller/session-outcome/session-outcome.ts'
 export type {
   CircuitResultApplication,
+  SessionSaveOutcome,
   TimeRecordApplication,
 } from './controller/session-outcome/session-outcome.types.ts'
 export {

@@ -14,6 +14,7 @@ import type {
   ScreenResult,
   ScreenRuntime,
 } from '../../types/front-end-screen.types.ts'
+import { getSettingsWithPlayerCar } from '../profile/profile.ts'
 import { getBaseCar } from '../driver-base/driver-base.ts'
 import { findEntry, getAbsoluteRectangle } from '../screen-layout/screen-layout.ts'
 import {
@@ -167,13 +168,10 @@ const getApplyResult = (runtime: ScreenRuntime, driver: DriverSession): ScreenRe
   const [hat = 0, face = 0, torso = 0, legs = 0, expression = 0] = getDriverSessionPartBytes(driver)
   const topBit = (base.record.colorBytes[4] ?? 0) & EXPRESSION_TOP_BIT
   return createResult(runtime, {
-    settings: {
-      ...runtime.settings,
-      playerCar: {
-        ...base,
-        record: { ...base.record, colorBytes: [face, hat, legs, torso, expression | topBit] },
-      },
-    },
+    settings: getSettingsWithPlayerCar(runtime.settings, {
+      ...base,
+      record: { ...base.record, colorBytes: [face, hat, legs, torso, expression | topBit] },
+    }),
     navigation: { kind: 'pop' },
     soundNames: [MenuSound.ACCEPT],
   })

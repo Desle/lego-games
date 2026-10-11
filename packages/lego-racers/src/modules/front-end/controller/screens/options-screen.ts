@@ -7,6 +7,7 @@ import type {
   ScreenResult,
   ScreenRuntime,
 } from '../../types/front-end-screen.types.ts'
+import { getSettingsWithRaceOptions } from '../profile/profile.ts'
 import {
   createResult,
   getMovedFocusIndex,
@@ -138,14 +139,14 @@ const handleGameTabInput = (runtime: ScreenRuntime, input: FrontEndInput): Scree
   if (selection.focusIndex === OPPONENTS_FOCUS) {
     const racerCount = Math.min(MAXIMUM_OPPONENT_COUNT, Math.max(0, settings.racerCount + step))
     return createResult(runtime, {
-      settings: { ...settings, racerCount },
+      settings: getSettingsWithRaceOptions({ ...settings, racerCount }),
       soundNames: racerCount === settings.racerCount ? [] : [MenuSound.HIGHLIGHT],
     })
   }
   if (selection.focusIndex === LAPS_FOCUS) {
     const lapCount = Math.min(MAXIMUM_LAP_COUNT, Math.max(1, settings.lapCount + step))
     return createResult(runtime, {
-      settings: { ...settings, lapCount },
+      settings: getSettingsWithRaceOptions({ ...settings, lapCount }),
       soundNames: lapCount === settings.lapCount ? [] : [MenuSound.HIGHLIGHT],
     })
   }

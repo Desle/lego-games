@@ -35,6 +35,8 @@ export const createFrontEndSettings = (): FrontEndSettings =>
     playerRacerNames: Object.freeze([]),
     playerCar: null,
     randomPosition: 0,
+    saveFile: null,
+    racerIndex: 0,
   })
 
 export const createSelection = (): FrontEndSelection =>
@@ -45,6 +47,7 @@ export const createSelection = (): FrontEndSelection =>
     racerIndex: 0,
     tabIndex: 0,
     isDialogOpen: false,
+    text: '',
   })
 
 export const createResult = (

@@ -18,6 +18,7 @@ import type {
   ScreenResult,
   ScreenRuntime,
 } from '../../types/front-end-screen.types.ts'
+import { getUnlockedCircuitMask } from '../profile/profile.ts'
 import { createResult, getClampedStep, MenuSound } from '../screen-helpers/screen-helpers.ts'
 
 const RACES_PER_CIRCUIT = 4
@@ -66,7 +67,7 @@ const getTitleId = (kind: RaceSelectionKind, isVersus: boolean): number => {
 }
 
 const getIsCircuitLocked = (runtime: ScreenRuntime): boolean =>
-  ((runtime.environment.unlockedCircuitMask >> runtime.selection.circuitIndex) & 1) === 0
+  ((getUnlockedCircuitMask(runtime) >> runtime.selection.circuitIndex) & 1) === 0
 
 const getRaceNumberWithinCycle = (
   resources: FrontEndResources,
@@ -263,7 +264,7 @@ const handleInput =
           raceIndex: 0,
           // 0x0047a0e0: a closed circuit disables "next" and moves the focus to "back".
           focusIndex:
-            ((runtime.environment.unlockedCircuitMask >> circuitIndex) & 1) === 0
+            ((getUnlockedCircuitMask(runtime) >> circuitIndex) & 1) === 0
               ? GOBACK_INDEX
               : selection.focusIndex,
         },

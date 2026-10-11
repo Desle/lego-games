@@ -1,6 +1,5 @@
 import type {
   FrontEndMemory,
-  FrontEndSettings,
   FrontEndDrawCommand,
   FrontEndEnvironment,
   FrontEndFrame,
@@ -12,6 +11,7 @@ import type {
   OpenedScreen,
 } from '../../types/front-end.types.ts'
 import { createBuilderSession } from '../../../car-builder/index.ts'
+import { getSettingsWithMemory } from '../profile/profile.ts'
 import { getDriverForScreen } from '../driver-base/driver-base.ts'
 import { FrontEndScreen } from '../../types/front-end-screen/front-end-screen.ts'
 import type { ScreenRuntime } from '../../types/front-end-screen.types.ts'
@@ -57,6 +57,8 @@ const getBuilderForScreen = (
 export const NO_FRONT_END_MEMORY: FrontEndMemory = Object.freeze({
   playerCar: null,
   randomPosition: 0,
+  saveFile: null,
+  racerIndex: 0,
 })
 
 // GameApplication_RunFrontEnd 0x0042bdc0 → FrontEnd_Run 0x0042b1e0: the front end starts on the screen the application
@@ -67,7 +69,7 @@ export const createFrontEnd = (
   firstScreenId: number = FrontEndScreen.MAIN_MENU,
   memory: FrontEndMemory = NO_FRONT_END_MEMORY
 ): FrontEndState => {
-  const settings: FrontEndSettings = { ...createFrontEndSettings(), ...memory }
+  const settings = getSettingsWithMemory(resources, createFrontEndSettings(), memory)
   return Object.freeze({
     builder: getBuilderForScreen(firstScreenId, null, resources),
     driver: getDriverForScreen(firstScreenId, settings, resources, environment),

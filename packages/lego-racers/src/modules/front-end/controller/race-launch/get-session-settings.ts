@@ -19,6 +19,7 @@ export const getSessionSettings = (
     multiplayerLapCount: request.lapCount,
     randomPosition,
     playerSavedCars: request.playerCar === null ? [] : [request.playerCar],
+    playerNames: request.playerCar === null ? [] : [request.playerCar.record.name],
   }
   if (request.mode === 'circuit') {
     return createCircuitSettings(resources, { ...common, circuitName: request.circuitName })

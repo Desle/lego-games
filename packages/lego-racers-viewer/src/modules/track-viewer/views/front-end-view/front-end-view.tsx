@@ -12,6 +12,7 @@ const FrontEndView = ({
   height,
   firstScreenId,
   standingRows,
+  onMenuMemoryChanged,
   onRaceRequested,
   onQuit,
 }: FrontEndViewProps) => {
@@ -22,6 +23,7 @@ const FrontEndView = ({
     readTune,
     firstScreenId,
     standingRows,
+    onMenuMemoryChanged,
     onRaceRequested,
     onQuit,
   })

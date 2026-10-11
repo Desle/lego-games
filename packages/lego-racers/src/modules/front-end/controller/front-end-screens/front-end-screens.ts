@@ -2,8 +2,10 @@ import { FrontEndScreen } from '../../types/front-end-screen/front-end-screen.ts
 import type { FrontEndSelection } from '../../types/front-end.types.ts'
 import type { ScreenDefinition, ScreenRuntime } from '../../types/front-end-screen.types.ts'
 import { CAR_BUILD_SCREEN } from '../screens/car-build-screen.ts'
+import { NEW_RACER_SCREEN } from '../screens/new-racer-screen.ts'
 import { DRIVER_EDIT_SCREEN } from '../screens/driver-edit-screen.ts'
 import { GARAGE_ENTRY_SCREEN } from '../screens/garage-entry-screen.ts'
+import { getUnlockedCircuitMask } from '../profile/profile.ts'
 import { MAIN_MENU_SCREEN } from '../screens/main-menu-screen.ts'
 import { OPTIONS_SCREEN } from '../screens/options-screen.ts'
 import { PICK_RACER_SCREEN } from '../screens/pick-racer-screen.ts'
@@ -19,6 +21,7 @@ const IMPLEMENTED_SCREENS: readonly ScreenDefinition[] = Object.freeze([
   MAIN_MENU_SCREEN,
   GARAGE_ENTRY_SCREEN,
   CAR_BUILD_SCREEN,
+  NEW_RACER_SCREEN,
   DRIVER_EDIT_SCREEN,
   CIRCUIT_RACE_SCREEN,
   SINGLE_RACE_SCREEN,
@@ -51,6 +54,7 @@ export const getScreenDefinition = (screenId: number): ScreenDefinition => {
 // 0x0046b890: a screen loads the description named by its screen id, except the ones that overwrite the id before
 // loading: the time trial and the versus race read SINGRACE (0x00487ca0), the racer picks PICKRCR.
 export const getScreenFileName = (screenId: number, menuNames: readonly string[]): string => {
+  if (screenId === FrontEndScreen.NEW_RACER) return 'newracer'
   if (screenId === FrontEndScreen.TIME_TRIAL) return 'singrace'
   if (PICK_RACER_IDS.includes(screenId)) return 'pickrcr'
   if (
@@ -74,6 +78,7 @@ export const getInitialSelection = (
     racerIndex: 0,
     tabIndex: 0,
     isDialogOpen: false,
+    text: '',
   }
   if (PICK_RACER_IDS.includes(screenId)) return { ...base, focusIndex: 1 }
   const isRaceSelection =
@@ -81,7 +86,7 @@ export const getInitialSelection = (
     screenId === FrontEndScreen.SINGLE_RACE ||
     screenId === FrontEndScreen.TIME_TRIAL
   // Circuit 0 is open unless the progression hook says otherwise; a closed one starts on "back".
-  if (isRaceSelection && (runtime.environment.unlockedCircuitMask & 1) === 0) {
+  if (isRaceSelection && (getUnlockedCircuitMask(runtime) & 1) === 0) {
     return { ...base, focusIndex: 1 }
   }
   return base

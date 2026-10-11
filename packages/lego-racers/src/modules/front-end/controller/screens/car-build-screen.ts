@@ -27,6 +27,7 @@ import {
   getAbsoluteRectangle,
   getPropertyValues,
 } from '../screen-layout/screen-layout.ts'
+import { getSettingsWithPlayerCar } from '../profile/profile.ts'
 import { createResult, MenuSound } from '../screen-helpers/screen-helpers.ts'
 
 const SCREEN_NAME = 'carbuild'
@@ -216,17 +217,14 @@ const getLeaveResult = (runtime: ScreenRuntime, session: BuilderSession): Screen
   const template = runtime.settings.playerCar?.record ?? runtime.resources.getRacerTemplate()
   const chassisName = catalog.sets[session.setIndex]?.chassisName ?? template.chassisName
   return createResult(runtime, {
-    settings: {
-      ...runtime.settings,
-      playerCar: {
-        record: {
-          ...template,
-          chassisName,
-          designBytes: Array.from(serializeCarDesign(session.design)),
-        },
-        design: session.design,
+    settings: getSettingsWithPlayerCar(runtime.settings, {
+      record: {
+        ...template,
+        chassisName,
+        designBytes: Array.from(serializeCarDesign(session.design)),
       },
-    },
+      design: session.design,
+    }),
     navigation: { kind: 'pop' },
     soundNames: [MenuSound.BACK],
   })
