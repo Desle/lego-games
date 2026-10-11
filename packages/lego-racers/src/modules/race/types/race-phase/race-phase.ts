@@ -34,3 +34,6 @@ export const FINISHING_MILLISECONDS = 10000
 export const SKIPPED_COUNTDOWN_FINISHING_START_MILLISECONDS = 9000
 // `4000 < timer` and `timer < 5000` in Race_UpdateState5 only matter with the points record (race +0x18).
 export const RESULTS_MILLISECONDS = 5000
+// `timer < 0x251d` in Race_UpdateState4: a race with a ghost holds at 9,501 ms for the menu (race +0x30c0 = 2).
+export const GHOST_MENU_MILLISECONDS = 9501
+export const GHOST_MENU_PAUSE_STATE = 2

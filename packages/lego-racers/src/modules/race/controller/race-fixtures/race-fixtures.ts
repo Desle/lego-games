@@ -18,6 +18,8 @@ export const createFixtureDefinition = (): RaceDefinition => ({
   multiplayerLapCount: 3,
   isCountdownSkipped: false,
   isMirrored: false,
+  isPointsRecordPresent: false,
+  ghost: null,
   racers: [createFixtureRacerDefinition(0), createFixtureRacerDefinition(2)],
   checkpoints: [],
   collisionObjects: [],

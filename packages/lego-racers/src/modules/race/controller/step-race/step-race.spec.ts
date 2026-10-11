@@ -1,14 +1,19 @@
+import { createGhostSession } from '../../../ghost/index.ts'
 import { getRacer, setRacer } from '../../../racer/index.ts'
 import {
   COUNTDOWN_MILLISECONDS,
   FINISHING_MILLISECONDS,
+  GHOST_MENU_MILLISECONDS,
+  GHOST_MENU_PAUSE_STATE,
   INTRODUCTION_MILLISECONDS,
   RacePhase,
+  RESULTS_MILLISECONDS,
 } from '../../types/race-phase/race-phase.ts'
 import type { RaceInputs, RaceState } from '../../types/race.types.ts'
-import { createFixtureRace } from '../race-fixtures/race-fixtures.ts'
+import { createRace } from '../create-race/create-race.ts'
+import { createFixtureDefinition, createFixtureRace } from '../race-fixtures/race-fixtures.ts'
 import { IDLE_RACER_CONTROLS, NO_RACE_CONTACTS } from '../race-world/race-world.ts'
-import { stepRace } from './step-race.ts'
+import { endRaceFromMenu, stepRace } from './step-race.ts'
 
 const IDLE_INPUTS: RaceInputs = { controls: [IDLE_RACER_CONTROLS], contacts: NO_RACE_CONTACTS }
 const PLAYER = 0
@@ -132,5 +137,50 @@ describe('stepRace', () => {
     // Assert
     expect(step.raceState).toBe(ended)
     expect(step.events).toEqual([])
+  })
+
+  it('keeps the results of a circuit race for 5 s before the loop ends', () => {
+    // Arrange
+    const circuitRace = createRace({ ...createFixtureDefinition(), isPointsRecordPresent: true })
+    const finishing = stepUntil(
+      withLaps(stepUntil(circuitRace, RacePhase.RACING), PLAYER, FINISHED_LAPS),
+      RacePhase.FINISHING
+    )
+    const results = stepRace(finishing, IDLE_INPUTS, FINISHING_MILLISECONDS)
+
+    // Act
+    const early = stepRace(results.raceState, IDLE_INPUTS, RESULTS_MILLISECONDS - 1)
+    const late = stepRace(early.raceState, IDLE_INPUTS, 1)
+
+    // Assert
+    expect(results.raceState.phase).toBe(RacePhase.RESULTS)
+    expect(results.raceState.isRunning).toBe(true)
+    expect(results.raceState.placements).toEqual([1, 2])
+    expect(early.raceState.isRunning).toBe(true)
+    expect(late.raceState.isRunning).toBe(false)
+  })
+
+  it('records the ghost while racing, keeps the finished run and holds the race for the menu', () => {
+    // Arrange
+    const ghostRace = createRace({ ...createFixtureDefinition(), ghost: createGhostSession(false) })
+    const racing = stepUntil(ghostRace, RacePhase.RACING)
+    const recorded = stepRace(racing, IDLE_INPUTS, 100)
+    const finished = stepRace(withLaps(recorded.raceState, PLAYER, FINISHED_LAPS), IDLE_INPUTS, 33)
+
+    // Act
+    const held = stepRace(finished.raceState, IDLE_INPUTS, GHOST_MENU_MILLISECONDS)
+    const stillHeld = stepRace(held.raceState, IDLE_INPUTS, 5000)
+    const ended = endRaceFromMenu(stillHeld.raceState)
+
+    // Assert
+    expect(racing.ghost?.isRunning).toBe(true)
+    expect(recorded.raceState.ghost?.currentRun.samples.length).toBeGreaterThan(0)
+    expect(finished.raceState.ghost?.bestRun).not.toBeNull()
+    expect(finished.raceState.ghost?.isRunning).toBe(false)
+    expect(held.raceState.pauseState).toBe(GHOST_MENU_PAUSE_STATE)
+    expect(held.raceState.isRunning).toBe(true)
+    expect(stillHeld.raceState).toBe(held.raceState)
+    expect(ended.raceState.isRunning).toBe(false)
+    expect(ended.events).toEqual([{ type: 'race.ended' }])
   })
 })

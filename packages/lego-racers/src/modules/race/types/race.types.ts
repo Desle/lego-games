@@ -2,6 +2,7 @@ import type { EnumValues } from '../../../shared/types/enum.types.ts'
 import type { Checkpoint } from '../../checkpoint/index.ts'
 import type { CollisionObject } from '../../collision/index.ts'
 import type { ComputerRacerRoute } from '../../computer-racer-route/index.ts'
+import type { GhostSession } from '../../ghost/index.ts'
 import type { HazardList } from '../../hazard/index.ts'
 import type {
   CarBodyDefinition,
@@ -62,6 +63,10 @@ export type RaceDefinition = {
   readonly isCountdownSkipped: boolean
   // Race_LoadTrackContent's argument: the track is mirrored (bias 0.05 for the rubber band).
   readonly isMirrored: boolean
+  // Race +0x18 != 0: the circuit runner's points record rides along (the results state lasts 5 s).
+  readonly isPointsRecordPresent: boolean
+  // Race +0x3364: the time trial's ghost object, null in any other race.
+  readonly ghost: GhostSession | null
   readonly racers: readonly RaceRacerDefinition[]
   readonly checkpoints: readonly Checkpoint[]
   // Every car rigid body's collision list: the track's COLLIDE.BVB first, then the moving objects.
@@ -92,6 +97,12 @@ export type RaceState = {
   readonly phaseMilliseconds: number
   // Race +0x3334: Race_RunLoop runs while it is non-zero.
   readonly isRunning: boolean
+  // Race +0x18 != 0.
+  readonly isPointsRecordPresent: boolean
+  // Race +0x3364: the ghost object (a time trial); the recorder runs in every sub-step.
+  readonly ghost: GhostSession | null
+  // Race +0x30c0: non-zero while a menu holds the race (2 after a ghost race's finish); the race does not advance.
+  readonly pauseState: number
   // Race +0x3330: how many racers have been given a final place.
   readonly finishedRacerCount: number
   // Race +0x3348 (byte): the laps to race.

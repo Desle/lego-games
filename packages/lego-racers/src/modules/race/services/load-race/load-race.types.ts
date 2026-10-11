@@ -1,3 +1,4 @@
+import type { GhostSession } from '../../../ghost/index.ts'
 import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
 import type { RandomDraw, RandomTablePosition } from '../../../random-table/index.ts'
 import type { BuiltCar, RacerDatabases } from '../../../racer-setup/index.ts'
@@ -19,6 +20,16 @@ export type LoadRaceOptions = {
   readonly playerCars?: readonly BuiltCar[]
   // The driver code of each racer slot, instead of the codes of the race's circuit in LEGORACE.CRB.
   readonly racerCodes?: readonly string[]
+  // Game settings +0x3c of the race (LEGORACE.RCB's flag, set for the mirrored second pass of a circuit): every
+  // loader negates the y of what it reads (Race_LoadTrackContent's argument).
+  readonly isMirrored?: boolean
+  // Game settings +0x2c: the laps of a race with two or more local players (the front end's option, 2 or 3 in the
+  // shipped save files); one local player always races 3.
+  readonly multiplayerLapCount?: number
+  // Race +0x18 != 0: the race is part of a circuit and its results stay on screen for 5 s.
+  readonly isPointsRecordPresent?: boolean
+  // Race +0x3364: the time trial's ghost object (the race session loads the champion into it first).
+  readonly ghost?: GhostSession | null
 }
 
 // The routes chosen so far (null for a racer without one) and the table position after their draws.
@@ -29,6 +40,7 @@ export type RouteDraws = {
 
 export type RouteFiles = {
   readonly folder: string
+  readonly isMirrored: boolean
   readonly readFile: (path: string) => Uint8Array
   readonly getIsPresent: (path: string) => boolean
 }

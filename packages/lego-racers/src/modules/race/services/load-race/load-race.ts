@@ -74,7 +74,7 @@ const loadRoutes = (
       })
       if (choice === null) return { routes: [...progress.routes, null], position }
       const name = getComputerRacerRouteFileName(racerIndex, choice.letter, choice.variant, true)
-      const route = parseComputerRacerRoute(files.readFile(getPath(name)), false)
+      const route = parseComputerRacerRoute(files.readFile(getPath(name)), files.isMirrored)
       return { routes: [...progress.routes, route], position }
     },
     { routes: [], position: startPosition }
@@ -91,6 +91,7 @@ export const loadRaceDefinition = (
 ): RaceDefinition => {
   const folder = options.raceFolder ?? DEFAULT_RACE_FOLDER
   const localPlayerCount = options.localPlayerCount ?? 1
+  const isMirrored = options.isMirrored ?? false
   const raceModeFlags = options.raceModeFlags ?? 0
   const archive = openJamArchive(jam)
   const racerCodes = options.racerCodes ?? getCircuitRacerCodes(archive.readFile, folder)
@@ -102,7 +103,7 @@ export const loadRaceDefinition = (
     )
   const paths = new Set(archive.getFilePaths())
   const getIsPresent = (path: string): boolean => paths.has(`GAMEDATA${JAM_SEPARATOR}${path}`)
-  const description = parseRaceDescription(readFile(`${folder}.RAB`), false)
+  const description = parseRaceDescription(readFile(`${folder}.RAB`), isMirrored)
   const tables = readRacerTables(executable)
   const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
   const kinds = Array.from({ length: racerCount }, (_, index) =>
@@ -111,6 +112,7 @@ export const loadRaceDefinition = (
   const routeDraws = loadRoutes(
     {
       folder,
+      isMirrored,
       readFile: (path) => archive.readFile(`GAMEDATA${JAM_SEPARATOR}${path}`),
       getIsPresent,
     },
@@ -132,7 +134,9 @@ export const loadRaceDefinition = (
       ? null
       : readFile(`${description.firstCollisionObject.toUpperCase()}.BVB`)
   const startPositions =
-    startPositionBytes === null ? [] : parseStartPositions(startPositionBytes, false).startPositions
+    startPositionBytes === null
+      ? []
+      : parseStartPositions(startPositionBytes, isMirrored).startPositions
   const descriptions = describeRacers({
     arithmetic,
     databases: readRacerDatabases(archive.readFile),
@@ -171,31 +175,33 @@ export const loadRaceDefinition = (
     tables,
     raceModeFlags,
     localPlayerCount,
-    multiplayerLapCount: DEFAULT_LAP_COUNT,
+    multiplayerLapCount: options.multiplayerLapCount ?? DEFAULT_LAP_COUNT,
     isCountdownSkipped: false,
-    isMirrored: false,
+    isMirrored,
+    isPointsRecordPresent: options.isPointsRecordPresent ?? false,
+    ghost: options.ghost ?? null,
     racers,
     checkpoints:
-      checkpointBytes === null ? [] : parseCheckpoints(checkpointBytes, false).checkpoints,
+      checkpointBytes === null ? [] : parseCheckpoints(checkpointBytes, isMirrored).checkpoints,
     collisionObjects:
       collisionBytes === null
         ? []
-        : [loadCollisionObject({ bytes: collisionBytes, isMirrored: false, frame: undefined })],
+        : [loadCollisionObject({ bytes: collisionBytes, isMirrored, frame: undefined })],
     startPositions,
     powerUps:
       powerUpBytes === null
         ? { bricks: [], enhancementBricks: [], readByteCount: 0 }
-        : parsePowerUps(powerUpBytes, false),
+        : parsePowerUps(powerUpBytes, isMirrored),
     timers: timerBytes === null ? null : parseTimers(timerBytes),
     mainTriggers:
       mainTriggerBytes === null
         ? null
-        : parseTriggers(mainTriggerBytes, TriggerFileKind.MAIN, false),
+        : parseTriggers(mainTriggerBytes, TriggerFileKind.MAIN, isMirrored),
     environmentTriggers:
       environmentTriggerBytes === null
         ? null
-        : parseTriggers(environmentTriggerBytes, TriggerFileKind.ENVIRONMENT, false),
-    hazards: hazardBytes === null ? null : parseHazards(hazardBytes, false),
+        : parseTriggers(environmentTriggerBytes, TriggerFileKind.ENVIRONMENT, isMirrored),
+    hazards: hazardBytes === null ? null : parseHazards(hazardBytes, isMirrored),
     randomPosition: routeDraws.position,
     getGroundPoint: null,
     trackTargets: [],

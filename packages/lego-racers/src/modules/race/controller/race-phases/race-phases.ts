@@ -1,3 +1,4 @@
+import { beginGhostRun, finishGhostRun } from '../../../ghost/index.ts'
 import {
   activatePowerUp,
   BrickKind,
@@ -9,8 +10,11 @@ import type { PlayerController, Racer, RacerSet } from '../../../racer/index.ts'
 import {
   COUNTDOWN_MILLISECONDS,
   FINISHING_MILLISECONDS,
+  GHOST_MENU_MILLISECONDS,
+  GHOST_MENU_PAUSE_STATE,
   INTRODUCTION_MILLISECONDS,
   RacePhase,
+  RESULTS_MILLISECONDS,
   SKIPPED_COUNTDOWN_FINISHING_START_MILLISECONDS,
 } from '../../types/race-phase/race-phase.ts'
 import type {
@@ -184,11 +188,16 @@ const releasePlayerController = (
     : withController
 }
 
-// Race_UpdateState5 0x00435180 without the points record (race +0x18): the loop ends at once.
+// Race_UpdateState5 0x00435180: without the points record (race +0x18) the loop ends at once; with it, the results
+// stay for 5 s (the record's display counts down) and the timer is reset when they end.
 const stepResults = (step: RaceStepResult): RaceStepResult =>
-  getStepWith(step, Object.freeze({ ...step.raceState, phaseMilliseconds: 0, isRunning: false }), [
-    { type: 'race.ended' },
-  ])
+  step.raceState.isPointsRecordPresent && step.raceState.phaseMilliseconds < RESULTS_MILLISECONDS
+    ? step
+    : getStepWith(
+        step,
+        Object.freeze({ ...step.raceState, phaseMilliseconds: 0, isRunning: false }),
+        [{ type: 'race.ended' }]
+      )
 
 // Race_UpdateState4 0x00434eb0 (without a ghost): after 10 s the racers still running are given the next places
 // in racer order and every racer's place is recorded; before that, racers that finished their laps are placed.
@@ -196,6 +205,11 @@ const stepFinishing = (step: RaceStepResult): RaceStepResult => {
   const { raceState } = step
   const racerCount = raceState.racerSet.racers.length
   const indices = Array.from({ length: racerCount }, (_, index) => index)
+  if (raceState.ghost !== null && raceState.phaseMilliseconds >= GHOST_MENU_MILLISECONDS) {
+    return raceState.pauseState === GHOST_MENU_PAUSE_STATE
+      ? step
+      : getStepWith(step, Object.freeze({ ...raceState, pauseState: GHOST_MENU_PAUSE_STATE }), [])
+  }
   if (raceState.phaseMilliseconds >= FINISHING_MILLISECONDS) {
     const change = getPhaseChange(raceState, RacePhase.RESULTS, 0)
     const placed = indices.reduce(
@@ -228,6 +242,20 @@ const stepFinishing = (step: RaceStepResult): RaceStepResult => {
   }, step)
 }
 
+// FUN_004230e0, the last thing Race_UpdateState3 does for a finishing human: the ghost racer's lap times become the
+// ghost's run. The ghost's racer is the first local player's (race +0x6d4).
+const withGhostFinished = (raceState: RaceState): RaceState => {
+  const ghostRacerIndex = raceState.playerRacerIndices[0]
+  if (raceState.ghost === null || ghostRacerIndex === undefined) return raceState
+  return Object.freeze({
+    ...raceState,
+    ghost: finishGhostRun(
+      raceState.ghost,
+      getRacer(raceState.racerSet, ghostRacerIndex).lapMilliseconds
+    ),
+  })
+}
+
 // Race_UpdateState3 0x00434c80: racers that finished their laps are placed; when a human (or the
 // demonstration's racer 0) finishes, the finishing state starts and its function runs at once.
 const stepRacing = (step: RaceStepResult): RaceStepResult => {
@@ -248,7 +276,7 @@ const stepRacing = (step: RaceStepResult): RaceStepResult => {
         RacePhase.FINISHING,
         placed.raceState.isCountdownSkipped ? SKIPPED_COUNTDOWN_FINISHING_START_MILLISECONDS : 0
       )
-      const disabled = disablePlayerControls(change.raceState, index)
+      const disabled = withGhostFinished(disablePlayerControls(change.raceState, index))
       return { step: getStepWith(placed, disabled, [change.event]), isFinishing: true }
     },
     { step, isFinishing: false }
@@ -294,6 +322,7 @@ const stepCountdown = (step: RaceStepResult): RaceStepResult => {
     ...controlled,
     finishedRacerCount: 0,
     powerUpStep: setBrickSoundsEnabled(controlled.powerUpStep, true),
+    ghost: controlled.ghost === null ? null : beginGhostRun(controlled.ghost),
   })
   return stepRacing(getStepWith(step, sounding, [change.event, { type: 'race.controls_enabled' }]))
 }
