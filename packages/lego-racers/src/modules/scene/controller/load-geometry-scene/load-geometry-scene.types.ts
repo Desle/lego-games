@@ -6,6 +6,10 @@ export type GeometryBatch = {
   readonly materialIndex: number
   // Three vertex indices per triangle.
   readonly vertexIndices: Uint32Array
+  // The bone each corner follows; absent for a model without bones (every corner on bone 0).
+  readonly transformIndices?: Uint8Array
+  // Replaces the material's ambient and diffuse colours (a figure's tinted materials); absent keeps the library's.
+  readonly tint?: readonly [number, number, number, number]
 }
 
 export type ModelGeometry = {
@@ -26,4 +30,12 @@ export type GeometryFiles = {
   // The lights that shine on the model (a model with normals is lit by the device, and the track worlds set none).
   readonly ambientLights: readonly SceneAmbientLight[]
   readonly directionalLights: readonly SceneDirectionalLight[]
+  // A model with bones names the skeleton and animation its mesh follows, read from `directory`.
+  readonly bones: GeometryBones | null
+}
+
+export type GeometryBones = {
+  readonly directory: string
+  readonly skeletonName: string
+  readonly animationName: string
 }

@@ -47,9 +47,7 @@ const JAM_SEPARATOR = '\\'
 const DEFAULT_RACE_FOLDER = 'RACEC0R0'
 const DEFAULT_RACER_COUNT = 6
 const DEFAULT_LAP_COUNT = 3
-// The scale of the model the figure builder makes for a car built from bricks' driver: the pelvis models of the
-// game's drivers use 1/64 (GDB keyword 0x33). The figure builder (0x0042dfa0) is not ported, so this is a
-// hypothesis for the built driver.
+// The driver of a car built from bricks is made on `LEG_BOX` (GDB scale 1/64), which sets the scale of his model.
 const BUILT_DRIVER_MODEL_SCALE = 0.015625
 
 // The RAB names the text files (.cpf, .sps); the loaders read the binary twin, whose extension ends in b.

@@ -4,9 +4,14 @@ import { parseImageDatabase } from '@lego-games/lego-racers/image-database'
 import type { ImageDefinition } from '@lego-games/lego-racers/image-database'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
+import { getDriverPartBytes } from '@lego-games/lego-racers/car-builder'
 import { loadRaceDefinition } from '@lego-games/lego-racers/race'
 import type { RaceRacerDefinition } from '@lego-games/lego-racers/race'
-import { loadBuiltCarScene, RACER_FILE_DIRECTORY } from '@lego-games/lego-racers/racer-appearance'
+import {
+  loadBuiltCarScene,
+  loadBuiltDriverScene,
+  RACER_FILE_DIRECTORY,
+} from '@lego-games/lego-racers/racer-appearance'
 import type { ModelResourceNames } from '@lego-games/lego-racers/racer-appearance'
 import { parseRaceDescription } from '@lego-games/lego-racers/race-description'
 import {
@@ -53,13 +58,20 @@ const getBodyModel = (archive: JamArchive, racer: RaceRacerDefinition): ModelSce
   return design === null ? null : loadBuiltCarScene(archive, design)
 }
 
+const getBuiltDriver = (archive: JamArchive, racer: RaceRacerDefinition): ModelScene | null =>
+  racer.savedCar === null
+    ? null
+    : loadBuiltDriverScene(archive, getDriverPartBytes(racer.savedCar.record))
+
 const getRacerModels = (archive: JamArchive, racer: RaceRacerDefinition): RacerModels => {
   const { appearance } = racer
   return Object.freeze({
     body: getBodyModel(archive, racer),
     wheels: loadResourceModel(archive, appearance.wheelModel),
     driver:
-      appearance.driverModel === null ? null : loadResourceModel(archive, appearance.driverModel),
+      appearance.driverModel === null
+        ? getBuiltDriver(archive, racer)
+        : loadResourceModel(archive, appearance.driverModel),
   })
 }
 

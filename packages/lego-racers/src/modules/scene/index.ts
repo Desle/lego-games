@@ -3,9 +3,12 @@ export type {
   ModelFiles,
   ModelScene,
 } from './controller/load-model-scene/load-model-scene.types.ts'
+export { getDrawBatches } from './types/draw-batches/draw-batches.ts'
+export type { DrawCommand, DrawFace } from './types/draw-batches/draw-batches.types.ts'
 export { loadGeometryScene } from './controller/load-geometry-scene/load-geometry-scene.ts'
 export type {
   GeometryBatch,
+  GeometryBones,
   GeometryFiles,
   ModelGeometry,
 } from './controller/load-geometry-scene/load-geometry-scene.types.ts'

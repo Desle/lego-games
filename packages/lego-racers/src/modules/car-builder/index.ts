@@ -33,7 +33,7 @@ export {
   getBrickFaces,
 } from './controller/build-car-geometry/build-car-geometry.ts'
 export { getCarWeight } from './controller/get-car-weight/get-car-weight.ts'
-export { parseSaveFile } from './controller/parse-save-file/parse-save-file.ts'
+export { getDriverPartBytes, parseSaveFile } from './controller/parse-save-file/parse-save-file.ts'
 export { SaveFileError } from './types/save-file-error.ts'
 export type {
   BrickColor,
