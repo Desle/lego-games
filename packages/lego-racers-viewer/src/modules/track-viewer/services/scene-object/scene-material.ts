@@ -2,7 +2,6 @@ import type {
   BlendFactorValue,
   CompareFunctionValue,
   SceneMaterial,
-  SceneMesh,
   SceneTexture,
 } from '@lego-games/lego-racers/scene'
 import {
@@ -13,13 +12,11 @@ import {
 } from '@lego-games/lego-racers/scene'
 import {
   ClampToEdgeWrapping,
-  Color,
   CustomBlending,
   DataTexture,
   FrontSide,
   LinearFilter,
   MeshBasicMaterial,
-  MeshLambertMaterial,
   NearestFilter,
   NoColorSpace,
   NoBlending,
@@ -126,16 +123,13 @@ const getBlendingParameters = (sceneMaterial: SceneMaterial): BlendingParameters
   }
 }
 
-// The device state of GolDP.dll 0x1000a2c0 for one material. Prelit models (vertex colours) draw unlit
-// with the vertex colour as the diffuse colour; the engine's lighting of models with normals is not
-// ported, so those use three.js Lambert lighting with the material's diffuse colour.
+// The device state of GolDP.dll 0x1000a2c0 for one material. Every model draws unlit with the colour in its vertices: its
+// own for a prelit model, the light function's for a model with normals (see batch-geometry.ts).
 export const createSceneMaterial = (
   sceneMaterial: SceneMaterial,
-  mesh: SceneMesh,
   textures: readonly SceneTexture[],
   cache: TextureCache
 ): Material => {
-  const [red, green, blue] = sceneMaterial.diffuseColor
   const parameters = {
     map: getTexture(textures, sceneMaterial.textureIndex, sceneMaterial, cache),
     vertexColors: true,
@@ -145,13 +139,8 @@ export const createSceneMaterial = (
     name: sceneMaterial.name,
     ...getBlendingParameters(sceneMaterial),
   }
-  const isLit = mesh.colors === null && mesh.normals !== null
-  const material = isLit
-    ? new MeshLambertMaterial({
-        ...parameters,
-        color: new Color(red / 255, green / 255, blue / 255),
-      })
-    : new MeshBasicMaterial(parameters)
+  // Lit models carry their lighting in the vertex colours (see batch-geometry.ts): no three.js lights.
+  const material = new MeshBasicMaterial(parameters)
   // The render trace reads the state the material stands for.
   material.userData['renderState'] = sceneMaterial.renderState
   const alphaTestCode = getAlphaTestCode(sceneMaterial)

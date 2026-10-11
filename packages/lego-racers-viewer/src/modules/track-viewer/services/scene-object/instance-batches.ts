@@ -51,7 +51,7 @@ export const getBatchMaterial = (
   const materialKey = `${String(materialIndex)}/${String(mesh.colors === null)}`
   const material =
     context.materials.get(materialKey) ??
-    createSceneMaterial(sceneMaterial, mesh, scene.textures, context.textureCache)
+    createSceneMaterial(sceneMaterial, scene.textures, context.textureCache)
   if (context.isBackground) {
     material.depthTest = false
     material.depthWrite = false
@@ -71,7 +71,12 @@ export const getSharedBatchGeometry = (
   const key = `${String(levelMesh.level.meshIndex)}/${String(batchIndex)}/${String(batchMaterial.materialIndex)}`
   const geometry =
     context.geometries.get(key) ??
-    createBatchGeometry(levelMesh.mesh, batch, batchMaterial.sceneMaterial.renderState)
+    createBatchGeometry(
+      levelMesh.mesh,
+      batch,
+      batchMaterial.sceneMaterial.renderState,
+      batchMaterial.sceneMaterial.ambientColor
+    )
   context.geometries.set(key, geometry)
   return geometry
 }
