@@ -83,6 +83,8 @@ const getRacerFlowFields = (raceState: RaceState): TraceFields =>
   )
 
 // The race flow and track logic fields the emulator side reads (reverse-engineering/emulator/track_trace.py).
+const KICK_TIMER_MILLISECONDS = 0x2ee
+
 export const getTrackFields: TraceFieldProvider = (raceState) => {
   const { trackLogic, sky } = raceState
   return {
@@ -108,10 +110,18 @@ export const getTrackFields: TraceFieldProvider = (raceState) => {
       timer.remainingStartMilliseconds >>> 0,
       timer.isSecondPhase ? 1 : 0,
     ]),
-    'track.timeList': trackLogic.timers.entries.flatMap((entry) => [
-      entry.delayMilliseconds >>> 0,
-      entry.elapsedMilliseconds >>> 0,
-    ]),
+    'track.timeList': [
+      // The kick timers 0x00438e60 registers (750 ms each) sit at the head of the same list.
+      ...raceState.racerSet.racers.flatMap((racer) =>
+        racer.contactTimerMilliseconds === null
+          ? []
+          : [KICK_TIMER_MILLISECONDS, racer.contactTimerMilliseconds >>> 0]
+      ),
+      ...trackLogic.timers.entries.flatMap((entry) => [
+        entry.delayMilliseconds >>> 0,
+        entry.elapsedMilliseconds >>> 0,
+      ]),
+    ],
     ...getWorldFields('track', trackLogic.worlds.track),
     ...getWorldFields('blended', trackLogic.worlds.blended),
     ...getWorldFields('local', trackLogic.worlds.local),

@@ -185,12 +185,22 @@ const getFoundIntroductionCameraObject = (
 // power-ups (PowerUps_Initialize 0x00457c20), ending in the state Race_RunLoop starts from.
 // The track world's line query 0x0041f4d0 over the track's collision object, as the hazards and the enhancement bricks
 // use it (0x00456360, 0x00439490).
+const groundQueries = new WeakMap<RaceDefinition, GroundQuery | null>()
+
 const getTrackGroundQuery = (definition: RaceDefinition): GroundQuery | null => {
   if (definition.getGroundPoint !== null) return definition.getGroundPoint
+  const known = groundQueries.get(definition)
+  if (known !== undefined) return known
   const track = definition.collisionObjects[0]
-  if (track === undefined) return null
-  const probe = createTrackLineProbe(definition.arithmetic, track.volume, () => false)
-  return (start, end) => probe(start, end)?.point ?? null
+  const query =
+    track === undefined
+      ? null
+      : ((): GroundQuery => {
+          const probe = createTrackLineProbe(definition.arithmetic, track.volume, () => false)
+          return (start, end) => probe(start, end)?.point ?? null
+        })()
+  groundQueries.set(definition, query)
+  return query
 }
 
 export const createRace = (definition: RaceDefinition): RaceState => {

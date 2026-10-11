@@ -72,17 +72,19 @@ const createPool = (scene: ThreeScene, model: ModelScene) => {
 // Draws the effects the race reports: the bricks on the track (spinning, at the scale their state gives), the rockets nose first, the barrels, the magnets and the spiked explosions at the
 // scale the engine gives them. Effects without a model here (cannon ball, grapple hook, wand, plain explosion) are skipped.
 export const createRaceEffects = (scene: ThreeScene, models: EffectModels): RaceEffects => {
+  const brickPools = Object.fromEntries(
+    Object.entries(models.powerUpBricks).map(([kind, model]) => [kind, createPool(scene, model)])
+  )
   const pools = {
     rocket: createPool(scene, models.rocket),
     barrel: createPool(scene, models.barrel),
     magnet: createPool(scene, models.magnet),
     spikedExplosion: createPool(scene, models.spikedExplosion),
-    powerUpBrick: createPool(scene, models.powerUpBrick),
     enhancementBrick: createPool(scene, models.enhancementBrick),
   }
   return Object.freeze({
     update: (views: EffectViews) => {
-      for (const pool of Object.values(pools)) pool.reset()
+      for (const pool of [...Object.values(pools), ...Object.values(brickPools)]) pool.reset()
       for (const view of views.effects) {
         const pool =
           view.kind === 'rocket'
@@ -96,7 +98,11 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
         pool.use().group.matrix.copy(getHeadingMatrix(view.heading, view.position))
       }
       for (const brick of views.bricks) {
-        const copy = (brick.isEnhancement ? pools.enhancementBrick : pools.powerUpBrick).use()
+        const brickPool = brick.isEnhancement
+          ? pools.enhancementBrick
+          : brickPools[brick.kind ?? '']
+        if (brickPool === undefined) continue
+        const copy = brickPool.use()
         copy.group.matrix
           .copy(getHeadingMatrix(null, brick.position))
           .multiply(new Matrix4().makeRotationZ(views.spinAngle))
@@ -111,7 +117,7 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
       }
     },
     dispose: () => {
-      for (const pool of Object.values(pools)) pool.dispose()
+      for (const pool of [...Object.values(pools), ...Object.values(brickPools)]) pool.dispose()
     },
   })
 }

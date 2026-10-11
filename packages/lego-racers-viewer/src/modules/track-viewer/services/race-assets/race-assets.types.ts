@@ -30,7 +30,8 @@ export type EffectModels = {
   readonly barrel: ModelScene
   readonly magnet: ModelScene
   readonly spikedExplosion: ModelScene
-  readonly powerUpBrick: ModelScene
+  // The coloured brick's model with the material 0x00458a80 picks for each kind (pbrickP, pbrickS, pbrickT, pbrickM).
+  readonly powerUpBricks: Readonly<Record<string, ModelScene>>
   readonly enhancementBrick: ModelScene
 }
 

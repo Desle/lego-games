@@ -30,10 +30,11 @@ describe('projectile events on racers', () => {
 
   it('reports no route node for a racer that has touched no checkpoint', () => {
     // Arrange
-    const racerSet = getRaceRacerSet(createFixtureRace(), NO_RACE_CONTACTS)
+    const race = createFixtureRace()
+    const racerSet = getRaceRacerSet(race, NO_RACE_CONTACTS)
 
     // Act
-    const flightRacer = getFlightRacer(getRacer(racerSet, 0))
+    const flightRacer = getFlightRacer(race.context, getRacer(racerSet, 0))
 
     // Assert
     expect(flightRacer.routeNodeIndex).toBeNull()
