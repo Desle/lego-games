@@ -237,6 +237,36 @@ describe('a single race session', () => {
     }
   )
 
+  it.skipIf(!isGamePresent)(
+    'mirrors the final race with race mode flag 0x20 and clears the flags for a circuit',
+    () => {
+      // Arrange
+      const resources = getResources()
+      const final = createSingleRaceSettings(resources, {
+        raceName: 'rr',
+        racerCount: 6,
+        localPlayerCount: 1,
+        raceModeFlags: 0x20,
+      })
+      const circuit = createCircuitSettings(resources, {
+        circuitName: 'c6',
+        racerCount: 6,
+        localPlayerCount: 1,
+        raceModeFlags: 0x20,
+      })
+
+      // Act
+      const start = expectRace(startNextRace(createGameSession(resources, final)))
+
+      // Assert
+      expect(start.race.entry.isFlagged).toBe(false)
+      expect(start.race.isMirrored).toBe(true)
+      expect(start.definition.isMirrored).toBe(true)
+      expect(circuit.raceNames).toEqual(['rr', null, null, null])
+      expect(circuit.raceModeFlags).toBe(0)
+    }
+  )
+
   it.skipIf(!isGamePresent)('picks the demonstration race with the random table', () => {
     // Arrange
     const resources = getResources()

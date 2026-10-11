@@ -22,6 +22,8 @@ import {
   GAME_MODE_NUMBERS,
   GameMode,
   GARAGE_RESULT_SCREEN,
+  MIRRORED_FINAL_CIRCUIT_NAME,
+  MIRRORED_FINAL_FLAG,
   MENU_RESULT_SCREEN,
   TIME_TRIAL_OPPONENT_COUNT,
 } from '../../types/session-rules/session-rules.ts'
@@ -65,7 +67,8 @@ const getBaseSettings = (
     racerCount: request.racerCount,
     localPlayerCount: request.localPlayerCount,
     multiplayerLapCount: request.multiplayerLapCount ?? DEFAULT_MULTIPLAYER_LAP_COUNT,
-    raceModeFlags: request.raceModeFlags ?? 0,
+    // FUN_0042d730 clears the race mode flags for a circuit and a time trial.
+    raceModeFlags: mode === GameMode.SINGLE_RACE ? (request.raceModeFlags ?? 0) : 0,
     isCountdownSkipped: request.isCountdownSkipped ?? false,
     playerCars: Object.freeze(request.playerCars ?? []),
     playerNames: Object.freeze(request.playerNames ?? []),
@@ -131,7 +134,8 @@ export const createDemonstrationSettings = (
 const getSessionRace = (
   resources: GameResources,
   slot: number,
-  raceName: string | null
+  raceName: string | null,
+  isMirroredByOption: boolean
 ): SessionRace | null => {
   if (raceName === null) return null
   const entry = resources.catalog.entries.find((candidate) => candidate.name === raceName)
@@ -152,7 +156,7 @@ const getSessionRace = (
     slot,
     entry,
     folder,
-    isMirrored: entry.isFlagged,
+    isMirrored: entry.isFlagged || (slot === 0 && isMirroredByOption),
     musicTunePaths: Object.freeze(musicPaths),
     loadScreen: resources.archive.getFilePaths().includes(loadScreenPath)
       ? parseLoadScreen(resources.archive.readFile(loadScreenPath))
@@ -169,8 +173,13 @@ export const createGameSession = (
   if (findNamedRecord(resources.circuits.circuits, settings.circuitName) === null) {
     throw new RangeError(`LEGORACE.CRB lists no circuit ${settings.circuitName}`)
   }
+  // FUN_0042d730: race mode flag 0x20 in a single race of circuit c6 (the final) mirrors the race.
+  const isMirroredByOption =
+    settings.mode === GameMode.SINGLE_RACE &&
+    (settings.raceModeFlags & MIRRORED_FINAL_FLAG) !== 0 &&
+    settings.circuitName === MIRRORED_FINAL_CIRCUIT_NAME
   const races = settings.raceNames.map((raceName, slot) =>
-    getSessionRace(resources, slot, raceName)
+    getSessionRace(resources, slot, raceName, isMirroredByOption)
   )
   const firstRace = races.find((race) => race !== null) ?? null
   return Object.freeze({

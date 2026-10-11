@@ -31,3 +31,8 @@ export const DEMONSTRATION_CIRCUIT_NAME = 'c0'
 
 // A time trial has no opponents: the front end sets the racer count to 0 and FUN_0042d730 raises it to the players.
 export const TIME_TRIAL_OPPONENT_COUNT = 0
+
+// FUN_0042d730 compares the circuit key with "c6" (0x004bec44) when settings +0x20 has bit 0x20: the final race then
+// runs mirrored (the catalog's rr2 is the same race with the flag).
+export const MIRRORED_FINAL_FLAG = 0x20
+export const MIRRORED_FINAL_CIRCUIT_NAME = 'c6'
