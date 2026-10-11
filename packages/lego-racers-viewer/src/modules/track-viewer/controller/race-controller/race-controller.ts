@@ -31,7 +31,6 @@ import {
   stepRace,
 } from '@lego-games/lego-racers/race'
 import type { RaceState } from '@lego-games/lego-racers/race'
-import { getHudLayout } from '@lego-games/lego-racers/race-hud'
 import { getRacerControls } from '@lego-games/lego-racers/race-input'
 import {
   createRacePresentation,
@@ -40,13 +39,10 @@ import {
   getRacerPoses,
   stepRacePresentation,
 } from '@lego-games/lego-racers/race-presentation'
-import type { HudContext, RacePresentation } from '@lego-games/lego-racers/race-presentation'
+import type { RacePresentation } from '@lego-games/lego-racers/race-presentation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { DEVELOPMENT_GAME_FILE_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
-import {
-  createHudImageUrls,
-  createHudTextMeasure,
-} from '../../services/hud-resources/hud-resources.ts'
+import { createHudImageUrls, getHudContext } from '../../services/hud-resources/hud-resources.ts'
 import { getDevelopmentJam } from '../../services/jam-file/jam-file.ts'
 import { createRaceAudioPlayer } from '../../services/race-audio-player/race-audio-player.ts'
 import { loadRaceAssets } from '../../services/race-assets/race-assets.ts'
@@ -61,8 +57,6 @@ import type { RaceController, RaceScreen } from './race-controller.types.ts'
 export const RACE_STAGE_SIZE = Object.freeze({ width: 800, height: 600 })
 const EXECUTABLE_NAME = 'LEGORacers.exe'
 const JAM_NAME = 'LEGO.JAM'
-const HOLDER_IMAGE_NAME = 'HOLDER'
-const FALLBACK_HOLDER_SIZE = Object.freeze({ width: 64, height: 64 })
 
 const INITIAL_SCREEN: RaceScreen = Object.freeze({
   status: RaceStatus.IDLE,
@@ -85,19 +79,34 @@ const fetchBytes = async (url: string): Promise<Uint8Array> => {
   return new Uint8Array(await response.arrayBuffer())
 }
 
-// The dev server hands out LEGORacers.exe and the tunes next to the local LEGO.JAM.
+// The dev server hands out LEGORacers.exe and the tunes next to the local LEGO.JAM; a race fetches the tunes its music
+// list names (every track has its own list).
 const getDevelopmentGameFiles = async (): Promise<LoadedGameFiles> => {
   const jam = await getDevelopmentJam()
   const executable = await fetchBytes(`${DEVELOPMENT_GAME_FILE_ROUTE}/${EXECUTABLE_NAME}`)
-  const tuneNames = ['start', 'royal', 'lose', 'win', 'knight', 'moat', 'armor'].map(
-    (name) => `${name}.tun`
+  return {
+    jam,
+    files: { executable, tunes: new Map() },
+    readTune: (name) => fetchBytes(`${DEVELOPMENT_GAME_FILE_ROUTE}/${name}`).catch(() => null),
+  }
+}
+
+// The race's assets with the tunes of its music list (`LEGOMSC`) added; a tune that cannot be read stays silent.
+const loadRaceTunes = async (
+  assets: RaceAssets,
+  gameFiles: LoadedGameFiles
+): Promise<RaceAssets> => {
+  const tunes = new Map(assets.tunes)
+  await Promise.all(
+    assets.musicNames
+      .map((name) => name.toLowerCase())
+      .filter((name) => !tunes.has(name))
+      .map(async (name) => {
+        const bytes = await gameFiles.readTune(name)
+        if (bytes !== null) tunes.set(name, bytes)
+      })
   )
-  const tunes = await Promise.all(
-    tuneNames.map(
-      async (name) => [name, await fetchBytes(`${DEVELOPMENT_GAME_FILE_ROUTE}/${name}`)] as const
-    )
-  )
-  return { jam, files: { executable, tunes: new Map(tunes) } }
+  return { ...assets, tunes }
 }
 
 const getChosenGameFiles = async (files: readonly File[]): Promise<LoadedGameFiles> => {
@@ -121,25 +130,7 @@ const getChosenGameFiles = async (files: readonly File[]): Promise<LoadedGameFil
       executable: new Uint8Array(await executableFile.arrayBuffer()),
       tunes: new Map(tunes),
     },
-  }
-}
-
-const getHudContext = (assets: RaceAssets): HudContext => {
-  const measureText = createHudTextMeasure(assets.hudFonts)
-  const getString = (stringId: number) => assets.getString(stringId)
-  const holder = assets.hudImages.get(HOLDER_IMAGE_NAME) ?? FALLBACK_HOLDER_SIZE
-  return {
-    layout: getHudLayout({
-      screenWidth: RACE_STAGE_SIZE.width,
-      screenHeight: RACE_STAGE_SIZE.height,
-      measureText,
-      getString,
-      holderSize: { width: holder.width, height: holder.height },
-    }),
-    getString,
-    imageNames: assets.imageNames,
-    getImageSize: (name) => assets.hudImages.get(name.toUpperCase()) ?? null,
-    measureText,
+    readTune: (name) => Promise.resolve(new Map(tunes).get(name.toLowerCase()) ?? null),
   }
 }
 
@@ -207,14 +198,13 @@ export const useRaceController = (): RaceController => {
       // Lets the loading state paint before the synchronous load.
       window.setTimeout(() => {
         try {
-          setAssets(
-            loadRaceAssets(
-              gameFiles.jam,
-              gameFiles.files,
-              { raceFolder: next.race.folder },
-              next.definition
-            )
+          const loaded = loadRaceAssets(
+            gameFiles.jam,
+            gameFiles.files,
+            { raceFolder: next.race.folder },
+            next.definition
           )
+          loadRaceTunes(loaded, gameFiles).then(setAssets).catch(showFailure)
         } catch (error) {
           showFailure(error)
         }
@@ -273,7 +263,7 @@ export const useRaceController = (): RaceController => {
     const input = createRaceInputSource()
     const menuInput = createRaceMenuInputSource()
     const audio = createRaceAudioPlayer(assets)
-    const hudContext = getHudContext(assets)
+    const hudContext = getHudContext(assets, RACE_STAGE_SIZE)
     const hudImageUrls = createHudImageUrls(assets.hudImages)
     const resumeAudio = () => audio.resume()
     window.addEventListener('keydown', resumeAudio)
@@ -368,6 +358,7 @@ export const useRaceController = (): RaceController => {
     containerReference,
     isDevelopmentFilesAvailable: import.meta.env.DEV,
     gameJam: screen.status === RaceStatus.MENU ? (gameFiles?.jam ?? null) : null,
+    readTune: screen.status === RaceStatus.MENU ? (gameFiles?.readTune ?? null) : null,
     // A production build replaces DEV with false and drops the development fetches entirely.
     onDevelopmentGameRequested: import.meta.env.DEV
       ? () => openGame(getDevelopmentGameFiles)

@@ -6,6 +6,7 @@ import type {
   SceneMesh,
 } from '@lego-games/lego-racers/scene'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
+import type { Vector3Like } from '../race-viewport/race-viewport.types.ts'
 import type {
   Box3,
   BufferGeometry,
@@ -18,6 +19,9 @@ import type {
 
 export type SceneObject = {
   readonly group: Group
+  // Shows, for every instance with several levels, the level the squared distance to this camera position selects
+  // (GolDP.dll 0x10027cc0), and none past the last.
+  readonly selectLevels: (camera: Vector3Like) => void
   // Puts the skeleton instance with this name in the given clip state (the race simulation drives its clips).
   readonly setSkeletonState: (name: string, state: SkeletonAnimationState) => void
   // The instances' world-space bounds, for framing the camera.

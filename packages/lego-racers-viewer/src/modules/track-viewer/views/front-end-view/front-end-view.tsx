@@ -5,6 +5,7 @@ import type { FrontEndViewProps } from './front-end-view.types.ts'
 // The menus of the game over the stage: they choose the race and the racers, then the race starts.
 const FrontEndView = ({
   jam,
+  readTune,
   width,
   height,
   firstScreenId,
@@ -14,6 +15,7 @@ const FrontEndView = ({
 }: FrontEndViewProps) => {
   const frontEnd = useFrontEndController({
     jam,
+    readTune,
     firstScreenId,
     standingRows,
     onRaceRequested,

@@ -18,6 +18,8 @@
     "duplicates": "jscpd packages",
     "differential": "sh reverse-engineering/emulator/setup.sh && pnpm --filter @lego-games/lego-racers exec vitest run differential",
     "golden-trace": "sh reverse-engineering/emulator/setup.sh && pnpm --filter @lego-games/lego-racers run golden-trace",
+    "render-trace": "sh reverse-engineering/emulator/setup.sh && pnpm --filter @lego-games/lego-racers-viewer run render-trace",
+    "audio-trace": "sh reverse-engineering/emulator/setup.sh && pnpm --filter @lego-games/lego-racers-viewer run audio-trace",
     "dev:viewer": "pnpm --filter @lego-games/lego-racers-viewer run dev"
   },
   "prettier": "@lego-games/tooling/prettier",

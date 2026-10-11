@@ -7,6 +7,7 @@ import type {
   FrontEndResources,
   FrontEndState,
   FrontEndStep,
+  OpenedScreen,
 } from '../../types/front-end.types.ts'
 import { FrontEndScreen } from '../../types/front-end-screen/front-end-screen.ts'
 import type { ScreenRuntime } from '../../types/front-end-screen.types.ts'
@@ -16,6 +17,7 @@ import {
   getScreenFileName,
 } from '../front-end-screens/front-end-screens.ts'
 import { createFrontEndSettings } from '../screen-helpers/screen-helpers.ts'
+import { getFrontEndMusicIndex } from '../front-end-music/front-end-music.ts'
 import { getWidgetCommands } from '../widget-commands/widget-commands.ts'
 
 const getRuntime = (
@@ -57,7 +59,17 @@ export const createFrontEnd = (
     settings,
     outcome: 'running',
     screenMilliseconds: 0,
+    musicListIndex: getFrontEndMusicIndex(firstScreenId, null),
   })
+}
+
+// The state after a screen opened: the music its opening starts, if any.
+const getOpenedState = (state: FrontEndState, screenId: number): OpenedScreen => {
+  const musicListIndex = getFrontEndMusicIndex(screenId, state.musicListIndex)
+  return {
+    state: musicListIndex === null ? state : { ...state, musicListIndex },
+    musicListIndex,
+  }
 }
 
 // One pass of the loop of 0x0042d510: the time advances and the input, if any, reaches the current screen, which
@@ -76,7 +88,7 @@ export const stepFrontEnd = (
   const runtime = getRuntime(advanced, resources, environment)
   const current = advanced.screens.at(-1)
   if (input === null || runtime === null || current === undefined || state.outcome !== 'running') {
-    return { state: advanced, soundNames: [] }
+    return { state: advanced, soundNames: [], musicListIndex: null }
   }
   const result = getScreenDefinition(current.screenId).handleInput(runtime, input)
   const screens = [...advanced.screens.slice(0, -1), { ...current, selection: result.selection }]
@@ -88,25 +100,37 @@ export const stepFrontEnd = (
         screenId,
         selection: getInitialSelection(screenId, { ...runtime, settings: result.settings }),
       }
-      return {
-        state: { ...navigated, screens: [...screens, next], screenMilliseconds: 0 },
-        soundNames: result.soundNames,
-      }
+      const opened = getOpenedState(
+        { ...navigated, screens: [...screens, next], screenMilliseconds: 0 },
+        screenId
+      )
+      return { ...opened, soundNames: result.soundNames }
     }
-    case 'pop':
-      return {
-        state:
-          screens.length > 1
-            ? { ...navigated, screens: screens.slice(0, -1), screenMilliseconds: 0 }
-            : navigated,
-        soundNames: result.soundNames,
+    case 'pop': {
+      if (screens.length <= 1) {
+        return { state: navigated, soundNames: result.soundNames, musicListIndex: null }
       }
+      const remaining = screens.slice(0, -1)
+      const opened = getOpenedState(
+        { ...navigated, screens: remaining, screenMilliseconds: 0 },
+        remaining.at(-1)?.screenId ?? FrontEndScreen.MAIN_MENU
+      )
+      return { ...opened, soundNames: result.soundNames }
+    }
     case 'race':
-      return { state: { ...navigated, outcome: 'race' }, soundNames: result.soundNames }
+      return {
+        state: { ...navigated, outcome: 'race' },
+        soundNames: result.soundNames,
+        musicListIndex: null,
+      }
     case 'quit':
-      return { state: { ...navigated, outcome: 'quit' }, soundNames: result.soundNames }
+      return {
+        state: { ...navigated, outcome: 'quit' },
+        soundNames: result.soundNames,
+        musicListIndex: null,
+      }
     case 'none':
-      return { state: navigated, soundNames: result.soundNames }
+      return { state: navigated, soundNames: result.soundNames, musicListIndex: null }
   }
 }
 

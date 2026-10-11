@@ -32,7 +32,8 @@ export const loadGeometryScene = (
   const { textures, materials } = linkModelResources(
     source,
     files.textureNames,
-    files.materialNames
+    files.materialNames,
+    null
   )
   const sceneMaterials = [...materials.materials]
   const materialIndices = geometry.batches.map((batch) => {

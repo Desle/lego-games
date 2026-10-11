@@ -96,6 +96,7 @@ const getTexture = (
   texture.wrapS = wrapping
   texture.wrapT = wrapping
   texture.generateMipmaps = false
+  texture.name = textures[textureIndex]?.name ?? ''
   texture.colorSpace = NoColorSpace
   texture.needsUpdate = true
   cache.set(key, texture)
@@ -151,6 +152,8 @@ export const createSceneMaterial = (
         color: new Color(red / 255, green / 255, blue / 255),
       })
     : new MeshBasicMaterial(parameters)
+  // The render trace reads the state the material stands for.
+  material.userData['renderState'] = sceneMaterial.renderState
   const alphaTestCode = getAlphaTestCode(sceneMaterial)
   if (alphaTestCode !== null) {
     material.onBeforeCompile = (shader) => {

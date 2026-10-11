@@ -21,7 +21,7 @@ import {
 // The menus are drawn on a 640 × 480 surface.
 export const MENU_SURFACE = Object.freeze({ width: 640, height: 480 })
 // MSB 0x3e styles keep a gap of 14 pixels (their first 0x2b value) between a button's image and its text.
-const BUTTON_IMAGE_GAP = 14
+const BUTTON_IMAGE_GAP = 0
 const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
 
 // The states of a button in the order of its style's six images, fonts and colours (hypothesis for the roles; the
