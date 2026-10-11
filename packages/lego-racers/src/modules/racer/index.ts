@@ -87,6 +87,7 @@ export {
 } from './types/figure/figure.ts'
 export {
   clearVehicleWheelEmitter,
+  stopVehicleEffectsForWarp,
   endVehiclePowerSlideEffects,
   setVehicleWheelEmitter,
   startVehicleBoostSmoke,

@@ -28,6 +28,7 @@ import {
   setRacer,
   startCarBodyFlip,
   startVehicleTurboEffects,
+  stopVehicleEffectsForWarp,
   stopVehicleTireSmoke,
 } from '../../../racer/index.ts'
 import type { Racer, RacerControls, RacerSet, RacerSetContext } from '../../../racer/index.ts'
@@ -183,6 +184,9 @@ const getRacerSetAfterVehicleEffects = (
 ): RaceRacerSet => {
   if (event.type === 'power_ups.racer_turbo_started') {
     return getRaceRacerSetOf(startVehicleTurboEffects(context, racerSet, racerIndex))
+  }
+  if (event.type === 'power_ups.racer_warp_started') {
+    return getRaceRacerSetOf(stopVehicleEffectsForWarp(racerSet, racerIndex))
   }
   if (event.type === 'power_ups.racer_turbo_ended') {
     return getRaceRacerSetOf(stopVehicleTireSmoke(racerSet, racerIndex))

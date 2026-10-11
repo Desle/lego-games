@@ -297,7 +297,7 @@ export const getRacerThrown = (
 
 // 0x004395d0 (the warp takes the car off the track): flag 0x10, the timed effect ends (0x00439b00), the car body's spin
 // and tows end (slots 11, 17 and 19) and, for a human's free body, the hull stops testing the track (flag 0x1000,
-// 0x00429a90's other branch). The vehicle's smoke, fade and figure radii are presentation.
+// 0x00429a90's other branch). The vehicle's smoke and fade (0x0043dcd0, 0x0043dbb0) are `stopVehicleEffectsForWarp`; the parts' radii go with 0x00440160.
 const getRacerWarpStarted = (arithmetic: FloatArithmetic, racer: Racer): Racer => {
   const ended = getRacerWithoutTimedEffect(racer)
   const spun = endCarBodySpin(arithmetic, ended.carBody)
@@ -328,6 +328,8 @@ const getRacerWarpStarted = (arithmetic: FloatArithmetic, racer: Racer): Racer =
 const getRacerWarpEnded = (racer: Racer): Racer =>
   Object.freeze({
     ...racer,
+    // 0x0043db60 sets the fade flag and the reset 4.
+    vehicle: Object.freeze({ ...racer.vehicle, flags: racer.vehicle.flags | 6 }),
     flags: (racer.flags & ~WARP_DISABLED_FLAG) >>> 0,
     carBody: racer.carBody.isScripted
       ? racer.carBody
