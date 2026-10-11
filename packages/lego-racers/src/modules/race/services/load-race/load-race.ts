@@ -1,3 +1,4 @@
+import { EMPTY_PROJECTILE_MODEL_DATA } from '../../types/projectile-model-data/projectile-model-data.ts'
 import { parseCheckpoints } from '../../../checkpoint/index.ts'
 import { loadCollisionObject } from '../../../collision/index.ts'
 import {
@@ -6,6 +7,7 @@ import {
   getComputerRacerRouteFileName,
   parseComputerRacerRoute,
 } from '../../../computer-racer-route/index.ts'
+import { parseEvents } from '../../../event/index.ts'
 import { parseHazards } from '../../../hazard/index.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import { parsePowerUps } from '../../../power-up/index.ts'
@@ -123,6 +125,7 @@ export const loadRaceDefinition = (
   const checkpointBytes = readNamed(description.checkpoints)
   const startPositionBytes = readNamed(description.startPositions)
   const powerUpBytes = readNamed(description.powerUpPlacements)
+  const eventBytes = readNamed(description.events)
   const timerBytes = readNamed(description.timers)
   const mainTriggerBytes = readNamed(description.mainTriggers)
   const environmentTriggerBytes = readNamed(description.environmentTriggers)
@@ -186,6 +189,7 @@ export const loadRaceDefinition = (
       powerUpBytes === null
         ? { bricks: [], enhancementBricks: [], readByteCount: 0 }
         : parsePowerUps(powerUpBytes, false),
+    events: eventBytes === null ? null : parseEvents(eventBytes, false),
     timers: timerBytes === null ? null : parseTimers(timerBytes),
     mainTriggers:
       mainTriggerBytes === null
@@ -199,5 +203,6 @@ export const loadRaceDefinition = (
     randomPosition: routeDraws.position,
     getGroundPoint: null,
     trackTargets: [],
+    projectileModelData: EMPTY_PROJECTILE_MODEL_DATA,
   })
 }

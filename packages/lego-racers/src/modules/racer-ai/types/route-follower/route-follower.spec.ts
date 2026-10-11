@@ -4,6 +4,7 @@ import { UnportableRouteError } from '../racer-ai-errors/racer-ai-errors.ts'
 import {
   advanceRouteFollower,
   createRouteFollower,
+  moveRouteFollower,
   setRouteFollowerSpeedFactor,
   startRouteFollowerAtLoop,
 } from './route-follower.ts'
@@ -124,5 +125,59 @@ describe('startRouteFollowerAtLoop', () => {
 
     // Assert
     expect(start).toThrow(UnportableRouteError)
+  })
+})
+
+describe('moveRouteFollower, 0x004a5750', () => {
+  const ZERO = { x: 0, y: 0, z: 0 }
+  const createStarted = () => startRouteFollowerAtLoop(SINGLE, createRouteFollower(null, 1), ROUTE)
+
+  it('keeps the follower where it is for a zero displacement', () => {
+    // Arrange
+    const follower = createStarted()
+
+    // Act
+    const moved = moveRouteFollower(SINGLE, follower, ZERO)
+
+    // Assert
+    expect(moved.time).toBe(32)
+    expect(moved.position).toEqual({ x: 10, y: 0, z: 0 })
+    expect(moved.previousRotation).toEqual({ x: 0, y: 0, z: 0, w: 1 })
+  })
+
+  it('moves along the segment by the part of the displacement in its direction', () => {
+    // Arrange
+    const follower = createStarted()
+
+    // Act
+    const moved = moveRouteFollower(SINGLE, follower, { x: 1, y: 5, z: 0 })
+
+    // Assert
+    expect(moved.time).toBe(64)
+    expect(moved.position).toEqual({ x: 11, y: 0, z: 0 })
+  })
+
+  it('refuses a displacement that passes the end of the segment or goes backwards', () => {
+    // Arrange
+    const follower = createStarted()
+
+    // Act
+    const past = (): unknown => moveRouteFollower(SINGLE, follower, { x: 5, y: 0, z: 0 })
+    const back = (): unknown => moveRouteFollower(SINGLE, follower, { x: -1, y: 0, z: 0 })
+
+    // Assert
+    expect(past).toThrow(UnportableRouteError)
+    expect(back).toThrow(UnportableRouteError)
+  })
+
+  it('leaves a follower without a route alone', () => {
+    // Arrange
+    const follower = createRouteFollower(null, 1)
+
+    // Act
+    const moved = moveRouteFollower(SINGLE, follower, ZERO)
+
+    // Assert
+    expect(moved).toBe(follower)
   })
 })

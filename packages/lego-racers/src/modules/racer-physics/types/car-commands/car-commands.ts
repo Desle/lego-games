@@ -1,10 +1,55 @@
-import { getFloatFromBits, getStoredScaledVector } from '../../../simulation-math/index.ts'
+import {
+  getFloatFromBits,
+  getStoredScaledVector,
+  getTruncatedInteger,
+} from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
+import { getRotationRow, setYawRate } from '../car-forces/car-forces.ts'
 import { CarRigidBodyFlag } from '../car-rigid-body/car-rigid-body.ts'
+import { removeAngularMomentumAlongAxis } from '../rigid-body-forces/rigid-body-forces.ts'
 import type { CarRigidBody } from '../racer-physics.types.ts'
 
 // 0x00448800: the flag-0x80 countdown starts at 600 ms (MOV [ECX + 0x6e0], 0x258).
 const FLAGGED_MILLISECONDS = 600
+// 0x004b02f8, 2π.
+const TURN = getFloatFromBits(0x40c90fdb)
+
+// Slot 9, 0x00448160 (thiscall: factor, rate, spin time): spins the car about rotation row 2. A spin
+// that is already running is left alone. The yaw momentum is removed twice (here and in 0x00445c30),
+// the period is `_ftol(2π / rate)` and the yaw timer `_ftol(period · factor)`; a spin time above zero
+// (at most the factor) also sets the spin timer to `_ftol(period · time)`. The spin sound is not modelled.
+export const startSpin = (
+  arithmetic: FloatArithmetic,
+  body: CarRigidBody,
+  factor: number,
+  rate: number,
+  spinTime: number
+): CarRigidBody => {
+  const { divide, multiply, getIsBelowOrEqual } = arithmetic
+  if ((body.flags & CarRigidBodyFlag.SPINNING) !== 0) return body
+  const steadied = removeAngularMomentumAlongAxis(arithmetic, body, getRotationRow(body, 2))
+  const period = getTruncatedInteger(divide(TURN, rate))
+  const turning = setYawRate(
+    arithmetic,
+    Object.freeze({ ...steadied, spinPeriod: period }),
+    rate,
+    getTruncatedInteger(multiply(period, factor))
+  )
+  const spinning = Object.freeze({
+    ...turning,
+    flags:
+      (turning.flags & ~CarRigidBodyFlag.DRIFTING) |
+      CarRigidBodyFlag.SPINNING |
+      CarRigidBodyFlag.SPIN_STARTED,
+  })
+  if (getIsBelowOrEqual(spinTime, 0)) return spinning
+  const limited = getIsBelowOrEqual(spinTime, factor) ? spinTime : factor
+  return Object.freeze({
+    ...spinning,
+    spinTimer: getTruncatedInteger(multiply(spinning.spinPeriod, limited)),
+  })
+}
+
 // 0x00449090: the lean factor goes back to 0.2 (0x004b0d80).
 const DEFAULT_LEAN_FACTOR = getFloatFromBits(0x3e4ccccd)
 

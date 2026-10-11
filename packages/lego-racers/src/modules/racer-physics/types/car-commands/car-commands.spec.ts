@@ -12,6 +12,7 @@ import {
   setLeaning,
   setThrottle,
   setTopSpeed,
+  startSpin,
 } from './car-commands.ts'
 
 const SINGLE = createFloatArithmetic(FpuPrecision.SINGLE)
@@ -72,5 +73,48 @@ describe('flag commands', () => {
     expect(withoutForce.flags).toBe(0)
     expect([flagged.flaggedTimer, flagged.flags]).toEqual([600, CarRigidBodyFlag.FLAGGED])
     expect([leaning.leanFactor, leaning.flags]).toEqual([0.7, CarRigidBodyFlag.LEANING])
+  })
+})
+
+describe('startSpin, 0x00448160', () => {
+  const RATE = Math.fround(0.01)
+
+  it('sets the spin period 2π / rate, the yaw timer period × factor and the spin flags', () => {
+    // Arrange
+    const drifting = { ...CAR, flags: CarRigidBodyFlag.DRIFTING }
+
+    // Act
+    const spinning = startSpin(SINGLE, drifting, 1, RATE, 0)
+
+    // Assert
+    expect(spinning.spinPeriod).toBe(628)
+    expect(spinning.yawTimer).toBe(628)
+    expect(spinning.flags).toBe(CarRigidBodyFlag.SPINNING | CarRigidBodyFlag.SPIN_STARTED)
+    expect(spinning.spinTimer).toBe(0)
+  })
+
+  it('starts the spin timer at period × spin time, at most period × factor', () => {
+    // Arrange
+    const half = startSpin(SINGLE, CAR, 1, RATE, 0.5)
+
+    // Act
+    const limited = startSpin(SINGLE, CAR, 1, RATE, 3)
+
+    // Assert
+    expect(half.spinTimer).toBe(314)
+    expect(limited.spinTimer).toBe(628)
+  })
+
+  it('turns the body about rotation row 2 (0x00445c30) and leaves a running spin alone', () => {
+    // Arrange
+    const spinning = startSpin(SINGLE, CAR, 2, RATE, 0)
+
+    // Act
+    const again = startSpin(SINGLE, spinning, 1, RATE, 0)
+
+    // Assert
+    expect(spinning.yawTimer).toBe(1256)
+    expect(spinning.angularMomentum.z).toBeGreaterThan(0)
+    expect(again).toBe(spinning)
   })
 })

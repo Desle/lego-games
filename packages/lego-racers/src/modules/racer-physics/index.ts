@@ -10,7 +10,9 @@ export {
   setLeaning,
   setThrottle,
   setTopSpeed,
+  startSpin,
 } from './types/car-commands/car-commands.ts'
+export { moveOutOfContact } from './types/contact-separation/contact-separation.ts'
 export { applyCarForces, endDrift, setYawRate } from './types/car-forces/car-forces.ts'
 export {
   CarRigidBodyFlag,

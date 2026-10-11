@@ -134,6 +134,18 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 - Public API (`index.ts`): `parseTimers`, `resolveTimerSecondValue`, `TimerDivideByZeroError`, `TimerKeyword`, and the `Timer` types
 - TIB timers (`0x00464aa0`, `0x00464750`).
 
+### `event`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `parseEvents`, `EventBlockKeyword`, `EventSectionKeyword`, `NO_SIGNAL`, and the `Event` types
+- EVB track events (`0x0045efa0` and its thirteen section readers).
+
+### `track-logic`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `createTrackLogic`, `runTrackLogic`, `updateTrackLogicFrame`, `tickTrackTimeEntries`, `updateTrackEvents`, `STATIC_TRACK_WORLD`, `TrackEventKind`, `TrackEventState`, and the `TrackLogic` types
+- Events, triggers, timers and the signal bus at runtime (`0x00461ef0`, `0x00462580`, `0x00464830`, `0x004648d0`).
+
 ### `emitter`
 
 - Layers: `controller`, `types`
@@ -220,6 +232,12 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 - Public API (`index.ts`): the route follower (`createRouteFollower`, `resetRouteFollower`, `startRouteFollowerAtLoop`, `advanceRouteFollower`, `setRouteFollowerSpeedFactor`), the sample decoders (`decodeRouteSample`, `getRouteSample*`), the speed code (`stepComputerSpeedFactor`, `getRampedTargetSpeedFactor`, `getReturnedLateralOffset`, `stepComputerBounce`, `getPushedSpeedState`, `getRestoredSpeedState`, `getReleasedSpeedState`, `CAR_BODY_*_FLAG`), rubber-banding (`createRubberBand`, `stepRubberBand`, `getRacerProgress`), personality (`getComputerPersonality`, `getComputerChance`, `PERSONALITY_SCALE`), power-up use (`updatePowerUpUse`, `decidePowerUpUse`, `PowerUpUseDecision`), taunts (`updateComputerTaunt`, `createComputerTimers`), `findNearestRacerInCone`, `getFloatToInteger`, `UnportableRouteError`, and their types
 - Computer racers play recorded routes back kinematically; they produce no control input. Depends on `simulation-math`, `random-table` and `computer-racer-route`.
 
+### `racer-collision`
+
+- Layers: `types`
+- Public API (`index.ts`): `getBoxOverlap`, `getBoxContact`, `getBoundingSphere`, `getBoundingInterval`, `getSpheresOverlap`, and the `OrientedBox`, `BoxOverlap`, `BoxContact`, `BoundingSphere` and `BoundingInterval` types
+- The geometry of car-against-car collisions (`0x00441790`, `0x00441330`, `0x004113d0`, `0x00411b90`): a separating-axis test of two oriented boxes, the contact point, and the bounding spheres of the broad phase. `racer` runs the sweep and the response on top. Depends on `simulation-math`.
+
 ### `power-ups`
 
 - Layers: `controller`, `events`, `types`
@@ -235,13 +253,13 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 ### `racer`
 
 - Layers: `controller`, `services`, `types`
-- Public API (`index.ts`): `stepRacerSet`, `RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED`, `applyRacerControls`, `updatePlayerController`, `createPlayerController`, `startRacerPowerSlide`, `stopRacerPowerSlide`, `readRacerTables`, `createCarBody`, `stepRacerRigidBody`, `createRacer`, `createRacerSet`, the car body and driver functions, `rankRacers`, `playRacerVoice`, `getTableCosine`, and the `Racer`, `CarBody`, `RacerDriver`, `RacerControls`, `RacerSet` types
-- `RacerSet_Step` (`0x0043c030`) and the player controls. Calls into code not ported yet (rigid body step, AI, power-ups, audio, vehicle effects) are typed dependencies that receive and return the whole racer set. Reuses `racer-ai` (rubber band, progress, taunt), `random-table` and `checkpoint`; depends on `simulation-math` and `racer-physics`.
+- Public API (`index.ts`): `stepRacerSet`, `RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED`, `applyRacerControls`, `updatePlayerController`, `createPlayerController`, `startRacerPowerSlide`, `stopRacerPowerSlide`, `readRacerTables`, `createCarBody`, `stepRacerRigidBody`, `collideRacers`, `followDriverRoute`, `updateVehicle`, `updatePlayerGuidance`, `notifyRacerContact`, `respondToRacerContact`, `assignDriverRoute`, `createRacer`, `createRacerSet`, the figure and vehicle functions, the car body and driver functions, `rankRacers`, `playRacerVoice`, `getTableCosine`, and the `Racer`, `CarBody`, `RacerDriver`, `RacerControls`, `RacerSet` types
+- `RacerSet_Step` (`0x0043c030`) and the player controls. Calls into code not ported yet (rigid body step, AI, power-ups, audio, vehicle effects) are typed dependencies that receive and return the whole racer set. Pass 4 uses `racer-collision` and the registry of `projectiles`. Reuses `racer-ai` (rubber band, progress, taunt, route follower), `random-table` and `checkpoint`; depends on `simulation-math` and `racer-physics`.
 
 ### `scene`
 
 - Layers: `controller`, `types`
-- Public API (`index.ts`): `loadScene`, `getWorldPaths`, `getRaceWorldPaths`, `getRaceSkyPath`, `getRaceBackgroundWorldPath`, `COMMON_DIRECTORY`, `SceneLinkError`, `ScenePathError`, the render-state enums (`ShadeMode`, `TextureOperation`, `CompareFunction`, `BlendFactor`, `TextureFilter`, `TextureAddressing`), `SceneInstanceKind`, `MissingBitmapReason`, and the `Scene` types
+- Public API (`index.ts`): `loadScene`, `loadModelScene`, `getWorldPaths`, `getRaceWorldPaths`, `getRaceSkyPath`, `getRaceBackgroundWorldPath`, `COMMON_DIRECTORY`, `SceneLinkError`, `ScenePathError`, the render-state enums (`ShadeMode`, `TextureOperation`, `CompareFunction`, `BlendFactor`, `TextureFilter`, `TextureAddressing`), `SceneInstanceKind`, `MissingBitmapReason`, and the `Scene` types
 - Links worlds into a renderable scene (`0x10017ac0`, `0x1002e640`) and derives each material's Direct3D state (`0x1000a2c0`). Depends on `jam-archive`, `world`, `texture-database`, `material`, `model`, `bitmap`, `targa`, `skeleton`, `animation` and `skeletal-animation`; free of DOM and rendering libraries.
 
 ### `named-record`
@@ -291,3 +309,39 @@ The package mirrors the original game's subsystems, one module per subsystem, so
 - Layers: `controller`, `services`, `types`
 - Public API (`index.ts`): `stepRace`, `createRace`, `updateRace`, `loadRaceDefinition`, `runHeadlessRace`, `RACE_STEP_DEPENDENCIES`, `IDLE_RACER_CONTROLS`, `NO_RACE_CONTACTS`, `RacePhase`, the phase timings, the racer transitions (`resetRacerForRace`, `releaseRacerAtStart`, `enterZoneZero`, `enterZoneOne`, `enterZoneTwo`, `getRacerAfterCheckpointTouch`, `convertRacerToComputer`), `getRacerAfterWrongWayCheck`, `getRacerAfterTargetGuidance`, `getLapGapMilliseconds`, `placeCarBodyOnRoute`, `stepScriptedCarBody`, `getStartFrame`, `getPlaceholderCarBodyDefinition`, and the `RaceState`, `RaceDefinition`, `RaceInputs`, `RaceEvent`, `RaceContacts` types
 - The race itself: `Race_RunLoop` (`0x00432540`) with its five timed states and `Race_Update` (`0x00435220`), wiring `racer`, `racer-ai`, `power-ups`, `random-table`, `racer-physics` and `collision` into one deterministic `stepRace(raceState, inputs, frameMilliseconds) → { raceState, events }`. Free of DOM, clocks and rendering. The `services/` layer loads a race from the player's own `LEGO.JAM` and `LEGORacers.exe` and runs it headless.
+
+### `frame-clock`
+
+- Layers: `controller`
+- Public API (`index.ts`): `createFrameClock`, `advanceFrameClock`, `MAXIMUM_FRAME_MILLISECONDS`, `MINIMUM_FRAME_MILLISECONDS`, the `FrameClock` types
+- The frame delta of `Application_PumpMessagesAndMeasureFrame` (`0x00416ef0`): whole milliseconds, capped at 100, the under-12 ms sleep as a minimum step. Pure; the caller passes the time.
+
+### `race-input`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `getRacerControls`, `DEFAULT_KEYBOARD_BINDINGS`, `GAMEPAD_BUTTON_BINDINGS`, `GAMEPAD_STEERING_AXIS_INDEX`, `RaceBinding`, the snapshot types
+- The nine player-controller bindings with the original default keyboard layout (table `0x004b0624`) and the joystick set-up of `0x0042e960`, mapped to `RacerControls`. Depends on `race` and `racer`.
+
+### `race-camera`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `createCamera`, `attachCamera`, `setCameraPreset`, `setCameraLookingBehind`, `requestCameraSnap`, `updateCamera`, `getCameraView`, `getCameraRacerView`, `CAMERA_PRESETS`, `CameraMode`, the camera types
+- `Camera_Update` (`0x00428540`) chase, cockpit and finish modes and the preset table `0x004b0328`. Pure; the viewer applies the returned eye, forward and up. Depends on `simulation-math` and `racer`.
+
+### `race-hud`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `getHudLayout`, `createHudState`, `getHudFrame`, `startHudCountdown`, `finishHud`, `formatHudTime`, `HudFont`, the HUD types
+- The HUD layout (`0x004261f0`, `0x00425e90`) and draw routine (`0x004263a0`) as draw commands: countdown, lap rows, place, wrong way, held power-up. Text sizes and image sizes come from the caller.
+
+### `race-audio`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `getIntroductionMusic`, `getRacingMusic`, `getFinishMusic`, `RACE_MUSIC_VOLUME`, `getRaceEventSounds`, `getCountdownSound`, `getPowerSlideSound`, `getSoundLocation`, `POWER_UP_SOUND_SITES`, `SoundBankKind`, the audio types
+- Which music track and which sound effect the race plays, with the address of each call. Pure; the caller decodes (`audio`) and plays.
+
+### `race-presentation`
+
+- Layers: `controller`, `types`
+- Public API (`index.ts`): `createRacePresentation`, `stepRacePresentation`, `getRacerPoses`, the presentation types
+- Ties `race` events and state to the player's camera, HUD, music and sounds, and gives each racer's pose. Depends on `race`, `racer`, `race-camera`, `race-hud`, `race-audio`.

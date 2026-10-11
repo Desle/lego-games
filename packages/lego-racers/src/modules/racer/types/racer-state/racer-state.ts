@@ -1,8 +1,17 @@
 import { createRubberBand, getRacerProgress } from '../../../racer-ai/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
 import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
+import { createFigure } from '../figure/figure.ts'
+import { createVehicle } from '../vehicle/vehicle.ts'
 import { createRacerDriver } from '../racer-driver/racer-driver.ts'
-import type { CarBody, DrivenCarBody, Racer, RacerSet, RacerSetContext } from '../racer.types.ts'
+import type {
+  CarBody,
+  DrivenCarBody,
+  Figure,
+  Racer,
+  RacerSet,
+  RacerSetContext,
+} from '../racer.types.ts'
 
 const COMPUTER_CONTROLLER = 2
 const NO_POWER_UP_CHANCE = 0xff
@@ -10,10 +19,12 @@ const LAP_SLOTS = 5
 const NO_CHECKPOINT = -1
 
 // Racer_Constructor 0x00436990 with its field reset 0x00436bd0; the car body comes from 0x00429020 and its attach.
-export const createRacer = (carBody: CarBody): Racer =>
+export const createRacer = (carBody: CarBody, figure: Figure = createFigure([], null)): Racer =>
   Object.freeze({
     carBody,
     driver: createRacerDriver(),
+    figure,
+    vehicle: createVehicle(),
     vehicleSlideAngle: 0,
     checkpointIndex: NO_CHECKPOINT,
     checkpointSide: 1,
@@ -46,9 +57,23 @@ export const createRacer = (carBody: CarBody): Racer =>
     savedPosition: ZERO_VECTOR3,
     savedVelocity: ZERO_VECTOR3,
     savedForward: ZERO_VECTOR3,
+    forceFeedback: Object.freeze({
+      isPresent: false,
+      strength: 0,
+      duration: 0,
+      phase: 0,
+      state: 0,
+      elapsed: 0,
+    }),
+    attackKind: 0,
+    reactionKind: 0,
+    timedEffectCharge: 0,
+    guidanceTarget: ZERO_VECTOR3,
+    contactTimerMilliseconds: null,
   })
 
-// RacerSet_Setup 0x0043b190 ends with 0x0043a450 (the rubber band; its bias is race +0x64c).
+// RacerSet_Setup 0x0043b190 ends with 0x0043a450 (the rubber band; its bias is race +0x64c). 0x0043b480 adds each
+// racer's collision node to the head of list +0x2c (0x0043aa40), so the list starts in reverse order.
 export const createRacerSet = (
   racers: readonly Racer[],
   randomPosition: RandomTablePosition,
@@ -58,6 +83,9 @@ export const createRacerSet = (
     racers: Object.freeze([...racers]),
     rubberBand: createRubberBand(rubberBandBias),
     randomPosition,
+    collisionOrder: Object.freeze(racers.map((_, index) => racers.length - 1 - index)),
+    registryEntries: Object.freeze([]),
+    registryContacts: Object.freeze([]),
   })
 
 export const getRacer = (racerSet: RacerSet, racerIndex: number): Racer => {
