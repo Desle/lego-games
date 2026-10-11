@@ -20,6 +20,9 @@ import {
   startCarBodyFlaggedState,
   startCarBodyFlip,
   startCarBodySpin,
+  getRacerWithColourShiftOverride,
+  WAND_COLOUR_SHIFT,
+  WAND_COLOUR_SHIFT_MILLISECONDS,
 } from '../../../racer/index.ts'
 import { getThrowImpulse } from '../../../projectiles/index.ts'
 import type { Racer } from '../../../racer/index.ts'
@@ -452,10 +455,14 @@ export const getRacerAfterPowerUpEvent = (
         carBody: startCarBodyFlip(arithmetic, racer.carBody, event.rate, event.milliseconds),
       })
     case 'power_ups.racer_struck_by_lightning':
-      return getRacerThrown(
-        arithmetic,
-        racer,
-        getThrowImpulse(arithmetic, racer.carBody.rigidBody.heading, WAND_THROW_POWER)
+      return getRacerWithColourShiftOverride(
+        getRacerThrown(
+          arithmetic,
+          racer,
+          getThrowImpulse(arithmetic, racer.carBody.rigidBody.heading, WAND_THROW_POWER)
+        ),
+        WAND_COLOUR_SHIFT,
+        WAND_COLOUR_SHIFT_MILLISECONDS
       )
     case 'power_ups.racer_released_by_lightning':
       return Object.freeze({ ...racer, carBody: endCarBodyFlaggedState(racer.carBody) })

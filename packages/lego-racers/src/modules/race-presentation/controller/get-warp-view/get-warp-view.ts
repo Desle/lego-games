@@ -1,3 +1,4 @@
+import { getDisplayedColourShift } from '../../../racer/index.ts'
 import { EffectState, PowerUpEffectKind } from '../../../power-ups/index.ts'
 import {
   getCameraRacerView,
@@ -64,7 +65,7 @@ export const getWarpView = (
     driverPosition,
     wheelAnimation: getFigureAnimationState(racer.figure),
     driverAnimation: getFigureAnimationState(racer.vehicle.driverFigure),
-    colourShift: racer.colourShift,
+    colourShift: getDisplayedColourShift(racer),
   })
   const racerView = Object.freeze({
     ...getCameraRacerView(racer, turboLevel),
