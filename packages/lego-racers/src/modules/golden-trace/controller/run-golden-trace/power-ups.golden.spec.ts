@@ -9,11 +9,7 @@ import { openJamArchive } from '../../../jam-archive/index.ts'
 import { getCircuitRacerCodes } from '../../../race/index.ts'
 import { getIsOriginalTraceAvailable } from '../../services/original-trace/original-trace.ts'
 import type { PowerUpGrant, TraceFrameInput } from '../../types/golden-trace.types.ts'
-import {
-  createTraceScenario,
-  getIdleFrames,
-  holdBindings,
-} from '../trace-scenarios/trace-scenarios.ts'
+import { createTraceScenario, holdBindings } from '../trace-scenarios/trace-scenarios.ts'
 import { formatDivergence, runGoldenTrace } from './run-golden-trace.ts'
 
 const TRACE_TIMEOUT_MILLISECONDS = 3_600_000
@@ -26,19 +22,30 @@ const LEVELS = (process.env['POWER_UP_LEVELS'] ?? '0,1,2,3').split(',').map(Numb
 const isComputerGranted = process.env['POWER_UP_COMPUTERS'] === '1'
 const RACER_COUNT = 6
 // The racers are released at frame 160; the grant comes just after and the use key is pressed for three frames.
-const GRANT_FRAME = 162
-const USE_FRAME = 165
+const GRANT_FRAME = Number(process.env['POWER_UP_GRANT_FRAME'] ?? '162')
+const USE_FRAME = Number(process.env['POWER_UP_USE_FRAME'] ?? '165')
 const USE_FRAME_COUNT = 3
 const REPORTED_FIELD_COUNT = 14
+
+const getScanCodes = (bindings: readonly ('accelerate' | 'use_power_up')[]): readonly number[] =>
+  holdBindings(1, bindings)[0]?.scanCodes ?? []
 
 const getIsGamePresent = (): boolean =>
   getIsOriginalJamPresent() && getIsOriginalExecutablePresent() && getIsOriginalTraceAvailable()
 
-const getFrames = (): readonly TraceFrameInput[] => [
-  ...getIdleFrames(USE_FRAME),
-  ...holdBindings(USE_FRAME_COUNT, ['accelerate', 'use_power_up']),
-  ...holdBindings(AFTER_START_FRAMES - USE_FRAME - USE_FRAME_COUNT + 160, ['accelerate']),
-]
+// The player accelerates from ACCELERATE_FRAME (the use frame unless POWER_UP_ACCELERATE_FRAME says otherwise) and
+// presses the use key for three frames.
+const ACCELERATE_FRAME = Number(process.env['POWER_UP_ACCELERATE_FRAME'] ?? String(USE_FRAME))
+const getFrames = (): readonly TraceFrameInput[] =>
+  Array.from({ length: AFTER_START_FRAMES + 160 }, (_, frame) => ({
+    milliseconds: 33,
+    scanCodes: [
+      ...(frame >= ACCELERATE_FRAME ? getScanCodes(['accelerate']) : []),
+      ...(frame >= USE_FRAME && frame < USE_FRAME + USE_FRAME_COUNT
+        ? getScanCodes(['use_power_up'])
+        : []),
+    ],
+  }))
 
 const getGrants = (kind: number, level: number): readonly PowerUpGrant[] =>
   Array.from({ length: isComputerGranted ? RACER_COUNT : 1 }, (_, racer) => ({

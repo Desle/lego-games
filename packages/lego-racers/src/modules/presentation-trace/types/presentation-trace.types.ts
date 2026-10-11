@@ -17,6 +17,13 @@ export type PresentationScenario = {
   // The frames whose draws are recorded (draws are large); null records every frame.
   readonly recordFrames: readonly number[] | null
   readonly isRenderRecorded: boolean
+  // Bricks handed to racers at a frame (the golden trace's grants).
+  readonly powerUpGrants?: readonly {
+    readonly frame: number
+    readonly racer: number
+    readonly kind: number
+    readonly level: number
+  }[]
 }
 
 // A scripted visit to the front end: the keys of each frame are tapped (pressed and released within it).

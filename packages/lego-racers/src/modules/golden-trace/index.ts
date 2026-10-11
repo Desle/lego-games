@@ -2,6 +2,7 @@ export { compareTraces } from './controller/compare-traces/compare-traces.ts'
 export {
   getFrameControls,
   getPortTrace,
+  getRaceStateWithGrants,
   getTraceFields,
 } from './controller/port-trace/port-trace.ts'
 export { formatDivergence, runGoldenTrace } from './controller/run-golden-trace/run-golden-trace.ts'
@@ -22,6 +23,7 @@ export type {
   GoldenTraceResult,
   GoldenTraceScenario,
   OriginalTrace,
+  PowerUpGrant,
   TraceComparison,
   TraceFields,
   TraceFrame,

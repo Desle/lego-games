@@ -282,7 +282,10 @@ export const getFrameControls = (frame: TraceFrameInput) =>
   })
 
 // The racer holds the granted brick at the granted level, as in the original (racer +0xccc and +0xd58).
-const getRaceStateWithGrants = (raceState: RaceState, grants: readonly PowerUpGrant[]): RaceState =>
+export const getRaceStateWithGrants = (
+  raceState: RaceState,
+  grants: readonly PowerUpGrant[]
+): RaceState =>
   grants.reduce((current, grant) => {
     const racer = current.racerSet.racers[grant.racer]
     const powerUpRacer = current.powerUpStep.world.racers[grant.racer]
