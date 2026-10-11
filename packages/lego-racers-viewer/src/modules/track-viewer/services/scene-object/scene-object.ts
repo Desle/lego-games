@@ -1,6 +1,6 @@
 import type { Scene, SceneInstance } from '@lego-games/lego-racers/scene'
 import { SceneInstanceKind } from '@lego-games/lego-racers/scene'
-import { AmbientLight, Box3, Color, DirectionalLight, Group } from 'three'
+import { Box3, Group } from 'three'
 import type { BufferGeometry, Material } from 'three'
 import { applyColourShift, getMeshGeometries } from './colour-shift.ts'
 import type { ColourShiftLike, Vector3Like } from '../race-viewport/race-viewport.types.ts'
@@ -14,18 +14,6 @@ import type {
   SceneObjectContext,
   SceneObjectOptions,
 } from './scene-object.types.ts'
-
-const createLights = (scene: Scene): readonly (AmbientLight | DirectionalLight)[] => [
-  ...scene.ambientLights.map(
-    ({ color: [red, green, blue] }) =>
-      new AmbientLight(new Color(red / 255, green / 255, blue / 255))
-  ),
-  ...scene.directionalLights.map(({ color: [red, green, blue], direction }) => {
-    const light = new DirectionalLight(new Color(red / 255, green / 255, blue / 255))
-    light.position.set(-direction.x, -direction.y, -direction.z)
-    return light
-  }),
-]
 
 // The mesh of one level of an instance; a skeleton instance without a mesh (a camera's skeleton) has none.
 const getInstanceLevelMesh = (
@@ -116,7 +104,6 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
   }
   group.updateMatrixWorld(true)
   const bounds = new Box3().setFromObject(group)
-  for (const light of createLights(scene)) group.add(light)
   const dispose = () => {
     for (const geometry of context.geometries.values()) geometry.dispose()
     for (const material of context.materials.values()) material.dispose()

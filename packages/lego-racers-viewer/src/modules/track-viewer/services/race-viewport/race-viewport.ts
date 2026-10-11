@@ -82,8 +82,6 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     const parts = [wheels, body, driver].filter((part): part is ModelObject => part !== null)
     for (const part of parts) {
       trackScene.add(part.group)
-      // A car's lights are the world's, not the car's: they stay where they are while the car turns.
-      for (const light of part.group.getObjectsByProperty('isLight', true)) trackScene.add(light)
     }
     return { wheels, body, driver, objects: parts.map((part) => part.object) }
   })
