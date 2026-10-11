@@ -1,0 +1,229 @@
+import { advanceFrameClock, createFrameClock } from '@lego-games/lego-racers/frame-clock'
+import {
+  createRace,
+  IDLE_RACER_CONTROLS,
+  NO_RACE_CONTACTS,
+  stepRace,
+} from '@lego-games/lego-racers/race'
+import type { RaceState } from '@lego-games/lego-racers/race'
+import { getHudLayout } from '@lego-games/lego-racers/race-hud'
+import { getRacerControls } from '@lego-games/lego-racers/race-input'
+import {
+  createRacePresentation,
+  getRacerPoses,
+  stepRacePresentation,
+} from '@lego-games/lego-racers/race-presentation'
+import type { HudContext, RacePresentation } from '@lego-games/lego-racers/race-presentation'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { DEVELOPMENT_GAME_FILE_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
+import {
+  createHudImageUrls,
+  createHudTextMeasure,
+} from '../../services/hud-resources/hud-resources.ts'
+import { getDevelopmentJam } from '../../services/jam-file/jam-file.ts'
+import { createRaceAudioPlayer } from '../../services/race-audio-player/race-audio-player.ts'
+import { loadRaceAssets } from '../../services/race-assets/race-assets.ts'
+import type { LoadedGameFiles, RaceAssets } from '../../services/race-assets/race-assets.types.ts'
+import { createRaceInputSource } from '../../services/race-input-source/race-input-source.ts'
+import { createRaceViewport } from '../../services/race-viewport/race-viewport.ts'
+import { RaceStatus } from '../../types/race-status/race-status.ts'
+import type { RaceController, RaceScreen } from './race-controller.types.ts'
+
+// The race is drawn at 4:3 and the HUD is laid out for the same size.
+export const RACE_STAGE_SIZE = Object.freeze({ width: 800, height: 600 })
+const EXECUTABLE_NAME = 'LEGORacers.exe'
+const JAM_NAME = 'LEGO.JAM'
+const HOLDER_IMAGE_NAME = 'HOLDER'
+const FALLBACK_HOLDER_SIZE = Object.freeze({ width: 64, height: 64 })
+
+const INITIAL_SCREEN: RaceScreen = Object.freeze({
+  status: RaceStatus.IDLE,
+  errorMessage: null,
+  phase: null,
+  hudCommands: [],
+  hudImageUrls: new Map(),
+  lapCount: 0,
+})
+
+const getErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error)
+
+const fetchBytes = async (url: string): Promise<Uint8Array> => {
+  const response = await fetch(url)
+  if (!response.ok) throw new Error(await response.text())
+  return new Uint8Array(await response.arrayBuffer())
+}
+
+// The dev server hands out LEGORacers.exe and the tunes next to the local LEGO.JAM.
+const getDevelopmentGameFiles = async (): Promise<LoadedGameFiles> => {
+  const jam = await getDevelopmentJam()
+  const executable = await fetchBytes(`${DEVELOPMENT_GAME_FILE_ROUTE}/${EXECUTABLE_NAME}`)
+  const tuneNames = ['start', 'royal', 'lose', 'win', 'knight', 'moat', 'armor'].map(
+    (name) => `${name}.tun`
+  )
+  const tunes = await Promise.all(
+    tuneNames.map(
+      async (name) => [name, await fetchBytes(`${DEVELOPMENT_GAME_FILE_ROUTE}/${name}`)] as const
+    )
+  )
+  return { jam, files: { executable, tunes: new Map(tunes) } }
+}
+
+const getChosenGameFiles = async (files: readonly File[]): Promise<LoadedGameFiles> => {
+  const find = (name: string) =>
+    files.find((file) => file.name.toLowerCase() === name.toLowerCase())
+  const jamFile = find(JAM_NAME)
+  const executableFile = find(EXECUTABLE_NAME)
+  if (jamFile === undefined || executableFile === undefined) {
+    throw new Error(`Choose ${JAM_NAME} and ${EXECUTABLE_NAME} (and the .tun music files).`)
+  }
+  const tunes = await Promise.all(
+    files
+      .filter((file) => file.name.toLowerCase().endsWith('.tun'))
+      .map(
+        async (file) => [file.name.toLowerCase(), new Uint8Array(await file.arrayBuffer())] as const
+      )
+  )
+  return {
+    jam: new Uint8Array(await jamFile.arrayBuffer()),
+    files: {
+      executable: new Uint8Array(await executableFile.arrayBuffer()),
+      tunes: new Map(tunes),
+    },
+  }
+}
+
+const getHudContext = (assets: RaceAssets): HudContext => {
+  const measureText = createHudTextMeasure()
+  const getString = (stringId: number) => assets.getString(stringId)
+  const holder = assets.hudImages.get(HOLDER_IMAGE_NAME) ?? FALLBACK_HOLDER_SIZE
+  return {
+    layout: getHudLayout({
+      screenWidth: RACE_STAGE_SIZE.width,
+      screenHeight: RACE_STAGE_SIZE.height,
+      measureText,
+      getString,
+      holderSize: { width: holder.width, height: holder.height },
+    }),
+    getString,
+    imageNames: assets.imageNames,
+    getImageSize: (name) => assets.hudImages.get(name.toUpperCase()) ?? null,
+    measureText,
+  }
+}
+
+// Runs a race live: the original's frame clock feeds `stepRace`, the presentation module turns each step into the
+// camera, HUD, music and sounds, and the services draw and play them.
+export const useRaceController = (): RaceController => {
+  const containerReference = useRef<HTMLDivElement | null>(null)
+  const [screen, setScreen] = useState<RaceScreen>(INITIAL_SCREEN)
+  const [assets, setAssets] = useState<RaceAssets | null>(null)
+
+  const startRace = useCallback((getFiles: () => Promise<LoadedGameFiles>) => {
+    setAssets(null)
+    setScreen({ ...INITIAL_SCREEN, status: RaceStatus.LOADING })
+    getFiles()
+      // Lets the loading state paint before the synchronous load.
+      .then(({ jam, files }) =>
+        window.setTimeout(() => {
+          try {
+            setAssets(loadRaceAssets(jam, files))
+          } catch (error) {
+            setScreen({
+              ...INITIAL_SCREEN,
+              status: RaceStatus.FAILED,
+              errorMessage: getErrorMessage(error),
+            })
+          }
+        }, 0)
+      )
+      .catch((error: unknown) =>
+        setScreen({
+          ...INITIAL_SCREEN,
+          status: RaceStatus.FAILED,
+          errorMessage: getErrorMessage(error),
+        })
+      )
+  }, [])
+
+  useEffect(() => {
+    const container = containerReference.current
+    if (assets === null || container === null) return undefined
+    const viewport = createRaceViewport(container, assets, RACE_STAGE_SIZE)
+    const input = createRaceInputSource()
+    const audio = createRaceAudioPlayer(assets)
+    const hudContext = getHudContext(assets)
+    const hudImageUrls = createHudImageUrls(assets.hudImages)
+    const resumeAudio = () => audio.resume()
+    window.addEventListener('keydown', resumeAudio)
+    let raceState: RaceState = createRace(assets.definition)
+    const started = createRacePresentation(raceState, assets.musicNames.length)
+    let presentation: RacePresentation = started.presentation
+    let clock = createFrameClock()
+    let animationFrame = 0
+    audio.playMusic(started.music)
+    setScreen({
+      ...INITIAL_SCREEN,
+      status: RaceStatus.RUNNING,
+      phase: raceState.phase,
+      hudImageUrls,
+      lapCount: raceState.lapCount,
+    })
+
+    const onFrame = (time: number) => {
+      animationFrame = requestAnimationFrame(onFrame)
+      const advance = advanceFrameClock(clock, time)
+      clock = advance.clock
+      if (advance.frameMilliseconds !== null && raceState.isRunning) {
+        const controls = getRacerControls(input.read())
+        const step = stepRace(
+          raceState,
+          { controls: [controls], contacts: NO_RACE_CONTACTS },
+          advance.frameMilliseconds
+        )
+        raceState = step.raceState
+        const frame = stepRacePresentation(
+          presentation,
+          step,
+          { ...IDLE_RACER_CONTROLS, ...controls },
+          advance.frameMilliseconds,
+          hudContext
+        )
+        presentation = frame.presentation
+        for (const sound of frame.sounds) audio.playSound(sound)
+        if (frame.music !== null) audio.playMusic(frame.music)
+        viewport.update(getRacerPoses(raceState), frame.cameraView)
+        viewport.animate(advance.frameMilliseconds)
+        setScreen((previous) => ({
+          ...previous,
+          phase: raceState.phase,
+          hudCommands: frame.hudFrame?.commands ?? [],
+        }))
+      }
+      viewport.render()
+    }
+    animationFrame = requestAnimationFrame(onFrame)
+    return () => {
+      cancelAnimationFrame(animationFrame)
+      window.removeEventListener('keydown', resumeAudio)
+      input.dispose()
+      audio.dispose()
+      viewport.dispose()
+    }
+  }, [assets])
+
+  return {
+    ...screen,
+    containerReference,
+    isDevelopmentFilesAvailable: import.meta.env.DEV,
+    // A production build replaces DEV with false and drops the development fetches entirely.
+    onDevelopmentRaceRequested: import.meta.env.DEV
+      ? () => startRace(getDevelopmentGameFiles)
+      : () => undefined,
+    onGameFilesChosen: (files) => startRace(() => getChosenGameFiles(files)),
+    onRaceStopped: () => {
+      setAssets(null)
+      setScreen(INITIAL_SCREEN)
+    },
+  }
+}

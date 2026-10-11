@@ -17,6 +17,8 @@ Every rule is enforced by a check. When one fails, its output ends in a `Fix:` l
 
 In development the picker also offers **Load the development LEGO.JAM**: the dev server (`vite.config.ts`, `apply: 'serve'`) serves `original-files/Lego_Racers_Win_Files_EN/Game Files/LEGO.JAM`, or `LEGO_JAM_PATH`, at `/__development/lego.jam`. The route does not exist in a production build and the button is compiled out of it (`import.meta.env.DEV`).
 
+In development the race mode also uses `/__development/game-files/<name>`, which serves `LEGORacers.exe` and the `.tun` files next to the JAM (same plugin rules).
+
 ### Where code goes
 
 ```
