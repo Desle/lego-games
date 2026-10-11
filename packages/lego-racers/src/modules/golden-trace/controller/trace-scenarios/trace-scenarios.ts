@@ -41,6 +41,7 @@ export const createTraceScenario = (request: ScenarioRequest): GoldenTraceScenar
     isMirrored: request.isMirrored ?? false,
     precision: request.precision ?? 'auto',
     frames: request.frames,
+    powerUpGrants: request.powerUpGrants ?? [],
   })
 
 export const getIdleFrames = (count: number): readonly TraceFrameInput[] => holdBindings(count, [])

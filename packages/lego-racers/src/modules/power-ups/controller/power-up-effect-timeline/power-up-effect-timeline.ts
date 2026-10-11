@@ -1,3 +1,4 @@
+import type { PowerUpEvent } from '../../events/power-up.events.types.ts'
 import { RaceModeFlag } from '../../types/brick-kind/brick-kind.ts'
 import {
   EffectState,
@@ -116,6 +117,22 @@ const advanceTurbo = (
     : step
 }
 
+// 0x004573a0: the owner's car body flips (0x00429cf0, rate 0.0015, 150 ms) as the slick drops.
+const OIL_LANDING_FLIP_RATE = Math.fround(0.0015)
+const OIL_LANDING_FLIP_MILLISECONDS = 150
+
+const getOilLandingFlip = (effect: PowerUpEffect): readonly PowerUpEvent[] =>
+  effect.ownerRacer === null
+    ? []
+    : [
+        {
+          type: 'power_ups.racer_flipped',
+          racer: effect.ownerRacer,
+          rate: OIL_LANDING_FLIP_RATE,
+          milliseconds: OIL_LANDING_FLIP_MILLISECONDS,
+        },
+      ]
+
 const getOwnerEvent = (effect: PowerUpEffect, type: OwnerEventType): readonly OwnerEvent[] =>
   effect.ownerRacer === null ? [] : [{ type, racer: effect.ownerRacer }]
 
@@ -204,7 +221,14 @@ export const retractGrapple = (step: PowerUpStep, effect: PowerUpEffect): PowerU
   getStepWithEvents(
     getWithState(step, effect, EffectState.FINAL_STAGE, 500),
     effect.state === EffectState.ENDING
-      ? [{ type: 'power_ups.grapple_released', effect: effect.id }]
+      ? [
+          {
+            type: 'power_ups.grapple_released',
+            effect: effect.id,
+            victim: effect.targetRacer,
+            owner: effect.ownerRacer,
+          },
+        ]
       : []
   )
 
@@ -225,7 +249,10 @@ export const advancePowerUpEffect = (
       // 0x004573a0: the slick lands for 10 s and its bubble emitter starts.
       return effect.state === EffectState.STARTING
         ? startEffectEmitter(
-            getWithState(step, effect, EffectState.ACTIVE, 10000),
+            getStepWithEvents(
+              getWithState(step, effect, EffectState.ACTIVE, 10000),
+              getOilLandingFlip(effect)
+            ),
             context.arithmetic,
             effect.id,
             'oilbub'

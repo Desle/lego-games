@@ -45,6 +45,7 @@ export {
   createExplosionPool,
   ExplosionState,
   getBlastImpulse,
+  getThrowImpulse,
 } from './types/explosion/explosion.ts'
 export type {
   BlastTarget,

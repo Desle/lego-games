@@ -134,7 +134,12 @@ describe('hitRacerWithProjectile', () => {
     const hit = hitRacerWithProjectile(step, createContext(), getHead(step).id, 1, DIRECTION)
 
     // Assert
-    expect(hit.events[0]).toEqual({ type: 'power_ups.racer_spun_out', racer: 1, strength: 2 })
+    expect(hit.events[0]).toEqual({
+      type: 'power_ups.racer_spun_out',
+      racer: 1,
+      strength: 2,
+      spinTime: 0,
+    })
   })
 
   it('a grapple latches on for 4000 ms (0x004545d0)', () => {
@@ -164,7 +169,12 @@ describe('touchHazardEffect', () => {
 
     // Assert
     expect(getHead(touched).state).toBe(EffectState.FINISHED)
-    expect(touched.events[0]).toEqual({ type: 'power_ups.racer_spun_out', racer: 1, strength: 1 })
+    expect(touched.events[0]).toEqual({
+      type: 'power_ups.racer_spun_out',
+      racer: 1,
+      strength: 1,
+      spinTime: 1,
+    })
   })
 
   it('never affects its owner', () => {

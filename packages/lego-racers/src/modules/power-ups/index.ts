@@ -25,11 +25,13 @@ export {
 } from './controller/power-up-effect-timeline/power-up-effect-timeline.ts'
 export {
   createPowerUpEffects,
+  getEffectStateNumber,
   getStepWithAttachmentSlot,
   getStepWithAttachmentSlotFreed,
   getStepWithRacerEffectsFinished,
   getStepWithRacerWarpsFinished,
   NoPowerUpEffectToTakeError,
+  POWER_UP_EFFECT_POOL_ORDER,
 } from './controller/power-up-effects/power-up-effects.ts'
 export {
   getEffect,

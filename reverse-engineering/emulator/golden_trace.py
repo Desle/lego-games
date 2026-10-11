@@ -18,6 +18,7 @@ from unicorn.x86_const import UC_X86_REG_FPCW  # noqa: E402
 
 import boot  # noqa: E402
 import computer_trace  # noqa: E402
+import power_up_trace  # noqa: E402
 import race_session  # noqa: E402
 
 APPLICATION_BASE = 0x004C4A38 + 4
@@ -153,6 +154,7 @@ def snapshot_fields(machine, race: int, racer_count: int, local_players: int) ->
         fields[f"racer{index}.display.position"] = read_words(machine, display + 0x4C, 3)
         fields[f"racer{index}.display.rotation"] = read_words(machine, display + 0x28, 9)
     computer_trace.snapshot_computer_fields(machine, fields, racers, race + RACER_SET_OFFSET, racer_count)
+    power_up_trace.snapshot_power_up_fields(machine, fields, race, racers, racer_count)
     for index in range(local_players):
         controller = race + CONTROLLER_OFFSET + CONTROLLER_STRIDE * index
         for name, offset, count in CONTROLLER_FIELDS:
@@ -177,6 +179,7 @@ class TraceRun:
         self.racer_count = machine.read_u32(race + RACER_SET_OFFSET + 0x144)
         self.pump_count = 0
         self.held_keys = set()
+        self.grants = scenario.get("powerUpGrants", [])
         self.out = sys.stdout
 
     def on_pump(self) -> None:
@@ -192,6 +195,12 @@ class TraceRun:
             machine.request_stop("trace complete")
             return
         frame = self.frames[index]
+        for grant in self.grants:
+            if grant["frame"] == index:
+                racers = machine.read_u32(self.race + RACER_SET_OFFSET + 0x140)
+                racer = racers + 0xE34 * grant["racer"]
+                machine.write_u32(racer + 0xCCC, grant["kind"])
+                machine.write_u32(racer + 0xD58, grant["level"])
         wanted = set(frame.get("keys", []))
         for code in sorted(wanted - self.held_keys):
             machine.com.send_key(code, True)

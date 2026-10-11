@@ -28,7 +28,7 @@ import type {
 } from './power-up-effects.types.ts'
 
 // The order 0x004590f0 links the pools in.
-const POOL_ORDER: readonly PowerUpEffectKindValue[] = Object.freeze([
+export const POWER_UP_EFFECT_POOL_ORDER: readonly PowerUpEffectKindValue[] = Object.freeze([
   PowerUpEffectKind.MAGNET,
   PowerUpEffectKind.OIL_SLICK,
   PowerUpEffectKind.BARREL,
@@ -74,12 +74,12 @@ const createIdleEffect = (id: number, kind: PowerUpEffectKindValue): PowerUpEffe
 
 // 0x00457cf0 → 0x00457d30 (pool sizes) and 0x004590f0 (free lists, first object at the head).
 export const createPowerUpEffects = (isSplitScreen: boolean): PowerUpEffects => {
-  const kinds = POOL_ORDER.flatMap((kind) =>
+  const kinds = POWER_UP_EFFECT_POOL_ORDER.flatMap((kind) =>
     Array.from({ length: POWER_UP_EFFECT_POOL_SIZES[kind][isSplitScreen ? 0 : 1] }, () => kind)
   )
   const effects = Object.freeze(kinds.map((kind, id) => createIdleEffect(id, kind)))
   const freeEffectIds = Object.fromEntries(
-    POOL_ORDER.map((kind) => [
+    POWER_UP_EFFECT_POOL_ORDER.map((kind) => [
       kind,
       Object.freeze(effects.filter((effect) => effect.kind === kind).map((effect) => effect.id)),
     ])

@@ -104,7 +104,7 @@ const hitWithExplodingProjectile = (
     : getStepWithVictimHit(
         effect.kind === PowerUpEffectKind.ROCKET
           ? getStepWithEvents(step, [
-              { type: 'power_ups.racer_spun_out', racer: victim, strength: 2 },
+              { type: 'power_ups.racer_spun_out', racer: victim, strength: 2, spinTime: 0 },
             ])
           : step,
         context,
@@ -256,7 +256,7 @@ const hitWithHazard = (
     return getStepWithEvents(
       getStepWithEffect(step, { ...effect, state: EffectState.FINISHED, timerMilliseconds: 0 }),
       [
-        { type: 'power_ups.racer_spun_out', racer: victim, strength: 1 },
+        { type: 'power_ups.racer_spun_out', racer: victim, strength: 1, spinTime: 1 },
         { type: 'power_ups.racer_hit', racer: victim },
       ]
     )

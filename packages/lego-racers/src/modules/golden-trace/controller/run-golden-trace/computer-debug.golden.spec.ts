@@ -41,6 +41,7 @@ describe('golden trace debug', () => {
         isMirrored: raw.isMirrored,
         precision: 'auto',
         frames: raw.frames.map((frame) => ({ milliseconds: frame.dt, scanCodes: frame.keys })),
+        powerUpGrants: [],
       }
       const original = await readOriginalTrace(scenario)
       const definition = loadRaceDefinition(readOriginalJam(), readOriginalExecutable(), {

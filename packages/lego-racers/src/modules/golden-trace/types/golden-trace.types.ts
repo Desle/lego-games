@@ -7,6 +7,15 @@ export type TraceFrameInput = {
   readonly scanCodes: readonly number[]
 }
 
+// A racer is handed a power-up brick of this kind (1 to 4: projectile, shield, turbo, hazard) at this enhancement level
+// (0 to 3) just before the frame runs, in the original (racer +0xccc and +0xd58) and in the port alike.
+export type PowerUpGrant = {
+  readonly frame: number
+  readonly racer: number
+  readonly kind: number
+  readonly level: number
+}
+
 export type GoldenTraceScenario = {
   readonly name: string
   readonly raceFolder: string
@@ -21,6 +30,7 @@ export type GoldenTraceScenario = {
   // 'auto' lets the original's DDSCL_FPUSETUP choose (24-bit); the port then runs single precision.
   readonly precision: FpuPrecisionValue | 'auto'
   readonly frames: readonly TraceFrameInput[]
+  readonly powerUpGrants: readonly PowerUpGrant[]
 }
 
 // The 32-bit words of every observed field, by name: floats as their IEEE bits.
@@ -79,4 +89,5 @@ export type ScenarioRequest = {
   readonly circuitName?: string
   readonly isMirrored?: boolean
   readonly racerCount?: number
+  readonly powerUpGrants?: readonly PowerUpGrant[]
 }

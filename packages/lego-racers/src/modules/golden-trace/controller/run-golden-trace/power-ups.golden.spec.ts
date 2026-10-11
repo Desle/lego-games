@@ -1,0 +1,87 @@
+import { writeFileSync } from 'node:fs'
+import {
+  getIsOriginalExecutablePresent,
+  getIsOriginalJamPresent,
+  readOriginalExecutable,
+  readOriginalJam,
+} from '../../../../shared/testing/original-files.ts'
+import { openJamArchive } from '../../../jam-archive/index.ts'
+import { getCircuitRacerCodes } from '../../../race/index.ts'
+import { getIsOriginalTraceAvailable } from '../../services/original-trace/original-trace.ts'
+import type { PowerUpGrant, TraceFrameInput } from '../../types/golden-trace.types.ts'
+import {
+  createTraceScenario,
+  getIdleFrames,
+  holdBindings,
+} from '../trace-scenarios/trace-scenarios.ts'
+import { formatDivergence, runGoldenTrace } from './run-golden-trace.ts'
+
+const TRACE_TIMEOUT_MILLISECONDS = 3_600_000
+const REPORT_PATH = process.env['POWER_UP_REPORT'] ?? ''
+const RACE_FOLDER = process.env['POWER_UP_RACE'] ?? 'RACEC0R0'
+const CIRCUIT_NAME = process.env['POWER_UP_CIRCUIT'] ?? 'c1'
+const AFTER_START_FRAMES = Number(process.env['POWER_UP_FRAMES'] ?? '400')
+const KINDS = (process.env['POWER_UP_KINDS'] ?? '1,2,3,4').split(',').map(Number)
+const LEVELS = (process.env['POWER_UP_LEVELS'] ?? '0,1,2,3').split(',').map(Number)
+const isComputerGranted = process.env['POWER_UP_COMPUTERS'] === '1'
+const RACER_COUNT = 6
+// The racers are released at frame 160; the grant comes just after and the use key is pressed for three frames.
+const GRANT_FRAME = 162
+const USE_FRAME = 165
+const USE_FRAME_COUNT = 3
+const REPORTED_FIELD_COUNT = 14
+
+const getIsGamePresent = (): boolean =>
+  getIsOriginalJamPresent() && getIsOriginalExecutablePresent() && getIsOriginalTraceAvailable()
+
+const getFrames = (): readonly TraceFrameInput[] => [
+  ...getIdleFrames(USE_FRAME),
+  ...holdBindings(USE_FRAME_COUNT, ['accelerate', 'use_power_up']),
+  ...holdBindings(AFTER_START_FRAMES - USE_FRAME - USE_FRAME_COUNT + 160, ['accelerate']),
+]
+
+const getGrants = (kind: number, level: number): readonly PowerUpGrant[] =>
+  Array.from({ length: isComputerGranted ? RACER_COUNT : 1 }, (_, racer) => ({
+    frame: GRANT_FRAME,
+    racer,
+    kind,
+    level,
+  }))
+
+describe('golden trace: power-ups', () => {
+  it.skipIf(!getIsGamePresent())(
+    'reports where the power-ups diverge',
+    async () => {
+      const jam = readOriginalJam()
+      const archive = openJamArchive(jam)
+      const racerCodes = getCircuitRacerCodes(archive.readFile, RACE_FOLDER)
+      const lines: string[] = []
+      for (const kind of KINDS) {
+        for (const level of LEVELS) {
+          const scenario = createTraceScenario({
+            name: `${RACE_FOLDER}-kind${String(kind)}-level${String(level)}`,
+            raceFolder: RACE_FOLDER,
+            racerCodes,
+            circuitName: CIRCUIT_NAME,
+            frames: getFrames(),
+            powerUpGrants: getGrants(kind, level),
+          })
+          const result = await runGoldenTrace(scenario, jam, readOriginalExecutable())
+          const fields = [...result.comparison.divergenceByField].sort(
+            (left, right) => left.frame - right.frame
+          )
+          lines.push(
+            `${scenario.name}: ${String(fields.length)} fields differ` +
+              fields
+                .slice(0, REPORTED_FIELD_COUNT)
+                .map((divergence) => `\n    ${formatDivergence(divergence)}`)
+                .join('')
+          )
+          if (REPORT_PATH !== '') writeFileSync(REPORT_PATH, lines.join('\n'))
+        }
+      }
+      console.log(lines.join('\n'))
+    },
+    TRACE_TIMEOUT_MILLISECONDS
+  )
+})
