@@ -17,6 +17,7 @@ import { createRaceEffects } from '../race-effects/race-effects.ts'
 import { createSceneObject } from '../scene-object/scene-object.ts'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import { createModelObject } from '../model-object/model-object.ts'
+import { WARP_WORLD_PATH } from '../race-assets/race-assets.ts'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import { showSceneObjects } from '../scene-viewport/scene-viewport.ts'
 import type { ShownScene } from '../scene-viewport/scene-viewport.types.ts'
@@ -116,7 +117,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
         tunnel.dispose()
       }
       tunnel = createSceneObject(assets.effectModels.warpTunnel, {
-        includeInstance: () => true,
+        includeInstance: (instance) => instance.worldPath === WARP_WORLD_PATH,
         isBackground: false,
       })
       warpGroup.add(tunnel.group)
@@ -135,6 +136,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     setWarpTunnel(warpView)
     shown.track.group.visible = warpView === null
     particles.points.visible = warpView === null
+    backgroundScene.visible = warpView === null
     const poses =
       warpView === null
         ? allPoses

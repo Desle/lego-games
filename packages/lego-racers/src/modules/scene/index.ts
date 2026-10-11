@@ -12,7 +12,7 @@ export type {
   GeometryFiles,
   ModelGeometry,
 } from './controller/load-geometry-scene/load-geometry-scene.types.ts'
-export { getWorldPaths, loadScene } from './controller/load-scene/load-scene.ts'
+export { getWorldPaths, loadScene, loadSceneOnto } from './controller/load-scene/load-scene.ts'
 export {
   COMMON_DIRECTORY,
   getRaceBackgroundWorldPath,
