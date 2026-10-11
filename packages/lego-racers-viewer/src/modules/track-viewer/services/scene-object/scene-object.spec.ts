@@ -63,6 +63,7 @@ const SCENE: Scene = {
       drawBatches: [
         {
           materialSlot: 0,
+          firstCommand: 0,
           vertexIndices: new Uint32Array([1, 0, 2]),
           transformIndices: new Uint8Array(3),
         },
@@ -80,6 +81,7 @@ const SCENE: Scene = {
       drawBatches: [
         {
           materialSlot: 0,
+          firstCommand: 0,
           vertexIndices: new Uint32Array([0, 1, 2]),
           transformIndices: new Uint8Array([1, 1, 1]),
         },
@@ -87,6 +89,7 @@ const SCENE: Scene = {
     },
   ],
   materialAssignments: [],
+  bspTrees: [],
   // A root and a child bone; the child moves along x over ten frames.
   skeletons: [
     {
@@ -155,6 +158,7 @@ const SCENE: Scene = {
           skeletonIndex: null,
           animationIndex: null,
           materialAssignmentIndex: null,
+          bspTreeIndex: null,
           squaredDistance: 0,
         },
       ],
@@ -172,6 +176,7 @@ const SCENE: Scene = {
           skeletonIndex: 0,
           animationIndex: 0,
           materialAssignmentIndex: null,
+          bspTreeIndex: null,
           squaredDistance: 0,
         },
       ],
@@ -189,6 +194,7 @@ const SCENE: Scene = {
           skeletonIndex: 0,
           animationIndex: 0,
           materialAssignmentIndex: null,
+          bspTreeIndex: null,
           squaredDistance: 0,
         },
       ],

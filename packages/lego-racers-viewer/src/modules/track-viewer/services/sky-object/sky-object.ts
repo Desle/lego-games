@@ -36,6 +36,7 @@ const getDomeMesh = (dome: SkyDome, ringColors: SkyRingColors, materialIndex: nu
     drawBatches: [
       Object.freeze({
         materialSlot: 0,
+        firstCommand: 0,
         vertexIndices: Uint32Array.from(dome.triangleCorners),
         transformIndices: new Uint8Array(dome.triangleCorners.length),
       }),
