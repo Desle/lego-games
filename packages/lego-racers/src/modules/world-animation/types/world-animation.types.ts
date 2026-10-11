@@ -76,6 +76,11 @@ export type WorldAnimationInput = {
   readonly isMirrored?: boolean
 }
 
+// What the mirror needs of an instance: its position.
+export type PositionedInstance = {
+  readonly position: Vector3
+}
+
 export type InstanceLevel = {
   readonly animationIndex: number
   readonly squaredDistance: number

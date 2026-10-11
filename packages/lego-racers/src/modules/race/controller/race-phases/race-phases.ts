@@ -465,7 +465,8 @@ const getAfterIntroductionCamera = (raceState: RaceState): RaceState => {
   const { introductionCameraObject } = raceState
   if (introductionCameraObject === null) return raceState
   const world = raceState.trackLogic.worlds.track
-  const instance = world.skeletonInstances[findSkeletonInstanceIndex(world, introductionCameraObject)]
+  const instance =
+    world.skeletonInstances[findSkeletonInstanceIndex(world, introductionCameraObject)]
   return instance !== undefined && getIsSkeletonInstanceFinished(instance)
     ? Object.freeze({ ...raceState, introductionCameraObject: null, phaseMilliseconds: 0 })
     : raceState

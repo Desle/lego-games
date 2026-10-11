@@ -77,6 +77,12 @@ export type TrackEvent =
   | TrackEventBase<'kind_55', Event55>
   | TrackEventBase<'kind_59', Event59>
 
+// Where a scene object an event names sits: the world and the skeleton instance in it.
+export type TrackObjectLocation = {
+  readonly key: 'track' | 'blended'
+  readonly index: number
+}
+
 export type TrackEventAction = 'begin' | 'end' | 'fire' | 'release'
 
 export type TrackEventSet = Readonly<Record<TrackEventKind, readonly TrackEvent[]>>

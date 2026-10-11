@@ -317,10 +317,7 @@ const createHazards = (
 // The 28 events' initialiser 0x00463330 ORs 0x200000 into the flags (+0x5c) of the scene object the event drives.
 const EVENT_DRIVEN_FLAG = 0x200000
 
-const getWorldsWithEventObjects = (
-  worlds: RaceWorlds,
-  eventSet: EventSet | null
-): RaceWorlds =>
+const getWorldsWithEventObjects = (worlds: RaceWorlds, eventSet: EventSet | null): RaceWorlds =>
   (eventSet?.events28 ?? []).reduce((current, record) => {
     const reference = record.objectReference
     if (reference === null) return current

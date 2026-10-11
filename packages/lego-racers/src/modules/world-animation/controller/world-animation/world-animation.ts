@@ -11,6 +11,7 @@ import type {
   InstanceLevel,
   MaterialAnimationRuntime,
   MeshInstanceRuntime,
+  PositionedInstance,
   SkeletonInstanceRuntime,
   WorldAnimation,
   WorldAnimationInput,
@@ -181,7 +182,8 @@ export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation
   const getMirroredVelocity = (instance: SkeletonInstanceRuntime): SkeletonInstanceRuntime => {
     const { clip } = instance
     if (input.isMirrored !== true || clip === null) return instance
-    const flip = (vector: Vector3): Vector3 => Object.freeze([vector[0], -vector[1], vector[2]] as const)
+    const flip = (vector: Vector3): Vector3 =>
+      Object.freeze([vector[0], -vector[1], vector[2]] as const)
     return Object.freeze({
       ...instance,
       clip: Object.freeze({
@@ -195,9 +197,7 @@ export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation
       }),
     })
   }
-  const getMirrored = <Instance extends { readonly position: Vector3 }>(
-    instance: Instance
-  ): Instance =>
+  const getMirrored = <Instance extends PositionedInstance>(instance: Instance): Instance =>
     input.isMirrored === true
       ? Object.freeze({
           ...instance,
@@ -214,7 +214,9 @@ export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation
         getMirroredVelocity(getMirrored(createSkeletonInstance(instance, input.animations)))
       )
     ),
-    meshInstances: Object.freeze(world.meshInstances.map((instance) => getMirrored(createMeshInstance(instance)))),
+    meshInstances: Object.freeze(
+      world.meshInstances.map((instance) => getMirrored(createMeshInstance(instance)))
+    ),
     materialAnimations: createMaterialAnimations(
       world.materialAnimations,
       input.materialAnimations,

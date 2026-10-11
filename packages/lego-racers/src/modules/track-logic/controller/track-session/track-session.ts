@@ -41,6 +41,7 @@ import type {
   TrackLogicContext,
   TrackLogicState,
   TrackSession,
+  TrackObjectLocation,
   TrackWorldObject,
   SessionBuild,
   SessionReference,
@@ -428,9 +429,7 @@ export const createTrackSession = (
     emitters = { common, track: update(emitters.track) }
   }
 
-  const getObjectInstance = (
-    reference: ObjectReference
-  ): { readonly key: 'track' | 'blended'; readonly index: number } | null => {
+  const getObjectInstance = (reference: ObjectReference): TrackObjectLocation | null => {
     const key = reference.isFromSecondWorld ? 'blended' : 'track'
     const index = findSkeletonInstanceIndex(worlds[key], reference.name)
     return index < 0 ? null : { key, index }
