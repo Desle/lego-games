@@ -70,6 +70,7 @@ const createIdleEffect = (id: number, kind: PowerUpEffectKindValue): PowerUpEffe
     sparkMilliseconds: 0,
     heldMilliseconds: 0,
     emitterHandleIndex: null,
+    warpDestination: null,
   })
 
 // 0x00457cf0 → 0x00457d30 (pool sizes) and 0x004590f0 (free lists, first object at the head).
@@ -158,6 +159,7 @@ export const resetPowerUpEffect = (
       targetTrackPoint: null,
       attachmentSlotIndices: Object.freeze([]),
       emitterHandleIndex: null,
+      warpDestination: null,
     }),
     getResetEvents(effect, isStolen)
   )
