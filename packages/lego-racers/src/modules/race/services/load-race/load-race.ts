@@ -204,11 +204,13 @@ export const loadRaceDefinition = (
     return {
       controllerKind,
       carBody: createCarBodySetup(arithmetic, description.car, {
+        // The car body attaches at its start slot (0x00444d90 copies the model frame); the route placement
+        // 0x0042a670 moves only the display frame afterwards (placeCarBodyOnRoute).
         displayFrame: getStartFrame(
           arithmetic,
           startPositions,
           getStartSlot(index, isMultiplayer),
-          route
+          null
         ),
         displayBoundingRadius: getFigureBounds(arithmetic, racerFigures.wheels)?.radius ?? 0,
         isRaceModeFlagged: getIsCarBodyFlagged(raceModeFlags),

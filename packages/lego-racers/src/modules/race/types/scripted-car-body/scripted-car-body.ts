@@ -46,7 +46,9 @@ const getSpeedState = (carBody: CarBody): ComputerSpeedState =>
   })
 
 // 0x0042a670: the car body follows a script from now on. The follower restarts on the route (0x004a5200) and the
-// frame takes the route's first position and rotation; the body is held (+0x748 = 1, 0x004374c0) until the start.
+// display frame takes the route's first position and rotation (the physics frame keeps the start slot's); the world
+// centre of mass and the four world hull points follow the display frame (frame slot +0x2c). The body is held
+// (+0x748 = 1, 0x004374c0) until the start.
 export const placeCarBodyOnRoute = (
   arithmetic: FloatArithmetic,
   carBody: CarBody,
@@ -70,7 +72,18 @@ export const placeCarBodyOnRoute = (
     isScripted: true,
     isRouteHeld: true,
     routeFollower: follower,
-    rigidBody: Object.freeze({ ...carBody.rigidBody, displayFrame }),
+    rigidBody: Object.freeze({
+      ...carBody.rigidBody,
+      displayFrame,
+      worldCentreOfMass: getFrameTransformedPoint(
+        arithmetic,
+        displayFrame,
+        carBody.rigidBody.localCentreOfMass
+      ),
+      worldHullPoints: carBody.rigidBody.localHullPoints.map((point) =>
+        getFrameTransformedPoint(arithmetic, displayFrame, point)
+      ),
+    }),
   })
 }
 
