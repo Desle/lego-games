@@ -74,6 +74,8 @@ export const createBatchGeometry = (
   geometry.setAttribute('uv', new BufferAttribute(textureCoordinates, 2))
   geometry.setAttribute('color', new BufferAttribute(colors, 4, true))
   if (normals !== null) geometry.setAttribute('normal', new BufferAttribute(normals, 3))
+  // Only a prelit model keeps its vertex colours for the draw; a track event's colour shift reads this (0x10017050).
+  geometry.userData['isPrelit'] = mesh.colors !== null
   geometry.computeBoundingSphere()
   return geometry
 }

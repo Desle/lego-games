@@ -129,6 +129,7 @@ export type {
   RacerBoundary,
   RacerCollisionDependencies,
   RacerPassDependencies,
+  ColourShift,
   RacerControls,
   RacerDriver,
   RacerSet,

@@ -2,7 +2,8 @@ import type { Scene, SceneInstance } from '@lego-games/lego-racers/scene'
 import { SceneInstanceKind } from '@lego-games/lego-racers/scene'
 import { Box3, Group } from 'three'
 import type { BufferGeometry, Material } from 'three'
-import type { Vector3Like } from '../race-viewport/race-viewport.types.ts'
+import { applyColourShift, getMeshGeometries } from './colour-shift.ts'
+import type { ColourShiftLike, Vector3Like } from '../race-viewport/race-viewport.types.ts'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import { createSkeletonInstanceObject } from './skeleton-instance-object.ts'
 import { createStaticInstanceObject } from './static-instance-object.ts'
@@ -116,6 +117,9 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
     bounds,
     animate: (deltaMilliseconds: number) => {
       for (const animator of animators) animator(deltaMilliseconds)
+    },
+    setColourShift: (shift: ColourShiftLike | null) => {
+      for (const geometry of getMeshGeometries(group)) applyColourShift(geometry, shift)
     },
     selectLevels: (camera: Vector3Like) => {
       for (const select of levelSelectors) select(camera)

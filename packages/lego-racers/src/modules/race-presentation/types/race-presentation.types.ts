@@ -9,6 +9,7 @@ import type {
   HudState,
 } from '../../race-hud/index.ts'
 import type { SkeletonAnimationState } from '../../skeletal-animation/index.ts'
+import type { ColourShift } from '../../racer/index.ts'
 import type { Matrix3, Vector3 } from '../../simulation-math/index.ts'
 import type { RacePhaseValue } from '../../race/index.ts'
 
@@ -63,6 +64,8 @@ export type RacerPose = {
   // The bones of the wheels and of the driver: the figures' clips as the pose sampling reads them.
   readonly wheelAnimation: SkeletonAnimationState
   readonly driverAnimation: SkeletonAnimationState
+  // The colour shift a track event put on the racer's models (0x004400a0), or null.
+  readonly colourShift: ColourShift | null
 }
 
 // What the frame's race events change in the presentation.
