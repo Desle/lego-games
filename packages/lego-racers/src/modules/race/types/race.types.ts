@@ -92,11 +92,9 @@ export type RaceDefinition = {
   readonly ghost: GhostSession | null
   // The tunes of the race's music list (RAB keyword 0x30, `LEGOMSC`); 0 when the race plays no music.
   readonly musicTuneCount: number
-  // The introduction camera's animation length minus one (0x0040e360 via Race_UpdateState1), in animation ticks; null
-  // is a race without the introduction camera. The clock advances `rate` ticks per millisecond (skeleton instance
-  // +0xb8, 0x10027f40: time = dt · rate + time), which is model data: the trace reads it from the original.
-  readonly introductionCameraLimit: number | null
-  readonly introductionCameraRate: number
+  // The track world's skeleton instance the introduction camera follows (RAB keyword 0x49, race +0x3ac; its clip is
+  // Race_UpdateState1's hold, 0x0040e360); null is a race without one.
+  readonly introductionCameraObject: string | null
   readonly racers: readonly RaceRacerDefinition[]
   readonly checkpoints: readonly Checkpoint[]
   // The collision world's BVB instances in world order (race +0x3a0, 0x00432e20): the track, the checkpoint object, the
@@ -177,11 +175,8 @@ export type RaceState = {
   readonly ghost: GhostSession | null
   // The music list's tune count and the tune the music stream (race +0x3320) plays; null without a stream.
   readonly musicTuneCount: number
-  // The introduction camera that has not finished yet: its limit (see RaceDefinition) and the milliseconds it ran.
-  readonly introductionCameraLimit: number | null
-  readonly introductionCameraRate: number
-  // The camera animation's time in ticks (float32).
-  readonly introductionCameraTime: number
+  // The introduction camera's instance while its clip has not finished (see RaceDefinition); null afterwards.
+  readonly introductionCameraObject: string | null
   readonly tuneIndex: number | null
   // Race +0x3330: how many racers have been given a final place.
   readonly finishedRacerCount: number

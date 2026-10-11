@@ -19,6 +19,7 @@ from unicorn.x86_const import UC_X86_REG_FPCW  # noqa: E402
 import boot  # noqa: E402
 import computer_trace  # noqa: E402
 import race_session  # noqa: E402
+import track_trace  # noqa: E402
 
 APPLICATION_BASE = 0x004C4A38 + 4
 LAST_TIME_OFFSET = 0x820
@@ -164,6 +165,7 @@ def snapshot_fields(machine, race: int, racer_count: int, local_players: int) ->
     fields["race.phase"] = [machine.read_u32(race + 0x3328)]
     fields["race.phaseMilliseconds"] = [machine.read_u32(race + 0x332C)]
     fields["race.randomPosition"] = [machine.read_u32(race_session.RANDOM_CURSOR)]
+    fields.update(track_trace.snapshot_track_fields(machine, race, racer_count))
     return fields
 
 
@@ -204,29 +206,6 @@ class TraceRun:
         self.pump_count += 1
 
 
-def read_introduction_camera_rate(machine, race: int) -> float:
-    """The camera animation's clock rate in ticks per millisecond (skeleton instance +0xb8)."""
-    camera = machine.read_u32(race + 0x2ACC)
-    if camera == 0 or machine.read_u32(race + 0x3AC) == 0:
-        return 0.03
-    animation = machine.read_u32(camera + 0x28)
-    return 0.03 if animation == 0 else machine.read_f32(animation + 0xB8)
-
-
-def read_introduction_camera_limit(machine, race: int) -> int:
-    """The length minus one of the introduction camera's animation (Race_UpdateState1 0x004349a0 via 0x0040e360), or -1."""
-    camera = machine.read_u32(race + 0x2ACC)
-    if camera == 0 or machine.read_u32(race + 0x3AC) == 0:
-        return -1
-    animation = machine.read_u32(camera + 0x28)
-    if animation == 0:
-        return -1
-    sequences = machine.read_u32(machine.read_u32(animation + 0xA8) + 0x2C)
-    index = struct.unpack("<H", machine.read_bytes(animation + 0xBC, 2))[0]
-    count = struct.unpack("<H", machine.read_bytes(sequences + 0x24 + index * 0x28, 2))[0]
-    return count - 1
-
-
 def run_scenario(scenario: dict) -> None:
     machine = boot.create_machine({"fpu": scenario.get("fpu", "auto")})
     boot.boot_to_front_end(machine)
@@ -234,11 +213,9 @@ def run_scenario(scenario: dict) -> None:
     race = race_session.begin_race(machine, scenario)
     machine.apply_fpu_option()
     trace = TraceRun(machine, race, scenario)
-    introduction_limit = read_introduction_camera_limit(machine, race)
-    introduction_rate = read_introduction_camera_rate(machine, race)
     machine.add_address_hook(race_session.PUMP_MESSAGES, trace.on_pump)
     reason = machine.call_function_until_stop(race_session.RACE_RUN_LOOP, "thiscall", [race])
-    sys.stdout.write(json.dumps({"isDone": True, "reason": reason, "frames": trace.pump_count, "controlWord": machine.uc.reg_read(UC_X86_REG_FPCW), "introductionCameraLimit": introduction_limit, "introductionCameraRate": introduction_rate}) + "\n")
+    sys.stdout.write(json.dumps({"isDone": True, "reason": reason, "frames": trace.pump_count, "controlWord": machine.uc.reg_read(UC_X86_REG_FPCW)}) + "\n")
     sys.stdout.flush()
 
 

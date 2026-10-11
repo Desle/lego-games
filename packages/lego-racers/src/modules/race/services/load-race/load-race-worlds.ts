@@ -24,10 +24,16 @@ const getBinaryName = (name: string): string => `${name.slice(0, -1)}b`.toUpperC
 
 // 0x00432e20: the world is read from its folder; the files its lists name sit in the same folder, as `.ADB` and
 // `.MAB` (the list loader replaces the `.adf` and `.maf` it appends).
-const loadWorldAnimation = (readFile: ReadFile, folder: string, name: string): WorldAnimation => {
+const loadWorldAnimation = (
+  readFile: ReadFile,
+  folder: string,
+  name: string,
+  isMirrored = false
+): WorldAnimation => {
   const world = readWorld(readFile(`${folder}${JAM_SEPARATOR}${getBinaryName(name)}`))
   return createWorldAnimation({
     world,
+    isMirrored,
     animations: world.animations.map((animation) =>
       getSkeletalAnimation(
         parseAnimation(readFile(`${folder}${JAM_SEPARATOR}${animation.toUpperCase()}.ADB`))
@@ -43,10 +49,13 @@ const loadWorldAnimation = (readFile: ReadFile, folder: string, name: string): W
 export const loadRaceWorlds = (
   readFile: ReadFile,
   raceFolder: string,
-  description: RaceDescription
+  description: RaceDescription,
+  isMirrored: boolean
 ): RaceWorlds => {
   const load = (name: string | null): WorldAnimation =>
-    name === null ? EMPTY_WORLD_ANIMATION : loadWorldAnimation(readFile, raceFolder, name)
+    name === null
+      ? EMPTY_WORLD_ANIMATION
+      : loadWorldAnimation(readFile, raceFolder, name, isMirrored)
   return Object.freeze({
     track: load(description.trackWorld),
     blended: load(description.blendedWorld),

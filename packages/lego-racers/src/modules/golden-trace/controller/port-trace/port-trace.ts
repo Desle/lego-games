@@ -16,6 +16,7 @@ import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import type { Matrix3 } from '../../../simulation-math/index.ts'
 import { getFloatWords, getVectorWords } from '../trace-words/trace-words.ts'
 import { getComputerTraceFields } from '../computer-trace/computer-trace.ts'
+import { getTrackFields } from '../track-trace/track-trace.ts'
 import type {
   GoldenTraceScenario,
   TraceFieldProvider,
@@ -248,6 +249,7 @@ export const TRACE_FIELD_PROVIDERS: readonly TraceFieldProvider[] = [
   getRacerSetFields,
   getPlayerFields,
   getRaceFields,
+  getTrackFields,
 ]
 
 export const getTraceFields = (raceState: RaceState, localPlayerCount: number): TraceFields =>

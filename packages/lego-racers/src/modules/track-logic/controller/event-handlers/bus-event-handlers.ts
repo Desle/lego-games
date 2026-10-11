@@ -105,6 +105,14 @@ const getEmitterHandle = (event: TrackEvent, session: TrackSession): EmitterRefe
   })
 }
 
+// Event +0x1c bit 0x20: the event holds an emitter (set by 0x0045eaf0 and 0x0045ebe0, cleared by 0x0045eb90).
+const EMITTER_HELD_FLAG = 0x20
+
+const getWithEmitterFlag = (event: TrackEvent): TrackEvent =>
+  event.emitterHandle === null
+    ? event
+    : { ...event, flags: (event.flags | EMITTER_HELD_FLAG) >>> 0 }
+
 // 0x0045eaf0, 0x0045eb90, 0x0045ebe0: a particle emitter that follows an object (the object is not ported).
 export const HANDLERS_3D: TrackEventHandlers = Object.freeze({
   ...IDLE_HANDLERS,
@@ -117,7 +125,10 @@ export const HANDLERS_3D: TrackEventHandlers = Object.freeze({
     const emitterHandle = getEmitterHandle(positioned, session)
     return announceAndSet(
       session,
-      { ...positioned, emitterHandle: emitterHandle ?? positioned.emitterHandle },
+      getWithEmitterFlag({
+        ...positioned,
+        emitterHandle: emitterHandle ?? positioned.emitterHandle,
+      }),
       positioned.state,
       FIRST_SIGNAL,
       TrackEventState.RUNNING
@@ -127,7 +138,7 @@ export const HANDLERS_3D: TrackEventHandlers = Object.freeze({
     if (event.emitterHandle !== null) session.releaseEmitter(event.emitterHandle)
     return announceAndSet(
       session,
-      { ...event, emitterHandle: null },
+      { ...event, emitterHandle: null, flags: (event.flags & ~EMITTER_HELD_FLAG) >>> 0 },
       event.state,
       NO_SIGNAL_PHASE,
       TrackEventState.INACTIVE
@@ -136,7 +147,7 @@ export const HANDLERS_3D: TrackEventHandlers = Object.freeze({
   update: (event, session) => {
     const base = endIfRequested(event, session)
     if (base.state === TrackEventState.INACTIVE || base.emitterHandle !== null) return base
-    return { ...base, emitterHandle: getEmitterHandle(base, session) }
+    return getWithEmitterFlag({ ...base, emitterHandle: getEmitterHandle(base, session) })
   },
 })
 
@@ -145,6 +156,13 @@ export const HANDLERS_42: TrackEventHandlers = Object.freeze({
   ...IDLE_HANDLERS,
   begin: (event, session) => {
     emitAction(session, event, 'begin')
+    if (event.kind === TrackEventKind.KIND_42 && event.record.name !== '') {
+      session.emit({
+        type: 'track.sky_setting_switched',
+        name: event.record.name,
+        durationMilliseconds: event.record.keyword44Integer,
+      })
+    }
     return announceAndSet(session, event, event.state, FIRST_SIGNAL, TrackEventState.END_REQUESTED)
   },
   end: (event, session) => {
