@@ -71,6 +71,7 @@ const getRaceStart = (session: GameSession, race: SessionRace): RaceStart => {
     raceModeFlags: settings.raceModeFlags,
     randomPosition: session.randomPosition,
     playerCars: settings.playerCars,
+    playerSavedCars: settings.playerSavedCars,
     ...(circuit === null ? {} : { racerCodes: circuit.racerCodes }),
     isMirrored: race.isMirrored,
     multiplayerLapCount: settings.multiplayerLapCount,

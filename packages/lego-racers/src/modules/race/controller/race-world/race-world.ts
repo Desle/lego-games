@@ -22,12 +22,13 @@ import {
   addCarBodyImpulse,
   getRacer,
   getRacerSphere,
-  getRacerVolumeParts,
+  getRacerReadVolumeParts,
   getTableCosine,
   setCarBodyPush,
   setRacer,
   startCarBodyFlip,
   startVehicleTurboEffects,
+  stopVehicleEffectsForWarp,
   stopVehicleTireSmoke,
 } from '../../../racer/index.ts'
 import type { Racer, RacerControls, RacerSet, RacerSetContext } from '../../../racer/index.ts'
@@ -184,6 +185,9 @@ const getRacerSetAfterVehicleEffects = (
   if (event.type === 'power_ups.racer_turbo_started') {
     return getRaceRacerSetOf(startVehicleTurboEffects(context, racerSet, racerIndex))
   }
+  if (event.type === 'power_ups.racer_warp_started') {
+    return getRaceRacerSetOf(stopVehicleEffectsForWarp(racerSet, racerIndex))
+  }
   if (event.type === 'power_ups.racer_turbo_ended') {
     return getRaceRacerSetOf(stopVehicleTireSmoke(racerSet, racerIndex))
   }
@@ -283,7 +287,7 @@ export const getFlightRacer = (context: RacerSetContext, racer: Racer): FlightRa
   const { rigidBody } = racer.carBody
   // 0x0043fdc0 tests the beam against the sphere of the car body model (vehicle +0x3c, 0x00411510).
   const sphere =
-    getRacerVolumeParts(context.arithmetic, racer).body ?? getRacerSphere(context, racer)
+    getRacerReadVolumeParts(context.arithmetic, racer).body ?? getRacerSphere(context, racer)
   const { displayFrame } = rigidBody
   const row = Object.freeze({
     x: displayFrame.rotation[0],
@@ -305,6 +309,7 @@ export const getFlightRacer = (context: RacerSetContext, racer: Racer): FlightRa
     beamRadius: 0,
     routeNodeIndex: racer.checkpointIndex < 0 ? null : racer.checkpointIndex,
     rocketHeading: row,
+    isComputer: racer.controllerKind === COMPUTER_CONTROLLER,
   })
 }
 
@@ -579,6 +584,16 @@ const getRacerSetAfterTrackEffect = (
               z: effect.target[2],
             }),
           })
+    )
+  }
+  if (effect.type === 'track.racer_colour_shift_changed') {
+    if (racerSet.racers[effect.racerIndex] === undefined) return racerSet
+    const { shifts, biases } = effect
+    return changeRacer(racerSet, effect.racerIndex, (racer) =>
+      Object.freeze({
+        ...racer,
+        colourShift: shifts === null ? null : Object.freeze({ shifts, biases }),
+      })
     )
   }
   if (effect.type === 'track.racer_force_changed') {

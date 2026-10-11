@@ -1,3 +1,4 @@
+import type { Vector3 } from '../../../simulation-math/index.ts'
 import { getIsAttachmentRoomFor } from '../../types/attachment-slots/attachment-slots.ts'
 import { BrickKind } from '../../types/brick-kind/brick-kind.ts'
 import {
@@ -27,6 +28,7 @@ import {
   takePowerUpEffect,
 } from '../power-up-effects/power-up-effects.ts'
 import { getEffect, getStepWithEffect, getStepWithEvents } from '../power-up-step/power-up-step.ts'
+import type { WarpDestination } from '../../types/power-ups.types.ts'
 import type { PowerUpContext, PowerUpStep } from '../power-up-step/power-up-step.types.ts'
 import type { ActivationTarget, EffectStart } from './activate-power-up.types.ts'
 
@@ -237,8 +239,15 @@ const activateTurbo = (
   )
 }
 
-// 0x0045b260 → 0x0045d560 (power-up system +0x1998 is null for a racer's own warp: 500 ms, ahead on the track).
-const activateWarp = (step: PowerUpStep, context: PowerUpContext, racer: number): PowerUpStep => {
+// 0x0045b260 → 0x0045d560: a racer's own warp waits 500 ms (power-up system +0x1998 is null) and carries it ahead on the
+// track; with a launcher (the warp pad, 0x0048af80) there is no wait and the racer is carried to the launcher's
+// destination.
+const startWarp = (
+  step: PowerUpStep,
+  context: PowerUpContext,
+  racer: number,
+  warpDestination: WarpDestination | null
+): PowerUpStep => {
   const status = getStatus(context, racer)
   const taken = takePowerUpEffect(step, { kind: PowerUpEffectKind.WARP, levels: [3, -1, -1, -1] })
   const effect = getEffect(taken.step, taken.effectId)
@@ -255,11 +264,24 @@ const activateWarp = (step: PowerUpStep, context: PowerUpContext, racer: number)
   return getStepWithEvents(
     getStepWithEffect(released, {
       ...getEffect(released, taken.effectId),
-      ...getPlainStart(racer, 3, 500, null),
+      ...getPlainStart(racer, 3, warpDestination === null ? 500 : 0, null),
+      warpDestination,
     }),
     [{ type: 'power_ups.racer_warp_pending', racer }]
   )
 }
+
+const activateWarp = (step: PowerUpStep, context: PowerUpContext, racer: number): PowerUpStep =>
+  startWarp(step, context, racer, null)
+
+export const activateLauncherWarp = (
+  step: PowerUpStep,
+  context: PowerUpContext,
+  racer: number,
+  destination: Vector3,
+  forward: Vector3
+): PowerUpStep =>
+  startWarp(step, context, racer, Object.freeze({ destination, forward, start: null }))
 
 // 0x0045af80: three rockets, each taken separately, numbered 0..2.
 const activateRockets = (step: PowerUpStep, racer: number): PowerUpStep =>

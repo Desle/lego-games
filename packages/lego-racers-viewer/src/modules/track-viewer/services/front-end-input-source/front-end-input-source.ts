@@ -10,6 +10,27 @@ const KEY_INPUTS: ReadonlyMap<string, FrontEndInput> = new Map([
   ['Space', 'accept'],
   ['Escape', 'back'],
   ['Backspace', 'back'],
+  // The car builder reads the numeric keypad (5 turns, + adds, - takes off), A and D turn the view, S and X raise and lower
+  // it (0x00473ee0); the letters and page keys are this port's laptop-friendly twins, and the choosers take page up and
+  // down (bricks) and insert and delete (sets).
+  ['KeyR', 'rotate'],
+  ['Numpad5', 'rotate'],
+  ['KeyU', 'undo'],
+  ['NumpadSubtract', 'undo'],
+  ['NumpadAdd', 'accept'],
+  ['NumpadEnter', 'accept'],
+  ['PageUp', 'previous_piece'],
+  ['KeyQ', 'previous_piece'],
+  ['PageDown', 'next_piece'],
+  ['KeyE', 'next_piece'],
+  ['Insert', 'previous_set'],
+  ['KeyZ', 'previous_set'],
+  ['Delete', 'next_set'],
+  ['KeyC', 'next_set'],
+  ['KeyA', 'view_left'],
+  ['KeyD', 'view_right'],
+  ['KeyS', 'view_up'],
+  ['KeyX', 'view_down'],
 ])
 
 // Standard gamepad mapping: the d-pad, button 0 (A) accepts and button 1 (B) goes back.

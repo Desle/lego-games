@@ -1,3 +1,4 @@
+import { createRandomTable } from '../../../random-table/index.ts'
 import {
   getIsOriginalExecutablePresent,
   getIsOriginalJamPresent,
@@ -30,6 +31,8 @@ const getRequest = (changes: Partial<FrontEndRaceRequest>): FrontEndRaceRequest 
   localPlayerCount: 1,
   lapCount: 3,
   playerRacerNames: [],
+  playerCar: null,
+  randomPosition: 0,
   ...changes,
 })
 
@@ -82,6 +85,8 @@ describe('the session the menus start', () => {
       const environment: FrontEndEnvironment = {
         controllerCount: 0,
         unlockedCircuitMask: 0x7f,
+        randomTable: createRandomTable(Array.from({ length: 1024 }, (_, index) => index)),
+        isEveryPartUnlocked: true,
         playerRacerNames: [],
         standingRows: rows,
       }

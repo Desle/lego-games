@@ -1,8 +1,10 @@
-import type { EffectViews, RacerPose } from '@lego-games/lego-racers/race-presentation'
+import type { EffectViews, RacerPose, WarpView } from '@lego-games/lego-racers/race-presentation'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type { Matrix3 } from '@lego-games/lego-racers/simulation-math'
+import type { Mesh, MeshBasicMaterial } from 'three'
 import {
   Color,
+  Group,
   LinearSRGBColorSpace,
   Matrix4,
   PerspectiveCamera,
@@ -11,9 +13,14 @@ import {
 } from 'three'
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
 import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
+import { getCameraFrustum, ORIGINAL_FIELD_OF_VIEW_DEGREES } from './camera-frustum.ts'
+import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
 import { createRaceParticles } from '../race-particles/race-particles.ts'
 import { createRaceEffects } from '../race-effects/race-effects.ts'
+import { createSceneObject } from '../scene-object/scene-object.ts'
+import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import { createModelObject } from '../model-object/model-object.ts'
+import { WARP_WORLD_PATH } from '../race-assets/race-assets.ts'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import { showSceneObjects } from '../scene-viewport/scene-viewport.ts'
 import type { ShownScene } from '../scene-viewport/scene-viewport.types.ts'
@@ -26,9 +33,10 @@ import type {
   Vector3Like,
 } from './race-viewport.types.ts'
 
-// The Direct3D camera's field of view is not traced yet; the track viewer's 60 degrees stand in for it.
-const FIELD_OF_VIEW_DEGREES = 60
 const BACKGROUND_COLOR = 0x101820
+const MILLISECONDS_PER_SECOND = 1000
+// The scroll the original adds stays below 1 (it wraps).
+const getWrappedFraction = (value: number): number => value - Math.floor(value)
 const NEAR_PLANE = 0.5
 const FAR_PLANE = 20000
 // Rows of a frame's rotation are the images of the model's axes; three.js takes them as columns.
@@ -61,7 +69,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   const trackScene = new ThreeScene()
   const backgroundScene = new ThreeScene()
   const camera = new PerspectiveCamera(
-    FIELD_OF_VIEW_DEGREES,
+    ORIGINAL_FIELD_OF_VIEW_DEGREES,
     size.width / size.height,
     NEAR_PLANE,
     FAR_PLANE
@@ -82,24 +90,103 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     const parts = [wheels, body, driver].filter((part): part is ModelObject => part !== null)
     for (const part of parts) {
       trackScene.add(part.group)
-      // A car's lights are the world's, not the car's: they stay where they are while the car turns.
-      for (const light of part.group.getObjectsByProperty('isLight', true)) trackScene.add(light)
     }
     return { wheels, body, driver, objects: parts.map((part) => part.object) }
   })
 
   // The wheels sit in the display frame; the car model at its position with the leaned rotation of the model frame
   // (vehicle +0x3c); the driver at the seat carried by that frame (LEGORacers.exe 0x0043e740).
+  const colourShiftKeys = new Map<number, string>()
   const effects = createRaceEffects(trackScene, assets.effectModels)
+  // 0x0045d940: while the player is carried the tunnel and the car are drawn and the track is not. The tunnel is made
+  // anew when a warp starts, so its clocks start at 0, and is advanced to the time spent in the warp.
+  const warpGroup = new Group()
+  warpGroup.visible = false
+  trackScene.add(warpGroup)
+  let tunnel: SceneObject | null = null
+  let tunnelMilliseconds = 0
+  const setWarpTunnel = (warpView: WarpView | null) => {
+    if (warpView === null) {
+      if (tunnel !== null) {
+        warpGroup.remove(tunnel.group)
+        tunnel.dispose()
+        tunnel = null
+      }
+      warpGroup.visible = false
+      return
+    }
+    if (tunnel === null || warpView.tunnelMilliseconds < tunnelMilliseconds) {
+      if (tunnel !== null) {
+        warpGroup.remove(tunnel.group)
+        tunnel.dispose()
+      }
+      tunnel = createSceneObject(assets.effectModels.warpTunnel, {
+        includeInstance: (instance) => instance.worldPath === WARP_WORLD_PATH,
+        isBackground: false,
+      })
+      warpGroup.add(tunnel.group)
+      tunnelMilliseconds = 0
+    }
+    tunnel.animate(warpView.tunnelMilliseconds - tunnelMilliseconds)
+    const [scrollU, scrollV] = assets.effectModels.warpTextureScroll
+    tunnel.group.traverse((object) => {
+      if (object.type !== 'Mesh') return
+      const { map } = (object as Mesh).material as MeshBasicMaterial
+      map?.offset.set(
+        getWrappedFraction((scrollU * warpView.tunnelMilliseconds) / MILLISECONDS_PER_SECOND),
+        getWrappedFraction((scrollV * warpView.tunnelMilliseconds) / MILLISECONDS_PER_SECOND)
+      )
+    })
+    tunnelMilliseconds = warpView.tunnelMilliseconds
+    warpGroup.visible = true
+  }
   const update = (
-    poses: readonly RacerPose[],
-    cameraView: CameraView,
-    effectViews: EffectViews
+    allPoses: readonly RacerPose[],
+    allCameraView: CameraView,
+    effectViews: EffectViews,
+    warpView: WarpView | null = null
   ) => {
-    effects.update(effectViews)
+    setWarpTunnel(warpView)
+    shown.track.group.visible = warpView === null
+    particles.points.visible = warpView === null
+    backgroundScene.visible = warpView === null
+    const poses =
+      warpView === null
+        ? allPoses
+        : allPoses.map((pose) =>
+            pose.racerIndex === warpView.pose.racerIndex ? warpView.pose : pose
+          )
+    const cameraView = warpView === null ? allCameraView : warpView.cameraView
+    effects.update(
+      warpView === null ? effectViews : { ...effectViews, effects: [], bricks: [], explosions: [] },
+      cameraView.position
+    )
+    for (const rig of racerRigs) {
+      const isShown = warpView === null || rig === racerRigs[warpView.pose.racerIndex]
+      for (const part of [rig.wheels, rig.body, rig.driver])
+        if (part !== null) part.group.visible = isShown
+    }
     for (const pose of poses) {
       const racerRig = racerRigs[pose.racerIndex]
       if (racerRig === undefined) continue
+      const shiftKey = JSON.stringify(pose.colourShift)
+      if (colourShiftKeys.get(pose.racerIndex) !== shiftKey) {
+        colourShiftKeys.set(pose.racerIndex, shiftKey)
+        for (const object of racerRig.objects) object.setColourShift(pose.colourShift)
+      }
+      const isRigShown = warpView === null || pose.racerIndex === warpView.pose.racerIndex
+      const centres = pose.partCentres
+      const eye = cameraView.position
+      racerRig.wheels.group.visible =
+        isRigShown && getIsWithinLevelDistance(centres?.wheels ?? null, eye)
+      if (racerRig.body !== null) {
+        racerRig.body.group.visible =
+          isRigShown && getIsWithinLevelDistance(centres?.body ?? null, eye)
+      }
+      if (racerRig.driver !== null) {
+        racerRig.driver.group.visible =
+          isRigShown && getIsWithinLevelDistance(centres?.driver ?? null, eye)
+      }
       racerRig.wheels.group.matrix.copy(getFrameMatrix(pose.rotation, pose.position))
       racerRig.wheels.group.matrixWorldNeedsUpdate = true
       racerRig.wheels.object.setAnimationState(pose.wheelAnimation)
@@ -119,6 +206,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     camera.up.set(-up.x, -up.y, -up.z)
     camera.lookAt(position.x + forward.x, position.y + forward.y, position.z + forward.z)
     shown.track.selectLevels(camera.position)
+    shown.track.selectVisibleLeaves(getCameraFrustum(camera))
     const placement = shown.sky?.place(camera.position)
     if (shown.backdrop !== null) {
       const point = placement?.backdrop ?? camera.position
@@ -181,6 +269,7 @@ export const createRaceViewport = (
     dispose: () => {
       stage.dispose()
       renderer.dispose()
+      renderer.forceContextLoss()
       renderer.domElement.remove()
     },
   })

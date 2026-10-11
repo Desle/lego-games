@@ -2,7 +2,6 @@ import type {
   BlendFactorValue,
   CompareFunctionValue,
   SceneMaterial,
-  SceneMesh,
   SceneTexture,
 } from '@lego-games/lego-racers/scene'
 import {
@@ -13,13 +12,11 @@ import {
 } from '@lego-games/lego-racers/scene'
 import {
   ClampToEdgeWrapping,
-  Color,
   CustomBlending,
   DataTexture,
   FrontSide,
   LinearFilter,
   MeshBasicMaterial,
-  MeshLambertMaterial,
   NearestFilter,
   NoColorSpace,
   NoBlending,
@@ -69,6 +66,21 @@ const ALPHA_CONDITIONS: Readonly<Record<CompareFunctionValue, string>> = {
   [CompareFunction.NOT_EQUAL]: 'alphaByte != alphaReference',
 }
 
+// The surface the engine hands Direct3D holds the picture's last row first (GolDP.dll 0x10019da0 writes it with a
+// negative pitch), so a model's v = 0 is the picture's bottom edge. The render trace finds every texture the original
+// uploads equal to its bitmap with the rows reversed.
+export const getRowsReversed = (colors: Uint8Array, width: number, height: number): Uint8Array => {
+  const rowBytes = width * 4
+  const reversed = new Uint8Array(colors.length)
+  for (let row = 0; row < height; row++) {
+    reversed.set(
+      colors.subarray(row * rowBytes, (row + 1) * rowBytes),
+      (height - 1 - row) * rowBytes
+    )
+  }
+  return reversed
+}
+
 const getTextureKey = (textureIndex: number, material: SceneMaterial) =>
   `${String(textureIndex)}/${material.renderState.filter}/${material.renderState.addressing}`
 
@@ -85,7 +97,12 @@ const getTexture = (
   const key = getTextureKey(textureIndex, material)
   const cached = cache.get(key)
   if (cached !== undefined) return cached
-  const texture = new DataTexture(bitmap.colors, bitmap.width, bitmap.height, RGBAFormat)
+  const texture = new DataTexture(
+    getRowsReversed(bitmap.colors, bitmap.width, bitmap.height),
+    bitmap.width,
+    bitmap.height,
+    RGBAFormat
+  )
   const filter = material.renderState.filter === TextureFilter.POINT ? NearestFilter : LinearFilter
   const wrapping =
     material.renderState.addressing === TextureAddressing.CLAMP
@@ -126,16 +143,13 @@ const getBlendingParameters = (sceneMaterial: SceneMaterial): BlendingParameters
   }
 }
 
-// The device state of GolDP.dll 0x1000a2c0 for one material. Prelit models (vertex colours) draw unlit
-// with the vertex colour as the diffuse colour; the engine's lighting of models with normals is not
-// ported, so those use three.js Lambert lighting with the material's diffuse colour.
+// The device state of GolDP.dll 0x1000a2c0 for one material. Every model draws unlit with the colour in its vertices: its
+// own for a prelit model, the light function's for a model with normals (see batch-geometry.ts).
 export const createSceneMaterial = (
   sceneMaterial: SceneMaterial,
-  mesh: SceneMesh,
   textures: readonly SceneTexture[],
   cache: TextureCache
 ): Material => {
-  const [red, green, blue] = sceneMaterial.diffuseColor
   const parameters = {
     map: getTexture(textures, sceneMaterial.textureIndex, sceneMaterial, cache),
     vertexColors: true,
@@ -145,13 +159,8 @@ export const createSceneMaterial = (
     name: sceneMaterial.name,
     ...getBlendingParameters(sceneMaterial),
   }
-  const isLit = mesh.colors === null && mesh.normals !== null
-  const material = isLit
-    ? new MeshLambertMaterial({
-        ...parameters,
-        color: new Color(red / 255, green / 255, blue / 255),
-      })
-    : new MeshBasicMaterial(parameters)
+  // Lit models carry their lighting in the vertex colours (see batch-geometry.ts): no three.js lights.
+  const material = new MeshBasicMaterial(parameters)
   // The render trace reads the state the material stands for.
   material.userData['renderState'] = sceneMaterial.renderState
   const alphaTestCode = getAlphaTestCode(sceneMaterial)

@@ -33,6 +33,10 @@ export const createFrontEndSettings = (): FrontEndSettings =>
     lapCount: DEFAULT_LAP_COUNT,
     localPlayerCount: 1,
     playerRacerNames: Object.freeze([]),
+    playerCar: null,
+    randomPosition: 0,
+    saveFile: null,
+    racerIndex: 0,
   })
 
 export const createSelection = (): FrontEndSelection =>
@@ -43,6 +47,7 @@ export const createSelection = (): FrontEndSelection =>
     racerIndex: 0,
     tabIndex: 0,
     isDialogOpen: false,
+    text: '',
   })
 
 export const createResult = (
@@ -51,6 +56,8 @@ export const createResult = (
 ): ScreenResult => ({
   selection: runtime.selection,
   settings: runtime.settings,
+  builder: runtime.builder,
+  driver: runtime.driver,
   navigation: { kind: 'none' },
   soundNames: [],
   ...changes,
@@ -105,3 +112,21 @@ export const getPageWidgets = (
     alignment: 'left',
   },
 ]
+
+// Up and down move the focus to the next widget that is not disabled, with the highlight sound when it moved.
+export const getFocusMoveResult = (
+  runtime: ScreenRuntime,
+  input: FrontEndInput,
+  isDisabled: readonly boolean[]
+): ScreenResult => {
+  const { selection } = runtime
+  const focusIndex = getMovedFocusIndex(selection.focusIndex, isDisabled, input)
+  return createResult(runtime, {
+    selection: { ...selection, focusIndex },
+    soundNames: focusIndex === selection.focusIndex ? [] : [MenuSound.HIGHLIGHT],
+  })
+}
+
+// Leaving the screen for the one below it, with the way-back sound.
+export const getPopResult = (runtime: ScreenRuntime): ScreenResult =>
+  createResult(runtime, { navigation: { kind: 'pop' }, soundNames: [MenuSound.BACK] })

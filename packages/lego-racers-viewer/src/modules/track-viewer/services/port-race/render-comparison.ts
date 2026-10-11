@@ -1,11 +1,10 @@
 import {
   compareQuadPlacements,
-  compareRenderFrame,
+  compareRenderFrameByRoot,
   getOriginalQuads,
   getOriginalTriangles,
   getCandidateMatrices,
   matchTextures,
-  projectWorldTriangle,
   readOriginalPresentation,
 } from '@lego-games/lego-racers/presentation-trace'
 import { getEffectViews, getRacerPoses } from '@lego-games/lego-racers/race-presentation'
@@ -28,11 +27,22 @@ import { createPresentationScenario } from './trace-scenarios.ts'
 import type { TraceScenarioRequest } from './trace-scenarios.types.ts'
 
 const getEffectScenes = (assets: RaceAssets): readonly Scene[] => {
-  const { powerUpBricks, ...models } = assets.effectModels
-  return [...Object.values(models), ...Object.values(powerUpBricks)].map((model) => model.scene)
+  const { powerUpBricks, rocket, barrel, magnet, spikedExplosion, enhancementBrick, warpTunnel } =
+    assets.effectModels
+  return [
+    ...[
+      rocket,
+      barrel,
+      magnet,
+      spikedExplosion,
+      enhancementBrick,
+      ...Object.values(powerUpBricks),
+    ].map((model) => model.scene),
+    warpTunnel,
+  ]
 }
 
-const getSceneTextures = (assets: RaceAssets): ReadonlyMap<string, PortTexture> =>
+export const getSceneTextures = (assets: RaceAssets): ReadonlyMap<string, PortTexture> =>
   new Map(
     [assets.scene, ...getEffectScenes(assets)].flatMap((scene) =>
       scene.textures.flatMap((texture) =>
@@ -91,79 +101,85 @@ export const runRenderComparison = async (
   const hudResults: HudFrameResult[] = []
   const groups = new Map<string, AggregatedGroup>()
   const totals: FrameTotals[] = []
-  runPortRace(assets, scenario.frames, (portFrame) => {
-    const { raceState, presentation, milliseconds, frame } = portFrame
-    stage.update(getRacerPoses(raceState), presentation.cameraView, getEffectViews(raceState))
-    stage.showHazards(raceState.trackLogic.worlds.track, [
-      raceState.trackLogic.emitters.common,
-      raceState.trackLogic.emitters.track,
-    ])
-    stage.animate(milliseconds)
-    const originalFrame = original.renderFrames.find((candidate) => candidate.frame === frame)
-    if (originalFrame === undefined) return
-    const portTriangles = getPortWorldTriangles([stage.backgroundScene, stage.trackScene])
-    const originalTriangles = getOriginalTriangles(originalFrame)
-    const textureMatches = matchTextures(original.textures, allTextures(portTriangles.textures))
-    const comparisons = getCandidateMatrices(originalFrame, CANDIDATE_COUNT).map((matrix) =>
-      compareRenderFrame({
+  runPortRace(
+    assets,
+    scenario.frames,
+    (portFrame) => {
+      const { raceState, presentation, milliseconds, frame } = portFrame
+      stage.update(
+        getRacerPoses(raceState),
+        presentation.cameraView,
+        getEffectViews(raceState),
+        presentation.warpView
+      )
+      stage.showHazards(raceState.trackLogic.worlds.track, [
+        raceState.trackLogic.emitters.common,
+        raceState.trackLogic.emitters.track,
+      ])
+      stage.animate(milliseconds)
+      const originalFrame = original.renderFrames.find((candidate) => candidate.frame === frame)
+      if (originalFrame === undefined) return
+      const portTriangles = getPortWorldTriangles([
+        ...(stage.backgroundScene.visible ? stage.backgroundScene.children : []),
+        ...stage.trackScene.children,
+      ])
+      const originalTriangles = getOriginalTriangles(originalFrame)
+      const textureMatches = matchTextures(original.textures, allTextures(portTriangles.textures))
+      const comparison = compareRenderFrameByRoot({
         original: originalTriangles,
-        port: portTriangles.triangles.flatMap((triangle) => {
-          const drawn = projectWorldTriangle(triangle, matrix)
-          return drawn === null ? [] : [drawn]
-        }),
+        port: portTriangles.triangles,
+        candidates: getCandidateMatrices(originalFrame, CANDIDATE_COUNT, ORIGINAL_STAGE_SIZE),
         viewport: { width: ORIGINAL_STAGE_SIZE.width, height: ORIGINAL_STAGE_SIZE.height },
         textureMatches,
         tolerances: TOLERANCES,
       })
-    )
-    const comparison = comparisons.reduce((best, candidate) =>
-      candidate.matchedCount > best.matchedCount ? candidate : best
-    )
-    if (presentation.hudFrame !== null) {
-      const hud = compareQuadPlacements({
-        original: getOriginalQuads(originalFrame),
-        port: presentation.hudFrame.commands.flatMap((command) =>
-          command.kind === 'image'
-            ? [
-                {
-                  left: command.x,
-                  top: command.y,
-                  right: command.x + command.width,
-                  bottom: command.y + command.height,
-                  textureKey: command.imageName,
-                  source: command.imageName,
-                },
-              ]
-            : []
+      if (presentation.hudFrame !== null) {
+        const hud = compareQuadPlacements({
+          original: getOriginalQuads(originalFrame),
+          port: presentation.hudFrame.commands.flatMap((command) =>
+            command.kind === 'image'
+              ? [
+                  {
+                    left: command.x,
+                    top: command.y,
+                    right: command.x + command.width,
+                    bottom: command.y + command.height,
+                    textureKey: command.imageName,
+                    source: command.imageName,
+                  },
+                ]
+              : []
+          ),
+          textureMatches: matchTextures(original.textures, hudTextures),
+          tolerancePixels: HUD_TOLERANCE_PIXELS,
+        })
+        hudResults.push({ frame, ...hud })
+      }
+      totals.push({
+        frame,
+        originalCount: comparison.originalCount,
+        portCount: comparison.portCount,
+        matchedCount: comparison.matchedCount,
+        farthestOriginalDepth: Math.max(
+          ...originalTriangles.flatMap((triangle) =>
+            triangle.vertices.map((vertex) => 1 / vertex.reciprocalW)
+          )
         ),
-        textureMatches: matchTextures(original.textures, hudTextures),
-        tolerancePixels: HUD_TOLERANCE_PIXELS,
       })
-      hudResults.push({ frame, ...hud })
-    }
-    totals.push({
-      frame,
-      originalCount: comparison.originalCount,
-      portCount: comparison.portCount,
-      matchedCount: comparison.matchedCount,
-      farthestOriginalDepth: Math.max(
-        ...originalTriangles.flatMap((triangle) =>
-          triangle.vertices.map((vertex) => 1 / vertex.reciprocalW)
-        )
-      ),
-    })
-    for (const group of comparison.groups) {
-      const key = `${group.kind}|${group.source}`
-      const known = groups.get(key)
-      groups.set(key, {
-        kind: group.kind,
-        source: group.source,
-        frames: [...(known?.frames ?? []), frame],
-        count: (known?.count ?? 0) + group.count,
-        firstDetail: known?.firstDetail ?? group.firstDetail,
-      })
-    }
-  })
+      for (const group of comparison.groups) {
+        const key = `${group.kind}|${group.source}`
+        const known = groups.get(key)
+        groups.set(key, {
+          kind: group.kind,
+          source: group.source,
+          frames: [...(known?.frames ?? []), frame],
+          count: (known?.count ?? 0) + group.count,
+          firstDetail: known?.firstDetail ?? group.firstDetail,
+        })
+      }
+    },
+    scenario.powerUpGrants ?? []
+  )
   return Object.freeze({
     hudResults,
     totals,

@@ -31,7 +31,7 @@ const EMPTY_POOL: VertexPool = Object.freeze({
 const toSigned16 = (value: number): number => (value << 16) >> 16
 const toSigned8 = (value: number): number => (value << 24) >> 24
 
-// FUN_00408070: `[ count ] {` then per vertex five 16-bit values (x, y, z, u, v) and three bytes (a normal) or four (a colour).
+// FUN_00408070: `[ count ] {` then per vertex five 16-bit values (x, y, z, u, v; the engine reads u and v as the short times 1 / 4096, 0x00408280) and three bytes (a normal) or four (a colour).
 const readVertexPool = (reader: TokenReader, isColored: boolean): VertexPool => {
   const count = reader.readArrayCount()
   const positions = new Float32Array(count * 3)

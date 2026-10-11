@@ -1,9 +1,11 @@
+import { createRandomTable } from '../../../random-table/index.ts'
 import {
   getIsOriginalJamPresent,
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
 import type { Circuit } from '../../../circuit-database/index.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
+import type { SkeletalAnimation } from '../../../skeletal-animation/index.ts'
 import type { RaceCatalogEntry } from '../../../race-catalog/index.ts'
 import { loadFrontEndResources } from '../../services/load-front-end-resources/load-front-end-resources.ts'
 import { FrontEndScreen } from '../../types/front-end-screen/front-end-screen.ts'
@@ -16,10 +18,28 @@ import type {
 import { getRaceLoadOptions } from '../race-launch/get-race-load-options.ts'
 import {
   createFrontEnd,
+  getFrontEndDemonstrationRequest,
   getFrontEndFrame,
   getFrontEndRaceRequest,
   stepFrontEnd,
 } from './front-end.ts'
+
+const MENU_FIGURE_CLIP = {
+  name: 'clip',
+  framesPerMillisecond: 0.03,
+  velocity: [0, 0, 0] as const,
+  firstTrackIndex: 0,
+  frameCount: 100,
+  loopLength: 101,
+}
+
+const MENU_FIGURE_ANIMATION: SkeletalAnimation = {
+  positions: [],
+  rotations: [],
+  times: [],
+  tracks: [],
+  clips: [MENU_FIGURE_CLIP, MENU_FIGURE_CLIP, MENU_FIGURE_CLIP],
+}
 
 const getCircuit = (name: string): Circuit => ({
   name,
@@ -63,11 +83,29 @@ const resources: FrontEndResources = {
   getFont: () => null,
   getImage: () => null,
   getFontImage: () => null,
+  getBuilderCatalog: () => {
+    throw new RangeError('The test has no brick catalog')
+  },
+  getRacerTemplate: () => {
+    throw new RangeError('The test has no racer record')
+  },
+  getDefaultCar: () => {
+    throw new RangeError('The test has no default car')
+  },
+  getDriverCatalog: () => {
+    throw new RangeError('The test has no driver catalog')
+  },
+  getDriverDatabase: () => {
+    throw new RangeError('The test has no driver database')
+  },
+  getMenuFigureAnimation: () => MENU_FIGURE_ANIMATION,
 }
 
 const environment: FrontEndEnvironment = {
   controllerCount: 0,
   unlockedCircuitMask: 0x7f,
+  randomTable: createRandomTable(Array.from({ length: 1024 }, (_, index) => index)),
+  isEveryPartUnlocked: true,
   playerRacerNames: ['ALICE', 'BOB'],
   standingRows: [],
 }
@@ -85,6 +123,25 @@ const getScreenIds = (state: FrontEndState): readonly number[] =>
   state.screens.map((screen) => screen.screenId)
 
 describe('the front end', () => {
+  it('asks for a demonstration when the main menu has waited 60 seconds', () => {
+    // Arrange
+    const idleFrames = Math.ceil(60000 / 16)
+    const wait = (frames: number): FrontEndState =>
+      Array.from({ length: frames }).reduce<FrontEndState>(
+        (current) => stepFrontEnd(current, resources, environment, null, 16).state,
+        createFrontEnd(resources, environment)
+      )
+
+    // Act
+    const early = wait(idleFrames - 2)
+    const waited = wait(idleFrames)
+
+    // Assert
+    expect(getFrontEndDemonstrationRequest(early)).toBeNull()
+    expect(waited.outcome).toBe('demonstration')
+    expect(getFrontEndDemonstrationRequest(waited)).toEqual({ randomPosition: 0 })
+  })
+
   it('starts on the main menu with the garage button focused', () => {
     // Arrange / Act
     const state = createFrontEnd(resources, environment)

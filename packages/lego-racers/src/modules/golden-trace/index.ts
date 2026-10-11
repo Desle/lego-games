@@ -22,6 +22,7 @@ export type {
   GoldenTraceResult,
   GoldenTraceScenario,
   OriginalTrace,
+  PowerUpGrant,
   TraceComparison,
   TraceFields,
   TraceFrame,

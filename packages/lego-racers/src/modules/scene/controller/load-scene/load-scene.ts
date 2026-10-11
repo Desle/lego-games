@@ -9,6 +9,7 @@ import type {
   SceneDirectionalLight,
 } from '../../types/scene.types.ts'
 import { linkBspTreeInstances, linkMeshInstances, linkSkeletonInstances } from './link-instances.ts'
+import { linkBspTrees } from './link-bsp-trees.ts'
 import { linkMaterials } from './link-materials.ts'
 import { linkMaterialAssignments, linkMeshes } from './link-meshes.ts'
 import { linkAnimations, linkSkeletons } from './link-skeletons.ts'
@@ -24,6 +25,9 @@ const getSceneCamera = (camera: Camera): SceneCamera =>
     position: camera.position,
     forward: camera.forward,
     up: Object.freeze({ x: -camera.negatedUp.x, y: -camera.negatedUp.y, z: -camera.negatedUp.z }),
+    nearPlane: camera.nearPlane,
+    farPlane: camera.farPlane,
+    fieldOfViewDegrees: camera.fieldOfViewDegrees,
   })
 
 const getSceneAmbientLight = (light: AmbientLight): SceneAmbientLight =>
@@ -38,6 +42,7 @@ const EMPTY_SCENE: Scene = Object.freeze({
   materials: [],
   meshes: [],
   materialAssignments: [],
+  bspTrees: [],
   skeletons: [],
   animations: [],
   instances: [],
@@ -72,6 +77,7 @@ const getSceneWithWorld = (archive: JamArchive, scene: Scene, worldPath: string)
     meshCount: world.meshes.length,
     materialAssignmentCount: world.materialAssignments.length,
     skeletonCount: world.skeletons.length,
+    bspTreeOffset: scene.bspTrees.length,
     bspTreeCount: world.bspTrees.length,
   })
   const animations = Object.freeze([
@@ -87,6 +93,7 @@ const getSceneWithWorld = (archive: JamArchive, scene: Scene, worldPath: string)
       ...scene.materialAssignments,
       ...linkMaterialAssignments(source, world.materialAssignments, linkedMaterials),
     ]),
+    bspTrees: Object.freeze([...scene.bspTrees, ...linkBspTrees(source, world.bspTrees)]),
     skeletons: Object.freeze([...scene.skeletons, ...linkSkeletons(source, world.skeletons)]),
     animations,
     instances: Object.freeze([
@@ -111,6 +118,15 @@ const getSceneWithWorld = (archive: JamArchive, scene: Scene, worldPath: string)
 // 0x00432e20), whose texture and material chains (container +0x38 and +0x3c) every later world searches.
 export const loadScene = (archive: JamArchive, worldPaths: readonly string[]): Scene =>
   worldPaths.reduce((scene, worldPath) => getSceneWithWorld(archive, scene, worldPath), EMPTY_SCENE)
+
+// Loads more worlds onto a scene that is already loaded: their textures and materials search the earlier ones and
+// shadow them by name, as the game's container chains do.
+export const loadSceneOnto = (
+  archive: JamArchive,
+  scene: Scene,
+  worldPaths: readonly string[]
+): Scene =>
+  worldPaths.reduce((current, worldPath) => getSceneWithWorld(archive, current, worldPath), scene)
 
 // Every world file in the archive, in archive order.
 export const getWorldPaths = (archive: JamArchive): readonly string[] =>

@@ -43,4 +43,22 @@ describe.skipIf(!isAvailable)('buildDriverModel', () => {
       'helmet2',
     ])
   })
+
+  it("keeps v as the engine reads it (the short over 4096, 0x00408280): the bat helmet's face patch lies at v 0.425 to 0.655, the middle of the face texture whose surface starts at its bottom row", () => {
+    // Arrange
+    const archive = openJamArchive(new Uint8Array(readFileSync(JAM_PATH)))
+    const geometry = parsePartGeometry(archive.readFile('MENUDATA\\PARTDB\\GAMEPART\\ICB_CHAR.GCB'))
+    const batHat = geometry.parts.find((part) => part.name === 'bb_hat')
+    const faceGroup = batHat?.groups.find((group) => group.materialName === 'face')
+
+    // Act
+    const verticalCoordinates = Array.from(
+      faceGroup?.triangles ?? [],
+      (index) => geometry.textureCoordinates[index * 2 + 1] ?? 0
+    )
+
+    // Assert
+    expect(Math.min(...verticalCoordinates)).toBeCloseTo(0.425, 2)
+    expect(Math.max(...verticalCoordinates)).toBeCloseTo(0.655, 2)
+  })
 })

@@ -1,3 +1,4 @@
+import { getWarpView } from '../get-warp-view/get-warp-view.ts'
 import { getPhysicsSubSteps, getRaceTimeStep } from '../../../racer-physics/index.ts'
 import {
   attachCamera,
@@ -229,6 +230,12 @@ export const stepRacePresentation = (
       isPlayerPowerSliding: isPowerSliding,
     }),
     cameraView: cameraUpdate.view,
+    warpView: getWarpView(
+      raceState,
+      cameraUpdate.camera,
+      presentation.playerRacerIndex,
+      turboLevel
+    ),
     hudFrame,
     sounds: Object.freeze([
       ...step.events.flatMap((event) => getRaceEventSounds(event)),

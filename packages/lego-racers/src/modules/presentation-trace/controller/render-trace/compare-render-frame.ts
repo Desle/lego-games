@@ -175,6 +175,7 @@ export const compareRenderFrame = (input: RenderFrameInput): RenderFrameComparis
     })
   }
   let matchedCount = 0
+  const matchedOriginals: DrawnTriangle[] = []
   for (const triangle of original) {
     const centre = getCentre(triangle.vertices)
     const column = Math.floor(centre.x / CELL_SIZE)
@@ -208,6 +209,7 @@ export const compareRenderFrame = (input: RenderFrameInput): RenderFrameComparis
     }
     used.add(best.index)
     matchedCount += 1
+    matchedOriginals.push(triangle)
     const checks: readonly (readonly [RenderMismatchKindType, string | null])[] = [
       [
         RenderMismatchKind.POSITION,
@@ -261,5 +263,6 @@ export const compareRenderFrame = (input: RenderFrameInput): RenderFrameComparis
     matchedCount,
     clippedCount,
     groups: groupList,
+    matchedOriginals,
   })
 }

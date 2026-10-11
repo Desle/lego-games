@@ -4,7 +4,17 @@ export {
   getRacerSphere,
   RACER_COLLISION_DEPENDENCIES_NOT_YET_PORTED,
 } from './controller/collide-racers/collide-racers.ts'
-export { getRacerVolume, getRacerVolumeParts } from './types/racer-volume/racer-volume.ts'
+export {
+  getRacerAfterWarpDraw,
+  getRacerWithPartsMarked,
+  getWarpFadeScale,
+} from './types/vehicle-bounds/vehicle-bounds.ts'
+export {
+  getFreshRacerVolumeParts,
+  getRacerReadVolumeParts,
+  getRacerVolume,
+  getRacerVolumeParts,
+} from './types/racer-volume/racer-volume.ts'
 export { endRacerKick, respondToRacerContact } from './controller/racer-contact/racer-contact.ts'
 export { followDriverRoute } from './controller/follow-driver-route/follow-driver-route.ts'
 export { notifyRacerContact } from './controller/notify-racer-contact/notify-racer-contact.ts'
@@ -31,6 +41,17 @@ export {
   getRacerWithTimedEffect,
   transferTimedEffect,
 } from './controller/timed-effect/timed-effect.ts'
+export {
+  clearColourShiftOverride,
+  getDisplayedColourShift,
+  getRacerWithColourShiftOverride,
+  stepColourShiftOverride,
+  TIMED_EFFECT_COLOUR_SHIFT,
+  COPIED_FIGURE_DISTANCE,
+  POWER_UP_EFFECT_FIGURE_DISTANCE,
+  WAND_COLOUR_SHIFT,
+  WAND_COLOUR_SHIFT_MILLISECONDS,
+} from './types/colour-shift-override/colour-shift-override.ts'
 export { readRacerTables } from './services/read-racer-tables/read-racer-tables.ts'
 export {
   addCarBodyImpulse,
@@ -45,7 +66,9 @@ export {
   releaseCarBody,
   setCarBodyHeadingFromFrame,
   setCarBodyPush,
+  endCarBodyWarp,
   setCarBodyTwoPointMode,
+  startCarBodyWarp,
   startCarBodyBoost,
   startCarBodyFlip,
   startCarBodySpin,
@@ -77,6 +100,7 @@ export {
 } from './types/figure/figure.ts'
 export {
   clearVehicleWheelEmitter,
+  stopVehicleEffectsForWarp,
   endVehiclePowerSlideEffects,
   setVehicleWheelEmitter,
   startVehicleBoostSmoke,
@@ -85,7 +109,12 @@ export {
   stopVehicleTireSmoke,
 } from './types/vehicle-emitters/vehicle-emitters.ts'
 export { getVehicleLeanAtReset } from './types/vehicle/vehicle-lean.ts'
-export { createVehicle, updateVehicle, updateVehicleDriver } from './types/vehicle/vehicle.ts'
+export {
+  createVehicle,
+  getVehicleWithRestingDriver,
+  updateVehicle,
+  updateVehicleDriver,
+} from './types/vehicle/vehicle.ts'
 export { COSINE_TABLE_ADDRESS, getTableCosine } from './types/cosine-table/cosine-table.ts'
 export {
   applyDriverSteering,
@@ -129,6 +158,7 @@ export type {
   RacerBoundary,
   RacerCollisionDependencies,
   RacerPassDependencies,
+  ColourShift,
   RacerControls,
   RacerDriver,
   RacerSet,

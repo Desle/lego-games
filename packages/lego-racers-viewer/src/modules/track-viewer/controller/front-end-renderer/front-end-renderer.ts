@@ -4,6 +4,8 @@ import type {
   FrontEndImage,
   FrontEndResources,
 } from '@lego-games/lego-racers/front-end'
+import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
+import { createMenuViewport } from '../../services/menu-viewport/menu-viewport.ts'
 import { createBitmapFontPainter } from '../bitmap-font-painter/bitmap-font-painter.ts'
 import type { FrontEndRenderer } from './front-end-renderer.types.ts'
 
@@ -45,8 +47,11 @@ const getFillStyle = (
 // the object it would show (the menus' 3D backdrops are not rendered yet).
 export const createFrontEndRenderer = (
   canvas: HTMLCanvasElement,
-  resources: FrontEndResources
+  resources: FrontEndResources,
+  archive: JamArchive
 ): FrontEndRenderer => {
+  const menuViewport = createMenuViewport(archive)
+  let lastTime: number | null = null
   const imageCanvases = new Map<string, HTMLCanvasElement | null>()
   const painter = createBitmapFontPainter()
   const getCachedImageCanvas = (name: string): HTMLCanvasElement | null => {
@@ -60,6 +65,9 @@ export const createFrontEndRenderer = (
     draw: (commands: readonly FrontEndDrawCommand[]) => {
       const context = canvas.getContext('2d')
       if (context === null) return
+      const now = performance.now()
+      const deltaMilliseconds = lastTime === null ? 0 : Math.min(100, Math.floor(now - lastTime))
+      lastTime = now
       context.clearRect(0, 0, canvas.width, canvas.height)
       context.imageSmoothingEnabled = false
       for (const command of commands) {
@@ -94,6 +102,7 @@ export const createFrontEndRenderer = (
             break
           }
           case 'viewport': {
+            if (menuViewport.draw(context, command, deltaMilliseconds)) break
             const { left, top, right, bottom } = command.rectangle
             context.fillStyle = 'rgba(0, 0, 0, 0.35)'
             context.fillRect(left, top, right - left, bottom - top)
@@ -102,5 +111,6 @@ export const createFrontEndRenderer = (
         }
       }
     },
+    dispose: () => menuViewport.dispose(),
   })
 }

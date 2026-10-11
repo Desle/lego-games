@@ -7,6 +7,7 @@ import {
   ZERO_VECTOR3,
 } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
+import { stepColourShiftOverride } from '../colour-shift-override/colour-shift-override.ts'
 import { getRestartedForceFeedback } from '../force-feedback/force-feedback.ts'
 import {
   blendFigureAnimation,
@@ -101,6 +102,9 @@ export const createVehicle = (
     bodyRotation: IDENTITY_MATRIX3,
     forwardLean: 0,
     driverPosition: ZERO_VECTOR3,
+    bodyScale: 1,
+    boundsCaches: null,
+    pendingPartsMarkScale: null,
   })
 
 // 0x0043cbb0 (thiscall on the racer set: position, minimum and maximum squared distance): the nearest racer inside the
@@ -344,6 +348,14 @@ export const updateVehicleDriver: RacerBoundary = (
 // speed (about 0 and forwards: animation 0, backwards: animation 1) at |speed| · 1.8, on the display figure and the
 // second figure; the display figure is then updated and the car model frame leans (0x0043e740, `getVehicleLean`),
 // the driver's animation is chosen (0x0043ec10) and the emitters draw.
+// 0x004401a0 (fastcall, run by the racer set's reset 0x0043a780): the driver plays animation 9 from the start, the
+// pose a car is built with (0x0043d7a0).
+export const getVehicleWithRestingDriver = (vehicle: Vehicle): Vehicle =>
+  Object.freeze({
+    ...vehicle,
+    driverFigure: playFigureAnimation(vehicle.driverFigure, RESTING_ANIMATION),
+  })
+
 export const updateVehicle: RacerBoundary = (context, racerSet, racerIndex, stepMilliseconds) => {
   const { arithmetic } = context
   const { multiply, storeFloat, getIsBelow, getIsBelowOrEqual } = arithmetic
@@ -398,7 +410,7 @@ export const updateVehicle: RacerBoundary = (context, racerSet, racerIndex, step
     })
   )
   const driven = updateVehicleDriver(context, wheels, racerIndex, stepMilliseconds)
-  const drivenRacer = getRacer(driven, racerIndex)
+  const drivenRacer = stepColourShiftOverride(getRacer(driven, racerIndex), stepMilliseconds)
   const measured = setRacer(
     driven,
     racerIndex,
@@ -407,6 +419,7 @@ export const updateVehicle: RacerBoundary = (context, racerSet, racerIndex, step
       vehicle: Object.freeze({
         ...drivenRacer.vehicle,
         volume: getRacerVolume(arithmetic, drivenRacer),
+        boundsCaches: null,
       }),
     })
   )

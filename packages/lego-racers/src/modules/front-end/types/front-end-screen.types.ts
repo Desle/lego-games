@@ -1,3 +1,6 @@
+import type { SkeletonAnimationState } from '../../skeletal-animation/index.ts'
+import type { BuilderSession } from '../../car-builder/index.ts'
+import type { DriverSession } from '../../figure-builder/index.ts'
 import type {
   FrontEndEnvironment,
   FrontEndInput,
@@ -13,8 +16,13 @@ export type ScreenRuntime = {
   readonly environment: FrontEndEnvironment
   readonly settings: FrontEndSettings
   readonly selection: FrontEndSelection
+  // The builder screen's car (null until it opens).
+  readonly builder: BuilderSession | null
+  readonly driver: DriverSession | null
   // Milliseconds since the screen opened (the circuit race screen cycles its races on it).
   readonly screenMilliseconds: number
+  // The main menu figure's pose (null on the other screens and before it exists).
+  readonly menuFigureAnimation: SkeletonAnimationState | null
 }
 
 // What a screen asks of the front end when it handles an input (the original's target screen, 0x360 of the screen,
@@ -29,6 +37,8 @@ export type ScreenNavigation =
 export type ScreenResult = {
   readonly selection: FrontEndSelection
   readonly settings: FrontEndSettings
+  readonly builder: BuilderSession | null
+  readonly driver: DriverSession | null
   readonly navigation: ScreenNavigation
   // Sounds of MENUDATA\SOUNDS by file name (without `.pcm`); see front-end.md for how they were chosen.
   readonly soundNames: readonly string[]
@@ -59,3 +69,10 @@ export type OptionsButton = {
 }
 
 export type RaceSelectionKind = 'circuit_race' | 'single_race' | 'time_trial'
+
+// An entry of the garage page: the button, its label string and the screen it opens (null: back).
+export type GarageEntry = {
+  readonly itemName: string
+  readonly labelId: number
+  readonly targetScreenId: number | null
+}

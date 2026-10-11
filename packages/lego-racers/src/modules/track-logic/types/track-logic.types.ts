@@ -133,6 +133,13 @@ export type TrackEffect =
       readonly target: Vector3 | null
     }
   | {
+      // 0x00465600 (0x004400a0) and 0x00465690, 0x004400e0: a 4D event shifts the colours of the racer's models, or ends it.
+      readonly type: 'track.racer_colour_shift_changed'
+      readonly racerIndex: number
+      readonly shifts: readonly [number, number, number, number] | null
+      readonly biases: readonly [number, number, number, number]
+    }
+  | {
       readonly type: 'track.racer_force_changed'
       readonly racerIndex: number
       readonly slot: number

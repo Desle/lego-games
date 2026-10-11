@@ -1,4 +1,15 @@
 import { decodeBitmap } from '../../../bitmap/index.ts'
+import { loadBuilderCatalog, loadSavedCars } from '../../../car-builder/index.ts'
+import type { BuilderCatalog, SavedCar } from '../../../car-builder/index.ts'
+import { parseAnimation } from '../../../animation/index.ts'
+import { getSkeletalAnimation } from '../../../skeletal-animation/index.ts'
+import type { SkeletalAnimation } from '../../../skeletal-animation/index.ts'
+import { parseDriverDatabase } from '../../../driver-database/index.ts'
+import type { DriverDatabase } from '../../../driver-database/index.ts'
+import { parseBodyPartCatalog } from '../../../figure-builder/index.ts'
+import type { BodyPartCatalog } from '../../../figure-builder/index.ts'
+import { parseSaveFile } from '../../../save-data/index.ts'
+import type { SaveRacer } from '../../../save-data/index.ts'
 import { parseCircuitDatabase } from '../../../circuit-database/index.ts'
 import { parseFontDatabase } from '../../../font-database/index.ts'
 import { buildBitmapFont, getFontImagePixels } from '../../../font-rendering/index.ts'
@@ -17,6 +28,10 @@ import type {
 } from '../../types/front-end.types.ts'
 
 const MENU_DIRECTORY = 'MENUDATA'
+const DEFAULT_SAVE_PATH = 'MENUDATA\\DEFAULT.LRS'
+const MENU_FIGURE_ANIMATION_PATH = 'MENUDATA\\LEGOMAN.ADB'
+const DRIVER_DATABASE_PATH = 'MENUDATA\\PARTDB\\DRIVERS.DDB'
+const BODY_PART_CATALOG_PATH = 'MENUDATA\\PARTDB\\BODYPART.PCB'
 const SEPARATOR = '\\'
 
 const getPath = (...segments: readonly string[]): string => segments.join(SEPARATOR)
@@ -120,7 +135,51 @@ export const loadFrontEndResources = (
     return files
   }
 
+  let builderCatalog: BuilderCatalog | null = null
+  const getBuilderCatalog = (): BuilderCatalog => {
+    builderCatalog ??= loadBuilderCatalog((path) => archive.readFile(path))
+    return builderCatalog
+  }
+  let racerTemplate: SaveRacer | null = null
+  const getRacerTemplate = (): SaveRacer => {
+    racerTemplate ??= parseSaveFile(archive.readFile(DEFAULT_SAVE_PATH)).racers[0] ?? null
+    if (racerTemplate === null) throw new RangeError('DEFAULT.LRS has no racer')
+    return racerTemplate
+  }
+
+  let defaultCar: SavedCar | null = null
+  const getDefaultCar = (): SavedCar => {
+    defaultCar ??= loadSavedCars((path) => archive.readFile(path), DEFAULT_SAVE_PATH)[0] ?? null
+    if (defaultCar === null) throw new RangeError('DEFAULT.LRS has no racer')
+    return defaultCar
+  }
+  let driverCatalog: BodyPartCatalog | null = null
+  const getDriverCatalog = (): BodyPartCatalog => {
+    driverCatalog ??= parseBodyPartCatalog(archive.readFile(BODY_PART_CATALOG_PATH))
+    return driverCatalog
+  }
+
+  let driverDatabase: DriverDatabase | null = null
+  const getDriverDatabase = (): DriverDatabase => {
+    driverDatabase ??= parseDriverDatabase(archive.readFile(DRIVER_DATABASE_PATH))
+    return driverDatabase
+  }
+
+  let menuFigureAnimation: SkeletalAnimation | null = null
+  const getMenuFigureAnimation = (): SkeletalAnimation => {
+    menuFigureAnimation ??= getSkeletalAnimation(
+      parseAnimation(archive.readFile(MENU_FIGURE_ANIMATION_PATH))
+    )
+    return menuFigureAnimation
+  }
+
   return Object.freeze({
+    getBuilderCatalog,
+    getDriverDatabase,
+    getMenuFigureAnimation,
+    getRacerTemplate,
+    getDefaultCar,
+    getDriverCatalog,
     menuNames: getStrings(readTable(getPath(MENU_DIRECTORY, 'MENUNAME.SRF'))),
     getMenuText: (stringId: number) => getString(menuText, stringId) ?? '',
     getCircuitText: (stringId: number) => getString(circuitText, stringId) ?? '',

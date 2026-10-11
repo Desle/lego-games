@@ -15,3 +15,9 @@ export type CircuitResultApplication = {
   // The key of the circuit the result unlocked (settings → front end flag 4), or null.
   readonly unlockedCircuitName: string | null
 }
+
+export type SessionSaveOutcome = {
+  readonly saveFile: SaveFile
+  // The menu screen to open: the session's, or 0x1c once the twelfth champion is beaten.
+  readonly resultScreen: number
+}

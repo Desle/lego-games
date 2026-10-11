@@ -3,6 +3,12 @@ import {
   holdCarBody,
   releaseCarBody,
 } from '../../types/car-body-commands/car-body-commands.ts'
+import {
+  clearColourShiftOverride,
+  getRacerWithColourShiftOverride,
+  TIMED_EFFECT_COLOUR_SHIFT,
+  COPIED_FIGURE_DISTANCE,
+} from '../../types/colour-shift-override/colour-shift-override.ts'
 import { getRacer, setRacer } from '../../types/racer-state/racer-state.ts'
 import type { FloatArithmetic } from '../../../simulation-math/index.ts'
 import type { Racer, RacerBoundary, RacerSet, RacerSetContext } from '../../types/racer.types.ts'
@@ -20,10 +26,12 @@ const TIMED_EFFECT_CHARGE = 1000
 export const getRacerWithTimedEffect = (
   arithmetic: FloatArithmetic,
   receiver: Racer,
-  milliseconds: number
+  milliseconds: number,
+  figureDistance: number
 ): Racer =>
   Object.freeze({
-    ...receiver,
+    ...getRacerWithColourShiftOverride(receiver, TIMED_EFFECT_COLOUR_SHIFT, figureDistance),
+    timedEffectFigureDistance: COPIED_FIGURE_DISTANCE,
     timedEffectMilliseconds: milliseconds,
     timedEffectCharge: TIMED_EFFECT_CHARGE,
     flags: receiver.flags | RACER_TIMED_EFFECT_FLAG,
@@ -54,7 +62,8 @@ export const transferTimedEffect = (
     getRacerWithTimedEffect(
       context.arithmetic,
       getRacer(racerSet, receiverIndex),
-      getRacer(racerSet, giverIndex).timedEffectMilliseconds
+      getRacer(racerSet, giverIndex).timedEffectMilliseconds,
+      getRacer(racerSet, giverIndex).timedEffectFigureDistance
     )
   )
 
@@ -64,7 +73,7 @@ export const transferTimedEffect = (
 // The racer's side of 0x00439b00: no timed effect, no flags for it, the car body released.
 export const getRacerWithoutTimedEffect = (racer: Racer): Racer =>
   Object.freeze({
-    ...racer,
+    ...clearColourShiftOverride(racer),
     timedEffectMilliseconds: 0,
     flags: racer.flags & ~RACER_TIMED_EFFECT_FLAG,
     driver: Object.freeze({

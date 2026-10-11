@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs'
 import { getIsOriginalPresentationAvailable } from '@lego-games/lego-racers/presentation-trace'
 import { getIsOriginalGamePresent } from './original-game-files.ts'
 import { runRenderComparison } from './render-comparison.ts'
@@ -18,6 +19,12 @@ const RENDER_CASES: readonly TraceScenarioRequest[] = [
     isMirrored: true,
     recordFrames: RECORD_FRAMES,
   },
+  {
+    name: 'Royal Knights, warp',
+    raceFolder: 'RACEC0R0',
+    recordFrames: [310, 320, 330, 345, 360, 375],
+    warp: { grantFrame: 300, useFrame: 305, frameCount: 380 },
+  },
   { name: 'RACEC0R1', raceFolder: 'RACEC0R1', recordFrames: RECORD_FRAMES },
   { name: 'RACEC0R2', raceFolder: 'RACEC0R2', recordFrames: RECORD_FRAMES },
   { name: 'RACEC0R3', raceFolder: 'RACEC0R3', recordFrames: RECORD_FRAMES },
@@ -29,11 +36,24 @@ describe.skipIf(!isGamePresent())('render trace', () => {
   // eslint-disable-next-line no-restricted-syntax -- the lint rule knows `it(...)`, not `it.each(...)(...)`
   it.each(RENDER_CASES)('compares $name', async (renderCase) => {
     // Arrange / Act
-    const result = await runRenderComparison(renderCase)
+    const framesOverride = process.env['RENDER_TRACE_FRAMES']
+    const recordFrames =
+      framesOverride === undefined ? renderCase.recordFrames : framesOverride.split(',').map(Number)
+    const result = await runRenderComparison(
+      recordFrames === undefined ? renderCase : { ...renderCase, recordFrames }
+    )
 
     // Assert
     console.log(
       renderCase.name,
+      result.groups
+        .filter((group) => group.kind === 'color')
+        .slice(0, 12)
+        .map(
+          (group) =>
+            `color ${group.source} x${String(group.count)} in ${String(group.frames.length)} frames: ${group.firstDetail}`
+        )
+        .join('\n'),
       result.hudResults
         .map(
           (hud) =>
@@ -48,10 +68,23 @@ describe.skipIf(!isGamePresent())('render trace', () => {
         )
         .join('\n')
     )
+    const groupsPath = process.env['RENDER_TRACE_GROUPS']
+    if (groupsPath !== undefined) {
+      writeFileSync(
+        groupsPath,
+        `${JSON.stringify(result.totals)}\n${result.groups
+          .slice(0, 40)
+          .map(
+            (group) =>
+              `${group.kind} ${group.source} x${String(group.count)} frames ${group.frames.join(',')}: ${group.firstDetail}`
+          )
+          .join('\n')}`
+      )
+    }
     const lowest = Math.min(
       ...result.totals.map((total) => total.matchedCount / total.originalCount)
     )
-    expect(result.totals.length).toBe(RECORD_FRAMES.length)
+    expect(result.totals.length).toBe(recordFrames?.length)
     expect(lowest).toBeGreaterThan(MINIMUM_MATCHED_SHARE)
   })
 })

@@ -19,6 +19,13 @@ export {
   advanceSkeletonAnimation,
   createSkeletonAnimationState,
 } from './controller/skeleton-animation-state/skeleton-animation-state.ts'
+export {
+  blendToSkeletonClip,
+  getIsSkeletonClipEnded,
+  getShownClipIndex,
+  playSkeletonClipOnce,
+} from './controller/skeleton-clip-control/skeleton-clip-control.ts'
+export type { SkeletonClipBlend } from './controller/skeleton-clip-control/skeleton-clip-control.types.ts'
 export { SkeletalAnimationError } from './types/skeletal-animation-errors/skeletal-animation-errors.ts'
 export type {
   AnimationClip,

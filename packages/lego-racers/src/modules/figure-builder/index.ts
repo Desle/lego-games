@@ -13,3 +13,23 @@ export type {
   PartGeometry,
   PartGroup,
 } from './types/figure-builder.types.ts'
+export {
+  createDriverSession,
+  getBodyModelIndex,
+  getDriverChoice,
+  getDriverSessionPartBytes,
+  mixDriver,
+  moveDriverChooser,
+} from './controller/driver-session/driver-session.ts'
+export {
+  ALL_GHOSTS_REQUIREMENT,
+  DRIVER_PARTS,
+  DriverPart,
+} from './types/driver-session/driver-session.ts'
+export type {
+  DriverChooser,
+  DriverMixResult,
+  DriverPart as DriverPartValue,
+  DriverPartAvailability,
+  DriverSession,
+} from './types/driver-session/driver-session.types.ts'

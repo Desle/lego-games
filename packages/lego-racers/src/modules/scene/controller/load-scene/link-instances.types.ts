@@ -11,6 +11,7 @@ export type DistanceLevel = {
 
 export type SortedLevel = {
   readonly meshIndex: number
+  readonly bspTreeIndex: number | null
   readonly squaredDistance: number
 }
 
@@ -28,6 +29,7 @@ export type SceneCounts = {
   readonly meshOffset: number
   readonly materialAssignmentOffset: number
   readonly skeletonOffset: number
+  readonly bspTreeOffset: number
   readonly animationOffset: number
   readonly meshCount: number
   readonly materialAssignmentCount: number

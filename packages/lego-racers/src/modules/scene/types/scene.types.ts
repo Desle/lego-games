@@ -1,4 +1,5 @@
 import type { EnumValues } from '../../../shared/types/enum.types.ts'
+import type { BspTree } from '../../bsp-tree/index.ts'
 import type { Skeleton } from '../../skeleton/index.ts'
 import type { SkeletalAnimation } from '../../skeletal-animation/index.ts'
 import type {
@@ -91,6 +92,8 @@ export type SceneMaterial = {
 export type SceneDrawBatch = {
   // Index into the model's material list (or the instance's material assignment).
   readonly materialSlot: number
+  // The index of the select_material command that opened the batch (0 for faces drawn before any material).
+  readonly firstCommand: number
   // Three vertex-buffer indices per triangle, read through the 64-entry vertex cache.
   readonly vertexIndices: Uint32Array
   // The transform selected when each corner's vertex was transformed into the cache.
@@ -111,6 +114,13 @@ export type SceneMesh = {
   readonly normals: Float32Array | null
   readonly materialIndices: readonly number[]
   readonly drawBatches: readonly SceneDrawBatch[]
+}
+
+// A BSP tree the world lists (`.BDB`); its leaves name runs of the draw commands of the instance's mesh.
+export type SceneBspTree = {
+  readonly name: string
+  readonly path: string
+  readonly tree: BspTree
 }
 
 export type SceneMaterialAssignment = {
@@ -141,6 +151,8 @@ export type SceneInstanceLevel = {
   readonly skeletonIndex: number | null
   readonly animationIndex: number | null
   readonly materialAssignmentIndex: number | null
+  // BSP tree instance levels only: the index into the scene's BSP tree list.
+  readonly bspTreeIndex: number | null
   // Squared distance, or the largest float for "always".
   readonly squaredDistance: number
 }
@@ -163,6 +175,11 @@ export type SceneCamera = {
   readonly position: SceneVector
   readonly forward: SceneVector
   readonly up: SceneVector
+  // World camera keywords 0x45, 0x46 and 0x47: the clipping planes and the vertical field of view in degrees (confirmed
+  // by the original's menu draws: the matrices of the main menu, the racer showcase and the race cinemas).
+  readonly nearPlane: number
+  readonly farPlane: number
+  readonly fieldOfViewDegrees: number
 }
 
 export type SceneAmbientLight = {
@@ -181,6 +198,7 @@ export type Scene = {
   readonly materials: readonly SceneMaterial[]
   readonly meshes: readonly SceneMesh[]
   readonly materialAssignments: readonly SceneMaterialAssignment[]
+  readonly bspTrees: readonly SceneBspTree[]
   readonly skeletons: readonly SceneSkeleton[]
   readonly animations: readonly SceneAnimation[]
   readonly instances: readonly SceneInstance[]

@@ -1,11 +1,16 @@
 import {
   createFrontEnd,
+  getFrontEndDemonstrationRequest,
   getFrontEndFrame,
   getFrontEndRaceRequest,
   loadFrontEndResources,
   stepFrontEnd,
 } from '@lego-games/lego-racers/front-end'
-import type { FrontEndEnvironment } from '@lego-games/lego-racers/front-end'
+import type {
+  FrontEndEnvironment,
+  FrontEndMemory,
+  FrontEndState,
+} from '@lego-games/lego-racers/front-end'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import { useEffect, useRef, useState } from 'react'
 import { createFrontEndAudioPlayer } from '../../services/front-end-audio-player/front-end-audio-player.ts'
@@ -17,6 +22,21 @@ import type { FrontEndController, FrontEndControllerOptions } from './front-end-
 const MAXIMUM_FRAME_MILLISECONDS = 100
 // Progression hook: the circuits are all open until the save files and the circuit progression exist.
 const ALL_CIRCUITS_OPEN = 0x7f
+// Progression hook: every driver part is offered until the save files exist (no trophies are recorded yet).
+const isEveryPartOpen = true
+
+const getMemory = (state: FrontEndState): FrontEndMemory => ({
+  playerCar: state.settings.playerCar,
+  randomPosition: state.settings.randomPosition,
+  saveFile: state.settings.saveFile,
+  racerIndex: state.settings.racerIndex,
+})
+
+const getIsMemoryChanged = (previous: FrontEndMemory, current: FrontEndMemory): boolean =>
+  previous.playerCar !== current.playerCar ||
+  previous.randomPosition !== current.randomPosition ||
+  previous.saveFile !== current.saveFile ||
+  previous.racerIndex !== current.racerIndex
 
 // The menus of the game: reads the keyboard and the gamepad, steps the front end, draws its commands on the canvas
 // and plays its sounds; a race the menus chose, or the answer yes to the quit question, ends it.
@@ -35,7 +55,7 @@ export const useFrontEndController = (options: FrontEndControllerOptions): Front
     try {
       const archive = openJamArchive(jam)
       const resources = loadFrontEndResources(archive)
-      const renderer = createFrontEndRenderer(canvas, resources)
+      const renderer = createFrontEndRenderer(canvas, resources, archive)
       const input = createFrontEndInputSource()
       const audio = createFrontEndAudioPlayer(archive, callbacksReference.current.readTune)
       const resumeAudio = () => audio.resume()
@@ -43,15 +63,19 @@ export const useFrontEndController = (options: FrontEndControllerOptions): Front
       const getEnvironment = (): FrontEndEnvironment => ({
         controllerCount: input.getControllerCount(),
         unlockedCircuitMask: ALL_CIRCUITS_OPEN,
+        randomTable: callbacksReference.current.randomTable,
+        isEveryPartUnlocked: isEveryPartOpen,
         playerRacerNames: [],
         standingRows: callbacksReference.current.standingRows,
       })
       let state = createFrontEnd(
         resources,
         getEnvironment(),
-        callbacksReference.current.firstScreenId
+        callbacksReference.current.firstScreenId,
+        callbacksReference.current.memory
       )
       audio.playMusic(state.musicListIndex)
+      let reportedMemory = getMemory(state)
       let lastTime: number | null = null
       const onFrame = (time: number) => {
         animationFrame = requestAnimationFrame(onFrame)
@@ -73,9 +97,18 @@ export const useFrontEndController = (options: FrontEndControllerOptions): Front
           for (const soundName of result.soundNames) audio.playSound(soundName)
           if (result.musicListIndex !== null) audio.playMusic(result.musicListIndex)
         })
+        const memory = getMemory(state)
+        if (getIsMemoryChanged(reportedMemory, memory)) {
+          reportedMemory = memory
+          callbacksReference.current.onMenuMemoryChanged(memory)
+        }
         renderer.draw(getFrontEndFrame(state, resources, environment).commands)
+        const demonstration = getFrontEndDemonstrationRequest(state)
         const request = getFrontEndRaceRequest(state)
-        if (request !== null) {
+        if (demonstration !== null) {
+          cancelAnimationFrame(animationFrame)
+          callbacksReference.current.onDemonstrationRequested(demonstration)
+        } else if (request !== null) {
           cancelAnimationFrame(animationFrame)
           callbacksReference.current.onRaceRequested(request)
         } else if (state.outcome === 'quit') {
@@ -88,6 +121,7 @@ export const useFrontEndController = (options: FrontEndControllerOptions): Front
         window.removeEventListener('keydown', resumeAudio)
         input.dispose()
         audio.dispose()
+        renderer.dispose()
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : String(error))

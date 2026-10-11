@@ -9,6 +9,7 @@ import type {
   HudState,
 } from '../../race-hud/index.ts'
 import type { SkeletonAnimationState } from '../../skeletal-animation/index.ts'
+import type { ColourShift } from '../../racer/index.ts'
 import type { Matrix3, Vector3 } from '../../simulation-math/index.ts'
 import type { RacePhaseValue } from '../../race/index.ts'
 
@@ -43,11 +44,29 @@ export type HudContext = {
 export type RacePresentationFrame = {
   readonly presentation: RacePresentation
   readonly cameraView: CameraView
+  // The warp's tunnel scene while the player is carried (0x0045d940), else null.
+  readonly warpView: WarpView | null
   // null in the introduction and the results, when the original draws no HUD.
   readonly hudFrame: HudFrame | null
   readonly sounds: readonly SoundRequest[]
   // The music track to switch to this frame, if any.
   readonly music: MusicCue | null
+}
+
+// What the player's warp draws instead of the track: the tunnel animated for `tunnelMilliseconds`, the car at the origin
+// (`pose`) and the camera that follows it.
+export type WarpView = {
+  readonly tunnelMilliseconds: number
+  readonly pose: RacerPose
+  readonly cameraView: CameraView
+}
+
+// Where the three drawn parts of a car have their bounding sphere centres in the world (0x0040e270 reads them with
+// FUN_00411c60): the wheels, the car model and the driver.
+export type RacerPartCentres = {
+  readonly wheels: Vector3
+  readonly body: Vector3 | null
+  readonly driver: Vector3
 }
 
 // A racer on the track: where its display frame is, and what hangs on it. The wheels (a skeleton instance) sit in the
@@ -63,6 +82,10 @@ export type RacerPose = {
   // The bones of the wheels and of the driver: the figures' clips as the pose sampling reads them.
   readonly wheelAnimation: SkeletonAnimationState
   readonly driverAnimation: SkeletonAnimationState
+  // The colour shift a track event put on the racer's models (0x004400a0), or null.
+  readonly colourShift: ColourShift | null
+  // Where the parts' spheres are, for the distance cut; null in the warp, where the camera stays beside the car.
+  readonly partCentres: RacerPartCentres | null
 }
 
 // What the frame's race events change in the presentation.

@@ -305,6 +305,22 @@ export type Vehicle = {
   readonly forwardLean: number
   // The driver figure's world position, the seat point carried by the car model frame (0x0043e740 ends with it).
   readonly driverPosition: Vector3
+  // +0x3c's +0x58: the scale of the car model part, which 0x00440160 sets together with the figures' (`Figure.scale`).
+  readonly bodyScale: number
+  // The bounding caches (+0x04..+0x10) of the four parts, where they differ from a fresh refresh: 0x00440160 and the
+  // warp's draw (0x0045d940) leave a part's radius at -1 or its sphere at the origin until the next update refreshes
+  // it (0x00411ef0 reads every part through the getters 0x00411c60 and 0x00411ca0). null parts are fresh.
+  readonly boundsCaches: VehicleBoundsCaches | null
+  // A 0x00440160 call that happens after the frame's vehicle update (a stolen warp's reset runs in the racers' power-up
+  // pass, 0x0043917e), applied when the frame ends.
+  readonly pendingPartsMarkScale: number | null
+}
+
+export type VehicleBoundsCaches = {
+  readonly body: BoundingSphere | null
+  readonly second: BoundingSphere | null
+  readonly wheels: BoundingSphere | null
+  readonly driver: BoundingSphere | null
 }
 
 // The racer (0xe34 bytes; constructor 0x00436990, field reset 0x00436bd0). Only the fields the ported passes touch.
@@ -385,8 +401,29 @@ export type Racer = {
   // The car rigid body's collision list (+0x140, count +0x154, at most five; 0x00444d90 sets the first two, 0x004488e0
   // adds and 0x00448930 removes): positions in RacerSetContext.collisionObjects. The first is the track.
   readonly collisionObjectIndices: readonly number[]
+  // Vehicle +0x3a0..+0x3c0 (0x004400a0 sets it, 0x004400e0 clears it): the colour shift the track's 4D events put on the
+  // racer's car and driver, or null.
+  readonly colourShift: ColourShift | null
+  // Vehicle +0x3c4: 0x00440100 set it (the wand's flash, the timed effect's tint) and 0x00440130 clears it, every
+  // Vehicle_Update when the milliseconds are used up. While it is set the models keep the shift 0x00440100 gave
+  // them, and 0x004400a0 and 0x004400e0 touch only the stored one.
+  readonly isColourShiftOverridden: boolean
+  // Racer +0x29c + 0x84: the level distance bits of the figure the timed effect copies onto the racer. 0x00439900 hands
+  // them on as the override's milliseconds, and stores 0 in every copy.
+  readonly timedEffectFigureDistance: number
+  // Vehicle +0x3c8: uint32 milliseconds the override has left.
+  readonly colourShiftOverrideMilliseconds: number
+  // The shift 0x00440100 put on the models (it is not stored in the vehicle); null before the first override.
+  readonly overridingColourShift: ColourShift | null
   // The 750 ms timer 0x00438e60 adds to the collision manager (milliseconds counted so far), or null when none runs.
   readonly contactTimerMilliseconds: number | null
+}
+
+// The eight integers of an event's keywords 0x4e and 0x4f: every colour channel of the racer's models becomes
+// (channel >> shift) + bias, clamped to 255 (the vertex buffer's 0x10017050; red, green, blue, alpha).
+export type ColourShift = {
+  readonly shifts: readonly [number, number, number, number]
+  readonly biases: readonly [number, number, number, number]
 }
 
 // One entry of the ranking array (0x004c67b0, stride 12: racer, distance, progress).

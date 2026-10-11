@@ -195,6 +195,64 @@ describe('the signal bus', () => {
   })
 })
 
+describe('the 4D events (0x00465600, 0x00465690)', () => {
+  const shiftBlock = (identifier: number, extra: readonly number[]) =>
+    block(identifier, [
+      0x4e,
+      ...integerTokens([1, 1, 1, 0]),
+      0x4f,
+      ...integerTokens([0, 0, 16, 0]),
+      ...extra,
+    ])
+
+  it('shifts the colours of the racer an event fires on and ends the shift when a surface releases it', () => {
+    // Arrange
+    const bytes = section(0x4d, [shiftBlock(8, [])])
+
+    // Act
+    const fired = runTrackLogic(createLogic(bytes), CONTEXT, (session) => session.fireTrigger(8, 2))
+    const released = runTrackLogic(fired.state, CONTEXT, (session) =>
+      session.fireReleaseTrigger(99, 8, 2)
+    )
+
+    // Assert
+    expect(fired.effects).toContainEqual({
+      type: 'track.racer_colour_shift_changed',
+      racerIndex: 2,
+      shifts: [1, 1, 1, 0],
+      biases: [0, 0, 16, 0],
+    })
+    expect(released.effects).toContainEqual({
+      type: 'track.racer_colour_shift_changed',
+      racerIndex: 2,
+      shifts: null,
+      biases: [0, 0, 0, 0],
+    })
+  })
+
+  it('ends the shift when the block with keyword 0x50 fires, and does nothing on its release', () => {
+    // Arrange
+    const bytes = section(0x4d, [shiftBlock(9, [0x50])])
+
+    // Act
+    const fired = runTrackLogic(createLogic(bytes), CONTEXT, (session) => session.fireTrigger(9, 1))
+    const released = runTrackLogic(fired.state, CONTEXT, (session) =>
+      session.fireReleaseTrigger(99, 9, 1)
+    )
+
+    // Assert
+    expect(fired.effects).toContainEqual({
+      type: 'track.racer_colour_shift_changed',
+      racerIndex: 1,
+      shifts: null,
+      biases: [0, 0, 0, 0],
+    })
+    expect(
+      released.effects.filter((effect) => effect.type === 'track.racer_colour_shift_changed')
+    ).toEqual([])
+  })
+})
+
 describe('the random ambient sound (0x004643e0)', () => {
   const bytes = section(0x2a, [
     block(5, [0x40, ...encodeFloat(0.5), 0x3b, ...floatTokens([1, 2, 3])]),

@@ -36,6 +36,7 @@ const getDomeMesh = (dome: SkyDome, ringColors: SkyRingColors, materialIndex: nu
     drawBatches: [
       Object.freeze({
         materialSlot: 0,
+        firstCommand: 0,
         vertexIndices: Uint32Array.from(dome.triangleCorners),
         transformIndices: new Uint8Array(dome.triangleCorners.length),
       }),
@@ -54,7 +55,7 @@ export const createSkyObject = (sky: Sky, scene: Scene): SkyObject | null => {
   let ringColors = getSkyRingColors(state)
   const domeMesh = getDomeMesh(dome, ringColors, materialIndex)
   const textureCache = new Map<string, DataTexture>()
-  const material = createSceneMaterial(sceneMaterial, domeMesh, scene.textures, textureCache)
+  const material = createSceneMaterial(sceneMaterial, scene.textures, textureCache)
   material.depthTest = false
   material.depthWrite = false
   const [batch] = domeMesh.drawBatches

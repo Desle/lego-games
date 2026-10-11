@@ -60,3 +60,12 @@ export type {
   SaveRacer,
   SaveStorage,
 } from './types/save-data.types.ts'
+export {
+  getProfileWithRaceOptions,
+  getRacerName,
+  getSaveWithAddedRacer,
+  getSaveWithoutRacer,
+  getSaveWithRacer,
+  LAP_OPTION_BYTE_INDEX,
+  MAXIMUM_SAVED_RACER_COUNT,
+} from './controller/save-edits/save-edits.ts'
