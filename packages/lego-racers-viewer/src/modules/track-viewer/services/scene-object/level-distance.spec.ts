@@ -8,12 +8,12 @@ describe('getIsWithinLevelDistance', () => {
     ['at 500 units', { x: 500, y: 0, z: 0 }, true],
     ['beyond 500 units', { x: 300, y: 400.1, z: 0 }, false],
     ['without a centre', null, true],
-  ])('keeps a figure %s as the engine does', (_name, centre, expected) => {
+  ])('keeps a figure %s as the engine does', (_name, centre, isExpected) => {
     // Arrange / Act
     const isWithin = getIsWithinLevelDistance(centre, EYE)
 
     // Assert
-    expect(isWithin).toBe(expected)
+    expect(isWithin).toBe(isExpected)
   })
 
   it('cuts a brick beyond 400 units', () => {
