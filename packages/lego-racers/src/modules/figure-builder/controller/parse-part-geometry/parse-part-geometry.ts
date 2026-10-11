@@ -31,7 +31,7 @@ const EMPTY_POOL: VertexPool = Object.freeze({
 const toSigned16 = (value: number): number => (value << 16) >> 16
 const toSigned8 = (value: number): number => (value << 24) >> 24
 
-// FUN_00408070: `[ count ] {` then per vertex five 16-bit values (x, y, z, u, v) and three bytes (a normal) or four (a colour).
+// FUN_00408070: `[ count ] {` then per vertex five 16-bit values (x, y, z, u, v; the engine's v is 1 - v / 4096) and three bytes (a normal) or four (a colour).
 const readVertexPool = (reader: TokenReader, isColored: boolean): VertexPool => {
   const count = reader.readArrayCount()
   const positions = new Float32Array(count * 3)
@@ -44,9 +44,11 @@ const readVertexPool = (reader: TokenReader, isColored: boolean): VertexPool => 
       positions[vertex * 3 + axis] = toSigned16(reader.readInteger())
     }
     for (let axis = 0; axis < 2; axis += 1) {
-      textureCoordinates[vertex * 2 + axis] = Math.fround(
-        toSigned16(reader.readInteger()) * TEXTURE_SCALE
-      )
+      const coordinate = Math.fround(toSigned16(reader.readInteger()) * TEXTURE_SCALE)
+      // The stored v runs from the bottom of the image up; the viewer's textures run from the top down, so v is 1 - value.
+      // **Checked on the models**: with it every head, hat and face of the catalogue is the right way up and the bat
+      // helmet's black cowl (a colour-keyed texture whose cowl texels lie at the bottom) is solid, as in the game.
+      textureCoordinates[vertex * 2 + axis] = axis === 1 ? Math.fround(1 - coordinate) : coordinate
     }
     for (let extra = 0; extra < extraCount; extra += 1) {
       const value = reader.readInteger()

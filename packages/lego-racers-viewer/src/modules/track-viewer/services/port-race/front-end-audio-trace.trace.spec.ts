@@ -1,3 +1,4 @@
+import { createRandomTable } from '@lego-games/lego-racers/random-table'
 import {
   createFrontEnd,
   loadFrontEndResources,
@@ -68,6 +69,8 @@ describe.skipIf(!isGamePresent())('front end audio trace', () => {
     const environment: FrontEndEnvironment = {
       controllerCount: 1,
       unlockedCircuitMask: 0x7f,
+      randomTable: createRandomTable(Array.from({ length: 1024 }, (_, index) => index)),
+      isEveryPartUnlocked: true,
       playerRacerNames: [],
       standingRows: [],
     }

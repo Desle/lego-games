@@ -1,3 +1,4 @@
+import type { SavedCar } from '../../../car-builder/index.ts'
 import type { BuiltCar } from '../../../racer-setup/index.ts'
 
 export type SettingsRequest = {
@@ -7,6 +8,7 @@ export type SettingsRequest = {
   readonly raceModeFlags?: number
   readonly isCountdownSkipped?: boolean
   readonly playerCars?: readonly BuiltCar[]
+  readonly playerSavedCars?: readonly SavedCar[]
   readonly playerNames?: readonly string[]
   readonly randomPosition?: number
 }

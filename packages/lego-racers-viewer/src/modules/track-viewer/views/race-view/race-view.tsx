@@ -29,9 +29,11 @@ const RaceView = () => {
           className="relative shrink-0 overflow-hidden"
           style={{ width: RACE_STAGE_SIZE.width, height: RACE_STAGE_SIZE.height }}
         >
-          {race.status === RaceStatus.MENU && race.gameJam !== null ? (
+          {race.status === RaceStatus.MENU && race.gameJam !== null && race.randomTable !== null ? (
             <FrontEndView
               jam={race.gameJam}
+              randomTable={race.randomTable}
+              memory={race.menuMemory}
               readTune={race.readTune}
               firstScreenId={race.menuScreenId}
               standingRows={race.standingRows}

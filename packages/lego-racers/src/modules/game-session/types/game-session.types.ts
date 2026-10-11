@@ -1,3 +1,4 @@
+import type { SavedCar } from '../../car-builder/index.ts'
 import type { CircuitStandings } from '../../circuit-standings/index.ts'
 import type { CircuitDatabase } from '../../circuit-database/index.ts'
 import type { GhostSession } from '../../ghost/index.ts'
@@ -40,6 +41,8 @@ export type SessionSettings = {
   readonly isCountdownSkipped: boolean
   // The cars the local players built (settings +0x104 + 0x5c · i), by player.
   readonly playerCars: readonly BuiltCar[]
+  // The designs of those cars when the menus built them in this session (empty: the save's racers drive).
+  readonly playerSavedCars: readonly SavedCar[]
   // The names of the racer slots (settings +0x134 + 0x5c · i), used for the best times.
   readonly playerNames: readonly string[]
   // The random table cursor (0x004c6ee4) when the session starts.
