@@ -88,6 +88,7 @@ export type {
   EnhancementBrickPlacement,
   PowerUpBrick,
   PowerUpBrickPlacement,
+  BrickBase,
   PowerUpEffect,
   PowerUpEffects,
   PowerUpWorld,

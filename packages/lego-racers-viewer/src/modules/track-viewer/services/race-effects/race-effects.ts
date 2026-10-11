@@ -69,7 +69,7 @@ const createPool = (scene: ThreeScene, model: ModelScene) => {
   }
 }
 
-// Draws the effects the race reports: the rockets nose first, the barrels, the magnets and the spiked explosions at the
+// Draws the effects the race reports: the bricks on the track (spinning, at the scale their state gives), the rockets nose first, the barrels, the magnets and the spiked explosions at the
 // scale the engine gives them. Effects without a model here (cannon ball, grapple hook, wand, plain explosion) are skipped.
 export const createRaceEffects = (scene: ThreeScene, models: EffectModels): RaceEffects => {
   const pools = {
@@ -77,6 +77,8 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
     barrel: createPool(scene, models.barrel),
     magnet: createPool(scene, models.magnet),
     spikedExplosion: createPool(scene, models.spikedExplosion),
+    powerUpBrick: createPool(scene, models.powerUpBrick),
+    enhancementBrick: createPool(scene, models.enhancementBrick),
   }
   return Object.freeze({
     update: (views: EffectViews) => {
@@ -92,6 +94,13 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
                 : null
         if (pool === null) continue
         pool.use().group.matrix.copy(getHeadingMatrix(view.heading, view.position))
+      }
+      for (const brick of views.bricks) {
+        const copy = (brick.isEnhancement ? pools.enhancementBrick : pools.powerUpBrick).use()
+        copy.group.matrix
+          .copy(getHeadingMatrix(null, brick.position))
+          .multiply(new Matrix4().makeRotationZ(views.spinAngle))
+          .multiply(new Matrix4().makeScale(brick.scale, brick.scale, brick.scale))
       }
       for (const explosion of views.explosions) {
         if (!explosion.isSpiked) continue

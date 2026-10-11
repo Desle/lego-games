@@ -30,6 +30,8 @@ export type EffectModels = {
   readonly barrel: ModelScene
   readonly magnet: ModelScene
   readonly spikedExplosion: ModelScene
+  readonly powerUpBrick: ModelScene
+  readonly enhancementBrick: ModelScene
 }
 
 export type RaceAssets = {

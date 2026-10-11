@@ -115,7 +115,7 @@ export const stepRacerRigidBodyWithContacts: RacerBoundary = (
       rigidBody: stepCarRigidBody(
         context.arithmetic,
         racer.carBody.rigidBody,
-        { stepMilliseconds, collisionObjects: context.collisionObjects },
+        { stepMilliseconds, collisionObjects: getRacerCollisionObjects(context, racer) },
         hooks
       ),
     })
@@ -133,7 +133,7 @@ export const stepRacerScriptWithContacts: RacerBoundary = (
     stepScriptedCarBody(
       context.arithmetic,
       racer.carBody,
-      { stepMilliseconds, collisionObjects: context.collisionObjects },
+      { stepMilliseconds, collisionObjects: getRacerCollisionObjects(context, racer) },
       hooks
     )
   )
