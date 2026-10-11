@@ -35,7 +35,7 @@ export const useFrontEndController = (options: FrontEndControllerOptions): Front
     try {
       const archive = openJamArchive(jam)
       const resources = loadFrontEndResources(archive)
-      const renderer = createFrontEndRenderer(canvas, resources)
+      const renderer = createFrontEndRenderer(canvas, resources, archive)
       const input = createFrontEndInputSource()
       const audio = createFrontEndAudioPlayer(archive)
       const resumeAudio = () => audio.resume()
@@ -86,6 +86,7 @@ export const useFrontEndController = (options: FrontEndControllerOptions): Front
         window.removeEventListener('keydown', resumeAudio)
         input.dispose()
         audio.dispose()
+        renderer.dispose()
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : String(error))
