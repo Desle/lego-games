@@ -51,11 +51,22 @@ Fields (`power_up_trace.py`, `power-up-trace.ts`): `powerUps.bricks` (state `+0x
 
 With every racer holding the brick (`POWER_UP_COMPUTERS=1`, before the hit reaction and curse fixes): shield all match; cannon and turbo 0 and 1 differ only in computers' volume spheres; magnet and curse thrown at the player differ from frames 181 to 185; the warp is open.
 
+## The warp's bounds quirk (findings, not yet ported)
+
+Probed in the emulator (RACEC0R0, turbo level 3 fired at frame 165):
+
+- `0x00440160(vehicle, 1.0)` (called at the start of the warp, `0x0045dc90` state 2) writes `-1.0` into the radius (`+0x10`) of the vehicle's four parts (`+0x3c` car model, `+0x40`, `+0x44` wheels figure = the display frame, `+0x48` driver) and `1.0` into `+0x58`. A negative radius means dirty: the getters `0x00411c60` (centre) and `0x00411ca0` (radius) call the object's slot 0 first (for a figure `0x004113c0`, slot `0x4c`).
+- `Vehicle_Update` (`0x0043e070`) returns right after its first calls when racer flag `0x10` is set: the part updates, the 750 ms look timers and the emitters after `0x0043fdb0` do not run while the racer is off the track. `0x00437740` still sets the wheels' clock rate (`+0xb8`) every frame.
+- The raw radii stay `-1` from frame 172 on. Part `+0x3c` is later refreshed (r 5.862) but its position reads `(0, 0, 0)`, `+0x48` is refreshed (r 3.489) with a position off its seat, `+0x44` stays `-1` until about frame 230, when all three are valid again. The composite volume (`racer +0x1c`) keeps its radius (7.579) and its centre follows the display frame during the warp, so it is not recomputed from the dirty radii.
+- The ground probe (`0x00445dc0`, `0x004465c0`) reads the display frame's radius through the getter; the port keeps a constant `displayBoundingRadius` from load. At frame 173 the original's probe start is 0.0039 lower than the port's (`body.wheelProbes[2]`), which is the first physics difference.
+
+Porting this needs the parts' dirty flag and refresh rules (which reader refreshes which part, and the part positions the refresh produces); until then the trace fields `display.sphere`, `volume.body`, `volume.driver`, `volume.sphere[1]` and the later body differences stay open for the warp.
+
 ## Open
 
 - Shape centres: the hook's bounds centre is placed with a hypothesis (the frame faces along the horizontal velocity); the barrel's spin and the missile's animated figure bounds (its first registered centre is about 6 units off the owner) are not ported.
-- Warp (`0x0045d560`, `0x0045dc90`, `0x004395d0`): the vehicle is torn down (emitters, figure hidden, radius -1) and the car is carried; the events `racer_moved` and `racer_landed` are not applied.
-- Debris animation lengths and the warp route (`routeNodes`) are still the empty values of `EMPTY_PROJECTILE_MODEL_DATA`; `trackTargets` (the TGB points the cannon and grapple aim at) are empty.
+- Warp: the route (checkpoints), the carry (`0x0045d780`), the start (`0x004395d0`: flag 0x10, timed effect and spin end, tows end, flag 0x1000) and the landing (`0x0045dc90`) are ported for a human's free body. Open: `0x00440160` sets the radius of the vehicle's parts to -1 (a dirty bounds cache that nothing refreshes while the racer is off the track), which the composite volume and the wand then read; the computer's scripted warp (`0x00429a90`, `0x00429af0`); the vehicle's smoke and fade (`0x0043dcd0`, `0x0043dbb0`).
+- Debris animation lengths are still the empty values of `EMPTY_PROJECTILE_MODEL_DATA` (the warp route now comes from the checkpoints); `trackTargets` (the TGB points the cannon and grapple aim at) are empty.
 - Sound-driven random draws (`tauntNearestRacer`, `updateRacerSounds`) are stand-ins: a draw is missing or extra after some hits (wand, frame 199).
 - `racec0r3` shows a track event difference at frame 797 (`track.events.2a[61]`) that the random cursor used to hide.
 - Brick colours per kind belong to the render-trace branch (PR 37): `pbrickP`, `pbrickS`, `pbrickT`, `pbrickM` (`0x00458a80`, `0x0045ba90`).
