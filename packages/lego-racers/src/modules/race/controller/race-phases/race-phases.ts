@@ -1,4 +1,5 @@
 import { beginGhostRun, finishGhostRun } from '../../../ghost/index.ts'
+import { drawRandomRemainder } from '../../../random-table/index.ts'
 import {
   activatePowerUp,
   BrickKind,
@@ -13,8 +14,14 @@ import {
   GHOST_MENU_MILLISECONDS,
   GHOST_MENU_PAUSE_STATE,
   INTRODUCTION_MILLISECONDS,
+  LOSING_TUNE_INDEX,
+  RACING_TUNE_INDEX,
   RacePhase,
+  RANDOM_RACING_TUNE_DIVISOR_OFFSET,
+  RANDOM_RACING_TUNE_MINIMUM_COUNT,
+  RANDOM_RACING_TUNES,
   RESULTS_MILLISECONDS,
+  WINNING_TUNE_INDEX,
   SKIPPED_COUNTDOWN_FINISHING_START_MILLISECONDS,
 } from '../../types/race-phase/race-phase.ts'
 import type {
@@ -38,7 +45,12 @@ import {
   getRacerSetOf,
   NO_RACE_CONTACTS,
 } from '../race-world/race-world.ts'
-import type { FinishingProgress, PhaseChange, RaceWorldChanger } from './race-phases.types.ts'
+import type {
+  FinishingProgress,
+  PhaseChange,
+  RaceWorldChanger,
+  TuneChange,
+} from './race-phases.types.ts'
 
 const POWER_SLIDING_FLAG = 0x80
 const CONTROLS_DISABLED_FLAG = 0x2
@@ -277,11 +289,58 @@ const stepRacing = (step: RaceStepResult): RaceStepResult => {
         placed.raceState.isCountdownSkipped ? SKIPPED_COUNTDOWN_FINISHING_START_MILLISECONDS : 0
       )
       const disabled = withGhostFinished(disablePlayerControls(change.raceState, index))
-      return { step: getStepWith(placed, disabled, [change.event]), isFinishing: true }
+      const toned = getFinishTuneChange(disabled, index)
+      return {
+        step: getStepWith(placed, toned.raceState, [change.event, ...toned.events]),
+        isFinishing: true,
+      }
     },
     { step, isFinishing: false }
   )
   return result.isFinishing ? stepFinishing(result.step) : result.step
+}
+
+// Race_UpdateState2 0x00434b00 when the music stream is playing: tune 1 starts looping, unless the list has more
+// than four tunes and the race is not part of a circuit, when `draw % (count - 3)` picks tune 1, 4, 5 or 6 (the
+// draw moves the random table cursor).
+const getRacingTuneChange = (raceState: RaceState): TuneChange => {
+  if (raceState.tuneIndex === null) return { raceState, events: [] }
+  const isRandom =
+    raceState.musicTuneCount >= RANDOM_RACING_TUNE_MINIMUM_COUNT && !raceState.isPointsRecordPresent
+  const draw = isRandom
+    ? drawRandomRemainder(
+        raceState.context.tables.randomTable,
+        raceState.racerSet.randomPosition,
+        raceState.musicTuneCount - RANDOM_RACING_TUNE_DIVISOR_OFFSET
+      )
+    : null
+  const tuneIndex =
+    draw === null ? RACING_TUNE_INDEX : (RANDOM_RACING_TUNES[draw.value] ?? RACING_TUNE_INDEX)
+  return {
+    raceState: Object.freeze({
+      ...raceState,
+      tuneIndex,
+      racerSet:
+        draw === null
+          ? raceState.racerSet
+          : Object.freeze({ ...raceState.racerSet, randomPosition: draw.position }),
+    }),
+    events: [{ type: 'race.tune_changed', tuneIndex }],
+  }
+}
+
+// Race_UpdateState3 0x00434d..: the music stream plays the winning tune for a human who finishes first and the
+// losing tune for any other place.
+const getFinishTuneChange = (raceState: RaceState, racerIndex: number): TuneChange => {
+  if (raceState.tuneIndex === null) return { raceState, events: [] }
+  const tuneIndex =
+    getRacer(raceState.racerSet, racerIndex).racePosition === 1
+      ? WINNING_TUNE_INDEX
+      : LOSING_TUNE_INDEX
+  return {
+    raceState: Object.freeze({ ...raceState, tuneIndex }),
+    events: [{ type: 'race.tune_changed', tuneIndex }],
+  }
 }
 
 // Race_UpdateState2 0x00434b00: after 3 s (or at once when the countdown is skipped) the racers are released
@@ -324,7 +383,14 @@ const stepCountdown = (step: RaceStepResult): RaceStepResult => {
     powerUpStep: setBrickSoundsEnabled(controlled.powerUpStep, true),
     ghost: controlled.ghost === null ? null : beginGhostRun(controlled.ghost),
   })
-  return stepRacing(getStepWith(step, sounding, [change.event, { type: 'race.controls_enabled' }]))
+  const toned = getRacingTuneChange(sounding)
+  return stepRacing(
+    getStepWith(step, toned.raceState, [
+      change.event,
+      { type: 'race.controls_enabled' },
+      ...toned.events,
+    ])
+  )
 }
 
 // Race_UpdateState1 0x004349a0: after 2 s each local player's racer is marked as starting (0x004393d0, flag

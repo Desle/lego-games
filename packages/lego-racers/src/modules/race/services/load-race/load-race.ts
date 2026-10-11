@@ -7,6 +7,7 @@ import {
   parseComputerRacerRoute,
 } from '../../../computer-racer-route/index.ts'
 import { parseHazards } from '../../../hazard/index.ts'
+import { decodeSoundBank } from '../../../audio/index.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import { parsePowerUps } from '../../../power-up/index.ts'
 import { createRandomTablePosition, drawRandomValue } from '../../../random-table/index.ts'
@@ -180,6 +181,11 @@ export const loadRaceDefinition = (
     isMirrored,
     isPointsRecordPresent: options.isPointsRecordPresent ?? false,
     ghost: options.ghost ?? null,
+    musicTuneCount:
+      options.musicTuneCount ??
+      (description.musicList === null
+        ? 0
+        : decodeSoundBank(readFile(description.musicList.toUpperCase())).declaredSoundCount),
     racers,
     checkpoints:
       checkpointBytes === null ? [] : parseCheckpoints(checkpointBytes, isMirrored).checkpoints,

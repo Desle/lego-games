@@ -30,6 +30,9 @@ export type LoadRaceOptions = {
   readonly isPointsRecordPresent?: boolean
   // Race +0x3364: the time trial's ghost object (the race session loads the champion into it first).
   readonly ghost?: GhostSession | null
+  // The tunes the race's music stream can play; the default is the count of the race's music list. 0 is a race
+  // with no music stream (the music files are missing), which also spares the random draw for the racing tune.
+  readonly musicTuneCount?: number
 }
 
 // The routes chosen so far (null for a racer without one) and the table position after their draws.

@@ -20,6 +20,7 @@ export const createFixtureDefinition = (): RaceDefinition => ({
   isMirrored: false,
   isPointsRecordPresent: false,
   ghost: null,
+  musicTuneCount: 0,
   racers: [createFixtureRacerDefinition(0), createFixtureRacerDefinition(2)],
   checkpoints: [],
   collisionObjects: [],

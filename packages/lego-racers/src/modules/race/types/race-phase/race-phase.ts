@@ -37,3 +37,15 @@ export const RESULTS_MILLISECONDS = 5000
 // `timer < 0x251d` in Race_UpdateState4: a race with a ghost holds at 9,501 ms for the menu (race +0x30c0 = 2).
 export const GHOST_MENU_MILLISECONDS = 9501
 export const GHOST_MENU_PAUSE_STATE = 2
+
+// The tunes of a race's music list (the first four entries of every LEGOMSC: start, track, lose and win), as
+// Race_UpdateState1/2/3 start them through the music stream manager (race +0x3314, slot +0x10).
+export const INTRODUCTION_TUNE_INDEX = 0
+export const RACING_TUNE_INDEX = 1
+export const LOSING_TUNE_INDEX = 2
+export const WINNING_TUNE_INDEX = 3
+// `4 < count` in Race_UpdateState2: a list with more tunes picks the racing tune by a draw, outside a circuit.
+export const RANDOM_RACING_TUNE_MINIMUM_COUNT = 5
+export const RANDOM_RACING_TUNE_DIVISOR_OFFSET = 3
+// The switch on `draw % (count - 3)`: 1, 2 and 3 select the list's 5th, 6th and 7th entries; the rest keeps tune 1.
+export const RANDOM_RACING_TUNES: readonly number[] = Object.freeze([1, 4, 5, 6])
