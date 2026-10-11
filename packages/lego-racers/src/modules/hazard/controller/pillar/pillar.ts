@@ -14,7 +14,7 @@ import { DEFAULT_HAZARD_SLOTS } from '../hazard-defaults/hazard-defaults.ts'
 import {
   findSkeletonReference,
   getSkeletonInstance,
-  getUpdatedAfterEndRequest,
+  getActiveAfterEndRequest,
   getWithData,
   setSkeletonInstance,
 } from '../hazard-helpers/hazard-helpers.ts'
@@ -82,8 +82,8 @@ export const PILLAR: HazardBehavior = Object.freeze({
   },
   end: (instance) => instance,
   update: (instance, session) => {
-    if (instance.lifecycle === HazardLifecycle.IDLE) return instance
-    const checked = getUpdatedAfterEndRequest(instance, (current) => current)
+    const checked = getActiveAfterEndRequest(instance, (current) => current)
+    if (checked === null) return instance
     const { data } = checked
     if (!getIsPillarData(data) || data.isSolid) return checked
     const skeleton = getSkeletonInstance(session, data.pillar)

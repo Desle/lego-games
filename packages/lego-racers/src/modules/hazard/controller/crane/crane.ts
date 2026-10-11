@@ -6,8 +6,9 @@ import type { HazardInstance, HazardSession } from '../../types/hazard-runtime.t
 import { DEFAULT_HAZARD_SLOTS } from '../hazard-defaults/hazard-defaults.ts'
 import {
   findSkeletonReference,
+  getIsInsideAWindow,
   getSkeletonInstance,
-  getUpdatedAfterEndRequest,
+  getActiveAfterEndRequest,
   getWithData,
 } from '../hazard-helpers/hazard-helpers.ts'
 
@@ -31,11 +32,6 @@ const INSTANCE_NAME = 'crane'
 
 const getIsCraneData = (data: HazardInstance['data']): data is CraneData =>
   data.keyword === HazardKeyword.HAZARD_32
-
-const getIsInsideAWindow = (
-  time: number,
-  windows: readonly (readonly [number, number])[]
-): boolean => windows.some(([start, end]) => start < time && time < end)
 
 const end = (instance: HazardInstance): HazardInstance =>
   Object.freeze({ ...instance, lifecycle: HazardLifecycle.IDLE })
@@ -68,8 +64,8 @@ export const CRANE: HazardBehavior = Object.freeze({
   },
   end,
   update: (instance, session: HazardSession) => {
-    if (instance.lifecycle === HazardLifecycle.IDLE) return instance
-    const checked = getUpdatedAfterEndRequest(instance, end)
+    const checked = getActiveAfterEndRequest(instance, end)
+    if (checked === null) return instance
     const { data } = checked
     if (!getIsCraneData(data)) return checked
     const skeleton = getSkeletonInstance(session, data.instance)

@@ -19,7 +19,13 @@ import type {
   Vector3,
 } from '../../event/index.ts'
 import type { EmitterPool } from '../../emitter/index.ts'
-import type { HazardEffect, HazardList, HazardRacer, HazardRuntime } from '../../hazard/index.ts'
+import type {
+  HazardBus,
+  HazardEffect,
+  HazardList,
+  HazardRacer,
+  HazardRuntime,
+} from '../../hazard/index.ts'
 import type { LineProbe } from '../../projectiles/index.ts'
 import type { RandomTable, RandomTablePosition } from '../../random-table/index.ts'
 import type { RaceWorlds } from '../../world-animation/index.ts'
@@ -241,7 +247,7 @@ export type TrackLogicStep = {
 }
 
 // The operations the class handlers call; the session threads the state through them (events.ts).
-export type TrackSession = {
+export type TrackSession = HazardBus & {
   readonly context: TrackLogicContext
   // MOV r16,word ptr [position*2 + 0x004befec] after advancing the position.
   readonly drawRandomValue: () => number
@@ -251,14 +257,6 @@ export type TrackSession = {
   readonly announceTransition: (event: TrackEvent, from: number, to: number) => void
   // The class's end (vtable +0xc).
   readonly endEvent: (event: TrackEvent) => TrackEvent
-  // 0x00461ef0, 0x00462580 and 0x00462140: the bus the events, hazards and timers talk over.
-  readonly startSignal: (identifier: number, parameter: Vector3 | null) => void
-  readonly startStopSignal: (
-    startIdentifier: number,
-    stopIdentifier: number,
-    parameter: Vector3 | null
-  ) => void
-  readonly stopSignal: (identifier: number, parameter: Vector3 | null) => void
   // 0x00462350: the events with this identifier end at their next update.
   readonly forceEnd: (identifier: number) => void
   // 0x004628c0, 0x00462ae0 and 0x004629d0: a racer fires or releases the trigger-driven events.

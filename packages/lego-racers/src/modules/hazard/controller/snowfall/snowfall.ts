@@ -5,7 +5,8 @@ import { HazardLifecycle } from '../../types/hazard-lifecycle/hazard-lifecycle.t
 import type { HazardInstance, HazardSession } from '../../types/hazard-runtime.types.ts'
 import { DEFAULT_HAZARD_SLOTS } from '../hazard-defaults/hazard-defaults.ts'
 import {
-  getUpdatedAfterEndRequest,
+  getActiveAfterEndRequest,
+  getIdleWithEmitterReleased,
   getWithData,
   NO_IDENTIFIER,
   releaseTrackEmitter,
@@ -34,11 +35,9 @@ const begin = (instance: HazardInstance): HazardInstance => {
 const end = (instance: HazardInstance, session: HazardSession): HazardInstance => {
   const { data } = instance
   if (!getIsSnowfallData(data)) return instance
-  releaseTrackEmitter(session, data.emitterHandle)
-  return Object.freeze({
-    ...instance,
-    lifecycle: HazardLifecycle.IDLE,
-    data: Object.freeze({ ...data, emitterHandle: null }),
+  return getWithData(getIdleWithEmitterReleased(instance, session, data.emitterHandle), {
+    ...data,
+    emitterHandle: null,
   })
 }
 
@@ -65,8 +64,8 @@ export const SNOWFALL: HazardBehavior = Object.freeze({
   begin,
   end,
   update: (instance, session, milliseconds) => {
-    if (instance.lifecycle === HazardLifecycle.IDLE) return instance
-    const checked = getUpdatedAfterEndRequest(instance, (current) => end(current, session))
+    const checked = getActiveAfterEndRequest(instance, (current) => end(current, session))
+    if (checked === null) return instance
     const { data } = checked
     if (!getIsSnowfallData(data)) return checked
     const elapsed = (data.milliseconds + milliseconds) % UINT32_MODULUS

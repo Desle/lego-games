@@ -85,10 +85,8 @@ export type HazardRandom = {
 
 // What a hazard's code calls: the signal bus (0x00461ef0, 0x00462580, 0x00462140), the random table, the worlds and
 // the track emitter pool, the racers, and the effects it asks for. The track session implements it.
-export type HazardSession = {
-  readonly arithmetic: FloatArithmetic
-  // The 16-bit table value after advancing the position.
-  readonly drawRandomValue: () => number
+export type HazardBus = {
+  // 0x00461ef0, 0x00462580 and 0x00462140: the bus the events, hazards and timers talk over.
   readonly startSignal: (identifier: number, parameter: Vector3 | null) => void
   readonly startStopSignal: (
     startIdentifier: number,
@@ -96,6 +94,12 @@ export type HazardSession = {
     parameter: Vector3 | null
   ) => void
   readonly stopSignal: (identifier: number, parameter: Vector3 | null) => void
+}
+
+export type HazardSession = HazardBus & {
+  readonly arithmetic: FloatArithmetic
+  // The 16-bit table value after advancing the position.
+  readonly drawRandomValue: () => number
   readonly getWorld: (key: HazardWorldKey) => WorldAnimation
   readonly setWorld: (key: HazardWorldKey, world: WorldAnimation) => void
   readonly getEmitters: () => EmitterPool | null

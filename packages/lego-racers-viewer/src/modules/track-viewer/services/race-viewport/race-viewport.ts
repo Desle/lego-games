@@ -10,6 +10,9 @@ import {
   Vector3,
   WebGLRenderer,
 } from 'three'
+import type { EmitterPool } from '@lego-games/lego-racers/emitter'
+import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
+import { createRaceParticles } from '../race-particles/race-particles.ts'
 import { createSceneObject } from '../scene-object/scene-object.ts'
 import type { RacerModels, RaceAssets } from '../race-assets/race-assets.types.ts'
 import { showSceneObjects } from '../scene-viewport/scene-viewport.ts'
@@ -85,6 +88,8 @@ export const createRaceViewport = (
   )
   const shown: ShownScene = showSceneObjects(assets.scene, assets.background)
   trackScene.add(shown.track.group)
+  const particles = createRaceParticles()
+  trackScene.add(particles.points)
   if (shown.backdrop !== null) backgroundScene.add(shown.backdrop.group)
   if (shown.sky !== null) backgroundScene.add(shown.sky.mesh)
   const racerRigs = assets.racerModels.map((models) => {
@@ -116,10 +121,17 @@ export const createRaceViewport = (
     }
   }
 
+  const showHazards = (trackWorld: WorldAnimation, pools: readonly (EmitterPool | null)[]) => {
+    for (const instance of trackWorld.skeletonInstances) {
+      if (instance.clip !== null) shown.track.setSkeletonState(instance.name, instance.clip)
+    }
+    particles.update(pools)
+  }
+
   return Object.freeze({
     update,
+    showHazards,
     animate: (deltaMilliseconds: number) => {
-      shown.track.animate(deltaMilliseconds)
       shown.backdrop?.animate(deltaMilliseconds)
       shown.sky?.animate(deltaMilliseconds)
     },
@@ -129,6 +141,7 @@ export const createRaceViewport = (
       renderer.render(trackScene, camera)
     },
     dispose: () => {
+      particles.dispose()
       shown.track.dispose()
       shown.backdrop?.dispose()
       shown.sky?.dispose()

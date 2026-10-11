@@ -62,7 +62,11 @@ export const HAZARD_DROPPER: HazardBehavior = Object.freeze({
       effectKind: HAZARD_EFFECT_KIND,
       racerIndex: null,
       launcher: Object.freeze({
-        position: Object.freeze([place[0], data.isMirrored ? -place[1] : place[1], place[2]] as const),
+        position: Object.freeze([
+          place[0],
+          data.isMirrored ? -place[1] : place[1],
+          place[2],
+        ] as const),
         direction: FACING,
       }),
     })

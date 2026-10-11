@@ -2,6 +2,7 @@ import type { Scene, SceneInstance } from '@lego-games/lego-racers/scene'
 import { SceneInstanceKind } from '@lego-games/lego-racers/scene'
 import { AmbientLight, Box3, Color, DirectionalLight, Group } from 'three'
 import type { BufferGeometry, Material } from 'three'
+import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import { createSkeletonInstanceObject } from './skeleton-instance-object.ts'
 import { createStaticInstanceObject } from './static-instance-object.ts'
 import type {
@@ -60,6 +61,7 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
   }
   const group = new Group()
   const animators: ((deltaMilliseconds: number) => void)[] = []
+  const stateSetters = new Map<string, NonNullable<InstanceObject['setAnimationState']>>()
   for (const instance of scene.instances.filter(options.includeInstance)) {
     const levelMesh = getInstanceLevelMesh(scene, instance)
     const instanceObject =
@@ -67,6 +69,9 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
     if (instanceObject === null) continue
     group.add(instanceObject.group)
     if (instanceObject.animate !== null) animators.push(instanceObject.animate)
+    if (instanceObject.setAnimationState !== null) {
+      stateSetters.set(instance.name, instanceObject.setAnimationState)
+    }
   }
   group.updateMatrixWorld(true)
   const bounds = new Box3().setFromObject(group)
@@ -85,6 +90,8 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
     animate: (deltaMilliseconds: number) => {
       for (const animator of animators) animator(deltaMilliseconds)
     },
+    setSkeletonState: (name: string, state: SkeletonAnimationState) =>
+      stateSetters.get(name)?.(state),
     animatedInstanceCount: animators.length,
     dispose,
   })

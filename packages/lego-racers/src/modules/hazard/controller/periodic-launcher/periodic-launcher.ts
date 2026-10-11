@@ -7,7 +7,7 @@ import { getHazard43 } from '../hazard-definition/hazard-definition.ts'
 import { DEFAULT_HAZARD_SLOTS, getIdleHazard } from '../hazard-defaults/hazard-defaults.ts'
 import {
   findSkeletonReference,
-  getUpdatedAfterEndRequest,
+  getActiveAfterEndRequest,
   getWithData,
 } from '../hazard-helpers/hazard-helpers.ts'
 
@@ -50,8 +50,8 @@ export const PERIODIC_LAUNCHER: HazardBehavior = Object.freeze({
   },
   end: (instance) => getIdleHazard(instance),
   update: (instance, session, milliseconds) => {
-    if (instance.lifecycle === HazardLifecycle.IDLE) return instance
-    const checked = getUpdatedAfterEndRequest(instance, getIdleHazard)
+    const checked = getActiveAfterEndRequest(instance, getIdleHazard)
+    if (checked === null) return instance
     const { data } = checked
     if (!getIsLauncherData(data)) return checked
     const elapsed = (data.elapsedMilliseconds + milliseconds) % UINT32_MODULUS

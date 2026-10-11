@@ -68,7 +68,9 @@ describe('the pillar', () => {
 
     // Assert
     expect(early).toBe(begun)
-    expect(test.calls).toEqual([`startStop ${String(PILLAR_LANDED_SIGNAL)} ${String(PILLAR_LANDED_SIGNAL)}`])
+    expect(test.calls).toEqual([
+      `startStop ${String(PILLAR_LANDED_SIGNAL)} ${String(PILLAR_LANDED_SIGNAL)}`,
+    ])
     expect(test.effects).toEqual([
       { type: 'hazard.collision_object_changed', name: 'pilcol', isSolid: true },
     ])

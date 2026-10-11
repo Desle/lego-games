@@ -171,11 +171,11 @@ export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation
       world.skeletonInstances.map((instance) => createSkeletonInstance(instance, input.animations))
     ),
     meshInstances: Object.freeze(world.meshInstances.map(createMeshInstance)),
-    materialAnimations: createMaterialAnimations(world.materialAnimations, input.materialAnimations, [
-      ...world.meshInstances,
-      ...world.skeletonInstances,
-      ...world.bspTreeInstances,
-    ]),
+    materialAnimations: createMaterialAnimations(
+      world.materialAnimations,
+      input.materialAnimations,
+      [...world.meshInstances, ...world.skeletonInstances, ...world.bspTreeInstances]
+    ),
   })
 }
 

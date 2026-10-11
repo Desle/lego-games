@@ -1,4 +1,6 @@
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
+import type { EmitterPool } from '@lego-games/lego-racers/emitter'
+import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
 import type { Group } from 'three'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import type { RacerPose } from '@lego-games/lego-racers/race-presentation'
@@ -7,7 +9,10 @@ import type { RacerPose } from '@lego-games/lego-racers/race-presentation'
 export type RaceViewport = {
   // Puts every racer at its pose and the camera where the chase camera says.
   readonly update: (poses: readonly RacerPose[], cameraView: CameraView) => void
-  // Advances the animated instances and the sky by whole milliseconds.
+  // Shows the simulation's hazards and emitters: the track world's skeleton instances take the clip states the
+  // simulation advanced, and the emitter pools' particles are drawn as points.
+  readonly showHazards: (trackWorld: WorldAnimation, pools: readonly (EmitterPool | null)[]) => void
+  // Advances the backdrop and the sky by whole milliseconds (the track's instances follow the simulation).
   readonly animate: (deltaMilliseconds: number) => void
   readonly render: () => void
   readonly dispose: () => void

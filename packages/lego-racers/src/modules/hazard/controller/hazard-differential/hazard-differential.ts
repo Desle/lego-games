@@ -1,3 +1,4 @@
+import type { RecordedActivation } from './hazard-differential.types.ts'
 import type {
   EmulatorArgument,
   EmulatorBuffer,
@@ -149,12 +150,6 @@ export const EFFECT_BUFFER: EmulatorBuffer = Object.freeze({
   words: Object.freeze(Array.from({ length: EFFECT_WORD_COUNT }, (): EmulatorArgument => 0)),
   isRead: true,
 })
-
-export type RecordedActivation = {
-  readonly racerPointer: number
-  readonly kind: number
-  readonly launcher: readonly number[]
-}
 
 // The recorded activation, or null when none was made.
 export const getRecordedActivation = (words: readonly number[]): RecordedActivation | null =>

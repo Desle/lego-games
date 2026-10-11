@@ -6,9 +6,9 @@ import type { HazardInstance, HazardSession } from '../../types/hazard-runtime.t
 import { DEFAULT_HAZARD_SLOTS } from '../hazard-defaults/hazard-defaults.ts'
 import {
   findSkeletonReference,
-  getUpdatedAfterEndRequest,
+  getActiveAfterEndRequest,
+  getIdleWithEmitterReleased,
   getWithData,
-  releaseTrackEmitter,
   spawnTrackEmitter,
 } from '../hazard-helpers/hazard-helpers.ts'
 
@@ -24,11 +24,9 @@ const getIsSmokeVentData = (data: HazardInstance['data']): data is SmokeVentData
 const end = (instance: HazardInstance, session: HazardSession): HazardInstance => {
   const { data } = instance
   if (!getIsSmokeVentData(data)) return instance
-  releaseTrackEmitter(session, data.emitterHandle)
-  return Object.freeze({
-    ...instance,
-    lifecycle: HazardLifecycle.IDLE,
-    data: Object.freeze({ ...data, emitterHandle: null }),
+  return getWithData(getIdleWithEmitterReleased(instance, session, data.emitterHandle), {
+    ...data,
+    emitterHandle: null,
   })
 }
 
@@ -52,8 +50,8 @@ export const SMOKE_VENT: HazardBehavior = Object.freeze({
   begin: (instance) => Object.freeze({ ...instance, lifecycle: HazardLifecycle.ACTIVE }),
   end,
   update: (instance, session) => {
-    if (instance.lifecycle === HazardLifecycle.IDLE) return instance
-    const checked = getUpdatedAfterEndRequest(instance, (current) => end(current, session))
+    const checked = getActiveAfterEndRequest(instance, (current) => end(current, session))
+    if (checked === null) return instance
     const { data } = checked
     if (!getIsSmokeVentData(data)) return checked
     const handle = data.emitterHandle ?? spawnTrackEmitter(session, EMITTER_NAME)

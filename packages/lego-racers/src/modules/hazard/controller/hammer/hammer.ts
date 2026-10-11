@@ -9,7 +9,7 @@ import { DEFAULT_HAZARD_SLOTS, getIdleHazard } from '../hazard-defaults/hazard-d
 import {
   findSkeletonReference,
   getSkeletonInstance,
-  getUpdatedAfterEndRequest,
+  getActiveAfterEndRequest,
   setSkeletonInstance,
 } from '../hazard-helpers/hazard-helpers.ts'
 
@@ -42,8 +42,8 @@ export const HAMMER: HazardBehavior = Object.freeze({
   begin: (instance) => Object.freeze({ ...instance, lifecycle: HazardLifecycle.ACTIVE }),
   end: (instance) => getIdleHazard(instance),
   update: (instance) => {
-    if (instance.lifecycle === HazardLifecycle.IDLE) return instance
-    const checked = getUpdatedAfterEndRequest(instance, getIdleHazard)
+    const checked = getActiveAfterEndRequest(instance, getIdleHazard)
+    if (checked === null) return instance
     return getIsHammerData(checked.data) ? checked : instance
   },
 })

@@ -9,7 +9,7 @@ import { DEFAULT_HAZARD_SLOTS } from '../hazard-defaults/hazard-defaults.ts'
 import {
   findSkeletonReference,
   getSkeletonInstance,
-  getUpdatedAfterEndRequest,
+  getActiveAfterEndRequest,
   getWithData,
 } from '../hazard-helpers/hazard-helpers.ts'
 
@@ -116,8 +116,8 @@ export const CAPTURE: HazardBehavior = Object.freeze({
     })
   },
   update: (instance, session, milliseconds) => {
-    if (instance.lifecycle === HazardLifecycle.IDLE) return instance
-    const checked = getUpdatedAfterEndRequest(instance, (current) => end(current, session))
+    const checked = getActiveAfterEndRequest(instance, (current) => end(current, session))
+    if (checked === null) return instance
     const { data } = checked
     if (!getIsCaptureData(data)) return checked
     let next: CaptureData = data

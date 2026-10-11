@@ -105,7 +105,6 @@ const update = (instance: HazardInstance, session: HazardSession): HazardInstanc
   if (getIsExplosionPlaying(session, data)) return checked
   const explosion = getSkeletonInstance(session, data.explosion)
   if (explosion !== null) {
-
     session.stopSignal(SPHINX_EXPLOSION_SIGNAL, explosion.position)
   }
   return end(checked, session)
@@ -129,4 +128,3 @@ export const SPHINX: HazardBehavior = Object.freeze({
   end,
   update,
 })
-

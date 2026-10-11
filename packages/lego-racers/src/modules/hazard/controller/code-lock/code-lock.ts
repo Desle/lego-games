@@ -154,9 +154,12 @@ const update = (
             entry,
             playback
           )
-      const definition = session.getWorld(WORLD_KEY).materialAnimations[data.materialAnimationIndex]?.definition
+      const definition =
+        session.getWorld(WORLD_KEY).materialAnimations[data.materialAnimationIndex]?.definition
       return getStoppedMaterialPlayback(
-        definition === undefined ? placed : getAdvancedMaterialPlayback(definition, entry, placed, 0)
+        definition === undefined
+          ? placed
+          : getAdvancedMaterialPlayback(definition, entry, placed, 0)
       )
     })
   })

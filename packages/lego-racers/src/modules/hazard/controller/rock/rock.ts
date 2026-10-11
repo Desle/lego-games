@@ -7,7 +7,7 @@ import { DEFAULT_HAZARD_SLOTS } from '../hazard-defaults/hazard-defaults.ts'
 import {
   findMeshReference,
   getInstanceDistances,
-  getUpdatedAfterEndRequest,
+  getActiveAfterEndRequest,
   getWithData,
   setInstanceDistances,
 } from '../hazard-helpers/hazard-helpers.ts'
@@ -94,8 +94,8 @@ export const ROCK: HazardBehavior = Object.freeze({
     return getWithData(instance, { ...data, flag: 0 })
   },
   update: (instance, session) => {
-    if (instance.lifecycle === HazardLifecycle.IDLE) return instance
-    const checked = getUpdatedAfterEndRequest(instance, (current) => end(current, session))
+    const checked = getActiveAfterEndRequest(instance, (current) => end(current, session))
+    if (checked === null) return instance
     const { data } = checked
     if (!getIsRockData(data)) return checked
     if (data.flag === 0) {

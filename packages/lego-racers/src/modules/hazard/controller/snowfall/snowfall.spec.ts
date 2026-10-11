@@ -60,7 +60,9 @@ describe('the snowfall', () => {
     expect(made.data).toMatchObject({ emitterHandle: 0, milliseconds: 0 })
     expect(kept.data).toMatchObject({ emitterHandle: 0, milliseconds: 900 })
     expect(renewed.data).toMatchObject({ emitterHandle: 0, milliseconds: 0 })
-    expect(test.getEmitters()?.instances.filter((instance) => instance.system.isActive)).toHaveLength(1)
+    expect(
+      test.getEmitters()?.instances.filter((instance) => instance.system.isActive)
+    ).toHaveLength(1)
   })
 
   it('draws once after the racers while the emitter exists', () => {

@@ -6,8 +6,9 @@ import type { HazardInstance } from '../../types/hazard-runtime.types.ts'
 import { DEFAULT_HAZARD_SLOTS, getIdleHazard } from '../hazard-defaults/hazard-defaults.ts'
 import {
   findSkeletonReference,
+  getIsInsideAWindow,
   getSkeletonInstance,
-  getUpdatedAfterEndRequest,
+  getActiveAfterEndRequest,
   getWithData,
 } from '../hazard-helpers/hazard-helpers.ts'
 
@@ -32,11 +33,6 @@ const HAMMER_NAME = 'rkhamm02'
 
 const getIsHammerData = (data: HazardInstance['data']): data is HammerWatcherData =>
   data.keyword === HazardKeyword.HAZARD_2A
-
-const getIsInsideAWindow = (
-  time: number,
-  windows: readonly (readonly [number, number])[]
-): boolean => windows.some(([start, end]) => start < time && time < end)
 
 const end = (instance: HazardInstance): HazardInstance => getIdleHazard(instance)
 
@@ -66,8 +62,8 @@ export const HAMMER_WATCHER: HazardBehavior = Object.freeze({
   },
   end: (instance) => end(instance),
   update: (instance, session) => {
-    if (instance.lifecycle === HazardLifecycle.IDLE) return instance
-    const checked = getUpdatedAfterEndRequest(instance, end)
+    const checked = getActiveAfterEndRequest(instance, end)
+    if (checked === null) return instance
     const { data } = checked
     if (!getIsHammerData(data)) return checked
     const hammer = getSkeletonInstance(session, data.hammer)

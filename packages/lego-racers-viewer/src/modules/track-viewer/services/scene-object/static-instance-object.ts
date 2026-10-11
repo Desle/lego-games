@@ -21,5 +21,5 @@ export const createStaticInstanceObject = (
     const geometry = getSharedBatchGeometry(context, levelMesh, batchIndex, batch, batchMaterial)
     group.add(createBatchMesh(context, geometry, batchMaterial.material))
   }
-  return Object.freeze({ group, animate: null })
+  return Object.freeze({ group, animate: null, setAnimationState: null })
 }

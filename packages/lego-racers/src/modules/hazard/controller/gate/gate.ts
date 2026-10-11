@@ -18,7 +18,7 @@ import { DEFAULT_HAZARD_SLOTS } from '../hazard-defaults/hazard-defaults.ts'
 import {
   findSkeletonReference,
   getSkeletonInstance,
-  getUpdatedAfterEndRequest,
+  getActiveAfterEndRequest,
   setInstanceDistances,
   setSkeletonInstance,
 } from '../hazard-helpers/hazard-helpers.ts'
@@ -96,8 +96,8 @@ export const GATE: HazardBehavior = Object.freeze({
   },
   end,
   update: (instance, session) => {
-    if (instance.lifecycle === HazardLifecycle.IDLE) return instance
-    const checked = getUpdatedAfterEndRequest(instance, (current) => end(current, session))
+    const checked = getActiveAfterEndRequest(instance, (current) => end(current, session))
+    if (checked === null) return instance
     const { data } = checked
     if (!getIsGateData(data)) return checked
     if (data.collisionObjectName !== '') {

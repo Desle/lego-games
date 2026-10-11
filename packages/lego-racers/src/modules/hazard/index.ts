@@ -36,6 +36,7 @@ export type {
   Vector3,
 } from './types/hazard.types.ts'
 export type {
+  HazardBus,
   HazardEffect,
   HazardInstance,
   HazardLauncher,

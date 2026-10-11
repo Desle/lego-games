@@ -8,7 +8,7 @@ import { DEFAULT_HAZARD_SLOTS, getIdleHazard } from '../hazard-defaults/hazard-d
 import {
   findSkeletonReference,
   getSkeletonInstance,
-  getUpdatedAfterEndRequest,
+  getActiveAfterEndRequest,
   getWithData,
 } from '../hazard-helpers/hazard-helpers.ts'
 
@@ -49,18 +49,17 @@ export const TURRET: HazardBehavior = Object.freeze({
   begin: (instance) => {
     const { data } = instance
     if (!getIsTurretData(data)) return instance
-    return Object.freeze({
-      ...instance,
-      lifecycle: HazardLifecycle.ACTIVE,
-      data: Object.freeze({ ...data, shotMilliseconds: BEGUN_SHOT_MILLISECONDS }),
+    return getWithData(Object.freeze({ ...instance, lifecycle: HazardLifecycle.ACTIVE }), {
+      ...data,
+      shotMilliseconds: BEGUN_SHOT_MILLISECONDS,
     })
   },
   end: (instance) => getIdleHazard(instance),
   update: (instance, session, milliseconds) => {
-    if (instance.lifecycle === HazardLifecycle.IDLE) return instance
-    const checked = getUpdatedAfterEndRequest(instance, getIdleHazard)
+    const checked = getActiveAfterEndRequest(instance, getIdleHazard)
+    if (checked === null) return instance
+    if (!getIsTurretData(checked.data)) return checked
     const { data } = checked
-    if (!getIsTurretData(data)) return checked
     const cycle = (data.cycleMilliseconds + milliseconds) % UINT32_MODULUS
     const cycleMilliseconds = cycle >= data.periodMilliseconds >>> 0 ? 0 : cycle
     const skeleton = getSkeletonInstance(session, data.instance)

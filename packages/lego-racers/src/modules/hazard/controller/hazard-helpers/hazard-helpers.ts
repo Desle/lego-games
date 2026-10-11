@@ -166,3 +166,25 @@ export const releaseTrackEmitter = (session: HazardSession, handleIndex: number 
   const pool = session.getEmitters()
   if (pool !== null && handleIndex !== null) session.setEmitters(releaseEmitter(pool, handleIndex))
 }
+
+// The opening of an update: null while idle; otherwise the hazard, ended first when it was asked to end.
+export const getActiveAfterEndRequest = (
+  instance: HazardInstance,
+  end: (instance: HazardInstance) => HazardInstance
+): HazardInstance | null =>
+  instance.lifecycle === HazardLifecycle.IDLE ? null : getUpdatedAfterEndRequest(instance, end)
+
+export const getIsInsideAWindow = (
+  time: number,
+  windows: readonly (readonly [number, number])[]
+): boolean => windows.some(([start, end]) => start < time && time < end)
+
+// The End of the hazards that hold a track emitter: it is released and the hazard idle.
+export const getIdleWithEmitterReleased = (
+  instance: HazardInstance,
+  session: HazardSession,
+  emitterHandle: number | null
+): HazardInstance => {
+  releaseTrackEmitter(session, emitterHandle)
+  return Object.freeze({ ...instance, lifecycle: HazardLifecycle.IDLE })
+}
