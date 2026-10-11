@@ -28,6 +28,7 @@ const renderState: SceneRenderState = {
 
 const batch: SceneDrawBatch = {
   materialSlot: 0,
+  firstCommand: 0,
   vertexIndices: Uint32Array.from([0, 1, 2]),
   transformIndices: new Uint8Array(3),
 }

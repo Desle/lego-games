@@ -5,12 +5,13 @@ import type { DrawBatchBuilder, DrawCommand, DrawFace } from './draw-batches.typ
 const VERTEX_CACHE_SIZE = 0x40
 const NO_VERTEX = -1
 
-const createBatchBuilder = (materialSlot: number): DrawBatchBuilder =>
-  Object.freeze({ materialSlot, vertexIndices: [], transformIndices: [] })
+const createBatchBuilder = (materialSlot: number, firstCommand: number): DrawBatchBuilder =>
+  Object.freeze({ materialSlot, firstCommand, vertexIndices: [], transformIndices: [] })
 
 const getFrozenBatch = (builder: DrawBatchBuilder): SceneDrawBatch =>
   Object.freeze({
     materialSlot: builder.materialSlot,
+    firstCommand: builder.firstCommand,
     vertexIndices: Uint32Array.from(builder.vertexIndices),
     transformIndices: Uint8Array.from(builder.transformIndices),
   })
@@ -27,10 +28,10 @@ export const getDrawBatches = (
   const batches: DrawBatchBuilder[] = []
   let currentBatch: DrawBatchBuilder | null = null
   let currentTransform = 0
-  for (const command of commands) {
+  for (const [commandIndex, command] of commands.entries()) {
     switch (command.kind) {
       case 'select_material':
-        currentBatch = createBatchBuilder(command.materialIndex)
+        currentBatch = createBatchBuilder(command.materialIndex, commandIndex)
         batches.push(currentBatch)
         break
       case 'select_transform':
@@ -45,7 +46,7 @@ export const getDrawBatches = (
         }
         break
       case 'draw_faces': {
-        const batch: DrawBatchBuilder = currentBatch ?? createBatchBuilder(0)
+        const batch: DrawBatchBuilder = currentBatch ?? createBatchBuilder(0, commandIndex)
         if (currentBatch === null) {
           currentBatch = batch
           batches.push(batch)

@@ -388,6 +388,17 @@ export type Racer = {
   // Vehicle +0x3a0..+0x3c0 (0x004400a0 sets it, 0x004400e0 clears it): the colour shift the track's 4D events put on the
   // racer's car and driver, or null.
   readonly colourShift: ColourShift | null
+  // Vehicle +0x3c4: 0x00440100 set it (the wand's flash, the timed effect's tint) and 0x00440130 clears it, every
+  // Vehicle_Update when the milliseconds are used up. While it is set the models keep the shift 0x00440100 gave
+  // them, and 0x004400a0 and 0x004400e0 touch only the stored one.
+  readonly isColourShiftOverridden: boolean
+  // Racer +0x29c + 0x84: the level distance bits of the figure the timed effect copies onto the racer. 0x00439900 hands
+  // them on as the override's milliseconds, and stores 0 in every copy.
+  readonly timedEffectFigureDistance: number
+  // Vehicle +0x3c8: uint32 milliseconds the override has left.
+  readonly colourShiftOverrideMilliseconds: number
+  // The shift 0x00440100 put on the models (it is not stored in the vehicle); null before the first override.
+  readonly overridingColourShift: ColourShift | null
   // The 750 ms timer 0x00438e60 adds to the collision manager (milliseconds counted so far), or null when none runs.
   readonly contactTimerMilliseconds: number | null
 }

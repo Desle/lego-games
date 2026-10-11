@@ -2,7 +2,7 @@
 
 ## Behaviour
 
-Resolves one or more `.WDB` worlds into a renderable, frozen scene description, exactly as `GolDP.dll` loads and links them: it finds every texture database, material library, model and material assignment the worlds name in `LEGO.JAM`, decodes the textures' bitmaps and Targa images (with their colour key), turns every material's flags into the Direct3D render state the renderer sets, resolves each model's draw commands into triangle batches, and places the mesh, skeleton and BSP tree instances with their transforms, linking each skeleton instance to its skeleton, animation and starting clip. It also lists the worlds' cameras and lights. It uses no DOM or rendering library.
+Resolves one or more `.WDB` worlds into a renderable, frozen scene description, exactly as `GolDP.dll` loads and links them: it finds every texture database, material library, model and material assignment the worlds name in `LEGO.JAM`, decodes the textures' bitmaps and Targa images (with their colour key), turns every material's flags into the Direct3D render state the renderer sets, resolves each model's draw commands into triangle batches, and places the mesh, skeleton and BSP tree instances with their transforms, linking each skeleton instance to its skeleton, animation and starting clip. A BSP tree instance level names its tree (`.BDB`, loaded with the world) and every draw batch records the index of the command that opened it, so a tree leaf's run of commands selects batches. It also lists the worlds' cameras and lights. It uses no DOM or rendering library.
 
 ## User flows
 

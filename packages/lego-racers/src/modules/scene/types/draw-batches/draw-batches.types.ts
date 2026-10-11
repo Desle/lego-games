@@ -14,6 +14,7 @@ export type DrawCommand =
 
 export type DrawBatchBuilder = {
   readonly materialSlot: number
+  readonly firstCommand: number
   readonly vertexIndices: number[]
   readonly transformIndices: number[]
 }

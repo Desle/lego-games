@@ -3,7 +3,7 @@ import { createFigure, getFigureAnimationId } from '../figure/figure.ts'
 import { createTestCarBodyWith, createTestContext } from '../racer-fixtures/racer-fixtures.ts'
 import { createRacer, createRacerSet, getRacer } from '../racer-state/racer-state.ts'
 import type { Figure, Racer, RacerSet, Vehicle } from '../racer.types.ts'
-import { createVehicle, updateVehicle } from './vehicle.ts'
+import { createVehicle, getVehicleWithRestingDriver, updateVehicle } from './vehicle.ts'
 
 const PLAYS = 0x10000
 const ANIMATION_COUNT = 0x12
@@ -195,5 +195,46 @@ describe('updateVehicle, the driver 0x0043ec10', () => {
     expect(getDriverId(racerSet)).toBe(0x10)
     expect(getRacer(racerSet, 0).vehicle.watchedRacerIndex).toBe(1)
     expect(getRacer(racerSet, 0).vehicle.lookMilliseconds).toBe(5001)
+  })
+})
+
+describe('updateVehicle, the colour shift override 0x00440130', () => {
+  it('counts the override down every update and clears it when a step reaches what is left', () => {
+    // Arrange
+    const car = createCar({
+      racer: {
+        isColourShiftOverridden: true,
+        colourShiftOverrideMilliseconds: 20,
+        overridingColourShift: { shifts: [0, 0, 0, 0], biases: [1, 2, 3, 0] },
+      },
+    })
+
+    // Act
+    const counted = getRacer(update([car], 16), 0)
+    const cleared = getRacer(update([car], 20), 0)
+
+    // Assert
+    expect([counted.isColourShiftOverridden, counted.colourShiftOverrideMilliseconds]).toEqual([
+      true,
+      4,
+    ])
+    expect([cleared.isColourShiftOverridden, cleared.colourShiftOverrideMilliseconds]).toEqual([
+      false,
+      0,
+    ])
+  })
+})
+
+describe('getVehicleWithRestingDriver, 0x004401a0', () => {
+  it('makes the driver play animation 9 from the start', () => {
+    // Arrange
+    const vehicle = createVehicle(createDriver(0xe))
+
+    // Act
+    const resting = getVehicleWithRestingDriver(vehicle)
+
+    // Assert
+    expect(getFigureAnimationId(resting.driverFigure)).toBe(9)
+    expect(resting.driverFigure.currentTime).toBe(0)
   })
 })

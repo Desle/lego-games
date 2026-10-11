@@ -9,6 +9,7 @@ import type {
   SceneDirectionalLight,
 } from '../../types/scene.types.ts'
 import { linkBspTreeInstances, linkMeshInstances, linkSkeletonInstances } from './link-instances.ts'
+import { linkBspTrees } from './link-bsp-trees.ts'
 import { linkMaterials } from './link-materials.ts'
 import { linkMaterialAssignments, linkMeshes } from './link-meshes.ts'
 import { linkAnimations, linkSkeletons } from './link-skeletons.ts'
@@ -41,6 +42,7 @@ const EMPTY_SCENE: Scene = Object.freeze({
   materials: [],
   meshes: [],
   materialAssignments: [],
+  bspTrees: [],
   skeletons: [],
   animations: [],
   instances: [],
@@ -75,6 +77,7 @@ const getSceneWithWorld = (archive: JamArchive, scene: Scene, worldPath: string)
     meshCount: world.meshes.length,
     materialAssignmentCount: world.materialAssignments.length,
     skeletonCount: world.skeletons.length,
+    bspTreeOffset: scene.bspTrees.length,
     bspTreeCount: world.bspTrees.length,
   })
   const animations = Object.freeze([
@@ -90,6 +93,7 @@ const getSceneWithWorld = (archive: JamArchive, scene: Scene, worldPath: string)
       ...scene.materialAssignments,
       ...linkMaterialAssignments(source, world.materialAssignments, linkedMaterials),
     ]),
+    bspTrees: Object.freeze([...scene.bspTrees, ...linkBspTrees(source, world.bspTrees)]),
     skeletons: Object.freeze([...scene.skeletons, ...linkSkeletons(source, world.skeletons)]),
     animations,
     instances: Object.freeze([

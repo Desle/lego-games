@@ -31,6 +31,17 @@ export {
   getRacerWithTimedEffect,
   transferTimedEffect,
 } from './controller/timed-effect/timed-effect.ts'
+export {
+  clearColourShiftOverride,
+  getDisplayedColourShift,
+  getRacerWithColourShiftOverride,
+  stepColourShiftOverride,
+  TIMED_EFFECT_COLOUR_SHIFT,
+  COPIED_FIGURE_DISTANCE,
+  POWER_UP_EFFECT_FIGURE_DISTANCE,
+  WAND_COLOUR_SHIFT,
+  WAND_COLOUR_SHIFT_MILLISECONDS,
+} from './types/colour-shift-override/colour-shift-override.ts'
 export { readRacerTables } from './services/read-racer-tables/read-racer-tables.ts'
 export {
   addCarBodyImpulse,
@@ -85,7 +96,12 @@ export {
   stopVehicleTireSmoke,
 } from './types/vehicle-emitters/vehicle-emitters.ts'
 export { getVehicleLeanAtReset } from './types/vehicle/vehicle-lean.ts'
-export { createVehicle, updateVehicle, updateVehicleDriver } from './types/vehicle/vehicle.ts'
+export {
+  createVehicle,
+  getVehicleWithRestingDriver,
+  updateVehicle,
+  updateVehicleDriver,
+} from './types/vehicle/vehicle.ts'
 export { COSINE_TABLE_ADDRESS, getTableCosine } from './types/cosine-table/cosine-table.ts'
 export {
   applyDriverSteering,
