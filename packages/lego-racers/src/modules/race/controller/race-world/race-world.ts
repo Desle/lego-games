@@ -19,10 +19,12 @@ import type {
   ProjectileEvent,
 } from '../../../projectiles/index.ts'
 import {
+  addCarBodyImpulse,
   getRacer,
   getTableCosine,
   setCarBodyPush,
   setRacer,
+  startCarBodyFlip,
   startVehicleTurboEffects,
   stopVehicleTireSmoke,
 } from '../../../racer/index.ts'
@@ -35,6 +37,7 @@ import {
   enterZoneTwo,
   enterZoneZero,
   getRacerAfterPowerUpEvent,
+  getRacerThrown,
   getRacerTumbling,
 } from '../../types/racer-transitions/racer-transitions.ts'
 import type { RaceWorldChange } from './race-world.types.ts'
@@ -181,6 +184,28 @@ const getRacerSetAfterVehicleEffects = (
   return racerSet
 }
 
+// 0x00454690: car body slot 0x44 on the latched racer and 0x4c on the owner end the tow.
+const getRacerSetWithTowEnded = (
+  arithmetic: FloatArithmetic,
+  racerSet: RaceRacerSet,
+  target: number | null,
+  slot: 'extraForceA' | 'extraForceB'
+): RaceRacerSet => {
+  const racer = target === null ? undefined : racerSet.racers[target]
+  if (target === null || racer === undefined) return racerSet
+  return Object.freeze({
+    ...racerSet,
+    ...setRacer(
+      racerSet,
+      target,
+      Object.freeze({
+        ...racer,
+        carBody: setCarBodyPush(arithmetic, racer.carBody, slot, undefined),
+      })
+    ),
+  })
+}
+
 const getRacerSetAfterEvents = (
   context: RacerSetContext,
   racerSet: RaceRacerSet,
@@ -188,6 +213,14 @@ const getRacerSetAfterEvents = (
 ): RaceRacerSet =>
   events.reduce((current, event) => {
     const { arithmetic } = context
+    if (event.type === 'power_ups.grapple_released') {
+      return getRacerSetWithTowEnded(
+        arithmetic,
+        getRacerSetWithTowEnded(arithmetic, current, event.victim, 'extraForceA'),
+        event.owner,
+        'extraForceB'
+      )
+    }
     const racerIndex = 'racer' in event ? event.racer : -1
     if (current.racers[racerIndex] === undefined) return current
     const effected = getRacerSetAfterVehicleEffects(context, current, racerIndex, event)
@@ -215,6 +248,7 @@ export const changePowerUps: RaceWorldChange = (context, racerSet, change) => {
         )
       ),
       random: Object.freeze({ table: step.world.random.table, position: racerSet.randomPosition }),
+      emitters: racerSet.emitters,
     }),
   })
   const changed = change(synced, getPowerUpContext(context, racerSet))
@@ -222,6 +256,7 @@ export const changePowerUps: RaceWorldChange = (context, racerSet, change) => {
     ...racerSet,
     powerUpStep: changed,
     randomPosition: changed.world.random.position,
+    emitters: changed.world.emitters,
     racers: Object.freeze(
       racerSet.racers.map((racer, index) => {
         const powerUpRacer = changed.world.racers[index]
@@ -291,8 +326,41 @@ export const getRacerAfterProjectileEvent = (
   arithmetic: FloatArithmetic,
   racer: Racer,
   event: ProjectileEvent
-): Racer =>
-  event.type === 'projectiles.racer_tumbling_started' ? getRacerTumbling(arithmetic, racer) : racer
+): Racer => {
+  switch (event.type) {
+    case 'projectiles.racer_tumbling_started':
+      return getRacerTumbling(arithmetic, racer)
+    case 'projectiles.racer_pulled':
+      return Object.freeze({
+        ...racer,
+        carBody: addCarBodyImpulse(arithmetic, racer.carBody, event.direction, event.strength),
+      })
+    case 'projectiles.racer_boosted':
+      return Object.freeze({
+        ...racer,
+        carBody: startCarBodyFlip(arithmetic, racer.carBody, event.factor, event.milliseconds),
+      })
+    case 'projectiles.racer_towed':
+      return Object.freeze({
+        ...racer,
+        carBody: setCarBodyPush(
+          arithmetic,
+          racer.carBody,
+          event.isOwner ? 'extraForceB' : 'extraForceA',
+          event.vector
+        ),
+      })
+    case 'projectiles.racer_tow_ended':
+      return Object.freeze({
+        ...racer,
+        carBody: setCarBodyPush(arithmetic, racer.carBody, 'extraForceA', undefined),
+      })
+    case 'projectiles.racer_blasted':
+      return getRacerThrown(arithmetic, racer, event.impulse)
+    default:
+      return racer
+  }
+}
 
 export const getRacerSetAfterProjectileEvents = (
   arithmetic: FloatArithmetic,

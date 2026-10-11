@@ -18,8 +18,21 @@ export type PowerUpEvent =
     }
   // Racer +0x39c |= 2 after a hit (car body flag; hypothesis: plays the hit reaction).
   | { readonly type: 'power_ups.racer_hit'; readonly racer: number }
-  // Car body vtable slot +0x24 with this strength (oil slick 1.0, rocket 2.0); hypothesis: spin-out.
-  | { readonly type: 'power_ups.racer_spun_out'; readonly racer: number; readonly strength: number }
+  // Car body vtable slot +0x24 (0x00429c40): spin factor 1.0 with a spin time of 1.0 (oil slick 0x004575b0) or 2.0
+  // with 0 (rocket 0x00456fa0), at the rate 0x3be56042.
+  | {
+      readonly type: 'power_ups.racer_spun_out'
+      readonly racer: number
+      readonly strength: number
+      readonly spinTime: number
+    }
+  // 0x00429cf0 on the car body: a flip at this rate for this many milliseconds (the oil slick's landing, 0x004573a0).
+  | {
+      readonly type: 'power_ups.racer_flipped'
+      readonly racer: number
+      readonly rate: number
+      readonly milliseconds: number
+    }
   // 0x00439900 with the curse model: racer +0xd7c = duration, +0xd80 = 1000, +0xd04 |= 0x800.
   | {
       readonly type: 'power_ups.racer_cursed'
@@ -54,7 +67,12 @@ export type PowerUpEvent =
   // 0x004545d0: the grapple latched on; 0x00453ef0 then pulls the two racers together (not ported).
   | { readonly type: 'power_ups.racer_grappled'; readonly racer: number; readonly owner: number }
   // 0x00454690: car body slot +0x44 on the latched racer and +0x4c on the owner.
-  | { readonly type: 'power_ups.grapple_released'; readonly effect: number }
+  | {
+      readonly type: 'power_ups.grapple_released'
+      readonly effect: number
+      readonly victim: number | null
+      readonly owner: number | null
+    }
   // 0x00431310: a shield of level 2 or more sends the projectile back; the shielded racer becomes its owner.
   | {
       readonly type: 'power_ups.projectile_reflected'

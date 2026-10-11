@@ -1,3 +1,5 @@
+import { createEmitterPool } from '../../../emitter/index.ts'
+import type { Emitter } from '../../../emitter/index.ts'
 import { createRandomTable } from '../../../random-table/index.ts'
 import { createFloatArithmetic, FpuPrecision } from '../../../simulation-math/index.ts'
 import { BrickKind, RaceModeFlag } from '../../types/brick-kind/brick-kind.ts'
@@ -57,6 +59,39 @@ const createActivated = (request: ActivationRequest, context = createContext()):
     0,
     request
   )
+
+const BUBBLE_EMITTER: Emitter = {
+  name: 'oilbub',
+  firstTruncatedValue: 100,
+  secondTruncatedValue: 0,
+  vector: [0, 0, 0],
+  points: [[0, 0, 1]],
+  firstFloat: 1,
+  secondFloat: 1,
+  thirdFloat: 0,
+  fourthFloat: 0,
+  fifthFloat: 10,
+  entryIndex: null,
+  firstInteger: 500,
+  secondInteger: -1,
+  thirdInteger: 1,
+  linkedName: null,
+}
+
+const getStepWithBubblePool = (step: PowerUpStep): PowerUpStep => ({
+  ...step,
+  world: {
+    ...step.world,
+    emitters: {
+      common: createEmitterPool({
+        list: { emitters: [BUBBLE_EMITTER], readByteCount: 0 },
+        instanceCount: 2,
+        animation: null,
+      }),
+      track: null,
+    },
+  },
+})
 
 const getHead = (step: PowerUpStep): PowerUpEffect => {
   const id = step.world.effects.activeEffectIds[0]
@@ -173,7 +208,9 @@ describe('updatePowerUpEffects', () => {
   it('draws twice per frame for a landed oil slick (0x004572a0)', () => {
     // Arrange
     const context = createContext()
-    const step = createActivated({ category: BrickKind.HAZARD, level: 0 }, context)
+    const step = getStepWithBubblePool(
+      createActivated({ category: BrickKind.HAZARD, level: 0 }, context)
+    )
 
     // Act
     const landed = runFor(step, context, [20])

@@ -18,6 +18,7 @@ import {
   getBodyOutOfTwoPointMode,
   getWithHeadingFromFrame,
   setExtraForce,
+  setFlaggedTimer,
   setPitchRate,
   setTopSpeed,
   startSpin,
@@ -48,6 +49,9 @@ const BOOST_GRIP_SCALE = getFloatFromBits(0x3fc00000) // 1.5
 const HELD_SPEED_FACTOR = getFloatFromBits(0x3f000000) // 0x004b049c, 0.5
 const RAMPED_TARGET_FLAG = 0x10000
 const TARGET_KEPT_FLAGS = 0x40002
+
+const FLAGGED_SPEED_FACTOR = getFloatFromBits(0x3dcccccd) // 0x004b0488, 0.1
+const FLAGGED_BOUNCE_SPEED = getFloatFromBits(0x42480000) // 0x004b04d0, 50
 
 const TWO_POINT_FLIP_RATE = getFloatFromBits(0xbb449ba6) // -0.003, pushed by 0x00429b40
 const TWO_POINT_FLIP_MILLISECONDS = 250 // 0xfa
@@ -420,3 +424,43 @@ export const endCarBodyFlaggedState = (body: CarBody): CarBody =>
           flags: body.rigidBody.flags & ~CarRigidBodyFlag.FLAGGED,
         }),
       })
+
+// 0x00429c00 (car body slot 14, which 0x004397a0 calls): the flagged state starts (600 ms, flag 0x80), the bounce's
+// vertical speed (+0x7d0) becomes 50 and the route speed factor 0.1.
+export const startCarBodyFlaggedState = (body: CarBody): CarBody =>
+  Object.freeze({
+    ...getWithSpeedFactor(body, FLAGGED_SPEED_FACTOR),
+    rigidBody: setFlaggedTimer(body.rigidBody, true),
+    bounceVerticalSpeed: FLAGGED_BOUNCE_SPEED,
+  })
+
+// What the explosion (0x00421c00) and the wand (0x00455440) do to the racer's velocity (racer +0x3f0..+0x3f8, the car
+// body's +0x8): it is cleared.
+export const clearCarBodyVelocity = (body: CarBody): CarBody =>
+  Object.freeze({
+    ...body,
+    rigidBody: Object.freeze({ ...body.rigidBody, linearVelocity: ZERO_VECTOR3 }),
+  })
+
+// Car body slot 7 (0x00429a70, thiscall: impulse): a free body's velocity gains the impulse times its inverse mass
+// (0x004480c0); a scripted body ignores it.
+export const addCarBodyVelocity = (
+  arithmetic: FloatArithmetic,
+  body: CarBody,
+  impulse: Vector3
+): CarBody => {
+  if (body.isScripted) return body
+  const { add, multiply, storeFloat } = arithmetic
+  const { linearVelocity, inverseMass } = body.rigidBody
+  return Object.freeze({
+    ...body,
+    rigidBody: Object.freeze({
+      ...body.rigidBody,
+      linearVelocity: Object.freeze({
+        x: storeFloat(add(multiply(inverseMass, impulse.x), linearVelocity.x)),
+        y: storeFloat(add(multiply(impulse.y, inverseMass), linearVelocity.y)),
+        z: storeFloat(add(multiply(impulse.z, inverseMass), linearVelocity.z)),
+      }),
+    }),
+  })
+}

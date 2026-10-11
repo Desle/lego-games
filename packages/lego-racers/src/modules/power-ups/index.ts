@@ -8,6 +8,11 @@ export {
   rollComputerStartTurbo,
 } from './controller/computer-power-up-use/computer-power-up-use.ts'
 export {
+  checkEffectEmitter,
+  releaseEffectEmitter,
+  startEffectEmitter,
+} from './controller/effect-emitters/effect-emitters.ts'
+export {
   endProjectileFlight,
   hitRacerWithProjectile,
   touchHazardEffect,
@@ -19,11 +24,13 @@ export {
 } from './controller/power-up-effect-timeline/power-up-effect-timeline.ts'
 export {
   createPowerUpEffects,
+  getEffectStateNumber,
   getStepWithAttachmentSlot,
   getStepWithAttachmentSlotFreed,
   getStepWithRacerEffectsFinished,
   getStepWithRacerWarpsFinished,
   NoPowerUpEffectToTakeError,
+  POWER_UP_EFFECT_POOL_ORDER,
 } from './controller/power-up-effects/power-up-effects.ts'
 export {
   getEffect,

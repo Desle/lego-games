@@ -1,3 +1,4 @@
+import { NO_EMITTER_POOLS } from '../../../emitter/index.ts'
 import { createRandomTable } from '../../../random-table/index.ts'
 import type { PowerUpStep } from './power-up-step.types.ts'
 import {
@@ -33,6 +34,7 @@ const createStep = (position: number): PowerUpStep =>
         attachmentSlots: { usedMask: 0, usedCount: 0 },
       },
       brickSpinAngle: 0,
+      emitters: NO_EMITTER_POOLS,
       random: {
         table: createRandomTable(Array.from({ length: 1024 }, (_, index) => index)),
         position,

@@ -1,9 +1,11 @@
+import type { PowerUpEvent } from '../../events/power-up.events.types.ts'
 import { RaceModeFlag } from '../../types/brick-kind/brick-kind.ts'
 import {
   EffectState,
   PowerUpEffectKind,
 } from '../../types/power-up-effect-kind/power-up-effect-kind.ts'
 import type { EffectState as EffectStateValue, PowerUpEffect } from '../../types/power-ups.types.ts'
+import { releaseEffectEmitter, startEffectEmitter } from '../effect-emitters/effect-emitters.ts'
 import {
   getEffect,
   getStepDraws,
@@ -53,9 +55,19 @@ const getStepWithScatteredExplosion = (step: PowerUpStep, effect: PowerUpEffect)
   ])
 }
 
-const advanceBarrel = (step: PowerUpStep, effect: PowerUpEffect): PowerUpStep => {
+const advanceBarrel = (
+  step: PowerUpStep,
+  context: PowerUpContext,
+  effect: PowerUpEffect
+): PowerUpStep => {
   if (effect.state === EffectState.STARTING)
-    return getWithState(step, effect, EffectState.ACTIVE, 5000)
+    // 0x00453240 case 2: the thrown barrel throws sparks.
+    return startEffectEmitter(
+      getWithState(step, effect, EffectState.ACTIVE, 5000),
+      context.arithmetic,
+      effect.id,
+      'dynsprk'
+    )
   if (effect.state === EffectState.ACTIVE) {
     return getStepWithEvents(getWithState(step, effect, EffectState.FINISHED, 0), [
       {
@@ -105,6 +117,22 @@ const advanceTurbo = (
     : step
 }
 
+// 0x004573a0: the owner's car body flips (0x00429cf0, rate 0.0015, 150 ms) as the slick drops.
+const OIL_LANDING_FLIP_RATE = Math.fround(0.0015)
+const OIL_LANDING_FLIP_MILLISECONDS = 150
+
+const getOilLandingFlip = (effect: PowerUpEffect): readonly PowerUpEvent[] =>
+  effect.ownerRacer === null
+    ? []
+    : [
+        {
+          type: 'power_ups.racer_flipped',
+          racer: effect.ownerRacer,
+          rate: OIL_LANDING_FLIP_RATE,
+          milliseconds: OIL_LANDING_FLIP_MILLISECONDS,
+        },
+      ]
+
 const getOwnerEvent = (effect: PowerUpEffect, type: OwnerEventType): readonly OwnerEvent[] =>
   effect.ownerRacer === null ? [] : [{ type, racer: effect.ownerRacer }]
 
@@ -147,24 +175,43 @@ const advanceThreeStages = (
   return getWithState(step, effect, EffectState.FINISHED, 0)
 }
 
-const advanceProjectile = (step: PowerUpStep, effect: PowerUpEffect): PowerUpStep => {
+const advanceProjectile = (
+  step: PowerUpStep,
+  context: PowerUpContext,
+  effect: PowerUpEffect
+): PowerUpStep => {
   if (effect.kind === PowerUpEffectKind.GRAPPLE) {
+    // 0x00454360: the hook leaves in a puff of smoke.
     if (effect.state === EffectState.STARTING)
-      return getWithState(step, effect, EffectState.ACTIVE, 3000)
+      return startEffectEmitter(
+        getWithState(step, effect, EffectState.ACTIVE, 3000),
+        context.arithmetic,
+        effect.id,
+        'cannsmk'
+      )
     if (effect.state === EffectState.ACTIVE || effect.state === EffectState.ENDING) {
       return retractGrapple(step, effect)
     }
     return getWithState(step, effect, EffectState.FINISHED, 0)
   }
-  if (effect.kind === PowerUpEffectKind.WAND) return advanceThreeStages(step, effect, 7000, 500)
-  // Cannon 0x00451f50 (3000 ms flight) and rocket 0x00456db0 (5500 ms).
+  if (effect.kind === PowerUpEffectKind.WAND) {
+    const advanced = advanceThreeStages(step, effect, 7000, 500)
+    // 0x00455060: the hit sparks are let go when the wand ends.
+    return effect.state === EffectState.STARTING || effect.state === EffectState.ACTIVE
+      ? advanced
+      : releaseEffectEmitter(advanced, effect.id, false)
+  }
+  // Cannon 0x00451f50 (3000 ms flight, with its smoke) and rocket 0x00456db0 (5500 ms).
   if (effect.state === EffectState.STARTING) {
-    return getWithState(
+    const started = getWithState(
       step,
       effect,
       EffectState.ACTIVE,
       effect.kind === PowerUpEffectKind.CANNON ? 3000 : 0x157c
     )
+    return effect.kind === PowerUpEffectKind.CANNON
+      ? startEffectEmitter(started, context.arithmetic, effect.id, 'cannsmk')
+      : started
   }
   return getWithState(step, effect, EffectState.FINISHED, 0)
 }
@@ -174,7 +221,14 @@ export const retractGrapple = (step: PowerUpStep, effect: PowerUpEffect): PowerU
   getStepWithEvents(
     getWithState(step, effect, EffectState.FINAL_STAGE, 500),
     effect.state === EffectState.ENDING
-      ? [{ type: 'power_ups.grapple_released', effect: effect.id }]
+      ? [
+          {
+            type: 'power_ups.grapple_released',
+            effect: effect.id,
+            victim: effect.targetRacer,
+            owner: effect.ownerRacer,
+          },
+        ]
       : []
   )
 
@@ -190,19 +244,22 @@ export const advancePowerUpEffect = (
     case PowerUpEffectKind.GRAPPLE:
     case PowerUpEffectKind.WAND:
     case PowerUpEffectKind.ROCKET:
-      return advanceProjectile(step, effect)
+      return advanceProjectile(step, context, effect)
     case PowerUpEffectKind.OIL_SLICK:
       // 0x004573a0: the slick lands for 10 s and its bubble emitter starts.
       return effect.state === EffectState.STARTING
-        ? getStepWithEffect(step, {
-            ...effect,
-            state: EffectState.ACTIVE,
-            timerMilliseconds: 10000,
-            isBubbleEmitterActive: true,
-          })
+        ? startEffectEmitter(
+            getStepWithEvents(
+              getWithState(step, effect, EffectState.ACTIVE, 10000),
+              getOilLandingFlip(effect)
+            ),
+            context.arithmetic,
+            effect.id,
+            'oilbub'
+          )
         : getWithState(step, effect, EffectState.FINISHED, 0)
     case PowerUpEffectKind.BARREL:
-      return advanceBarrel(step, effect)
+      return advanceBarrel(step, context, effect)
     case PowerUpEffectKind.MAGNET:
       // 0x00455f50.
       return effect.state === EffectState.ENDING
@@ -312,7 +369,7 @@ export const updatePowerUpEffect = (
   // 0x004572a0: two draws per frame while the bubble emitter exists.
   if (
     effect.kind === PowerUpEffectKind.OIL_SLICK &&
-    getEffect(counted, effectId).isBubbleEmitterActive
+    getEffect(counted, effectId).emitterHandleIndex !== null
   ) {
     return getStepWithDraws(counted, 2)
   }

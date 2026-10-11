@@ -1,4 +1,5 @@
 import type { EnumValues } from '../../../shared/types/enum.types.ts'
+import type { EmitterPools } from '../../emitter/index.ts'
 import type { RandomTable, RandomTablePosition } from '../../random-table/index.ts'
 import type { ComputerPersonality } from '../../racer-ai/index.ts'
 import type {
@@ -185,8 +186,9 @@ export type PowerUpEffect = {
   readonly sparkMilliseconds: number
   // Wand +0x240: milliseconds the struck racer has been held.
   readonly heldMilliseconds: number
-  // Oil slick +0x60: the bubble emitter exists (created when the slick lands).
-  readonly isBubbleEmitterActive: boolean
+  // The handle slot (common pool) of the emitter the effect holds: cannon +0xdc, grapple +0x26c, barrel +0x16c, wand
+  // +0x244, oil slick +0x60, turbo +0x30. Null while it holds none, or when the spawn gave no handle.
+  readonly emitterHandleIndex: number | null
 }
 
 export type PowerUpEffects = {
@@ -206,6 +208,8 @@ export type PowerUpWorld = {
   // +0x199c, radians.
   readonly brickSpinAngle: number
   readonly random: RandomState
+  // The emitter pools the effects and explosions spawn into (the race's, shared with the racers; synced by the race).
+  readonly emitters: EmitterPools
 }
 
 // Which brick a racer touched this frame, reported by the collision registry (0x0043d270).

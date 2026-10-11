@@ -1,3 +1,4 @@
+import { NO_EMITTER_POOLS } from '../../../emitter/index.ts'
 import { getIsBrickCollectable, getTouchedBrick } from '../../types/brick-base/brick-base.ts'
 import {
   advanceEnhancementBrick,
@@ -54,6 +55,7 @@ export const createPowerUpWorld = (definition: PowerUpWorldDefinition): PowerUpS
         effects: createPowerUpEffects(definition.isSplitScreen),
         brickSpinAngle: 0,
         random: definition.random,
+        emitters: NO_EMITTER_POOLS,
       }),
       events: Object.freeze([]),
     })

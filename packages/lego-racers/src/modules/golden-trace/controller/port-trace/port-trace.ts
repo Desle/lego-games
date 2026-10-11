@@ -7,6 +7,7 @@ import {
   stepRace,
 } from '../../../race/index.ts'
 import type { RaceDefinition, RaceState } from '../../../race/index.ts'
+import { getBrickKindFromCode } from '../../../power-ups/index.ts'
 import { DEFAULT_KEYBOARD_BINDINGS, getRacerControls } from '../../../race-input/index.ts'
 import { getRacerSphere, getRacerVolume, getRacerVolumeParts } from '../../../racer/index.ts'
 import type { BoundingSphere } from '../../../racer-collision/index.ts'
@@ -15,10 +16,12 @@ import type { Racer, RacerSetContext } from '../../../racer/index.ts'
 import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import type { Matrix3 } from '../../../simulation-math/index.ts'
 import { getFloatWords, getVectorWords } from '../trace-words/trace-words.ts'
+import { getPowerUpTraceFields } from '../power-up-trace/power-up-trace.ts'
 import { getComputerTraceFields } from '../computer-trace/computer-trace.ts'
 import { getTrackFields } from '../track-trace/track-trace.ts'
 import type {
   GoldenTraceScenario,
+  PowerUpGrant,
   TraceFieldProvider,
   TraceFields,
   TraceFrame,
@@ -246,6 +249,7 @@ const getRaceFields: TraceFieldProvider = (raceState) => ({
 export const TRACE_FIELD_PROVIDERS: readonly TraceFieldProvider[] = [
   getEmitterFields,
   (raceState) => getComputerTraceFields(raceState.racerSet),
+  (raceState) => getPowerUpTraceFields(raceState),
   getRacerSetFields,
   getPlayerFields,
   getRaceFields,
@@ -276,6 +280,44 @@ const getControls = (frame: TraceFrameInput) =>
     gamepad: null,
   })
 
+// The racer holds the granted brick at the granted level, as in the original (racer +0xccc and +0xd58).
+const getRaceStateWithGrants = (raceState: RaceState, grants: readonly PowerUpGrant[]): RaceState =>
+  grants.reduce((current, grant) => {
+    const racer = current.racerSet.racers[grant.racer]
+    const powerUpRacer = current.powerUpStep.world.racers[grant.racer]
+    if (racer === undefined || powerUpRacer === undefined) return current
+    return Object.freeze({
+      ...current,
+      racerSet: Object.freeze({
+        ...current.racerSet,
+        racers: Object.freeze(
+          current.racerSet.racers.map((candidate, index) =>
+            index === grant.racer
+              ? Object.freeze({ ...candidate, heldPowerUp: grant.kind })
+              : candidate
+          )
+        ),
+      }),
+      powerUpStep: Object.freeze({
+        ...current.powerUpStep,
+        world: Object.freeze({
+          ...current.powerUpStep.world,
+          racers: Object.freeze(
+            current.powerUpStep.world.racers.map((candidate, index) =>
+              index === grant.racer
+                ? Object.freeze({
+                    ...candidate,
+                    heldBrickKind: getBrickKindFromCode(grant.kind),
+                    enhancementLevel: grant.level,
+                  })
+                : candidate
+            )
+          ),
+        }),
+      }),
+    })
+  }, raceState)
+
 // Steps the port with the scenario's frame times and keys and records the same fields the original trace holds.
 export const getPortTrace = (
   scenario: GoldenTraceScenario,
@@ -288,7 +330,10 @@ export const getPortTrace = (
       index === 0 ? getControls(input) : IDLE_RACER_CONTROLS
     )
     raceState = stepRace(
-      raceState,
+      getRaceStateWithGrants(
+        raceState,
+        scenario.powerUpGrants.filter((grant) => grant.frame === frame)
+      ),
       { controls, contacts: NO_RACE_CONTACTS },
       input.milliseconds
     ).raceState
