@@ -14,8 +14,8 @@ MAIN_TRIGGERS_OFFSET = 0x2080
 ENVIRONMENT_TRIGGERS_OFFSET = 0x2128
 SKY_OFFSET = 0x2F90
 TIME_LIST_OFFSET = 0x4AC + 0xC
-# Instance flag bits the port does not model: 0x8 (fade distances, 0x10028110) and 0x200000 (presentation).
-PRESENTATION_FLAGS = 0x200008
+# Instance flag bit the port does not model: 0x8 (fade distances, 0x10028110).
+PRESENTATION_FLAGS = 0x8
 WORLD_OFFSETS = (("track", 0x390), ("blended", 0x398), ("local", 0x3A4))
 
 # (name, array offset, count offset, stride, extra word offsets read from the element, byte offsets read as one word)

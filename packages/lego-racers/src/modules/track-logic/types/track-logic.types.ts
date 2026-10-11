@@ -131,8 +131,6 @@ export type TrackWorldObject = {
 
 // The parts of the world that events read; the default answers as a world that never animates.
 export type TrackWorld = {
-  // The animation index (+0xbc) and flags (+0x5c) of a scene object, or null when the name is unknown.
-  readonly getObject: (reference: ObjectReference) => TrackWorldObject | null
   // 29: the material animation (entry +0x14 bit 2) is still playing.
   readonly getIsAnimationPlaying: (identifier: number) => boolean
   // 2A: a sound slot could be taken for a looped sound.
@@ -263,6 +261,16 @@ export type TrackSession = HazardBus & {
     racerIndex: number | null
   ) => void
   readonly releaseTrigger: (identifier: number, racerIndex: number | null) => void
+  // The animation index (+0xbc) and flags (+0x5c) of the scene object (a skeleton instance of the track world, or of
+  // the blended world) an event names, or null when the name is unknown.
+  readonly getObject: (reference: ObjectReference) => TrackWorldObject | null
+  // 0x00463570, 0x004635c0 and 0x004633f0 write the requested animation (+0xd8, the second clip) and the flag word
+  // (+0x5c) of the scene object; the instance's next update starts the clip (0x10023b10).
+  readonly requestObjectAnimation: (
+    reference: ObjectReference,
+    animation: number,
+    flags: number
+  ) => void
   // Events_Update 0x00461cc0
   readonly updateEvents: (milliseconds: number) => void
   // 0x00416090 for the three worlds (track, local, blended), the first of Race_Update's per-frame updates.
