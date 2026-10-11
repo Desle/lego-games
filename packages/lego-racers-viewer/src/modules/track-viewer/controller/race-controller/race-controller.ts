@@ -26,6 +26,7 @@ import type {
 } from '@lego-games/lego-racers/game-session'
 import {
   createRace,
+  getRaceStateWithGrants,
   IDLE_RACER_CONTROLS,
   NO_RACE_CONTACTS,
   PauseMenuMode,
@@ -49,6 +50,7 @@ import { getDevelopmentJam } from '../../services/jam-file/jam-file.ts'
 import { createRaceAudioPlayer } from '../../services/race-audio-player/race-audio-player.ts'
 import { loadRaceAssets } from '../../services/race-assets/race-assets.ts'
 import type { LoadedGameFiles, RaceAssets } from '../../services/race-assets/race-assets.types.ts'
+import { createDevelopmentPowerUpSource } from '../../services/development-power-up-source/development-power-up-source.ts'
 import { createRaceMenuInputSource } from '../../services/race-menu-input-source/race-menu-input-source.ts'
 import { createRaceInputSource } from '../../services/race-input-source/race-input-source.ts'
 import { createRaceViewport } from '../../services/race-viewport/race-viewport.ts'
@@ -275,6 +277,7 @@ export const useRaceController = (): RaceController => {
     const viewport = createRaceViewport(container, assets, RACE_STAGE_SIZE)
     const input = createRaceInputSource()
     const menuInput = createRaceMenuInputSource()
+    const developmentPowerUps = import.meta.env.DEV ? createDevelopmentPowerUpSource() : null
     const audio = createRaceAudioPlayer(assets)
     const hudContext = getHudContext(assets, RACE_STAGE_SIZE)
     const hudImageUrls = createHudImageUrls(assets.hudImages)
@@ -301,8 +304,13 @@ export const useRaceController = (): RaceController => {
       clock = advance.clock
       if (advance.frameMilliseconds !== null && raceState.isRunning) {
         const controls = getRacerControls(input.read())
+        const powerUpRequest = developmentPowerUps?.take() ?? null
         const step = stepRace(
-          raceState,
+          powerUpRequest === null
+            ? raceState
+            : getRaceStateWithGrants(raceState, [
+                { racer: 0, kind: powerUpRequest.kind, level: powerUpRequest.level },
+              ]),
           { controls: [controls], contacts: NO_RACE_CONTACTS, menu: menuInput.read() },
           advance.frameMilliseconds
         )
@@ -366,6 +374,7 @@ export const useRaceController = (): RaceController => {
       window.removeEventListener('keydown', resumeAudio)
       input.dispose()
       menuInput.dispose()
+      developmentPowerUps?.dispose()
       audio.dispose()
       viewport.dispose()
     }
