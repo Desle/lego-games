@@ -9,7 +9,7 @@ coverage/
 .claude/settings.local.json
 
 # Original game files are copyrighted: never commit them
-original-files/
+original-files
 
 # Ghidra project and raw decompiler output (derived from the original binaries)
 reverse-engineering/ghidra/
@@ -22,5 +22,5 @@ reverse-engineering/ghidra-server/
 reverse-engineering/ghidra-server-logs/
 
 # Emulator virtualenv and Python caches
-reverse-engineering/emulator/.venv/
+reverse-engineering/emulator/.venv
 __pycache__/
