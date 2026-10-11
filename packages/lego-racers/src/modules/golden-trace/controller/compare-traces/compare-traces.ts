@@ -20,7 +20,7 @@ const getFirstDifference = (
       const originalBits = originalWords[wordIndex] ?? -1
       const portBits = portWords[wordIndex] ?? -1
       if (!getIsSameFloatBits(originalBits, portBits)) {
-        return [{ frame, field, wordIndex, originalBits, portBits }]
+        return [{ frame, field, wordIndex, originalBits, portBits, differingFrameCount: 1 }]
       }
     }
     return []
@@ -52,6 +52,12 @@ export const compareTraces = (
       if (!seenFields.has(difference.field)) {
         seenFields.add(difference.field)
         divergenceByField.push(difference)
+      } else {
+        const index = divergenceByField.findIndex((entry) => entry.field === difference.field)
+        const entry = divergenceByField[index]
+        if (entry !== undefined) {
+          divergenceByField[index] = { ...entry, differingFrameCount: entry.differingFrameCount + 1 }
+        }
       }
     }
   }

@@ -46,7 +46,11 @@ export const stepRace = (
   })
   const phased = stepRacePhase(getStepOf(timed))
   const updated = updateRace(phased.raceState, inputs, frameMilliseconds)
-  return getFlushedStep(Object.freeze({ raceState: updated, events: phased.events }))
+  const withCamera: RaceState = Object.freeze({
+    ...updated,
+    introductionCameraMilliseconds: updated.introductionCameraMilliseconds + frameMilliseconds,
+  })
+  return getFlushedStep(Object.freeze({ raceState: withCamera, events: phased.events }))
 }
 
 // Race_ResumeFromPause 0x00436160 with a menu answer that ends the race (`iVar4 == 2`, choice not zero): the loop's

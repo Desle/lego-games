@@ -222,6 +222,7 @@ export const loadRaceDefinition = (
     isMirrored,
     isPointsRecordPresent: options.isPointsRecordPresent ?? false,
     ghost: options.ghost ?? null,
+    introductionCameraLimit: options.introductionCameraLimit ?? null,
     musicTuneCount:
       options.musicTuneCount ??
       (description.musicList === null

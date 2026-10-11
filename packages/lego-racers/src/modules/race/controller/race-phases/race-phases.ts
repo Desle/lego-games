@@ -396,7 +396,19 @@ const stepCountdown = (step: RaceStepResult): RaceStepResult => {
 // Race_UpdateState1 0x004349a0: after 2 s each local player's racer is marked as starting (0x004393d0, flag
 // 0x400) and the countdown's function runs at once. The track's introduction camera (race +0x3ac) can hold the
 // state longer in the original; it is not modelled.
-const stepIntroduction = (step: RaceStepResult): RaceStepResult => {
+const INTRODUCTION_CAMERA_TICKS_PER_SECOND = 30
+
+// Race_UpdateState1 0x004349a0: when the introduction camera's animation has finished the camera is handed to the
+// player and the state timer starts again from 0 (once).
+const getAfterIntroductionCamera = (raceState: RaceState): RaceState =>
+  raceState.introductionCameraLimit !== null &&
+  raceState.introductionCameraLimit * 1000 <=
+    raceState.introductionCameraMilliseconds * INTRODUCTION_CAMERA_TICKS_PER_SECOND
+    ? Object.freeze({ ...raceState, introductionCameraLimit: null, phaseMilliseconds: 0 })
+    : raceState
+
+const stepIntroduction = (cameraStep: RaceStepResult): RaceStepResult => {
+  const step = getStepWith(cameraStep, getAfterIntroductionCamera(cameraStep.raceState), [])
   const { raceState } = step
   if (raceState.phaseMilliseconds < INTRODUCTION_MILLISECONDS) return step
   const change = getPhaseChange(raceState, RacePhase.COUNTDOWN, 0)

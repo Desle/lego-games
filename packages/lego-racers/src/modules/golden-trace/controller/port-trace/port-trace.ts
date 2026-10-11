@@ -29,6 +29,16 @@ const getMatrixWords = (matrix: Matrix3): readonly number[] => getFloatWords(mat
 
 const getIntegerWords = (value: number): readonly number[] => [value >>> 0]
 
+const getIntegerWords3 = (first: number, second: number, third: number): readonly number[] => [
+  first >>> 0,
+  second >>> 0,
+  third >>> 0,
+]
+
+// Bytes stored one after the other, read back as little-endian 32-bit words.
+const getPackedBytes = (bytes: readonly number[]): readonly number[] =>
+  [0].map((start) => bytes.slice(start, start + 4).reduce((word, byte, index) => (word | (byte << (8 * index))) >>> 0, 0))
+
 const getRacerFields = (racer: Racer, index: number): TraceFields => {
   const { rigidBody } = racer.carBody
   const prefix = `racer${String(index)}`
@@ -62,6 +72,15 @@ const getRacerFields = (racer: Racer, index: number): TraceFields => {
     [`${prefix}.racer.crossings`]: getIntegerWords(racer.lapCrossings),
     [`${prefix}.racer.flags`]: getIntegerWords(racer.flags),
     [`${prefix}.racer.position`]: getIntegerWords(racer.racePosition),
+    [`${prefix}.racer.kind`]: getIntegerWords(racer.controllerKind),
+    [`${prefix}.racer.zones`]: getIntegerWords3(
+      racer.zoneCurrent,
+      racer.zonePrevious,
+      racer.zoneBeforePrevious
+    ),
+    [`${prefix}.racer.lapNumber`]: getIntegerWords(racer.lap),
+    [`${prefix}.racer.powerUpChances`]: getPackedBytes(racer.powerUpChances.slice(0, 4)),
+    [`${prefix}.racer.checkpointSide`]: getIntegerWords(racer.checkpointSide),
     [`${prefix}.display.position`]: getVectorWords(rigidBody.displayFrame.position),
     [`${prefix}.display.rotation`]: getMatrixWords(rigidBody.displayFrame.rotation),
   }

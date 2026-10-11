@@ -21,6 +21,7 @@ type TraceLine = {
   readonly fields?: Record<string, number[]>
   readonly isDone?: boolean
   readonly controlWord?: number
+  readonly introductionCameraLimit?: number
 }
 
 export const getIsOriginalTraceAvailable = (): boolean =>
@@ -46,13 +47,14 @@ export const readOriginalTrace = async (scenario: GoldenTraceScenario): Promise<
   })
   child.stdin.end(JSON.stringify(getScenarioForEmulator(scenario)))
   const frames: TraceFrame[] = []
-  const progress = { isDone: false, controlWord: 0 }
+  const progress = { isDone: false, controlWord: 0, introductionCameraLimit: -1 }
   const lines = createInterface({ input: child.stdout })
   lines.on('line', (text) => {
     const line = JSON.parse(text) as TraceLine
     if (line.isDone === true) {
       progress.isDone = true
       progress.controlWord = line.controlWord ?? 0
+      progress.introductionCameraLimit = line.introductionCameraLimit ?? -1
     }
     if (line.frame !== undefined && line.dt !== undefined && line.fields !== undefined) {
       frames.push({ frame: line.frame, milliseconds: line.dt, fields: line.fields })
@@ -64,5 +66,9 @@ export const readOriginalTrace = async (scenario: GoldenTraceScenario): Promise<
   if (!progress.isDone || exitCode !== 0) {
     throw new Error(`The original trace failed (exit ${String(exitCode)}); see the emulator output`)
   }
-  return { frames, controlWord: progress.controlWord }
+  return {
+    frames,
+    controlWord: progress.controlWord,
+    introductionCameraLimit: progress.introductionCameraLimit,
+  }
 }

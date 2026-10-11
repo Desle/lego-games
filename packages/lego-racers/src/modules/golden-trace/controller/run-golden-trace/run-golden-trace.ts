@@ -49,6 +49,10 @@ export const runGoldenTrace = async (
     randomPosition: scenario.randomPosition,
     fpuPrecision: precision,
     isPlayerChampionCar: true,
+    // The emulator has no sound device, so the original starts no music stream and spares the racing tune's draw.
+    musicTuneCount: 0,
+    introductionCameraLimit:
+      original.introductionCameraLimit < 0 ? null : original.introductionCameraLimit,
   })
   const port = getPortTrace(scenario, definition)
   const first = original.frames[0]
@@ -68,4 +72,4 @@ export const runGoldenTrace = async (
 export const formatDivergence = (divergence: FieldDivergence): string =>
   `frame ${String(divergence.frame)} ${divergence.field}[${String(divergence.wordIndex)}]: original ` +
   `0x${divergence.originalBits.toString(16).padStart(8, '0')} port ` +
-  `0x${divergence.portBits.toString(16).padStart(8, '0')}`
+  `0x${divergence.portBits.toString(16).padStart(8, '0')} (${String(divergence.differingFrameCount)} frames differ)`
