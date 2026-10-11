@@ -13,6 +13,7 @@ import {
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
 import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
 import { getCameraFrustum, ORIGINAL_FIELD_OF_VIEW_DEGREES } from './camera-frustum.ts'
+import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
 import { createRaceParticles } from '../race-particles/race-particles.ts'
 import { createRaceEffects } from '../race-effects/race-effects.ts'
 import { createSceneObject } from '../scene-object/scene-object.ts'
@@ -142,7 +143,8 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
           )
     const cameraView = warpView === null ? allCameraView : warpView.cameraView
     effects.update(
-      warpView === null ? effectViews : { ...effectViews, effects: [], bricks: [], explosions: [] }
+      warpView === null ? effectViews : { ...effectViews, effects: [], bricks: [], explosions: [] },
+      cameraView.position
     )
     for (const rig of racerRigs) {
       const isShown = warpView === null || rig === racerRigs[warpView.pose.racerIndex]
@@ -156,6 +158,19 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
       if (colourShiftKeys.get(pose.racerIndex) !== shiftKey) {
         colourShiftKeys.set(pose.racerIndex, shiftKey)
         for (const object of racerRig.objects) object.setColourShift(pose.colourShift)
+      }
+      const isRigShown = warpView === null || pose.racerIndex === warpView.pose.racerIndex
+      const centres = pose.partCentres
+      const eye = cameraView.position
+      racerRig.wheels.group.visible =
+        isRigShown && getIsWithinLevelDistance(centres?.wheels ?? null, eye)
+      if (racerRig.body !== null) {
+        racerRig.body.group.visible =
+          isRigShown && getIsWithinLevelDistance(centres?.body ?? null, eye)
+      }
+      if (racerRig.driver !== null) {
+        racerRig.driver.group.visible =
+          isRigShown && getIsWithinLevelDistance(centres?.driver ?? null, eye)
       }
       racerRig.wheels.group.matrix.copy(getFrameMatrix(pose.rotation, pose.position))
       racerRig.wheels.group.matrixWorldNeedsUpdate = true

@@ -61,6 +61,14 @@ export type WarpView = {
   readonly cameraView: CameraView
 }
 
+// Where the three drawn parts of a car have their bounding sphere centres in the world (0x0040e270 reads them with
+// FUN_00411c60): the wheels, the car model and the driver.
+export type RacerPartCentres = {
+  readonly wheels: Vector3
+  readonly body: Vector3 | null
+  readonly driver: Vector3
+}
+
 // A racer on the track: where its display frame is, and what hangs on it. The wheels (a skeleton instance) sit in the
 // display frame; the car model sits at the same position with the leaned rotation of vehicle +0x3c (0x0043e740); the
 // driver sits at `driverPosition` with the car model's rotation (vehicle +0x48).
@@ -76,6 +84,8 @@ export type RacerPose = {
   readonly driverAnimation: SkeletonAnimationState
   // The colour shift a track event put on the racer's models (0x004400a0), or null.
   readonly colourShift: ColourShift | null
+  // Where the parts' spheres are, for the distance cut; null in the warp, where the camera stays beside the car.
+  readonly partCentres: RacerPartCentres | null
 }
 
 // What the frame's race events change in the presentation.
