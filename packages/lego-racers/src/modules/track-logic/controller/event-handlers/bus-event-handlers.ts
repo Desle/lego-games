@@ -156,6 +156,13 @@ export const HANDLERS_42: TrackEventHandlers = Object.freeze({
   ...IDLE_HANDLERS,
   begin: (event, session) => {
     emitAction(session, event, 'begin')
+    if (event.kind === TrackEventKind.KIND_42 && event.record.name !== '') {
+      session.emit({
+        type: 'track.sky_setting_switched',
+        name: event.record.name,
+        durationMilliseconds: event.record.keyword44Integer,
+      })
+    }
     return announceAndSet(session, event, event.state, FIRST_SIGNAL, TrackEventState.END_REQUESTED)
   },
   end: (event, session) => {

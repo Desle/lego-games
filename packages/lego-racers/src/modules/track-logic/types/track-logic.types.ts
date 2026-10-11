@@ -100,6 +100,12 @@ export type TrackEffect =
       readonly action: TrackEventAction
     }
   | {
+      // 0x0045e2a0 (a 42 event's begin) asks Sky_SwitchSetting 0x0041d150 for the named setting.
+      readonly type: 'track.sky_setting_switched'
+      readonly name: string
+      readonly durationMilliseconds: number
+    }
+  | {
       readonly type: 'track.tagged_position_touched'
       readonly racerIndex: number
       readonly triggerIndex: number
