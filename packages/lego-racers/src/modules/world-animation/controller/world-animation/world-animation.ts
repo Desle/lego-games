@@ -1,5 +1,5 @@
 import { createSkeletonAnimationState } from '../../../skeletal-animation/index.ts'
-import type { SkeletalAnimation } from '../../../skeletal-animation/index.ts'
+import type { SkeletalAnimation, Vector3 } from '../../../skeletal-animation/index.ts'
 import type {
   BspTreeInstance,
   MeshInstance,
@@ -176,11 +176,45 @@ const createMaterialAnimations = (
 // clips, the mesh instances' positions and level distances, and the material animation entries instances play.
 export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation => {
   const { world } = input
+  // **Hypothesis**: the mirror also negates the y of the clip velocities (the trace shows the instance's y as -0 after
+  // the first update, which only a negated velocity gives); the code that does it is not traced.
+  const getMirroredVelocity = (instance: SkeletonInstanceRuntime): SkeletonInstanceRuntime => {
+    const { clip } = instance
+    if (input.isMirrored !== true || clip === null) return instance
+    const flip = (vector: Vector3): Vector3 => Object.freeze([vector[0], -vector[1], vector[2]] as const)
+    return Object.freeze({
+      ...instance,
+      clip: Object.freeze({
+        ...clip,
+        velocity: flip(clip.velocity),
+        clip: Object.freeze({ ...clip.clip, velocity: flip(clip.clip.velocity) }),
+        secondClip: Object.freeze({
+          ...clip.secondClip,
+          velocity: flip(clip.secondClip.velocity),
+        }),
+      }),
+    })
+  }
+  const getMirrored = <Instance extends { readonly position: Vector3 }>(
+    instance: Instance
+  ): Instance =>
+    input.isMirrored === true
+      ? Object.freeze({
+          ...instance,
+          position: Object.freeze([
+            instance.position[0],
+            -instance.position[1],
+            instance.position[2],
+          ] as const),
+        })
+      : instance
   return Object.freeze({
     skeletonInstances: Object.freeze(
-      world.skeletonInstances.map((instance) => createSkeletonInstance(instance, input.animations))
+      world.skeletonInstances.map((instance) =>
+        getMirroredVelocity(getMirrored(createSkeletonInstance(instance, input.animations)))
+      )
     ),
-    meshInstances: Object.freeze(world.meshInstances.map(createMeshInstance)),
+    meshInstances: Object.freeze(world.meshInstances.map((instance) => getMirrored(createMeshInstance(instance)))),
     materialAnimations: createMaterialAnimations(
       world.materialAnimations,
       input.materialAnimations,

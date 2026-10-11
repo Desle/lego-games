@@ -281,7 +281,7 @@ export const loadRaceDefinition = (
         ? null
         : parseTriggers(environmentTriggerBytes, TriggerFileKind.ENVIRONMENT, isMirrored),
     hazards: hazardBytes === null ? null : parseHazards(hazardBytes, isMirrored),
-    worlds: loadRaceWorlds(readArchiveFile, raceDirectory, description),
+    worlds: loadRaceWorlds(readArchiveFile, raceDirectory, description, isMirrored),
     emitters: loadRaceEmitters(readArchiveFile, raceDirectory, description),
     ...optionalSky,
     randomPosition: routeDraws.position,
