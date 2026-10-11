@@ -85,7 +85,8 @@ const getMaterialAssignmentIndices = (
 const getLinkedInstance = <Level extends InstanceLevelInput>(
   instance: WorldInstance<Level>,
   kind: SceneInstanceKindValue,
-  counts: SceneCounts
+  counts: SceneCounts,
+  getBspTreeIndex: (level: Level) => number | null
 ): SceneInstance => {
   const firstMeshIndex = instance.levels[0]?.meshIndex ?? -1
   if (counts.meshCount <= firstMeshIndex >>> 0) throw new SceneLinkError('Illegal mesh reference')
@@ -95,6 +96,7 @@ const getLinkedInstance = <Level extends InstanceLevelInput>(
     usedLevels.map((level) =>
       Object.freeze({
         meshIndex: level.meshIndex,
+        bspTreeIndex: getBspTreeIndex(level),
         squaredDistance: getSquaredDistance(level.distance),
       })
     )
@@ -105,6 +107,7 @@ const getLinkedInstance = <Level extends InstanceLevelInput>(
       skeletonIndex: null,
       animationIndex: null,
       materialAssignmentIndex: materialAssignmentIndices[index] ?? null,
+      bspTreeIndex: level.bspTreeIndex,
       squaredDistance: level.squaredDistance,
     })
   )
@@ -123,7 +126,9 @@ export const linkMeshInstances = (
   instances: readonly MeshInstance[],
   counts: SceneCounts
 ): readonly SceneInstance[] =>
-  instances.map((instance) => getLinkedInstance(instance, SceneInstanceKind.MESH, counts))
+  instances.map((instance) =>
+    getLinkedInstance(instance, SceneInstanceKind.MESH, counts, () => null)
+  )
 
 // BSP tree instances also check their tree index ("Illegal bsp tree reference").
 export const linkBspTreeInstances = (
@@ -132,7 +137,12 @@ export const linkBspTreeInstances = (
 ): readonly SceneInstance[] =>
   instances.map((instance) => {
     const bspTreeIndex = instance.levels[0]?.bspTreeIndex ?? -1
-    const linked = getLinkedInstance(instance, SceneInstanceKind.BSP_TREE, counts)
+    const linked = getLinkedInstance(
+      instance,
+      SceneInstanceKind.BSP_TREE,
+      counts,
+      (level) => counts.bspTreeOffset + level.bspTreeIndex
+    )
     if (counts.bspTreeCount <= bspTreeIndex >>> 0) {
       throw new SceneLinkError('Illegal bsp tree reference')
     }
@@ -195,6 +205,7 @@ export const linkSkeletonInstances = (
         skeletonIndex: counts.skeletonOffset + level.skeletonIndex,
         animationIndex: counts.animationOffset + level.animationIndex,
         materialAssignmentIndex: materialAssignmentIndices[index] ?? null,
+        bspTreeIndex: null,
         squaredDistance: level.squaredDistance,
       })
     )

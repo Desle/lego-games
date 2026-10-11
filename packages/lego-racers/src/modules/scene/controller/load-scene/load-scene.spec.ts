@@ -68,6 +68,24 @@ describe.runIf(isOriginalPresent)('loadScene on the original LEGO.JAM', () => {
     }
   })
 
+  it('links the BSP tree instance to its tree and keeps the first command of every draw batch', () => {
+    // Arrange
+    const worldPaths = getRaceWorldPaths('GAMEDATA\\RACEC0R0', FIRST_RACE_WORLDS)
+
+    // Act
+    const scene = loadScene(archive!, worldPaths)
+
+    // Assert
+    const track = scene.instances.find((instance) => instance.kind === SceneInstanceKind.BSP_TREE)
+    const tree = scene.bspTrees[track?.levels[0]?.bspTreeIndex ?? -1]
+    expect(tree?.path).toBe('GAMEDATA\\RACEC0R0\\RKTK.BDB')
+    expect(tree?.tree.nodes.length).toBe(77)
+    const mesh = scene.meshes[track?.levels[0]?.meshIndex ?? -1]
+    const firstCommands = mesh?.drawBatches.map((batch) => batch.firstCommand) ?? []
+    expect(firstCommands[0]).toBe(0)
+    expect(firstCommands).toEqual([...firstCommands].sort((first, second) => first - second))
+  })
+
   it('links skeleton instances to their skeletons, animations and starting clip', () => {
     // Arrange
     const worldPaths = getRaceWorldPaths('GAMEDATA\\RACEC0R0', FIRST_RACE_WORLDS)
