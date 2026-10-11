@@ -52,6 +52,7 @@ import {
   stepRacerRigidBodyWithContacts,
   stepRacerScriptWithContacts,
 } from '../racer-contacts/racer-contacts.ts'
+import { getRacerSetAfterProjectileContact } from '../projectile-registry/projectile-registry.ts'
 import { getRegistryEntries, getRegistrySphere } from '../registry-objects/registry-objects.ts'
 
 const RACER_PERMANENT_TURBO_FLAG = 0x8000000
@@ -99,6 +100,13 @@ const answerRegistryContacts = (context: RacerSetContext, racerSet: RaceRacerSet
           })
         )
       )
+    }
+    if (
+      object.type === 'effect_flight' ||
+      object.type === 'effect_hazard' ||
+      object.type === 'explosion'
+    ) {
+      return getRacerSetAfterProjectileContact(context, current, object, contact.racer)
     }
     const brickContacts = [{ racer: contact.racer, brick: object.index }]
     return changePowerUps(context, current, (step, powerUpContext) =>

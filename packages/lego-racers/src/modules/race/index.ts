@@ -1,3 +1,4 @@
+export { getProjectileRegistrySphere } from './controller/projectile-registry/projectile-registry.ts'
 export { createRace } from './controller/create-race/create-race.ts'
 export { RACE_STEP_DEPENDENCIES } from './controller/race-dependencies/race-dependencies.ts'
 export { IDLE_RACER_CONTROLS, NO_RACE_CONTACTS } from './controller/race-world/race-world.ts'

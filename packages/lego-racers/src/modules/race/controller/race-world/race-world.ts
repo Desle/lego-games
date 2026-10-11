@@ -86,6 +86,8 @@ export const getRaceRacerSet = (state: RaceState, contacts: RaceContacts): RaceR
     collisionObjectNames: state.collisionObjectNames,
     taggedPositionMilliseconds: state.taggedPositionMilliseconds,
     registryObjects: state.registryObjects,
+    projectileWorld: state.projectileWorld,
+    projectileModelData: state.projectileModelData,
     raceModeFlags: state.raceModeFlags,
     pendingContacts: contacts,
     trackLogic: state.trackLogic,
@@ -301,24 +303,32 @@ export const getFlightRacer = (racer: Racer): FlightRacer => {
 
 // The line probe 0x0041f730 over the first collision object (the track); the material flag 0x20000 test needs the
 // track-material table of the track, which the race does not carry, so no hit is passed through.
+export const createProjectileContext = (
+  context: RacerSetContext,
+  modelData: RaceState['projectileModelData'],
+  racerSet: RaceRacerSet,
+  powerUps: PowerUpContext
+): ProjectileContext => {
+  const track = context.collisionObjects[racerSet.racers[0]?.collisionObjectIndices[0] ?? 0]
+  return Object.freeze({
+    powerUps,
+    racers: Object.freeze(racerSet.racers.map(getFlightRacer)),
+    route: modelData.routeNodes,
+    rocketLaunchMilliseconds: modelData.rocketLaunchMilliseconds,
+    debrisAnimations: modelData.debrisAnimations,
+    probe:
+      track === undefined
+        ? NO_LINE_HIT
+        : createTrackLineProbe(context.arithmetic, track.volume, () => false),
+  })
+}
+
 export const getProjectileContext = (
   state: RaceState,
   racerSet: RaceRacerSet,
   powerUps: PowerUpContext
-): ProjectileContext => {
-  const track = state.context.collisionObjects[racerSet.racers[0]?.collisionObjectIndices[0] ?? 0]
-  return Object.freeze({
-    powerUps,
-    racers: Object.freeze(racerSet.racers.map(getFlightRacer)),
-    route: state.projectileModelData.routeNodes,
-    rocketLaunchMilliseconds: state.projectileModelData.rocketLaunchMilliseconds,
-    debrisAnimations: state.projectileModelData.debrisAnimations,
-    probe:
-      track === undefined
-        ? NO_LINE_HIT
-        : createTrackLineProbe(state.context.arithmetic, track.volume, () => false),
-  })
-}
+): ProjectileContext =>
+  createProjectileContext(state.context, state.projectileModelData, racerSet, powerUps)
 
 // 0x00439570 makes the racer tumble; the other events call car body slots that are not ported (they stay in the
 // events the race reports).

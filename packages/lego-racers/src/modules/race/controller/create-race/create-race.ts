@@ -268,7 +268,12 @@ export const createRace = (definition: RaceDefinition): RaceState => {
   )
   const registryEntries = getRegistryEntries(
     definition.arithmetic,
-    { registryObjects, trackLogic, powerUpStep },
+    {
+      registryObjects,
+      trackLogic,
+      powerUpStep,
+      projectileWorld: createProjectileWorld(powerUpStep),
+    },
     []
   )
   return Object.freeze({
