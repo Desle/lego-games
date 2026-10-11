@@ -843,3 +843,9 @@
 0049db90 FigureBuilder_BuildDriver
 0049dd50 FigureBuilder_MergeCommands
 0049d9b0 FigureBuilder_ReplaceMaterial
+00486b30 SaveScreen_Constructor
+00486e40 SaveScreen_Run
+00443420 SaveSlots_LoadSlot
+004846b0 PickMemoryScreen_Constructor
+004849e0 PickMemoryScreen_OnButton
+00481fe0 NewRacerScreen_Constructor
