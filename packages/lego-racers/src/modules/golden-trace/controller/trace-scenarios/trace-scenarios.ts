@@ -1,6 +1,10 @@
 import { DEFAULT_KEYBOARD_BINDINGS, RaceBinding } from '../../../race-input/index.ts'
 import type { RaceBindingValue } from '../../../race-input/index.ts'
-import type { GoldenTraceScenario, TraceFrameInput } from '../../types/golden-trace.types.ts'
+import type {
+  GoldenTraceScenario,
+  ScenarioRequest,
+  TraceFrameInput,
+} from '../../types/golden-trace.types.ts'
 
 // The introduction (about 2,000 ms after the camera) and the countdown (3,000 ms) pass before the racers are released,
 // at frame 160. Accelerating within 100 ms of that fires the start boost (0x00430790); the plain scenarios wait longer.
@@ -24,14 +28,6 @@ export const holdBindings = (
     milliseconds,
     scanCodes: bindings.map(getScanCode),
   }))
-
-export type ScenarioRequest = {
-  readonly name: string
-  readonly raceFolder: string
-  readonly racerCodes: readonly string[]
-  readonly frames: readonly TraceFrameInput[]
-  readonly precision?: GoldenTraceScenario['precision']
-}
 
 export const createTraceScenario = (request: ScenarioRequest): GoldenTraceScenario =>
   Object.freeze({

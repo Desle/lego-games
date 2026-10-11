@@ -465,7 +465,10 @@ const getAfterIntroductionCamera = (raceState: RaceState): RaceState =>
     ? Object.freeze({ ...raceState, introductionCameraLimit: null, phaseMilliseconds: 0 })
     : raceState
 
-const stepIntroduction = (cameraStep: RaceStepResult, frameMilliseconds: number): RaceStepResult => {
+const stepIntroduction = (
+  cameraStep: RaceStepResult,
+  frameMilliseconds: number
+): RaceStepResult => {
   const step = getStepWith(cameraStep, getAfterIntroductionCamera(cameraStep.raceState), [])
   const { raceState } = step
   if (raceState.phaseMilliseconds < INTRODUCTION_MILLISECONDS) return step

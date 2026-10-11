@@ -56,7 +56,10 @@ export const compareTraces = (
         const index = divergenceByField.findIndex((entry) => entry.field === difference.field)
         const entry = divergenceByField[index]
         if (entry !== undefined) {
-          divergenceByField[index] = { ...entry, differingFrameCount: entry.differingFrameCount + 1 }
+          divergenceByField[index] = {
+            ...entry,
+            differingFrameCount: entry.differingFrameCount + 1,
+          }
         }
       }
     }

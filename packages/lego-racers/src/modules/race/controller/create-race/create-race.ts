@@ -218,7 +218,10 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     playerRacerIndices: Object.freeze(playerRacerIndices),
     playerControllers: Object.freeze(
       playerRacerIndices.map(() =>
-        Object.freeze({ ...createPlayerController(false), stateFlags: CONTROLLER_BEFORE_START_FLAG })
+        Object.freeze({
+          ...createPlayerController(false),
+          stateFlags: CONTROLLER_BEFORE_START_FLAG,
+        })
       )
     ),
     powerUpStep,

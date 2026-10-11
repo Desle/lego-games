@@ -53,3 +53,18 @@ export type TraceComparison = {
   // The first frame each differing field differs in, ordered by frame.
   readonly divergenceByField: readonly FieldDivergence[]
 }
+
+export type GoldenTraceResult = {
+  readonly comparison: TraceComparison
+  readonly controlWord: number
+  readonly precision: FpuPrecisionValue
+  readonly isFrameTimeKept: boolean
+}
+
+export type ScenarioRequest = {
+  readonly name: string
+  readonly raceFolder: string
+  readonly racerCodes: readonly string[]
+  readonly frames: readonly TraceFrameInput[]
+  readonly precision?: GoldenTraceScenario['precision']
+}

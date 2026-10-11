@@ -3,6 +3,7 @@ import type { RaceDefinition, RaceState } from '../../../race/index.ts'
 import { RaceBinding } from '../../../race-input/index.ts'
 import type { RaceBindingValue } from '../../../race-input/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
+import type { DrivingPose } from './route-driving.types.ts'
 import type { TraceFrameInput } from '../../types/golden-trace.types.ts'
 import { holdBindings } from '../trace-scenarios/trace-scenarios.ts'
 
@@ -19,11 +20,6 @@ const GUIDE_RACER_INDEX = 1
 const STUCK_SPEED = 0.015
 const STUCK_FRAMES = 45
 const REVERSE_FRAMES = 40
-
-type DrivingPose = {
-  readonly position: Vector3
-  readonly forward: Vector3
-}
 
 const getPlayerPose = (raceState: RaceState): DrivingPose => {
   const racer = raceState.racerSet.racers[0]
@@ -106,7 +102,9 @@ export const getRouteDrivingFrames = (
     if (isReversing) stuckFrames = 0
     const steering = target === undefined ? [] : getSteeringBinding(pose, target)
     const reversedSteering = steering.map((binding) =>
-      binding === RaceBinding.STEER_POSITIVE ? RaceBinding.STEER_NEGATIVE : RaceBinding.STEER_POSITIVE
+      binding === RaceBinding.STEER_POSITIVE
+        ? RaceBinding.STEER_NEGATIVE
+        : RaceBinding.STEER_POSITIVE
     )
     const bindings = isReversing
       ? [RaceBinding.BRAKE, ...reversedSteering]

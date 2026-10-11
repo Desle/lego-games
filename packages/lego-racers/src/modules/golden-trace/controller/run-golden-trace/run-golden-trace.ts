@@ -1,9 +1,9 @@
 import { FpuPrecision } from '../../../simulation-math/index.ts'
-import type { FpuPrecisionValue } from '../../../simulation-math/index.ts'
 import { loadRaceDefinition } from '../../../race/index.ts'
 import { readOriginalTrace } from '../../services/original-trace/original-trace.ts'
 import type {
   FieldDivergence,
+  GoldenTraceResult,
   GoldenTraceScenario,
   TraceComparison,
 } from '../../types/golden-trace.types.ts'
@@ -24,13 +24,6 @@ const FIELD_GROUP_ORDER = ['race.', 'player', '.driver.', '.racer.', '.body.', '
 const getFieldOrder = (field: string): number => {
   const group = FIELD_GROUP_ORDER.findIndex((marker) => field.includes(marker))
   return group === -1 ? FIELD_GROUP_ORDER.length : group
-}
-
-export type GoldenTraceResult = {
-  readonly comparison: TraceComparison
-  readonly controlWord: number
-  readonly precision: FpuPrecisionValue
-  readonly isFrameTimeKept: boolean
 }
 
 // Runs the original race in the emulator and the port with the same frames, and compares them bit for bit.
@@ -63,9 +56,7 @@ export const runGoldenTrace = async (
   const first = original.frames[0]
   const fieldNames = Object.keys(first?.fields ?? {})
     .filter((field) => !KNOWN_UNPORTED_FIELDS.some((suffix) => field.endsWith(suffix)))
-    .sort(
-    (left, right) => getFieldOrder(left) - getFieldOrder(right)
-  )
+    .sort((left, right) => getFieldOrder(left) - getFieldOrder(right))
   return {
     comparison: compareTraces(original.frames, port, fieldNames),
     controlWord: original.controlWord,

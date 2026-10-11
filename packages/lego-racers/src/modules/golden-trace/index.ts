@@ -5,7 +5,6 @@ export {
   getPlayerDivergences,
   runGoldenTrace,
 } from './controller/run-golden-trace/run-golden-trace.ts'
-export type { GoldenTraceResult } from './controller/run-golden-trace/run-golden-trace.ts'
 export { getRouteDrivingFrames } from './controller/route-driving/route-driving.ts'
 export {
   createTraceScenario,
@@ -20,6 +19,7 @@ export {
 } from './services/original-trace/original-trace.ts'
 export type {
   FieldDivergence,
+  GoldenTraceResult,
   GoldenTraceScenario,
   OriginalTrace,
   TraceComparison,

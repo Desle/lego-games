@@ -38,7 +38,11 @@ const getIntegerWords3 = (first: number, second: number, third: number): readonl
 
 // Bytes stored one after the other, read back as little-endian 32-bit words.
 const getPackedBytes = (bytes: readonly number[]): readonly number[] =>
-  [0].map((start) => bytes.slice(start, start + 4).reduce((word, byte, index) => (word | (byte << (8 * index))) >>> 0, 0))
+  [0].map((start) =>
+    bytes
+      .slice(start, start + 4)
+      .reduce((word, byte, index) => (word | (byte << (8 * index))) >>> 0, 0)
+  )
 
 const getRacerFields = (racer: Racer, index: number, context: RacerSetContext): TraceFields => {
   const { rigidBody } = racer.carBody

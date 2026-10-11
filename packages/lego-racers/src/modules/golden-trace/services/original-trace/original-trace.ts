@@ -12,17 +12,9 @@ import type {
   OriginalTrace,
   TraceFrame,
 } from '../../types/golden-trace.types.ts'
+import type { TraceLine } from './original-trace.types.ts'
 
 const TRACE_SCRIPT_PATH = resolve(EMULATOR_DIRECTORY, 'golden_trace.py')
-
-type TraceLine = {
-  readonly frame?: number
-  readonly dt?: number
-  readonly fields?: Record<string, number[]>
-  readonly isDone?: boolean
-  readonly controlWord?: number
-  readonly introductionCameraLimit?: number
-}
 
 export const getIsOriginalTraceAvailable = (): boolean =>
   existsSync(EMULATOR_PYTHON_PATH) &&
