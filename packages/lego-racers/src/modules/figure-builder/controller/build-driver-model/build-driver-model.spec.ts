@@ -43,4 +43,22 @@ describe.skipIf(!isAvailable)('buildDriverModel', () => {
       'helmet2',
     ])
   })
+
+  it("puts the texture the right way up: the bat helmet's face patch lies in the middle of the face texture", () => {
+    // Arrange
+    const archive = openJamArchive(new Uint8Array(readFileSync(JAM_PATH)))
+    const geometry = parsePartGeometry(archive.readFile('MENUDATA\\PARTDB\\GAMEPART\\ICB_CHAR.GCB'))
+    const batHat = geometry.parts.find((part) => part.name === 'bb_hat')
+    const faceGroup = batHat?.groups.find((group) => group.materialName === 'face')
+
+    // Act
+    const verticalCoordinates = Array.from(
+      faceGroup?.triangles ?? [],
+      (index) => geometry.textureCoordinates[index * 2 + 1] ?? 0
+    )
+
+    // Assert
+    expect(Math.min(...verticalCoordinates)).toBeCloseTo(1 - 0.655, 2)
+    expect(Math.max(...verticalCoordinates)).toBeCloseTo(1 - 0.425, 2)
+  })
 })

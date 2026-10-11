@@ -10,7 +10,7 @@ import type {
 import {
   createResult,
   getFirstEnabledIndex,
-  getMovedFocusIndex,
+  getFocusMoveResult,
   MenuSound,
 } from '../screen-helpers/screen-helpers.ts'
 
@@ -146,11 +146,7 @@ const handleInput = (runtime: ScreenRuntime, input: FrontEndInput): ScreenResult
   if (selection.isDialogOpen) return handleDialogInput(runtime, input)
   const disabled = getDisabledFlags(runtime)
   if (input === 'up' || input === 'down') {
-    const focusIndex = getMovedFocusIndex(selection.focusIndex, disabled, input)
-    return createResult(runtime, {
-      selection: { ...selection, focusIndex },
-      soundNames: focusIndex === selection.focusIndex ? [] : [MenuSound.HIGHLIGHT],
-    })
+    return getFocusMoveResult(runtime, input, disabled)
   }
   if (input !== 'accept') return createResult(runtime)
   const button = BUTTONS[selection.focusIndex]

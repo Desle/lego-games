@@ -17,6 +17,8 @@ import type { FrontEndController, FrontEndControllerOptions } from './front-end-
 const MAXIMUM_FRAME_MILLISECONDS = 100
 // Progression hook: the circuits are all open until the save files and the circuit progression exist.
 const ALL_CIRCUITS_OPEN = 0x7f
+// Progression hook: every driver part is offered until the save files exist (no trophies are recorded yet).
+const isEveryPartOpen = true
 
 // The menus of the game: reads the keyboard and the gamepad, steps the front end, draws its commands on the canvas
 // and plays its sounds; a race the menus chose, or the answer yes to the quit question, ends it.
@@ -35,7 +37,7 @@ export const useFrontEndController = (options: FrontEndControllerOptions): Front
     try {
       const archive = openJamArchive(jam)
       const resources = loadFrontEndResources(archive)
-      const renderer = createFrontEndRenderer(canvas, resources)
+      const renderer = createFrontEndRenderer(canvas, resources, archive)
       const input = createFrontEndInputSource()
       const audio = createFrontEndAudioPlayer(archive, callbacksReference.current.readTune)
       const resumeAudio = () => audio.resume()
@@ -43,13 +45,16 @@ export const useFrontEndController = (options: FrontEndControllerOptions): Front
       const getEnvironment = (): FrontEndEnvironment => ({
         controllerCount: input.getControllerCount(),
         unlockedCircuitMask: ALL_CIRCUITS_OPEN,
+        randomTable: callbacksReference.current.randomTable,
+        isEveryPartUnlocked: isEveryPartOpen,
         playerRacerNames: [],
         standingRows: callbacksReference.current.standingRows,
       })
       let state = createFrontEnd(
         resources,
         getEnvironment(),
-        callbacksReference.current.firstScreenId
+        callbacksReference.current.firstScreenId,
+        callbacksReference.current.memory
       )
       audio.playMusic(state.musicListIndex)
       let lastTime: number | null = null
@@ -88,6 +93,7 @@ export const useFrontEndController = (options: FrontEndControllerOptions): Front
         window.removeEventListener('keydown', resumeAudio)
         input.dispose()
         audio.dispose()
+        renderer.dispose()
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : String(error))

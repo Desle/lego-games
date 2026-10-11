@@ -34,6 +34,8 @@ const getRequest = (raceName: string): FrontEndRaceRequest => ({
   localPlayerCount: 1,
   lapCount: 3,
   playerRacerNames: [],
+  playerCar: null,
+  randomPosition: 0,
 })
 
 // Single Race, the first race of the first circuit, started the way the viewer starts it.
