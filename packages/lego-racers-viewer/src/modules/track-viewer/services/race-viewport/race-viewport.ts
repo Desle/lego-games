@@ -90,6 +90,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
 
   // The wheels sit in the display frame; the car model at its position with the leaned rotation of the model frame
   // (vehicle +0x3c); the driver at the seat carried by that frame (LEGORacers.exe 0x0043e740).
+  const colourShiftKeys = new Map<number, string>()
   const effects = createRaceEffects(trackScene, assets.effectModels)
   const update = (
     poses: readonly RacerPose[],
@@ -100,6 +101,11 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     for (const pose of poses) {
       const racerRig = racerRigs[pose.racerIndex]
       if (racerRig === undefined) continue
+      const shiftKey = JSON.stringify(pose.colourShift)
+      if (colourShiftKeys.get(pose.racerIndex) !== shiftKey) {
+        colourShiftKeys.set(pose.racerIndex, shiftKey)
+        for (const object of racerRig.objects) object.setColourShift(pose.colourShift)
+      }
       racerRig.wheels.group.matrix.copy(getFrameMatrix(pose.rotation, pose.position))
       racerRig.wheels.group.matrixWorldNeedsUpdate = true
       racerRig.wheels.object.setAnimationState(pose.wheelAnimation)

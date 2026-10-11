@@ -14,16 +14,46 @@ const FORCE_RELEASE_OFFSET = 4
 const releaseToLastPhase: TrackEventHandlers['release'] = (event, session) =>
   announceAndSet(session, event, event.state, NO_SIGNAL_PHASE, TrackEventState.LAST_PHASE)
 
-// 0x00465600, 0x00465690: sets the racer's lighting (racer +0x18, not ported).
+const NO_BIASES = Object.freeze([0, 0, 0, 0] as const)
+
+// 0x00465600 (fire) and 0x00465690 (release), for an event that names no object: the racer's vehicle gets the colour
+// shift of the block's keywords 0x4e and 0x4f (0x004400a0) and loses it on release (0x004400e0). A block with keyword 0x50
+// does the opposite: its fire ends the shift and its release does nothing. A block that names an object shifts that
+// object instead (not ported: no traced track has one).
 export const HANDLERS_4D: TrackEventHandlers = Object.freeze({
   ...IDLE_HANDLERS,
-  fire: (event, session) => {
+  fire: (event, session, racerIndex) => {
     emitAction(session, event, 'fire')
+    if (
+      event.kind === TrackEventKind.KIND_4D &&
+      racerIndex !== null &&
+      event.record.objectName === null
+    ) {
+      session.emit({
+        type: 'track.racer_colour_shift_changed',
+        racerIndex,
+        shifts: event.record.isKeyword50Set ? null : event.record.keyword4eIntegers,
+        biases: event.record.isKeyword50Set ? NO_BIASES : event.record.keyword4fIntegers,
+      })
+    }
     return announceAndSet(session, event, TrackEventState.INACTIVE, FIRST_SIGNAL, event.state)
   },
-  release: (event, session) => {
+  release: (event, session, racerIndex) => {
     emitAction(session, event, 'release')
-    return releaseToLastPhase(event, session, null)
+    if (
+      event.kind === TrackEventKind.KIND_4D &&
+      racerIndex !== null &&
+      event.record.objectName === null &&
+      !event.record.isKeyword50Set
+    ) {
+      session.emit({
+        type: 'track.racer_colour_shift_changed',
+        racerIndex,
+        shifts: null,
+        biases: NO_BIASES,
+      })
+    }
+    return releaseToLastPhase(event, session, racerIndex)
   },
 })
 
