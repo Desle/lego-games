@@ -107,3 +107,6 @@
 10009860 Renderer_EnableDepthBuffer
 100098d0 Renderer_DisableDepthBuffer
 10008910 Renderer_DrawInstance
+1001e190 FontImage_FindGlyphColumns
+1001e070 Font_BuildFromImage
+1001df80 Font_AllocateGlyphTable
