@@ -1,6 +1,14 @@
 import type { PowerUpEvent } from '../../../power-ups/index.ts'
 import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
-import { assignDriverRoute, getDriven, setDriven } from '../../../racer/index.ts'
+import {
+  assignDriverRoute,
+  endCarBodyBoost,
+  getDriven,
+  setCarBodyHeadingFromFrame,
+  setDriven,
+  startCarBodyBoost,
+  startCarBodyFlip,
+} from '../../../racer/index.ts'
 import type { Racer } from '../../../racer/index.ts'
 import { FLOAT32_MAXIMUM } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
@@ -177,15 +185,64 @@ export const getRacerAfterCheckpointTouch = (
   )
 }
 
+// 0x0045cd70's flip: the rate pushed with the boost's milliseconds (0xbb23d70a).
+const TURBO_FLIP_RATE = Math.fround(-0.0025)
+const RACER_TURBO_FLAG = 0x40
+const DRIVER_FULL_THROTTLE_FLAG = 0x1
+const DRIVER_FULL_THROTTLE_TOUCHING_FLAG = 0x100
+
+// 0x0045cd70 → 0x00429cf0 on the car body, then 0x004396c0: racer flag 0x40, the driver at full throttle (driver
+// flag 0x1 set, 0x100 cleared), the heading from the frame (0x00446fa0) and the boost (0x004292e0). The vehicle's
+// effects, racer +0xd68 (the level, read by force feedback and presentation) and level 2's tumble (0x00439570) are
+// not applied here.
+export const getRacerAfterTurboStart = (
+  arithmetic: FloatArithmetic,
+  racer: Racer,
+  boostMilliseconds: number
+): Racer => {
+  const flipped = startCarBodyFlip(arithmetic, racer.carBody, TURBO_FLIP_RATE, boostMilliseconds)
+  return Object.freeze({
+    ...racer,
+    flags: (racer.flags | RACER_TURBO_FLAG) >>> 0,
+    driver: Object.freeze({
+      ...racer.driver,
+      flags: (racer.driver.flags & ~DRIVER_FULL_THROTTLE_TOUCHING_FLAG) | DRIVER_FULL_THROTTLE_FLAG,
+    }),
+    carBody: startCarBodyBoost(arithmetic, setCarBodyHeadingFromFrame(arithmetic, flipped)),
+  })
+}
+
+// 0x00439730 (then 0x004395a0, which acts on racer flag 0x8): racer flag 0x40 and driver flags 0x101 cleared, and
+// the boost ends (0x00429330).
+export const getRacerAfterTurboEnd = (arithmetic: FloatArithmetic, racer: Racer): Racer =>
+  Object.freeze({
+    ...racer,
+    flags: (racer.flags & ~RACER_TURBO_FLAG) >>> 0,
+    driver: Object.freeze({
+      ...racer.driver,
+      flags: racer.driver.flags & ~(DRIVER_FULL_THROTTLE_FLAG | DRIVER_FULL_THROTTLE_TOUCHING_FLAG),
+    }),
+    carBody: endCarBodyBoost(arithmetic, racer.carBody),
+  })
+
 const getRacerWithFlags = (racer: Racer, flags: number): Racer =>
   Object.freeze({ ...racer, flags: flags >>> 0 })
 
 // The racer-side effects power-ups names after their original calls: 0x00439770, 0x00439790, 0x0043a270 (+0xd74),
 // 0x00439900 (+0xd7c, flag 0x800), 0x0045d560 (0x200000), 0x004395d0 (0x10), 0x00439660 and 0x0043a130 (0x100000).
-// The rest (turbo, magnet release, lightning, grapple) call racer code that is not ported; they only reach the
+// The turbo start and end (0x0045cd70, 0x00439730). The rest (magnet release, lightning, grapple) call racer code
+// that is not ported; they only reach the
 // caller as events.
-export const getRacerAfterPowerUpEvent = (racer: Racer, event: PowerUpEvent): Racer => {
+export const getRacerAfterPowerUpEvent = (
+  arithmetic: FloatArithmetic,
+  racer: Racer,
+  event: PowerUpEvent
+): Racer => {
   switch (event.type) {
+    case 'power_ups.racer_turbo_started':
+      return getRacerAfterTurboStart(arithmetic, racer, event.boostMilliseconds)
+    case 'power_ups.racer_turbo_ended':
+      return getRacerAfterTurboEnd(arithmetic, racer)
     case 'power_ups.racer_shield_raised':
       return Object.freeze({
         ...getRacerWithFlags(racer, racer.flags | 0x1),

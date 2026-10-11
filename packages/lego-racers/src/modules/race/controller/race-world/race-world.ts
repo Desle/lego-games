@@ -6,6 +6,7 @@ import type {
   RacerPowerUps,
   RacerPowerUpStatus,
 } from '../../../power-ups/index.ts'
+import type { FloatArithmetic } from '../../../simulation-math/index.ts'
 import { STATIC_TRACK_WORLD } from '../../../track-logic/index.ts'
 import type { TrackEffect, TrackLogicContext, TrackLogicStep } from '../../../track-logic/index.ts'
 import { createTrackLineProbe } from '../../../projectiles/index.ts'
@@ -153,6 +154,7 @@ const getRacerWithPowerUpRacer = (racer: Racer, powerUpRacer: RacerPowerUps): Ra
   })
 
 const getRacerSetAfterEvents = (
+  arithmetic: FloatArithmetic,
   racerSet: RaceRacerSet,
   events: readonly PowerUpEvent[]
 ): RaceRacerSet =>
@@ -164,7 +166,7 @@ const getRacerSetAfterEvents = (
       ...setRacer(
         current,
         racerIndex,
-        getRacerAfterPowerUpEvent(getRacer(current, racerIndex), event)
+        getRacerAfterPowerUpEvent(arithmetic, getRacer(current, racerIndex), event)
       ),
     })
   }, racerSet)
@@ -197,7 +199,11 @@ export const changePowerUps: RaceWorldChange = (context, racerSet, change) => {
       })
     ),
   })
-  return getRacerSetAfterEvents(withRacers, changed.events.slice(step.events.length))
+  return getRacerSetAfterEvents(
+    context.arithmetic,
+    withRacers,
+    changed.events.slice(step.events.length)
+  )
 }
 
 const NO_LINE_HIT: LineProbe = () => null

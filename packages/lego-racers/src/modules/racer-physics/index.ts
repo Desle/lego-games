@@ -31,7 +31,12 @@ export {
   WHEEL_COUNT,
 } from './types/car-rigid-body/car-rigid-body.ts'
 export { getWithTiltLimit, probeGround } from './types/ground-probe/ground-probe.ts'
-export { getTableArcCosine, getWithVelocitySplit, updateHeading } from './types/heading/heading.ts'
+export {
+  getTableArcCosine,
+  getWithHeadingFromFrame,
+  getWithVelocitySplit,
+  updateHeading,
+} from './types/heading/heading.ts'
 export { advanceToContact, respondToContact } from './types/hull-contacts/hull-contacts.ts'
 export {
   getPhysicsSubSteps,

@@ -15,6 +15,7 @@ import {
   CarRigidBodyFlag,
   getBodyInTwoPointMode,
   getBodyOutOfTwoPointMode,
+  getWithHeadingFromFrame,
   setExtraForce,
   setPitchRate,
   setTopSpeed,
@@ -40,6 +41,9 @@ const MAXIMUM_SPEED_FACTOR = getFloatFromBits(0x40300000) // 0x004b04a0, 2.75
 const MINIMUM_SPEED_FACTOR = getFloatFromBits(0xbf000000) // 0x004b04a4, -0.5
 
 const BASE_TOP_SPEED = getFloatFromBits(0x42f00000) // 0x004b0448, 120
+const BOOST_TOP_SPEED = getFloatFromBits(0x43300000) // 0x004b0450, 176
+const BOOST_SPEED_FACTOR = getFloatFromBits(0x3fd9999a) // 0x004b0494, 1.7
+const BOOST_GRIP_SCALE = getFloatFromBits(0x3fc00000) // 1.5
 const HELD_SPEED_FACTOR = getFloatFromBits(0x3f000000) // 0x004b049c, 0.5
 const RAMPED_TARGET_FLAG = 0x10000
 const TARGET_KEPT_FLAGS = 0x40002
@@ -332,6 +336,31 @@ export const endCarBodyBoost = (arithmetic: FloatArithmetic, body: CarBody): Car
     ),
   })
 }
+
+// 0x004292e0 (fastcall): the boost starts, unless the body is held (flag 0x80000). Flag 0x10000 is set, a scripted
+// body gets the speed factor 1.7, the grip scale becomes 1.5 and slot 6 (0x0042ad50) sets the top speed to the top
+// speed scale times 176 (car body +0x734, which nothing else reads here, is not modelled).
+export const startCarBodyBoost = (arithmetic: FloatArithmetic, body: CarBody): CarBody => {
+  const { rigidBody } = body
+  if ((rigidBody.flags & CAR_BODY_HELD_FLAG) !== 0) return body
+  return Object.freeze({
+    ...body,
+    speedFactor: body.isScripted ? BOOST_SPEED_FACTOR : body.speedFactor,
+    rigidBody: setTopSpeed(
+      arithmetic,
+      Object.freeze({
+        ...rigidBody,
+        flags: rigidBody.flags | RAMPED_TARGET_FLAG,
+        gripScale: BOOST_GRIP_SCALE,
+      }),
+      arithmetic.storeFloat(arithmetic.multiply(body.topSpeedScale, BOOST_TOP_SPEED))
+    ),
+  })
+}
+
+// 0x00446fa0 on the car body's rigid body: the heading follows the frame again.
+export const setCarBodyHeadingFromFrame = (arithmetic: FloatArithmetic, body: CarBody): CarBody =>
+  Object.freeze({ ...body, rigidBody: getWithHeadingFromFrame(arithmetic, body.rigidBody) })
 
 // 0x00429380 (fastcall): the body is held by an effect (flag 0x80000). A boost in progress ends first, and a scripted
 // body slows to a speed factor of 0.5.

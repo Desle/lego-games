@@ -171,3 +171,10 @@ export const getWithVelocitySplit = (
     }),
   })
 }
+
+// 0x00446fa0: the heading becomes rotation row 0 of the frame, then 0x00447330 splits the velocity along it.
+export const getWithHeadingFromFrame = (
+  arithmetic: FloatArithmetic,
+  body: CarRigidBody
+): CarRigidBody =>
+  getWithVelocitySplit(arithmetic, Object.freeze({ ...body, heading: getRotationRow(body, 0) }))
