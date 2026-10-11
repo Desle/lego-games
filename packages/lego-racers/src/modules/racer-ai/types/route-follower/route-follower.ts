@@ -31,7 +31,7 @@ import {
   getRouteSampleRotation,
 } from '../route-sample/route-sample.ts'
 
-const ZERO_QUATERNION: Quaternion = Object.freeze({ x: 0, y: 0, z: 0, w: 0 })
+const IDENTITY_QUATERNION: Quaternion = Object.freeze({ x: 0, y: 0, z: 0, w: 1 })
 const FIRST_ADVANCE_CONTACT_STATE = 4
 const SEGMENT_EPSILON = Math.fround(0.001) // 0x004b4bc8
 const ONE = 1
@@ -48,7 +48,7 @@ const getSample = (route: ComputerRacerRoute, index: number): ComputerRacerRoute
 
 // getStoredSum and getStoredDifference (simulation-math): FLD a; FADD b (or FSUB b); FSTP float, per component.
 
-// The fields the reset leaves alone are written by the first advance before anything reads them.
+// 0x004a5190: the constructor leaves the three rotations at the identity and the speed factor at 1.0.
 export const createRouteFollower = (
   route: ComputerRacerRoute | null,
   speedFactor: number
@@ -56,7 +56,7 @@ export const createRouteFollower = (
   Object.freeze({
     route,
     position: ZERO_VECTOR3,
-    rotation: ZERO_QUATERNION,
+    rotation: IDENTITY_QUATERNION,
     contactState: 0,
     negativeLateralLimit: 0,
     positiveLateralLimit: 0,
@@ -66,8 +66,8 @@ export const createRouteFollower = (
     nextSampleIndex: 0,
     previousPosition: ZERO_VECTOR3,
     nextPosition: ZERO_VECTOR3,
-    previousRotation: ZERO_QUATERNION,
-    nextRotation: ZERO_QUATERNION,
+    previousRotation: IDENTITY_QUATERNION,
+    nextRotation: IDENTITY_QUATERNION,
     previousTime: 0,
   })
 

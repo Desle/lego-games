@@ -28,8 +28,8 @@ const getScenarioForEmulator = (scenario: GoldenTraceScenario) => ({
   racerCount: scenario.racerCount,
   localPlayerCount: scenario.localPlayerCount,
   randomPosition: scenario.randomPosition,
-  isMirrored: scenario.isMirrored ?? false,
-  circuit: scenario.circuit ?? 'c1',
+  circuit: scenario.circuitName,
+  isMirrored: scenario.isMirrored,
   fpu: scenario.precision,
   frames: scenario.frames.map((frame) => ({ dt: frame.milliseconds, keys: frame.scanCodes })),
 })

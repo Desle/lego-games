@@ -13,7 +13,9 @@ import type { BoundingSphere } from '../../../racer-collision/index.ts'
 import type { EmitterPool } from '../../../emitter/index.ts'
 import type { Racer, RacerSetContext } from '../../../racer/index.ts'
 import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
-import type { Matrix3, Vector3 } from '../../../simulation-math/index.ts'
+import type { Matrix3 } from '../../../simulation-math/index.ts'
+import { getFloatWords, getVectorWords } from '../trace-words/trace-words.ts'
+import { getComputerTraceFields } from '../computer-trace/computer-trace.ts'
 import { getTrackFields } from '../track-trace/track-trace.ts'
 import type {
   GoldenTraceScenario,
@@ -24,12 +26,6 @@ import type {
 } from '../../types/golden-trace.types.ts'
 
 const SCAN_CODE_MASK = 0xff
-
-const getFloatWords = (values: readonly number[]): readonly number[] =>
-  values.map((value) => getBitsFromFloat(value))
-
-const getVectorWords = (vector: Vector3): readonly number[] =>
-  getFloatWords([vector.x, vector.y, vector.z])
 
 const getMatrixWords = (matrix: Matrix3): readonly number[] => getFloatWords(matrix)
 
@@ -249,6 +245,7 @@ const getRaceFields: TraceFieldProvider = (raceState) => ({
 // emulator side writes in golden_trace.py (one `snapshot_*` function per group).
 export const TRACE_FIELD_PROVIDERS: readonly TraceFieldProvider[] = [
   getEmitterFields,
+  (raceState) => getComputerTraceFields(raceState.racerSet),
   getRacerSetFields,
   getPlayerFields,
   getRaceFields,
