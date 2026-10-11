@@ -18,6 +18,7 @@ from unicorn.x86_const import UC_X86_REG_FPCW  # noqa: E402
 
 import boot  # noqa: E402
 import race_session  # noqa: E402
+import track_trace  # noqa: E402
 
 APPLICATION_BASE = 0x004C4A38 + 4
 LAST_TIME_OFFSET = 0x820
@@ -108,6 +109,7 @@ def snapshot_fields(machine, race: int, racer_count: int, local_players: int) ->
     fields["race.phase"] = [machine.read_u32(race + 0x3328)]
     fields["race.phaseMilliseconds"] = [machine.read_u32(race + 0x332C)]
     fields["race.randomPosition"] = [machine.read_u32(race_session.RANDOM_CURSOR)]
+    fields.update(track_trace.snapshot_track_fields(machine, race, racer_count))
     return fields
 
 
