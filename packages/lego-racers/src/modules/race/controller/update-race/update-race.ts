@@ -1,4 +1,6 @@
-import { updateTrackLogicFrame } from '../../../track-logic/index.ts'
+import { advanceSky } from '../../../sky/index.ts'
+import { updateTrackHazardsAfterRacers, updateTrackLogicFrame } from '../../../track-logic/index.ts'
+import { advanceWorldAnimation } from '../../../world-animation/index.ts'
 import { updatePowerUpsWithProjectiles } from '../../../projectiles/index.ts'
 import type { ProjectileWorld } from '../../../projectiles/index.ts'
 import { getRaceTimeStep, updateRacePhysics } from '../../../racer-physics/index.ts'
@@ -25,6 +27,19 @@ import type { PlayerControllerProgress, PlayerControllerRun } from './update-rac
 const TIME_SCALE_FLAG = 0x100
 // Race_Update 0x00435220: race +0x334c becomes 1,000 when the time step exceeds it.
 const COUNTDOWN_RESET_MILLISECONDS = 1000
+
+// Sky_Update 0x0041ccb0, the last world update of Race_Update: the background world animates and the sky's settings
+// advance.
+const getStateWithSkyUpdated = (state: RaceState, milliseconds: number): RaceState =>
+  state.sky === null
+    ? state
+    : Object.freeze({
+        ...state,
+        sky: Object.freeze({
+          state: advanceSky(state.sky.state, milliseconds),
+          background: advanceWorldAnimation(state.sky.background, milliseconds),
+        }),
+      })
 
 export const getIsTimeScaled = (state: RaceState): boolean =>
   (state.raceModeFlags & TIME_SCALE_FLAG) !== 0
@@ -79,10 +94,15 @@ export const applyPlayerControls = (state: RaceState, inputs: RaceInputs): RaceS
     )
   )
 
+// The hazards that follow the cameras (0x0048ae00) are given the players' camera positions; the port keeps no camera
+// in the simulation, so none.
+const NO_CAMERA_POSITIONS: readonly (readonly [number, number, number])[] = Object.freeze([])
+
 // Race_Update 0x00435220: the frame's whole time step goes to the power-ups and the players' controllers, then
-// the racers run in sub-steps of at most 40 ms. Not ported: the animations (0x00416090), the tagged positions
-// (0x0045e470), the triggers, events, hazards, timers and emitters, the sky and the HUD; the cameras
-// (0x00428540) and the ghost recorder (0x00422710) only read the racers.
+// the racers run in sub-steps of at most 40 ms; the worlds, triggers, emitters, events, hazards and timers run
+// first (track-logic) and the hazards that follow the cameras and the sky at the end. Not ported: the tagged
+// positions (0x0045e470), the lists 0x00493a20, 0x00492870 and 0x00494f60 and the HUD; the cameras (0x00428540) and
+// the ghost recorder (0x00422710) only read the racers.
 export const updateRace = (
   state: RaceState,
   inputs: RaceInputs,
@@ -140,8 +160,12 @@ export const updateRace = (
         })
       )
   )
-  return getStateWithProgress(Object.freeze({ ...counted, projectileWorld }), {
+  const hazardsFollowed = changeTrackLogic(counted.context, stepped, (trackLogic, trackContext) =>
+    updateTrackHazardsAfterRacers(trackLogic, trackContext, NO_CAMERA_POSITIONS)
+  )
+  const progressed = getStateWithProgress(Object.freeze({ ...counted, projectileWorld }), {
     controllers: controlled.controllers,
-    racerSet: stepped,
+    racerSet: hazardsFollowed,
   })
+  return getStateWithSkyUpdated(progressed, stepMilliseconds)
 }

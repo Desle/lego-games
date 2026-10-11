@@ -6,8 +6,10 @@ import type { MaterialAnimation } from '../../../material-animation/index.ts'
 import type { RaceDescription } from '../../../race-description/index.ts'
 import { getSkeletalAnimation } from '../../../skeletal-animation/index.ts'
 import type { TrackEmitters } from '../../../track-logic/index.ts'
+import { parseSky } from '../../../sky/index.ts'
 import { readWorld } from '../../../world/index.ts'
 import { createWorldAnimation, EMPTY_WORLD_ANIMATION } from '../../../world-animation/index.ts'
+import type { RaceSkyDefinition } from '../../types/race.types.ts'
 import type { ReadFile } from './load-race.types.ts'
 import type { RaceWorlds, WorldAnimation } from '../../../world-animation/index.ts'
 
@@ -51,6 +53,22 @@ export const loadRaceWorlds = (
     local: load(description.localWorld),
   })
 }
+
+// Sky_Load 0x0041c550: the sky file and the background world it loads; a race without a sky file has neither.
+export const loadRaceSky = (
+  readFile: ReadFile,
+  raceFolder: string,
+  description: RaceDescription
+): RaceSkyDefinition | undefined =>
+  description.sky === null
+    ? undefined
+    : Object.freeze({
+        sky: parseSky(readFile(`${raceFolder}${JAM_SEPARATOR}${getBinaryName(description.sky)}`)),
+        background:
+          description.backgroundWorld === null
+            ? EMPTY_WORLD_ANIMATION
+            : loadWorldAnimation(readFile, raceFolder, description.backgroundWorld),
+      })
 
 // The first material animation of a world (`world->vtable +0x4c (0)`), which is what Emitters_Load's fourth
 // argument is: the table the particles' entries index.

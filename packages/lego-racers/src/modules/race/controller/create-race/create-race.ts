@@ -15,6 +15,7 @@ import {
 import type { Racer, RacerSet } from '../../../racer/index.ts'
 import { drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
+import { createSkyState } from '../../../sky/index.ts'
 import { createTrackLogic } from '../../../track-logic/index.ts'
 import { RacePhase } from '../../types/race-phase/race-phase.ts'
 import type {
@@ -190,6 +191,13 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     mainTriggers: definition.mainTriggers,
     environmentTriggers: definition.environmentTriggers,
     hazards: definition.hazards,
+    sky:
+      definition.sky === undefined
+        ? null
+        : Object.freeze({
+            state: createSkyState(definition.sky.sky),
+            background: definition.sky.background,
+          }),
     startPositions: definition.startPositions,
   })
 }

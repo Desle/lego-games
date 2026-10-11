@@ -32,7 +32,7 @@ import {
 import type { RaceDefinition, RaceRacerDefinition } from '../../types/race.types.ts'
 import { getStartFrame } from '../../types/start-frame/start-frame.ts'
 import type { LoadRaceOptions, RouteDraws, RouteDrawer, RouteFiles } from './load-race.types.ts'
-import { loadRaceEmitters, loadRaceWorlds } from './load-race-worlds.ts'
+import { loadRaceEmitters, loadRaceSky, loadRaceWorlds } from './load-race-worlds.ts'
 import { describeRacers, getCircuitRacerCodes, readRacerDatabases } from './load-racers.ts'
 
 const JAM_SEPARATOR = '\\'
@@ -172,6 +172,8 @@ export const loadRaceDefinition = (
       voiceBase: description.voiceBase,
     }
   })
+  const sky = loadRaceSky(readArchiveFile, raceDirectory, description)
+  const optionalSky = sky === undefined ? {} : { sky }
   return Object.freeze({
     arithmetic,
     tables,
@@ -205,6 +207,7 @@ export const loadRaceDefinition = (
     hazards: hazardBytes === null ? null : parseHazards(hazardBytes, false),
     worlds: loadRaceWorlds(readArchiveFile, raceDirectory, description),
     emitters: loadRaceEmitters(readArchiveFile, raceDirectory, description),
+    ...optionalSky,
     randomPosition: routeDraws.position,
     getGroundPoint: null,
     trackTargets: [],
