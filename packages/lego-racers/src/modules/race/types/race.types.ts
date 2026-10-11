@@ -3,11 +3,11 @@ import type { Checkpoint } from '../../checkpoint/index.ts'
 import type { CollisionObject } from '../../collision/index.ts'
 import type { ComputerRacerRoute } from '../../computer-racer-route/index.ts'
 import type { EventSet } from '../../event/index.ts'
+import type { GhostSession } from '../../ghost/index.ts'
 import type { HazardList } from '../../hazard/index.ts'
 import type { TrackEffect, TrackLogicState } from '../../track-logic/index.ts'
 import type {
   CarBodyDefinition,
-  Figure,
   PlayerController,
   RacerControls,
   RacerSet,
@@ -23,7 +23,9 @@ import type {
   PowerUpStep,
   RacerPowerUpAbilities,
 } from '../../power-ups/index.ts'
+import type { SavedCar } from '../../car-builder/index.ts'
 import type { PowerUpPlacements } from '../../power-up/index.ts'
+import type { RacerAppearance, RacerFigures } from '../../racer-appearance/index.ts'
 import type {
   DebrisAnimations,
   ProjectileEvent,
@@ -52,8 +54,6 @@ export type RaceRacerDefinition = {
   readonly controllerKind: number
   // What 0x004371c0 builds from the chassis and the champion (racer-setup's createCarBodySetup).
   readonly carBody: CarBodyDefinition
-  // The display figure (racer +0x5c): the chassis's model part and animations, whose bounding sphere sizes the car.
-  readonly figure: Figure
   // Race +0x3104 + 0x48·i (racer +0xe2c), chosen by computer-racer-route; null for a racer without a route.
   readonly route: ComputerRacerRoute | null
   // Description +0x6c..+0x71: the driver's personality bytes (100 each for a car built from bricks).
@@ -63,6 +63,11 @@ export type RaceRacerDefinition = {
   readonly preferredPowerUpLevel: number
   // Description +0x74 → racer +0xd40.
   readonly voiceBase: number
+  // The files the car is drawn from, and the figures (wheels, driver) that 0x0043d7a0 binds to them.
+  readonly appearance: RacerAppearance
+  readonly figures: RacerFigures
+  // The racer save a local player's car was built from (its design draws the car body); null for a computer racer.
+  readonly savedCar: SavedCar | null
 }
 
 // Everything the race is built from; the parsed files and the settings Race_LoadRaceDescription reads.
@@ -79,6 +84,12 @@ export type RaceDefinition = {
   readonly isCountdownSkipped: boolean
   // Race_LoadTrackContent's argument: the track is mirrored (bias 0.05 for the rubber band).
   readonly isMirrored: boolean
+  // Race +0x18 != 0: the circuit runner's points record rides along (the results state lasts 5 s).
+  readonly isPointsRecordPresent: boolean
+  // Race +0x3364: the time trial's ghost object, null in any other race.
+  readonly ghost: GhostSession | null
+  // The tunes of the race's music list (RAB keyword 0x30, `LEGOMSC`); 0 when the race plays no music.
+  readonly musicTuneCount: number
   readonly racers: readonly RaceRacerDefinition[]
   readonly checkpoints: readonly Checkpoint[]
   // The collision world's BVB instances in world order (race +0x3a0, 0x00432e20): the track, the checkpoint object, the
@@ -138,6 +149,11 @@ export type RaceState = {
   readonly pointsRecord: PointsRecord | null
   // Game settings +0x1e & 0x40.
   readonly isSettingsFlag40Set: boolean
+  // Race +0x3364: the ghost object (a time trial); the recorder runs in every sub-step.
+  readonly ghost: GhostSession | null
+  // The music list's tune count and the tune the music stream (race +0x3320) plays; null without a stream.
+  readonly musicTuneCount: number
+  readonly tuneIndex: number | null
   // Race +0x3330: how many racers have been given a final place.
   readonly finishedRacerCount: number
   // Race +0x3348 (byte): the laps to race.
@@ -250,6 +266,8 @@ export type RaceEvent =
       readonly racerIndex: number
       readonly place: number
     }
+  // The music stream starts another tune of the list (0 introduction, 1 and 4+ racing, 2 lose, 3 win).
+  | { readonly type: 'race.tune_changed'; readonly tuneIndex: number }
   // 0x00439ba0: a racer crossed the start line into a new lap.
   | {
       readonly type: 'race.racer_started_lap'

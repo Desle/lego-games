@@ -11,7 +11,8 @@ import type { CollisionWorld } from './load-race.types.ts'
 export const loadCollisionWorld = (
   arithmetic: FloatArithmetic,
   worldBytes: Uint8Array | null,
-  readFile: (name: string) => Uint8Array
+  readFile: (name: string) => Uint8Array,
+  isMirrored: boolean
 ): CollisionWorld => {
   if (worldBytes === null) return { objects: [], names: [] }
   const world = readWorld(worldBytes)
@@ -25,7 +26,7 @@ export const loadCollisionWorld = (
     }
     return loadCollisionObject({
       bytes: readFile(`${volumeName.toUpperCase()}.BVB`),
-      isMirrored: false,
+      isMirrored,
       frame: Object.freeze({
         rotation: getRotationFromFrameAxes(arithmetic, {
           first: instance.forward,

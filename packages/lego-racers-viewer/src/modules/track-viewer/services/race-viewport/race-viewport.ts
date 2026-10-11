@@ -1,34 +1,31 @@
-import type { RacerPose } from '@lego-games/lego-racers/race-presentation'
+import type { EffectViews, RacerPose } from '@lego-games/lego-racers/race-presentation'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
+import type { Matrix3 } from '@lego-games/lego-racers/simulation-math'
 import {
   Color,
-  Group,
   LinearSRGBColorSpace,
   Matrix4,
   PerspectiveCamera,
   Scene as ThreeScene,
-  Vector3,
   WebGLRenderer,
 } from 'three'
-import { createSceneObject } from '../scene-object/scene-object.ts'
-import type { RacerModels, RaceAssets } from '../race-assets/race-assets.types.ts'
+import { createRaceEffects } from '../race-effects/race-effects.ts'
+import { createModelObject } from '../model-object/model-object.ts'
+import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import { showSceneObjects } from '../scene-viewport/scene-viewport.ts'
 import type { ShownScene } from '../scene-viewport/scene-viewport.types.ts'
-import type { ModelObject, RaceStageSize, RaceViewport } from './race-viewport.types.ts'
+import type { ModelObject } from '../model-object/model-object.types.ts'
+import type { RaceStageSize, RaceViewport, RacerRig, Vector3Like } from './race-viewport.types.ts'
 
 // The Direct3D camera's field of view is not traced yet; the track viewer's 60 degrees stand in for it.
 const FIELD_OF_VIEW_DEGREES = 60
 const BACKGROUND_COLOR = 0x101820
 const NEAR_PLANE = 0.5
 const FAR_PLANE = 20000
-// PLACEHOLDER: where the driver sits in the car comes from the chassis database (not ported); a point above the
-// car's origin stands in for it until the `cars-and-drivers` branch is on main.
-const DRIVER_SEAT_OFFSET = new Vector3(0, 0, 1.3)
-
 // Rows of a frame's rotation are the images of the model's axes; three.js takes them as columns.
-const getPoseMatrix = (pose: RacerPose): Matrix4 => {
-  const [forwardX, forwardY, forwardZ, sideX, sideY, sideZ, upX, upY, upZ] = pose.rotation
-  const { x, y, z } = pose.position
+const getFrameMatrix = (rotation: Matrix3, position: Vector3Like): Matrix4 => {
+  const [forwardX, forwardY, forwardZ, sideX, sideY, sideZ, upX, upY, upZ] = rotation
+  const { x, y, z } = position
   return new Matrix4().set(
     forwardX,
     sideX,
@@ -47,18 +44,6 @@ const getPoseMatrix = (pose: RacerPose): Matrix4 => {
     0,
     1
   )
-}
-
-const createModelObject = (model: RacerModels['car'], offset: Vector3): ModelObject => {
-  const object = createSceneObject(model.scene, {
-    includeInstance: () => true,
-    isBackground: false,
-  })
-  const group = new Group()
-  group.scale.setScalar(model.meshScales[0] ?? 1)
-  group.position.copy(offset)
-  group.add(object.group)
-  return { group, object }
 }
 
 // The race drawn as the engine does (LEGORacers.exe 0x004357b0): the sky and the backdrop first without the depth
@@ -87,22 +72,43 @@ export const createRaceViewport = (
   trackScene.add(shown.track.group)
   if (shown.backdrop !== null) backgroundScene.add(shown.backdrop.group)
   if (shown.sky !== null) backgroundScene.add(shown.sky.mesh)
-  const racerRigs = assets.racerModels.map((models) => {
-    const rig = new Group()
-    rig.matrixAutoUpdate = false
-    const car = createModelObject(models.car, new Vector3())
-    const driver = createModelObject(models.driver, DRIVER_SEAT_OFFSET)
-    rig.add(car.group, driver.group)
-    trackScene.add(rig)
-    return { rig, objects: [car.object, driver.object] }
+  const racerRigs = assets.racerModels.map((models): RacerRig => {
+    const wheels = createModelObject(models.wheels)
+    const body = models.body === null ? null : createModelObject(models.body)
+    const driver = models.driver === null ? null : createModelObject(models.driver)
+    const parts = [wheels, body, driver].filter((part): part is ModelObject => part !== null)
+    for (const part of parts) {
+      trackScene.add(part.group)
+      // A car's lights are the world's, not the car's: they stay where they are while the car turns.
+      for (const light of part.group.getObjectsByProperty('isLight', true)) trackScene.add(light)
+    }
+    return { wheels, body, driver, objects: parts.map((part) => part.object) }
   })
 
-  const update = (poses: readonly RacerPose[], cameraView: CameraView) => {
+  // The wheels sit in the display frame; the car model at its position with the leaned rotation of the model frame
+  // (vehicle +0x3c); the driver at the seat carried by that frame (LEGORacers.exe 0x0043e740).
+  const effects = createRaceEffects(trackScene, assets.effectModels)
+  const update = (
+    poses: readonly RacerPose[],
+    cameraView: CameraView,
+    effectViews: EffectViews
+  ) => {
+    effects.update(effectViews)
     for (const pose of poses) {
       const racerRig = racerRigs[pose.racerIndex]
       if (racerRig === undefined) continue
-      racerRig.rig.matrix.copy(getPoseMatrix(pose))
-      racerRig.rig.matrixWorldNeedsUpdate = true
+      racerRig.wheels.group.matrix.copy(getFrameMatrix(pose.rotation, pose.position))
+      racerRig.wheels.group.matrixWorldNeedsUpdate = true
+      racerRig.wheels.object.setAnimationState(pose.wheelAnimation)
+      if (racerRig.body !== null) {
+        racerRig.body.group.matrix.copy(getFrameMatrix(pose.bodyRotation, pose.position))
+        racerRig.body.group.matrixWorldNeedsUpdate = true
+      }
+      if (racerRig.driver !== null) {
+        racerRig.driver.group.matrix.copy(getFrameMatrix(pose.bodyRotation, pose.driverPosition))
+        racerRig.driver.group.matrixWorldNeedsUpdate = true
+        racerRig.driver.object.setAnimationState(pose.driverAnimation)
+      }
     }
     const { position, forward, up } = cameraView
     camera.position.set(position.x, position.y, position.z)
@@ -132,6 +138,7 @@ export const createRaceViewport = (
       shown.track.dispose()
       shown.backdrop?.dispose()
       shown.sky?.dispose()
+      effects.dispose()
       for (const { objects } of racerRigs) for (const object of objects) object.dispose()
       renderer.dispose()
       renderer.domElement.remove()

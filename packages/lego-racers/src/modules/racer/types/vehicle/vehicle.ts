@@ -3,6 +3,8 @@ import {
   getFloatFromBits,
   getNormalizedVector3,
   getStoredDifference,
+  IDENTITY_MATRIX3,
+  ZERO_VECTOR3,
 } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 import { getRestartedForceFeedback } from '../force-feedback/force-feedback.ts'
@@ -15,6 +17,7 @@ import {
   updateFigure,
 } from '../figure/figure.ts'
 import { playRacerVoice } from '../racer-ranking/racer-ranking.ts'
+import { getVehicleLean } from './vehicle-lean.ts'
 import { getRacer, setRacer, setRandomPosition } from '../racer-state/racer-state.ts'
 import type {
   Figure,
@@ -67,18 +70,27 @@ const DriverAnimation = Object.freeze({
 
 const hasId = (id: number, ids: readonly number[]): boolean => ids.includes(id)
 
-// 0x0043d5a0 and 0x0043d7a0: nothing is watched, no emitter exists.
-export const createVehicle = (driverFigure: Figure = createFigure([], null)): Vehicle =>
+// 0x0043d5a0 and 0x0043d7a0: nothing is watched, no emitter exists, the car model frame is the identity and the driver
+// sits at the origin until the first update. `lookMilliseconds` is the draw 0x0043d7a0 makes (`% 2000`, +0x388).
+export const createVehicle = (
+  driverFigure: Figure = createFigure([], null),
+  seatPoint: Vector3 = ZERO_VECTOR3,
+  lookMilliseconds = 0
+): Vehicle =>
   Object.freeze({
     driverFigure,
     secondFigure: null,
     reactionFlags: 0,
-    lookMilliseconds: 0,
+    lookMilliseconds,
     previousForwardSpeed: 0,
     watchedRacerIndex: -1,
     smokeEmitterAge: null,
     dustEmitterAge: null,
     boostEmitterAge: null,
+    seatPoint,
+    bodyRotation: IDENTITY_MATRIX3,
+    forwardLean: 0,
+    driverPosition: ZERO_VECTOR3,
   })
 
 // 0x0043cbb0 (thiscall on the racer set: position, minimum and maximum squared distance): the nearest racer inside the
@@ -354,8 +366,8 @@ export const updateVehicleDriver: RacerBoundary = (
 
 // 0x00437740 (thiscall: milliseconds) with Vehicle_Update 0x0043e070. The wheels' animation follows the forward
 // speed (about 0 and forwards: animation 0, backwards: animation 1) at |speed| · 1.8, on the display figure and the
-// second figure; the display figure is then updated (inside 0x0043e740, whose sway of the model frame is
-// presentation and not ported), the driver's animation is chosen (0x0043ec10) and the emitters draw.
+// second figure; the display figure is then updated and the car model frame leans (0x0043e740, `getVehicleLean`),
+// the driver's animation is chosen (0x0043ec10) and the emitters draw.
 export const updateVehicle: RacerBoundary = (context, racerSet, racerIndex, stepMilliseconds) => {
   const { arithmetic } = context
   const { multiply, storeFloat, getIsBelow, getIsBelowOrEqual } = arithmetic
@@ -376,6 +388,16 @@ export const updateVehicle: RacerBoundary = (context, racerSet, racerIndex, step
       : chassis
   const rate = storeFloat(multiply(speed, WHEEL_SPIN_SCALE))
   const { vehicle } = racer
+  const lean = getVehicleLean({
+    arithmetic,
+    displayFrame: racer.carBody.rigidBody.displayFrame,
+    bodyRotation: vehicle.bodyRotation,
+    forwardLean: vehicle.forwardLean,
+    sideLean: racer.vehicleSlideAngle,
+    stepMilliseconds,
+    mass: racer.carBody.rigidBody.mass,
+    seatPoint: vehicle.seatPoint,
+  })
   const wheels = setRacer(
     racerSet,
     racerIndex,
@@ -386,12 +408,16 @@ export const updateVehicle: RacerBoundary = (context, racerSet, racerIndex, step
         Object.freeze({ ...played, currentRate: rate }),
         stepMilliseconds
       ),
+      vehicleSlideAngle: lean.sideLean,
       vehicle: Object.freeze({
         ...vehicle,
         secondFigure:
           vehicle.secondFigure === null
             ? null
             : Object.freeze({ ...vehicle.secondFigure, currentRate: rate }),
+        bodyRotation: lean.bodyRotation,
+        forwardLean: lean.forwardLean,
+        driverPosition: lean.driverPosition,
       }),
     })
   )

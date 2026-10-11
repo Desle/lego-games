@@ -8,19 +8,24 @@ import {
 } from '../../../computer-racer-route/index.ts'
 import { parseEvents } from '../../../event/index.ts'
 import { parseHazards } from '../../../hazard/index.ts'
+import { decodeSoundBank } from '../../../audio/index.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import { parsePowerUps } from '../../../power-up/index.ts'
 import { createRandomTablePosition, drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
 import { getFigureBounds, readRacerTables } from '../../../racer/index.ts'
+import { createRacerFigures, loadRacerFigureSources } from '../../../racer-appearance/index.ts'
 import {
   createCarBodySetup,
   getIsCarBodyFlagged,
   getStartSlot,
 } from '../../../racer-setup/index.ts'
 import type { BuiltCar } from '../../../racer-setup/index.ts'
+import { DEFAULT_SAVE_PATH, getCarWeight, loadSavedCars } from '../../../car-builder/index.ts'
+import type { SavedCar } from '../../../car-builder/index.ts'
 import { parseRaceDescription } from '../../../race-description/index.ts'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
+import type { FloatArithmetic } from '../../../simulation-math/index.ts'
 import { parseStartPositions } from '../../../start-position/index.ts'
 import { parseTimers } from '../../../timer/index.ts'
 import { parseTrackMaterials } from '../../../track-material/index.ts'
@@ -31,28 +36,39 @@ import {
 } from '../../types/racer-transitions/racer-transitions.ts'
 import type { RaceDefinition, RaceRacerDefinition } from '../../types/race.types.ts'
 import { getStartFrame } from '../../types/start-frame/start-frame.ts'
-import type { LoadRaceOptions, RouteDraws, RouteDrawer, RouteFiles } from './load-race.types.ts'
-import { describeRacers, getCircuitRacerCodes, readRacerDatabases } from './load-racers.ts'
-import { loadChassisFigure } from './load-chassis-figure.ts'
 import { loadCollisionWorld } from './load-collision-world.ts'
+import type { LoadRaceOptions, RouteDraws, RouteDrawer, RouteFiles } from './load-race.types.ts'
+import {
+  describeAppearances,
+  describeRacers,
+  getCircuitRacerCodes,
+  readRacerDatabases,
+} from './load-racers.ts'
 
 const JAM_SEPARATOR = '\\'
 const DEFAULT_RACE_FOLDER = 'RACEC0R0'
 const DEFAULT_RACER_COUNT = 6
 const DEFAULT_LAP_COUNT = 3
-// The first chassis of CMB and the first racer of DEFAULT.LRS: a car without bricks. The car builder
-// (0x0049c6a0, not ported) would compute the weight and its centre offsets from the design.
-const DEFAULT_PLAYER_CAR: BuiltCar = Object.freeze({
-  chassisName: 'dachas0',
-  weight: 0,
-  centreOffsetX: 0,
-  centreOffsetY: 0,
-})
+// The driver of a car built from bricks is made on `LEG_BOX` (GDB scale 1/64), which sets the scale of his model.
+const BUILT_DRIVER_MODEL_SCALE = 0.015625
+
 // The RAB names the text files (.cpf, .sps); the loaders read the binary twin, whose extension ends in b.
 const getJamFileName = (name: string): string => `${name.slice(0, -1)}b`.toUpperCase()
 
-// Race_LoadAiRoutes 0x00433190: each computer racer (and, in a demonstration, every racer) draws its route variant
-// from the random table.
+// 0x0042d730 → 0x0042dcb0: the front end takes each local player's car from its racer save (`default.lrs` when the player
+// has not saved one): the chassis, and the weight and centre offsets of the design on the grid (0x0049c6a0).
+const getBuiltCar = (arithmetic: FloatArithmetic, saved: SavedCar): BuiltCar | null => {
+  if (saved.design === null) return null
+  const { weight, centreOffsetX, centreOffsetY } = getCarWeight(arithmetic, saved.design)
+  return Object.freeze({
+    chassisName: saved.record.chassisName,
+    weight,
+    centreOffsetX,
+    centreOffsetY,
+  })
+}
+
+// Race_LoadAiRoutes 0x00433190: each computer racer draws its route variant from the random table.
 const loadRoutes = (
   files: RouteFiles,
   kinds: readonly number[],
@@ -78,7 +94,7 @@ const loadRoutes = (
       })
       if (choice === null) return { routes: [...progress.routes, null], position }
       const name = getComputerRacerRouteFileName(racerIndex, choice.letter, choice.variant, true)
-      const route = parseComputerRacerRoute(files.readFile(getPath(name)), false)
+      const route = parseComputerRacerRoute(files.readFile(getPath(name)), files.isMirrored)
       return { routes: [...progress.routes, route], position }
     },
     { routes: [], position: startPosition }
@@ -95,6 +111,7 @@ export const loadRaceDefinition = (
 ): RaceDefinition => {
   const folder = options.raceFolder ?? DEFAULT_RACE_FOLDER
   const localPlayerCount = options.localPlayerCount ?? 1
+  const isMirrored = options.isMirrored ?? false
   const raceModeFlags = options.raceModeFlags ?? 0
   const archive = openJamArchive(jam)
   const racerCodes = options.racerCodes ?? getCircuitRacerCodes(archive.readFile, folder)
@@ -106,7 +123,7 @@ export const loadRaceDefinition = (
     )
   const paths = new Set(archive.getFilePaths())
   const getIsPresent = (path: string): boolean => paths.has(`GAMEDATA${JAM_SEPARATOR}${path}`)
-  const description = parseRaceDescription(readFile(`${folder}.RAB`), false)
+  const description = parseRaceDescription(readFile(`${folder}.RAB`), isMirrored)
   const tables = readRacerTables(executable)
   const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
   const kinds = Array.from({ length: racerCount }, (_, index) =>
@@ -115,6 +132,7 @@ export const loadRaceDefinition = (
   const routeDraws = loadRoutes(
     {
       folder,
+      isMirrored,
       readFile: (path) => archive.readFile(`GAMEDATA${JAM_SEPARATOR}${path}`),
       getIsPresent,
     },
@@ -136,7 +154,8 @@ export const loadRaceDefinition = (
   const collisionWorld = loadCollisionWorld(
     arithmetic,
     readNamed(description.collisionWorld),
-    readFile
+    readFile,
+    isMirrored
   )
   const getCollisionObjectIndex = (name: string | null): readonly number[] => {
     const index = name === null ? -1 : collisionWorld.names.indexOf(name)
@@ -144,30 +163,45 @@ export const loadRaceDefinition = (
   }
   const trackMaterialBytes = readNamed(description.trackMaterials)
   const startPositions =
-    startPositionBytes === null ? [] : parseStartPositions(startPositionBytes, false).startPositions
-  const databases = readRacerDatabases(archive.readFile)
-  const descriptions = describeRacers({
+    startPositionBytes === null
+      ? []
+      : parseStartPositions(startPositionBytes, isMirrored).startPositions
+  const defaultCars = loadSavedCars(archive.readFile, DEFAULT_SAVE_PATH)
+  const chosenCars = options.playerCars ?? []
+  // A session that chose no car drives the save's racers (the front end loaded at least `default.lrs`).
+  const playerCars =
+    chosenCars.length > 0
+      ? chosenCars
+      : defaultCars.flatMap((saved) => {
+          const car = getBuiltCar(arithmetic, saved)
+          return car === null ? [] : [car]
+        })
+  const request = {
     arithmetic,
-    databases,
+    databases: readRacerDatabases(archive.readFile),
     racerCount,
     localPlayerCount,
-    playerCars: options.playerCars ?? [],
-    defaultPlayerCar: DEFAULT_PLAYER_CAR,
+    playerCars,
     racerCodes,
-  })
+  }
+  const descriptions = describeRacers(request)
+  const appearances = describeAppearances(request)
+  const figures = appearances.map((appearance) =>
+    createRacerFigures(
+      loadRacerFigureSources(archive.readFile, appearance, BUILT_DRIVER_MODEL_SCALE)
+    )
+  )
   const isMultiplayer = localPlayerCount >= 2
   const racers: readonly RaceRacerDefinition[] = kinds.map((controllerKind, index) => {
     const route = routeDraws.routes[index] ?? null
     const description = descriptions[index]
-    if (description === undefined) throw new RangeError(`No description for racer ${String(index)}`)
-    const chassis = databases.chassis.chassis.find(
-      (candidate) => candidate.name === description.car.chassisName
-    )
-    if (chassis === undefined) throw new RangeError(`No chassis ${description.car.chassisName}`)
-    const figure = loadChassisFigure(archive.readFile, chassis)
+    const appearance = appearances[index]
+    const racerFigures = figures[index]
+    if (description === undefined || appearance === undefined || racerFigures === undefined) {
+      throw new RangeError(`No description for racer ${String(index)}`)
+    }
     return {
       controllerKind,
-      figure,
       carBody: createCarBodySetup(arithmetic, description.car, {
         displayFrame: getStartFrame(
           arithmetic,
@@ -175,7 +209,7 @@ export const loadRaceDefinition = (
           getStartSlot(index, isMultiplayer),
           route
         ),
-        displayBoundingRadius: getFigureBounds(arithmetic, figure)?.radius ?? 0,
+        displayBoundingRadius: getFigureBounds(arithmetic, racerFigures.wheels)?.radius ?? 0,
         isRaceModeFlagged: getIsCarBodyFlagged(raceModeFlags),
       }),
       route,
@@ -183,6 +217,10 @@ export const loadRaceDefinition = (
       preferredPowerUpKind: description.preferredPowerUpKind,
       preferredPowerUpLevel: description.preferredPowerUpLevel,
       voiceBase: description.voiceBase,
+      appearance,
+      figures: racerFigures,
+      // A local player's car is the save's racer of its slot (the first when the save has fewer).
+      savedCar: index < localPlayerCount ? (defaultCars[index] ?? defaultCars[0] ?? null) : null,
     }
   })
   return Object.freeze({
@@ -190,12 +228,19 @@ export const loadRaceDefinition = (
     tables,
     raceModeFlags,
     localPlayerCount,
-    multiplayerLapCount: DEFAULT_LAP_COUNT,
+    multiplayerLapCount: options.multiplayerLapCount ?? DEFAULT_LAP_COUNT,
     isCountdownSkipped: false,
-    isMirrored: false,
+    isMirrored,
+    isPointsRecordPresent: options.isPointsRecordPresent ?? false,
+    ghost: options.ghost ?? null,
+    musicTuneCount:
+      options.musicTuneCount ??
+      (description.musicList === null
+        ? 0
+        : decodeSoundBank(readFile(description.musicList.toUpperCase())).declaredSoundCount),
     racers,
     checkpoints:
-      checkpointBytes === null ? [] : parseCheckpoints(checkpointBytes, false).checkpoints,
+      checkpointBytes === null ? [] : parseCheckpoints(checkpointBytes, isMirrored).checkpoints,
     // The collision world's instances in world order (race +0x3a0). 0x004371c0 hands every car the track (race +0x3b0)
     // and the checkpoint object (+0x3b8, when the race names one); the other instances join a car's list while it is
     // in the trigger that names them (0x0045e520).
@@ -210,23 +255,23 @@ export const loadRaceDefinition = (
     trackMaterials:
       trackMaterialBytes === null
         ? []
-        : parseTrackMaterials(trackMaterialBytes, false).trackMaterials,
+        : parseTrackMaterials(trackMaterialBytes, isMirrored).trackMaterials,
     startPositions,
     powerUps:
       powerUpBytes === null
         ? { bricks: [], enhancementBricks: [], readByteCount: 0 }
-        : parsePowerUps(powerUpBytes, false),
-    events: eventBytes === null ? null : parseEvents(eventBytes, false),
+        : parsePowerUps(powerUpBytes, isMirrored),
+    events: eventBytes === null ? null : parseEvents(eventBytes, isMirrored),
     timers: timerBytes === null ? null : parseTimers(timerBytes),
     mainTriggers:
       mainTriggerBytes === null
         ? null
-        : parseTriggers(mainTriggerBytes, TriggerFileKind.MAIN, false),
+        : parseTriggers(mainTriggerBytes, TriggerFileKind.MAIN, isMirrored),
     environmentTriggers:
       environmentTriggerBytes === null
         ? null
-        : parseTriggers(environmentTriggerBytes, TriggerFileKind.ENVIRONMENT, false),
-    hazards: hazardBytes === null ? null : parseHazards(hazardBytes, false),
+        : parseTriggers(environmentTriggerBytes, TriggerFileKind.ENVIRONMENT, isMirrored),
+    hazards: hazardBytes === null ? null : parseHazards(hazardBytes, isMirrored),
     randomPosition: routeDraws.position,
     getGroundPoint: null,
     trackTargets: [],

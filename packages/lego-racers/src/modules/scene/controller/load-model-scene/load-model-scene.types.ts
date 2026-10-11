@@ -7,6 +7,10 @@ export type ModelFiles = {
   readonly textureNames: readonly string[]
   readonly materialNames: readonly string[]
   readonly meshNames: readonly string[]
+  // A model with bones (a racer's wheels or driver) also names the skeleton (`.SDB`) and the animation (`.ADB`) its
+  // first mesh follows; null for a model without.
+  readonly skeletonName: string | null
+  readonly animationName: string | null
 }
 
 // The scene of loose models, one mesh instance per model in `meshNames` order, and each model's scale

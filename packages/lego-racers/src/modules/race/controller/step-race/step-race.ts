@@ -7,7 +7,8 @@ import {
   NO_MENU_INPUT,
 } from '../pause-menu/pause-menu.ts'
 import type { PauseMenuStep } from '../pause-menu/pause-menu.types.ts'
-import { PauseMenuMode } from '../../types/pause-menu/pause-menu.ts'
+import { CLOSED_PAUSE_MENU, PauseMenuMode } from '../../types/pause-menu/pause-menu.ts'
+import { RaceExit } from '../../types/race-exit/race-exit.ts'
 import { applyPlayerControls, updateRace } from '../update-race/update-race.ts'
 
 // The power-ups' events leave the race with the frame's other events.
@@ -84,4 +85,19 @@ export const stepRace = (
       events: [...keyed.events, ...phased.events, ...updated.events],
     })
   )
+}
+
+// Race_ResumeFromPause 0x00436160 with a menu answer that ends the race (`iVar4 == 2`): the loop's running flag
+// (race +0x3334) becomes 0, a restart for the first item and a leave for the other.
+export const endRaceFromMenu = (raceState: RaceState): RaceStepResult => {
+  const exit = raceState.pauseMenu.selection === 0 ? RaceExit.RESTART : RaceExit.LEFT
+  return Object.freeze({
+    raceState: Object.freeze({
+      ...raceState,
+      pauseMenu: CLOSED_PAUSE_MENU,
+      isRunning: false,
+      exit,
+    }),
+    events: Object.freeze([{ type: 'race.ended', exit }] as const),
+  })
 }

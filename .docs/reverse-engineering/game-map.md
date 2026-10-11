@@ -177,7 +177,7 @@ Consequences for a deterministic server: the simulation is a pure function of (1
 | Token reader (text)   | heap                                        | `0x0044e580` | `0x004b0ffc` | `0x1fc`  | used when the settings' JAM pointer (`+0x18`) is null                                                                                                                           |
 | Vector maths          | —                                           | —            | —            | —        | `Math_SinCos 0x00449170` (`fsincos`), `0x00449280`, `0x00449460`, `0x004496a0`                                                                                                  |
 
-Game settings (the object at race `+4`, also `RaceSession +0`): `+0x18` JAM archive or null (text files), `+0x20` flags (`0x100` = 1.75× time), `+0x24` mode (0 = circuit; 2 loads a ghost from `GAMEDATA\COMMON`, hypothesis: time trial; others single race), `+0x100` racer count, `+0x114 + 0x5c·i` racer kind (2 = computer), `+0x32c` local players.
+Game settings (the object at race `+4`, also `RaceSession +0`): `+0x18` JAM archive or null (text files), `+0x20` flags (`0x100` = 1.75× time), `+0x24` mode (0 = circuit, 1 = single race, 2 = time trial with a ghost from `GAMEDATA\COMMON`; details in [game-progression.md](game-progression.md) and the save file in [save-data.md](save-data.md)), `+0x100` racer count, `+0x114 + 0x5c·i` racer kind (2 = computer), `+0x32c` local players.
 
 ## Numerics
 

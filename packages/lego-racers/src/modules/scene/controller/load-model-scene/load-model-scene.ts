@@ -3,9 +3,9 @@ import { parseModel } from '../../../model/index.ts'
 import { SceneInstanceKind } from '../../types/scene-enums/scene-enums.ts'
 import { getArchivePath } from '../../types/scene-path/scene-path.ts'
 import type { Scene, SceneInstance } from '../../types/scene.types.ts'
-import { linkMaterials } from '../load-scene/link-materials.ts'
 import { linkMeshes } from '../load-scene/link-meshes.ts'
-import { linkTextures } from '../load-scene/link-textures.ts'
+import { linkAnimations, linkSkeletons } from '../load-scene/link-skeletons.ts'
+import { linkModelResources } from '../load-scene/link-model-resources.ts'
 import type { ModelFiles, ModelScene } from './load-model-scene.types.ts'
 
 const IDENTITY_ROTATION: SceneInstance['rotation'] = Object.freeze([1, 0, 0, 0, 1, 0, 0, 0, 1])
@@ -15,30 +15,32 @@ const LARGEST_FLOAT = 3.4028234663852886e38
 
 // Loads models that no world lists (a racer's car and driver, which the race's chassis and driver databases name)
 // the way a world loads its files: textures, then materials, then models, all looked up in the same directory
-// (GolDP.dll 0x10017ac0). Each model becomes a mesh instance at the origin so a renderer can place it itself.
+// (GolDP.dll 0x10017ac0). Each model becomes a mesh instance at the origin so a renderer can place it itself; when
+// the files name a skeleton and an animation the instances are skeleton instances following them.
 export const loadModelScene = (archive: JamArchive, files: ModelFiles): ModelScene => {
   const source = Object.freeze({ archive, directory: files.directory })
-  const textures = linkTextures(source, files.textureNames, {
-    textures: [],
-    indexByName: new Map(),
-  })
-  const materials = linkMaterials(source, files.materialNames, textures, {
-    materials: [],
-    indexByName: new Map(),
-  })
+  const { textures, materials } = linkModelResources(
+    source,
+    files.textureNames,
+    files.materialNames
+  )
   const meshes = linkMeshes(source, files.meshNames, materials)
+  const skeletons = files.skeletonName === null ? [] : linkSkeletons(source, [files.skeletonName])
+  const animations =
+    files.animationName === null ? [] : linkAnimations(source, [files.animationName])
+  const isSkeletal = skeletons.length > 0 && animations.length > 0
   const instances: readonly SceneInstance[] = Object.freeze(
     meshes.map((mesh, meshIndex) =>
       Object.freeze({
         name: mesh.name,
-        kind: SceneInstanceKind.MESH,
+        kind: isSkeletal ? SceneInstanceKind.SKELETON : SceneInstanceKind.MESH,
         worldPath: files.directory,
         startClipIndex: null,
         levels: Object.freeze([
           Object.freeze({
             meshIndex,
-            skeletonIndex: null,
-            animationIndex: null,
+            skeletonIndex: isSkeletal ? 0 : null,
+            animationIndex: isSkeletal ? 0 : null,
             materialAssignmentIndex: null,
             squaredDistance: LARGEST_FLOAT,
           }),
@@ -54,8 +56,8 @@ export const loadModelScene = (archive: JamArchive, files: ModelFiles): ModelSce
     materials: materials.materials,
     meshes,
     materialAssignments: Object.freeze([]),
-    skeletons: Object.freeze([]),
-    animations: Object.freeze([]),
+    skeletons: Object.freeze(skeletons),
+    animations: Object.freeze(animations),
     instances,
     cameras: Object.freeze([]),
     ambientLights: Object.freeze([]),

@@ -24,7 +24,7 @@ Ported in `packages/lego-racers/src/modules/race` (and the modules it uses). Eve
 ## collideRacers and the registry
 
 - Pass 4 (`0x0043d180`): the real `createCollideRacers` runs racer against racer, then the registry sphere overlap tests (`0x0043d270`). Registry objects: main and environment triggers (fire `touchTrigger`) and bricks (`0x00453af0`, collect). Brick spheres have radius 0 (`0x004539b0`); extents are refreshed each frame.
-- Bounding radius: the chassis figure, ADB clip bounds times the GDB model scale (0.015625), about 5.1 (was a placeholder 5). A player's built car uses the chassis figure (**approximation**).
+- Bounding radius: the display figure's (racer `+0x5c`, the car builder's wheels figure) model bounds, `getFigureBounds(figures.wheels).radius`, the same value the original reads through `0x00411ca0`.
 
 ## Race end
 

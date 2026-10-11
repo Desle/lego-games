@@ -3,12 +3,12 @@ import type { ChangeEvent } from 'react'
 import { RaceStatus } from '../../types/race-status/race-status.ts'
 import type { RacePanelProps } from './race-panel.types.ts'
 
-// Starts and stops the race and lists the original's default controls.
+// Opens the game's files, stops the race and lists the controls of the menus and the original's default race controls.
 const RacePanel = ({
   status,
   errorMessage,
   isDevelopmentFilesAvailable,
-  onDevelopmentRaceRequested,
+  onDevelopmentGameRequested,
   onGameFilesChosen,
   onRaceStopped,
 }: RacePanelProps) => {
@@ -22,9 +22,9 @@ const RacePanel = ({
           type="button"
           className="rounded bg-amber-500 px-3 py-2 font-semibold text-slate-900 hover:bg-amber-400 disabled:opacity-50"
           disabled={isBusy}
-          onClick={onDevelopmentRaceRequested}
+          onClick={onDevelopmentGameRequested}
         >
-          Race Royal Knights Raceway (development files)
+          Open the game (development files)
         </button>
       )}
       <label className="flex cursor-pointer flex-col gap-1 rounded-lg border-2 border-dashed border-slate-500 p-3 text-center hover:border-amber-400">
@@ -46,10 +46,16 @@ const RacePanel = ({
           className="rounded bg-slate-700 px-2 py-1 hover:bg-slate-600"
           onClick={onRaceStopped}
         >
-          Stop the race
+          Stop the race (back to the menus)
         </button>
       )}
-      {status === RaceStatus.LOADING && <p className="text-slate-300">Loading the race...</p>}
+      {status === RaceStatus.MENU && (
+        <p className="text-slate-300">
+          Menus: arrow keys or the d-pad move, Enter or button A chooses, Escape or button B goes
+          back.
+        </p>
+      )}
+      {status === RaceStatus.LOADING && <p className="text-slate-300">Loading...</p>}
       {status === RaceStatus.FAILED && (
         <p role="alert" className="text-red-400">
           {errorMessage}

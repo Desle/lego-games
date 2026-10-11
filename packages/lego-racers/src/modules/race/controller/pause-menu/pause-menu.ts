@@ -39,7 +39,7 @@ const getOpenedMenu = (mode: PauseMenu['mode'], pendingAction: PauseMenu['pendin
 
 // 0x00436010 (the pause menu is built): every local player's controls are released (0x00430c20) and the menu opens with
 // its first item selected.
-const openMenu = (
+export const openPauseMenu = (
   raceState: RaceState,
   mode: PauseMenu['mode'],
   pendingAction: PauseMenu['pendingAction']
@@ -74,7 +74,7 @@ export const applyMenuInput = (raceState: RaceState, input: RaceMenuInput): Paus
   }
   const isOpening = input.isPausePressed && raceState.pauseMenu.mode === PauseMenuMode.NONE
   const opened = isOpening
-    ? openMenu(raceState, PauseMenuMode.PAUSED, PendingAction.NONE)
+    ? openPauseMenu(raceState, PauseMenuMode.PAUSED, PendingAction.NONE)
     : raceState
   const { pauseMenu } = opened
   const keyed =
@@ -135,7 +135,7 @@ export const answerPauseMenu = (raceState: RaceState): PauseMenuStep => {
       ? getStep(Object.freeze({ ...raceState, pauseMenu: CLOSED_PAUSE_MENU }), [
           { type: 'race.resumed' },
         ])
-      : getStep(openMenu(raceState, PauseMenuMode.CONFIRMATION, pending))
+      : getStep(openPauseMenu(raceState, PauseMenuMode.CONFIRMATION, pending))
   }
   if (pauseMenu.mode === PauseMenuMode.RESULTS) {
     const closed: RaceState = Object.freeze({ ...raceState, pauseMenu: CLOSED_PAUSE_MENU })

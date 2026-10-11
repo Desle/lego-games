@@ -1,7 +1,7 @@
-// The game's fonts are built from FONT_THS.BMP and IGNUM.BMP by code that is not ported; the HUD is set in a
-// browser font whose size stands in for the bitmap font's height. Keys are the HudFont values.
-export const HUD_FONT_SIZES: Readonly<Record<string, number>> = Object.freeze({
-  text: 16,
-  digits: 80,
+// The HUD's two fonts are bitmap fonts of the race's language folder: `font_ths` for the lap and time text and
+// `ignum` for the numerals (Hud_Initialize 0x00425d80 looks both up in LEGOFNTS.FDB by these names). Keys are the
+// HudFont values.
+export const HUD_FONT_NAMES: Readonly<Record<string, string>> = Object.freeze({
+  text: 'font_ths',
+  digits: 'ignum',
 })
-export const HUD_FONT_FAMILY = 'Impact, "Arial Black", sans-serif'

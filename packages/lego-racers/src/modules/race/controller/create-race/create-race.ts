@@ -11,14 +11,16 @@ import {
   createPlayerController,
   createRacer,
   createRacerSet,
+  createVehicle,
 } from '../../../racer/index.ts'
 import type { Racer, RacerSet } from '../../../racer/index.ts'
 import { drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
 import { createTrackLogic } from '../../../track-logic/index.ts'
 import { CLOSED_PAUSE_MENU } from '../../types/pause-menu/pause-menu.ts'
+import { createPointsRecord } from '../../types/points-record/points-record.ts'
 import { RaceExit } from '../../types/race-exit/race-exit.ts'
-import { RacePhase } from '../../types/race-phase/race-phase.ts'
+import { INTRODUCTION_TUNE_INDEX, RacePhase } from '../../types/race-phase/race-phase.ts'
 import type {
   RaceDefinition,
   RaceRacerDefinition,
@@ -42,6 +44,9 @@ const DEMONSTRATION_FLAG = 0x800000
 // float32 0.05 at 0x004b07f0, the rubber band's bias on a mirrored track (0x00433773).
 const MIRRORED_RUBBER_BAND_BIAS = Math.fround(0.05)
 
+// 0x0043d7a0 draws `% 2000` for the vehicle's +0x388, the time before the driver may look at another racer.
+const VEHICLE_LOOK_MILLISECONDS = 2000
+
 // 0x00436df0 and 0x004371c0 for one racer, then 0x004374c0: the computer racer's chances and its two timers
 // (two random table draws, even for a player), the vehicle's animation timer (0x0043d7a0, a third draw), the
 // place on the grid, the route placement and the reset.
@@ -61,7 +66,7 @@ const createRacerFromDefinition = (
     racerDefinition.route === null
       ? carBody
       : placeCarBodyOnRoute(arithmetic, carBody, racerDefinition.route),
-    racerDefinition.figure
+    racerDefinition.figures.wheels
   )
   const racer: Racer = Object.freeze({
     ...base,
@@ -70,6 +75,11 @@ const createRacerFromDefinition = (
     powerUpChances: personality.chances,
     proximityCheckMilliseconds: timers.tauntMilliseconds,
     voiceMilliseconds: timers.voiceMilliseconds,
+    vehicle: createVehicle(
+      racerDefinition.figures.driver,
+      racerDefinition.appearance.seatPoint,
+      vehicleDraw.value % VEHICLE_LOOK_MILLISECONDS
+    ),
     flags: getRaceModeRacerFlags(definition.raceModeFlags),
     controllerKind: racerDefinition.controllerKind,
     racePosition: racerIndex + 1,
@@ -172,13 +182,17 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     isRunning: true,
     exit: RaceExit.NONE,
     pauseMenu: CLOSED_PAUSE_MENU,
-    pointsRecord: definition.pointsRecord,
+    pointsRecord:
+      definition.pointsRecord ?? (definition.isPointsRecordPresent ? createPointsRecord() : null),
     isSettingsFlag40Set: definition.isSettingsFlag40Set,
     finishedRacerCount: 0,
     lapCount,
     isMultiplayer,
     isDemonstration,
     isCountdownSkipped: definition.isCountdownSkipped,
+    ghost: definition.ghost,
+    musicTuneCount: definition.musicTuneCount,
+    tuneIndex: definition.musicTuneCount > 0 ? INTRODUCTION_TUNE_INDEX : null,
     unidentifiedCountdownMilliseconds: 0,
     raceModeFlags: definition.raceModeFlags,
     placements: Object.freeze(racers.map(() => 0)),
