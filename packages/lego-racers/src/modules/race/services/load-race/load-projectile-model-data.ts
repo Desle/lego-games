@@ -1,6 +1,8 @@
 import { getModelBounds, parseModel } from '../../../model/index.ts'
 import type { ModelBounds } from '../../../model/index.ts'
 import type { FloatArithmetic } from '../../../simulation-math/index.ts'
+import type { Checkpoint } from '../../../checkpoint/index.ts'
+import type { RouteNode } from '../../../projectiles/index.ts'
 import { parseAnimation } from '../../../animation/index.ts'
 import { getRacerFilePath } from '../../../racer-appearance/index.ts'
 import { getSkeletalAnimation } from '../../../skeletal-animation/index.ts'
@@ -37,12 +39,36 @@ const getBounds = (
   getModelBounds(arithmetic, parseModel(readFile(getRacerFilePath(name, 'GDB')))) ?? NO_BOUNDS
 
 // The model data the moving power-up effects read (projectiles.md).
+// The race's route (racer set +0x10, entries of 0x24 bytes from 0x0041e940) is its checkpoint list: a plane, a point and
+// the next entry (the first link, byte +0x20).
+const getRouteNodes = (checkpoints: readonly Checkpoint[]): readonly RouteNode[] =>
+  Object.freeze(
+    checkpoints.map((checkpoint) =>
+      Object.freeze({
+        normal: Object.freeze({
+          x: checkpoint.plane[0],
+          y: checkpoint.plane[1],
+          z: checkpoint.plane[2],
+        }),
+        planeOffset: checkpoint.plane[3],
+        position: Object.freeze({
+          x: checkpoint.point[0],
+          y: checkpoint.point[1],
+          z: checkpoint.point[2],
+        }),
+        nextIndex: checkpoint.links[0] ?? 0,
+      })
+    )
+  )
+
 export const loadProjectileModelData = (
   arithmetic: FloatArithmetic,
-  readFile: (path: string) => Uint8Array
+  readFile: (path: string) => Uint8Array,
+  checkpoints: readonly Checkpoint[]
 ): ProjectileModelData =>
   Object.freeze({
     ...EMPTY_PROJECTILE_MODEL_DATA,
+    routeNodes: getRouteNodes(checkpoints),
     shapeBounds: Object.freeze({
       grapple: getBounds(arithmetic, readFile, 'GRAPPLE'),
       barrel: getBounds(arithmetic, readFile, 'BARREL'),

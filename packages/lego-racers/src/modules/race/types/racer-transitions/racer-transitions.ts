@@ -1,6 +1,7 @@
 import type { PowerUpEvent } from '../../../power-ups/index.ts'
 import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
 import {
+  addCarBodyImpulse,
   addCarBodyVelocity,
   assignDriverRoute,
   clearCarBodyTwoPointMode,
@@ -9,8 +10,10 @@ import {
   endCarBodyFlaggedState,
   endCarBodySpin,
   getDriven,
+  getRacerWithoutTimedEffect,
   getRacerWithTimedEffect,
   setCarBodyHeadingFromFrame,
+  setCarBodyPush,
   setCarBodyTwoPointMode,
   setDriven,
   startCarBodyBoost,
@@ -20,7 +23,13 @@ import {
 } from '../../../racer/index.ts'
 import { getThrowImpulse } from '../../../projectiles/index.ts'
 import type { Racer } from '../../../racer/index.ts'
-import { FLOAT32_MAXIMUM, getFloatFromBits } from '../../../simulation-math/index.ts'
+import { CarRigidBodyFlag } from '../../../racer-physics/index.ts'
+import {
+  FLOAT32_MAXIMUM,
+  getFloatFromBits,
+  getRotationFromFrameAxes,
+  ZERO_VECTOR3,
+} from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 
 export const COMPUTER_CONTROLLER = 2
@@ -38,6 +47,9 @@ const RACER_TUMBLING_FLAG = 0x8
 const TUMBLING_TURBO_LEVEL = 2
 const SPIN_RATE = getFloatFromBits(0x3be56042) // 0x004575db, 0x00457002: the spin of a slick or a rocket
 const VEHICLE_HIT_REACTION = 2
+const WARP_PENDING_FLAG = 0x200000
+const WARP_DISABLED_FLAG = 0x10
+const UP_AXIS: Vector3 = Object.freeze({ x: 0, y: 0, z: 1 })
 const WAND_THROW_POWER = 1 // 0x00455440 throws a struck racer like a blast at full power
 
 // 0x004374c0, the racer fields: flag 0x2 set and 0x1000..0x4000 cleared, no checkpoint, zone history 0, 2, 1, no lap.
@@ -282,6 +294,97 @@ export const getRacerThrown = (
     ),
   })
 
+// 0x004395d0 (the warp takes the car off the track): flag 0x10, the timed effect ends (0x00439b00), the car body's spin
+// and tows end (slots 11, 17 and 19) and, for a human's free body, the hull stops testing the track (flag 0x1000,
+// 0x00429a90's other branch). The vehicle's smoke, fade and figure radii are presentation.
+const getRacerWarpStarted = (arithmetic: FloatArithmetic, racer: Racer): Racer => {
+  const ended = getRacerWithoutTimedEffect(racer)
+  const spun = endCarBodySpin(arithmetic, ended.carBody)
+  const untowed = setCarBodyPush(
+    arithmetic,
+    setCarBodyPush(arithmetic, spun, 'extraForceA', undefined),
+    'extraForceB',
+    undefined
+  )
+  return Object.freeze({
+    ...ended,
+    flags: ((ended.flags & ~WARP_PENDING_FLAG) | WARP_DISABLED_FLAG) >>> 0,
+    carBody: untowed.isScripted
+      ? untowed
+      : Object.freeze({
+          ...untowed,
+          rigidBody: Object.freeze({
+            ...untowed.rigidBody,
+            flags: untowed.rigidBody.flags | CarRigidBodyFlag.WITHOUT_TRACK_CONTACTS,
+          }),
+        }),
+  })
+}
+
+// 0x00439660: the racer is back on the track.
+const getRacerWarpEnded = (racer: Racer): Racer =>
+  Object.freeze({
+    ...racer,
+    flags: (racer.flags & ~WARP_DISABLED_FLAG) >>> 0,
+    carBody: racer.carBody.isScripted
+      ? racer.carBody
+      : Object.freeze({
+          ...racer.carBody,
+          rigidBody: Object.freeze({
+            ...racer.carBody.rigidBody,
+            flags: racer.carBody.rigidBody.flags & ~CarRigidBodyFlag.WITHOUT_TRACK_CONTACTS,
+          }),
+        }),
+  })
+
+// 0x0045d780 state 3: the warp carries the racer's display and physics frames along the route.
+export const getRacerMoved = (racer: Racer, position: Vector3): Racer =>
+  Object.freeze({
+    ...racer,
+    carBody: Object.freeze({
+      ...racer.carBody,
+      rigidBody: Object.freeze({
+        ...racer.carBody.rigidBody,
+        displayFrame: Object.freeze({ ...racer.carBody.rigidBody.displayFrame, position }),
+        frame: Object.freeze({ ...racer.carBody.rigidBody.frame, position }),
+      }),
+    }),
+  })
+
+// 0x0045dc90 state 3 for a human's free body: both frames take the landing position and face along `forward` with z up
+// (frame slot 0x40, 0x00410900), the velocity is cleared, the body is pushed along `forward` (slot 8) and its heading
+// follows the frame (0x00446fa0). A computer's scripted body only comes back on the track.
+export const getRacerLanded = (
+  arithmetic: FloatArithmetic,
+  racer: Racer,
+  position: Vector3,
+  forward: Vector3,
+  speed: number
+): Racer => {
+  if (racer.controllerKind === COMPUTER_CONTROLLER) return racer
+  const rotation = getRotationFromFrameAxes(arithmetic, {
+    first: forward,
+    third: UP_AXIS,
+  })
+  const { rigidBody } = racer.carBody
+  const placed = Object.freeze({
+    ...racer.carBody,
+    rigidBody: Object.freeze({
+      ...rigidBody,
+      displayFrame: Object.freeze({ position, rotation }),
+      frame: Object.freeze({ position, rotation }),
+      linearVelocity: ZERO_VECTOR3,
+    }),
+  })
+  return Object.freeze({
+    ...racer,
+    carBody: setCarBodyHeadingFromFrame(
+      arithmetic,
+      addCarBodyImpulse(arithmetic, placed, forward, speed)
+    ),
+  })
+}
+
 const getRacerWithFlags = (racer: Racer, flags: number): Racer =>
   Object.freeze({ ...racer, flags: flags >>> 0 })
 
@@ -315,10 +418,12 @@ export const getRacerAfterPowerUpEvent = (
       return getRacerWithTimedEffect(arithmetic, racer, event.durationMilliseconds)
     case 'power_ups.racer_warp_pending':
       return getRacerWithFlags(racer, racer.flags | 0x200000)
+    case 'power_ups.racer_curse_lifted':
+      return getRacerWithoutTimedEffect(racer)
     case 'power_ups.racer_warp_started':
-      return getRacerWithFlags(racer, (racer.flags & ~0x200000) | 0x10)
+      return getRacerWarpStarted(arithmetic, racer)
     case 'power_ups.racer_warp_ended':
-      return getRacerWithFlags(racer, racer.flags & ~0x10)
+      return getRacerWarpEnded(racer)
     case 'power_ups.racer_magnetized':
       return getRacerWithFlags(racer, racer.flags | 0x100000)
     case 'power_ups.racer_spun_out':

@@ -39,6 +39,8 @@ import {
   enterZoneTwo,
   enterZoneZero,
   getRacerAfterPowerUpEvent,
+  getRacerLanded,
+  getRacerMoved,
   getRacerThrown,
   getRacerTumbling,
 } from '../../types/racer-transitions/racer-transitions.ts'
@@ -372,6 +374,10 @@ export const getRacerAfterProjectileEvent = (
       })
     case 'projectiles.racer_blasted':
       return getRacerThrown(arithmetic, racer, event.impulse)
+    case 'projectiles.racer_moved':
+      return getRacerMoved(racer, event.position)
+    case 'projectiles.racer_landed':
+      return getRacerLanded(arithmetic, racer, event.position, event.forward, event.speed)
     default:
       return racer
   }

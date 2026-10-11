@@ -27,6 +27,7 @@ export {
 export {
   endCarBodyEffect,
   endTimedEffect,
+  getRacerWithoutTimedEffect,
   getRacerWithTimedEffect,
   transferTimedEffect,
 } from './controller/timed-effect/timed-effect.ts'
