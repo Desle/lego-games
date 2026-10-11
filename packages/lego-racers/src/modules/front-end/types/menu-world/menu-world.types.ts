@@ -9,4 +9,15 @@ export type MenuCamera = {
   readonly farPlane: number
   // The width over the height the projection is built with; null takes the viewport's own (an optional tenth value).
   readonly aspectRatio: number | null
+  readonly up: readonly [number, number, number]
+}
+
+// A world's own camera (`Camera01`), as the scene loader returns it.
+export type WorldCamera = {
+  readonly position: { readonly x: number; readonly y: number; readonly z: number }
+  readonly forward: { readonly x: number; readonly y: number; readonly z: number }
+  readonly up: { readonly x: number; readonly y: number; readonly z: number }
+  readonly nearPlane: number
+  readonly farPlane: number
+  readonly fieldOfViewDegrees: number
 }

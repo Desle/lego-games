@@ -16,19 +16,7 @@ export const IDENTITY_FIGURE_FORWARD: readonly [number, number, number] = Object
 
 // 0x00481000: the main menu shows the figure of the driver at `DAT_004c214c[run]` of the driver database
 // (`FUN_00421050` copies the driver's five unread bytes, +0x2b..+0x2f), where `run` is how many circuits after the first
-// are unlocked in a row (`FUN_00443760`): Captain Redbeard (cr), then kk, bb, jt, bvb and gm.
+// are unlocked in a row (`FUN_00443760`): Captain Redbeard (cr), then kk, bb, jt, bvb and gm; a run of six reads the next byte of the table, 0: the driver rr.
 export const MAIN_MENU_FIGURE_DRIVER_INDICES: readonly number[] = Object.freeze([
-  0x13, 0x12, 0x16, 0x15, 0x14, 0x17,
-])
-
-// Measured from the original's draws (`pnpm run render-trace`, the main menu's frame). Every figure draw has the same
-// camera matrix (device +0xc8490), and `model matrix x inverse(camera matrix)` gives each part's world frame: the root
-// at (18.181, -10.623, 0.0257) with the scale 1/64, which confirms the figure's position above. The camera is NOT the
-// platform item's nine floats ((-12, -19, 28) to (0, 0, 10), 45 degrees): its eye is (28.786, -10.146, 3.599) looking
-// along (-0.9912, -0.0738, -0.1099) with a vertical field of view of about 29 degrees and square pixels (an aspect of
-// 0.984 for the 400 x 480 viewport). The pixel mapping of the matrix (x' / w' to pixels) was fitted on the parts'
-// pixel boxes (correlation 0.99 in x), so the field of view, the near plane (5.4) and the far plane are measured to
-// about 10 percent only (hypothesis); how the original computes this camera is open.
-export const MAIN_MENU_CAMERA: readonly number[] = Object.freeze([
-  28.786451, -10.145925, 3.598894, 18.875251, -10.883825, 2.499994, 29, 5.4, 1023, 0.984,
+  0x13, 0x12, 0x16, 0x15, 0x14, 0x17, 0x00,
 ])

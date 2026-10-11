@@ -131,7 +131,7 @@ Same header. `0x2b` int material assignment (checked) at `+0x2c` (default -1), `
 
 ### Cameras (`0x43`, 0x4c bytes)
 
-Same header as instances. `0x2f` int skeleton instance index (checked against the `0x2f` section) `+0x08`, int `+0x0c`; `0x31` position `+0x1c`; `0x32` forward `+0x28`, then three floats stored **negated** at `+0x34`; `0x35` as in skeleton instances at `+0x10`/`+0x14`; `0x44` 3 floats target, after the block `forward = target - position`; `0x45`/`0x46`/`0x47` floats `+0x40`/`+0x44`/`+0x48`. Defaults: `+0x08` -1, forward `(1,0,0)`, negated up `(0,0,-1)`, `0x45` 1.0, `0x46` 100.0, `0x47` 65.0.
+Same header as instances. `0x2f` int skeleton instance index (checked against the `0x2f` section) `+0x08`, int `+0x0c`; `0x31` position `+0x1c`; `0x32` forward `+0x28`, then three floats stored **negated** at `+0x34`; `0x35` as in skeleton instances at `+0x10`/`+0x14`; `0x44` 3 floats target, after the block `forward = target - position`; `0x45`/`0x46`/`0x47` floats `+0x40`/`+0x44`/`+0x48`: the **near plane, the far plane and the vertical field of view in degrees** (port fields `nearPlane`, `farPlane`, `fieldOfViewDegrees`; confirmed by the projection matrices of the original's menu draws: `TT.WDB` 5, 800, 36; `RS_SET\RACER.WDB` 5, 800, 31.7687; `SINGRACE\PST.WDB` 5, 800, 36; see [menu-backdrops.md](menu-backdrops.md)). Defaults: `+0x08` -1, forward `(1,0,0)`, negated up `(0,0,-1)`, near plane 1.0, far plane 100.0, field of view 65.0.
 
 ### Lights (`0x48` ambient, `0x49` directional; 16 bytes)
 

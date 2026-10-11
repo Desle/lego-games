@@ -58,6 +58,7 @@ export const getBuilderCamera = (preview: BuilderPreview): MenuCamera => {
     nearPlane: NEAR_PLANE,
     farPlane: FAR_PLANE,
     aspectRatio: null,
+    up: [0, 0, 1],
   }
   return Object.freeze(camera)
 }

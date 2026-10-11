@@ -12,6 +12,8 @@ import type {
   FrontEndResources,
 } from '@lego-games/lego-racers/front-end'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
+import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
+import { loadScene } from '@lego-games/lego-racers/scene'
 import {
   compareQuadPlacements,
   getIsOriginalPresentationAvailable,
@@ -118,13 +120,36 @@ const getIsFigureAtOriginalPlace = (
   if (driver === undefined || frame === undefined) return false
   const [x, y, z] = driver.position
   return frame.draws.some((draw) => {
-    if (draw.clipMatrix.length !== MATRIX_SIZE || draw.modelMatrix.length !== MATRIX_SIZE) return false
+    if (draw.clipMatrix.length !== MATRIX_SIZE || draw.modelMatrix.length !== MATRIX_SIZE)
+      return false
     return [0, 1, 2, 3].every((column) => {
       const at = (row: number): number => draw.clipMatrix[row * 4 + column] ?? 0
       const expected = x * at(0) + y * at(1) + z * at(2) + at(3)
       return Math.abs(expected - (draw.modelMatrix[12 + column] ?? 0)) < FIGURE_PLACE_TOLERANCE
     })
   })
+}
+
+const MAIN_MENU_WORLD_PATH = 'MENUDATA\\TT.WDB'
+
+// The camera of the main menu's platform is the world's own `Camera01` (not the item's nine floats): its eye is the
+// point the original's camera matrix sends to x = y = w = 0, with the matrix as row vectors.
+const getIsEyeAtOriginalCamera = (
+  archive: JamArchive,
+  frame: OriginalRenderFrame | undefined
+): boolean => {
+  const eye = loadScene(archive, [MAIN_MENU_WORLD_PATH]).cameras[0]?.position
+  if (eye === undefined || frame === undefined) return false
+  return frame.draws.some(
+    (draw) =>
+      draw.clipMatrix.length === MATRIX_SIZE &&
+      [0, 1, 3].every((column) => {
+        const at = (row: number): number => draw.clipMatrix[row * 4 + column] ?? 0
+        return (
+          Math.abs(eye.x * at(0) + eye.y * at(1) + eye.z * at(2) + at(3)) < FIGURE_PLACE_TOLERANCE
+        )
+      })
+  )
 }
 
 describe.skipIf(!isGamePresent())('front end render trace', () => {
@@ -184,6 +209,7 @@ describe.skipIf(!isGamePresent())('front end render trace', () => {
     if (frontEndCase.name === 'main menu') {
       expect(comparison.matchedCount / comparison.originalCount).toBeGreaterThan(MENU_MATCHED_SHARE)
       expect(getIsFigureAtOriginalPlace(commands, originalFrame)).toBe(true)
+      expect(getIsEyeAtOriginalCamera(archive, originalFrame)).toBe(true)
     }
   })
 })

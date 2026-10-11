@@ -221,8 +221,6 @@ export type DriverPreview = {
   // Where the figure stands in the screen's world and the way it faces (its frame's forward vector).
   readonly position: readonly [number, number, number]
   readonly forward: readonly [number, number, number]
-  // Replaces the item's camera floats (position, target, field of view, near, far) when the screen sets its own.
-  readonly camera: readonly number[] | null
 }
 
 export type BuilderPreview = {

@@ -290,9 +290,9 @@ describe('readWorld', () => {
         position: { x: 1, y: 2, z: 3 },
         forward: { x: 0.5, y: 0, z: -3 },
         negatedUp: { x: -0, y: -0, z: -1 },
-        keyword45Value: 1,
-        keyword46Value: 800,
-        keyword47Value: 65,
+        nearPlane: 1,
+        farPlane: 800,
+        fieldOfViewDegrees: 65,
       },
     ])
   })
@@ -350,7 +350,7 @@ describe('readWorld', () => {
         z: 46.94730758666992,
       })
       const camera = results.find((result) => result.path === 'MENUDATA\\CAM.WDB')
-      expect(camera?.world.cameras[0]?.keyword46Value).toBe(800)
+      expect(camera?.world.cameras[0]?.farPlane).toBe(800)
     }
   )
 })

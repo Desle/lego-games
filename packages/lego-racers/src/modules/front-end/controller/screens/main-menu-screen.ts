@@ -1,6 +1,5 @@
 import { getUnlockedCircuitRunLength } from '../../../save-data/index.ts'
 import {
-  MAIN_MENU_CAMERA,
   MAIN_MENU_FIGURE_DRIVER_INDICES,
   MAIN_MENU_FIGURE_FORWARD,
   MAIN_MENU_FIGURE_POSITION,
@@ -68,7 +67,6 @@ const getFigure = (runtime: ScreenRuntime): DriverPreview | null => {
     partBytes: driver.unreadBytes,
     position: MAIN_MENU_FIGURE_POSITION,
     forward: MAIN_MENU_FIGURE_FORWARD,
-    camera: MAIN_MENU_CAMERA,
   }
 }
 
