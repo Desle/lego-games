@@ -4,19 +4,20 @@ import { getDrawState } from './original-triangles.ts'
 import type { QuadComparison, QuadGroup, QuadPlacement, QuadsInput } from './render-trace.types.ts'
 
 const QUAD_VERTEX_COUNT = 4
-const FIRST_CORNER = 0
-const OPPOSITE_CORNER = 3
+const TRIANGLE_VERTEX_COUNT = 3
 
 // The textured rectangles the original drew in a frame: every four-vertex draw (the menu's images, glyphs and fills; the
-// front end's 3D scenes have more vertices), by the corners it covers.
-export const getOriginalQuads = (frame: OriginalRenderFrame): readonly QuadPlacement[] => {
+// front end's 3D scenes have more vertices), by the corners it covers. With `isTriangleIncluded` a three-vertex draw
+// (the race HUD's minimap and arrow) counts too, by the rectangle around it.
+export const getOriginalQuads = (
+  frame: OriginalRenderFrame,
+  isTriangleIncluded = false
+): readonly QuadPlacement[] => {
   const states = frame.states.map(getDrawState)
   return frame.draws.flatMap((draw) => {
-    const first = draw.vertices[FIRST_CORNER]
-    const last = draw.vertices[OPPOSITE_CORNER]
-    if (draw.vertices.length !== QUAD_VERTEX_COUNT || first === undefined || last === undefined) {
-      return []
-    }
+    const isQuad = draw.vertices.length === QUAD_VERTEX_COUNT
+    const isTriangle = isTriangleIncluded && draw.vertices.length === TRIANGLE_VERTEX_COUNT
+    if (!isQuad && !isTriangle) return []
     const state = states[draw.stateIndex]
     const isTextured =
       state !== undefined && state.colorOperation !== TextureOperation.SELECT_DIFFUSE

@@ -8,10 +8,15 @@ import {
   readOriginalPresentation,
 } from '@lego-games/lego-racers/presentation-trace'
 import { getEffectViews, getRacerPoses } from '@lego-games/lego-racers/race-presentation'
-import { FpuPrecision } from '@lego-games/lego-racers/simulation-math'
+import { layoutText } from '@lego-games/lego-racers/font-rendering'
+import {
+  createFloatArithmetic,
+  FpuPrecision,
+  RACE_FPU_PRECISION,
+} from '@lego-games/lego-racers/simulation-math'
 import { loadRaceAssets } from '../race-assets/race-assets.ts'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
-import type { PortTexture } from '@lego-games/lego-racers/presentation-trace'
+import type { PortTexture, QuadPlacement } from '@lego-games/lego-racers/presentation-trace'
 import type { Scene } from '@lego-games/lego-racers/scene'
 import { createRaceStage } from '../race-viewport/race-viewport.ts'
 import { readOriginalExecutable, readOriginalJam } from './original-game-files.ts'
@@ -63,7 +68,9 @@ const getSceneTextures = (assets: RaceAssets): ReadonlyMap<string, PortTexture> 
   )
 
 const CANDIDATE_COUNT = 6
-const HUD_TOLERANCE_PIXELS = 1
+const HUD_TOLERANCE_PIXELS = 0.25
+// The HUD never wraps its text (the overlay's width, race-hud-overlay.tsx).
+const HUD_UNBOUNDED_WIDTH = 0x7fff
 const TOLERANCES = Object.freeze({ positionPixels: 0.25, textureCoordinate: 0.001, colorLevels: 2 })
 
 // Runs the original and the port through a scenario and compares the recorded frames: the mismatches of every frame,
@@ -93,11 +100,15 @@ export const runRenderComparison = async (
   const allTextures = (used: ReadonlyMap<string, PortTexture>): ReadonlyMap<string, PortTexture> =>
     new Map([...sceneTextures, ...used])
   const hudTextures = new Map(
-    [...assets.hudImages].map(
+    [
+      ...assets.hudImages,
+      ...[...assets.hudFonts].map(([name, hudFont]) => [name, hudFont.image] as const),
+    ].map(
       ([name, image]) =>
         [name, { width: image.width, height: image.height, colors: image.colors }] as const
     )
   )
+  const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
   const hudResults: HudFrameResult[] = []
   const groups = new Map<string, AggregatedGroup>()
   const totals: FrameTotals[] = []
@@ -135,21 +146,78 @@ export const runRenderComparison = async (
       })
       if (presentation.hudFrame !== null) {
         const hud = compareQuadPlacements({
-          original: getOriginalQuads(originalFrame),
-          port: presentation.hudFrame.commands.flatMap((command) =>
-            command.kind === 'image'
-              ? [
-                  {
-                    left: command.x,
-                    top: command.y,
-                    right: command.x + command.width,
-                    bottom: command.y + command.height,
-                    textureKey: command.imageName,
-                    source: command.imageName,
-                  },
-                ]
-              : []
-          ),
+          original: getOriginalQuads(originalFrame, true),
+          port: presentation.hudFrame.commands.flatMap((command): readonly QuadPlacement[] => {
+            if (command.kind === 'fill') {
+              return [
+                {
+                  left: command.x,
+                  top: command.y,
+                  right: command.x + command.width,
+                  bottom: command.y + command.height,
+                  textureKey: null,
+                  source: 'fill',
+                },
+              ]
+            }
+            if (command.kind === 'text') {
+              const hudFont = assets.hudFonts.get(command.font)
+              if (hudFont === undefined) return []
+              return layoutText({
+                font: hudFont.font,
+                text: Array.from(command.text, (letter) => letter.charCodeAt(0)),
+                surface: ORIGINAL_STAGE_SIZE,
+                x: command.x,
+                y: command.y,
+                maximumWidth: HUD_UNBOUNDED_WIDTH,
+                lineGap: 0,
+                scale: { x: command.scaleX, y: command.scaleY },
+                clip: null,
+                alignment: 'left',
+                arithmetic,
+              }).map((glyph) => ({
+                ...glyph.destination,
+                textureKey: command.font,
+                source: command.font,
+              }))
+            }
+            if (command.kind === 'image_part') {
+              return [
+                {
+                  left: command.x,
+                  top: command.y,
+                  right: command.x + command.width,
+                  bottom: command.y + command.height,
+                  textureKey: command.imageName.toUpperCase(),
+                  source: command.imageName.toUpperCase(),
+                },
+              ]
+            }
+            if (command.kind === 'polygon') {
+              const xs = command.vertices.map((vertex) => vertex.x)
+              const ys = command.vertices.map((vertex) => vertex.y)
+              return [
+                {
+                  left: Math.min(...xs),
+                  top: Math.min(...ys),
+                  right: Math.max(...xs),
+                  bottom: Math.max(...ys),
+                  textureKey: command.imageName,
+                  source: command.imageName ?? 'fill',
+                },
+              ]
+            }
+            return [
+              {
+                left: command.x,
+                top: command.y,
+                right: command.x + command.width,
+                bottom: command.y + command.height,
+                textureKey: command.imageName,
+                source: command.imageName,
+              },
+            ]
+          }),
           textureMatches: matchTextures(original.textures, hudTextures),
           tolerancePixels: HUD_TOLERANCE_PIXELS,
         })

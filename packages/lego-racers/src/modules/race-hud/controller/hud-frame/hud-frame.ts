@@ -16,6 +16,7 @@ import type {
   HudTextCommand,
 } from '../../types/race-hud.types.ts'
 import { formatHudTime } from '../hud-time/hud-time.ts'
+import { getMinimapCommands } from '../hud-minimap/hud-minimap.ts'
 import { getHeldPowerUpCommands } from './held-power-up.ts'
 
 const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
@@ -344,6 +345,7 @@ export const getHudFrame = (state: HudState, input: HudInput): HudFrame => {
     )
   }
   commands.push(...getHeldPowerUpCommands(input))
+  if (input.minimap !== null) commands.push(...getMinimapCommands(layout, input.minimap))
   return Object.freeze({
     state: Object.freeze({
       ...countdown.state,

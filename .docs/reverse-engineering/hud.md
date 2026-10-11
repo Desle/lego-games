@@ -20,6 +20,20 @@ Source: `LEGORacers.exe`. Port: `packages/lego-racers/src/modules/race-hud`. The
 - **Wrong way**: racer flag `0x4000` draws string `0x24`.
 - **Held power-up** (image database `LEGOIMGS.IDB`: speed, dot, cannon, grapple, wand, rocket, oilcan, barrel, magnet, curse, igdcrdot, holder, holderwp, oneenh, twoenh, threeenh, shld1-4, octan1-4): holder (entry 11) and its frame (12) tinted by kind (1 `0xff0000ff`, 2 `0xffff5050`, 3 `0xff00ff00`, 4 `0xff00ffff`); icon entry 2 + level (projectile), `0x10` + level (shield), `0x14` + level (turbo), 6 + level (hazard), centred at `(31 w >> 6, 38 h >> 6)` of the holder; from level 1 entry 12 + level at `3w/8`.
 
+## Minimap (`0x004249b0`, display mode 1 = HUD byte `+0x3c`; called last by `Hud_Draw`)
+
+The map is the track world's texture `igd_map` (128 x 128; the HUD's `+0x118`, from the second world of the race container), the bounds are the race description's keyword `0x46` floats in file order `f0..f3` (`0x00426280` stores `+0x120 = f0`, `+0x11c = f1`, `+0x128 = f2`, `+0x124 = f3`), `+0x3b` the mirrored flag. With `W`, `H` the screen (`+0x9c`, `+0xa0`) and `h`, `v` the layout's horizontal and vertical scales (`+0x104` = `+0x10c`, `+0x114`):
+
+- dot size `A = ftol(h * 16)`, `B = ftol(v * 16)`; margin `m = H / 32`; anchors `right = W - ftol(h * m)`, `bottom = H - ftol(v * m)` (625 and 465 at 640 x 480);
+- `scale = 128 / max(f2 - f0, f1 - f3)` (times `+0xf4`, 1.0 in mode 1), `scaleX = h * scale`, `scaleY = v * scale`; the world origin is `(f2, mirrored ? -f1 : f3)`;
+- the map: two triangles `(v0, v1, v3)` and `(v3, v1, v2)` over the rectangle from `((f0 - f2) * scaleX + right, (f3 - f1) * scaleY + bottom)` to `(right, bottom)`, `u` 0 to `0x3f7fbe77`, `v` the same going down (up when mirrored), colour `0xc8ffffff`; every triangle goes through the clipper `0x00423fc0` (`0x00424190`, `0x00424340`, `0x004244f0`) against the screen (`+0x12c..+0x138`), not ported;
+- a dot per racer from the last to the first, except the HUD's own: image database entry 10 (`igdcrdot`, 32 x 32 in 16 pixel cells) with the source cell `(0, 0)`, or `(16, 0)` for computer racer index 1 (`+0xd08 == 2`), drawn into `(ftol((px - f2) * scaleX) + right - (A >> 1), ftol((oy - py) * scaleY) + bottom - (B >> 1))` of size `A x B` (vtable `+0x7c`); `(px, py)` is the display frame's position;
+- the own arrow (`0x004247d0`): centre `(right + ftol((px - f2) * scaleX), bottom + ftol((oy - py) * scaleY))`, direction `(a, -b) / sqrt(a^2 + b^2)` with `a`, `b` the display frame's rotation words `+0x28`, `+0x2c`; a black triangle (tip 9.5, side 5.5, back 6.5) and a green one (8, 4, 5), each corner scaled by `h`, `v`.
+
+Two more dots for a second object (HUD `+0x30`, flags `+0x3b4`) are not ported; no race has one.
+
+Verified with `render-trace`: the five dots, the map (two triangles) and the arrow of the first race match the original's draws to 0.25 pixels in every recorded frame, on the track and mirrored.
+
 ## Not ported
 
-The gap-to-leader row (racer `+0xd84`, value `+0xd88` not kept by the racer module), the displays the HUD-mode binding cycles (`0x004249b0`, `0x004258e0`, `0x00424fb0`), split-screen modes, and the bitmap fonts (`font_ths` and `ignum`, built from `FONT_THS.BMP` and `IGNUM.BMP`; `0x00408be0` measures them). The viewer measures and draws with a browser font.
+The gap-to-leader row (racer `+0xd84`, value `+0xd88` not kept by the racer module), the displays the HUD-mode binding cycles apart from mode 1's minimap (`0x004258e0`, `0x00424fb0`), split-screen modes, and the bitmap fonts (`font_ths` and `ignum`, built from `FONT_THS.BMP` and `IGNUM.BMP`; `0x00408be0` measures them). The viewer measures and draws with a browser font.
