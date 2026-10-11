@@ -7,4 +7,6 @@ export type MenuCamera = {
   readonly fieldOfViewDegrees: number
   readonly nearPlane: number
   readonly farPlane: number
+  // The width over the height the projection is built with; null takes the viewport's own (an optional tenth value).
+  readonly aspectRatio: number | null
 }

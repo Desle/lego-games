@@ -19,7 +19,11 @@ import {
   matchTextures,
   readOriginalFrontEnd,
 } from '@lego-games/lego-racers/presentation-trace'
-import type { PortTexture, QuadPlacement } from '@lego-games/lego-racers/presentation-trace'
+import type {
+  OriginalRenderFrame,
+  PortTexture,
+  QuadPlacement,
+} from '@lego-games/lego-racers/presentation-trace'
 import { getIsOriginalGamePresent, readOriginalJam } from './original-game-files.ts'
 import type { FrontEndAudioCase } from './trace-scenarios.types.ts'
 
@@ -99,6 +103,30 @@ const getPortTextures = (
   )
 }
 
+const MATRIX_SIZE = 16
+const FIGURE_PLACE_TOLERANCE = 0.01
+
+// The figure's root frame (0x0047df90) in world space is where some original draw's frame puts its origin: that draw's
+// model matrix translation is the root position times the draw's camera (clip) matrix, as row vectors.
+const getIsFigureAtOriginalPlace = (
+  commands: readonly FrontEndDrawCommand[],
+  frame: OriginalRenderFrame | undefined
+): boolean => {
+  const driver = commands.flatMap((command) =>
+    command.kind === 'viewport' && command.driver !== null ? [command.driver] : []
+  )[0]
+  if (driver === undefined || frame === undefined) return false
+  const [x, y, z] = driver.position
+  return frame.draws.some((draw) => {
+    if (draw.clipMatrix.length !== MATRIX_SIZE || draw.modelMatrix.length !== MATRIX_SIZE) return false
+    return [0, 1, 2, 3].every((column) => {
+      const at = (row: number): number => draw.clipMatrix[row * 4 + column] ?? 0
+      const expected = x * at(0) + y * at(1) + z * at(2) + at(3)
+      return Math.abs(expected - (draw.modelMatrix[12 + column] ?? 0)) < FIGURE_PLACE_TOLERANCE
+    })
+  })
+}
+
 describe.skipIf(!isGamePresent())('front end render trace', () => {
   // eslint-disable-next-line no-restricted-syntax -- the lint rule knows `it(...)`, not `it.each(...)(...)`
   it.each(FRONT_END_CASES)('compares the pictures of $name', async (frontEndCase) => {
@@ -155,6 +183,7 @@ describe.skipIf(!isGamePresent())('front end render trace', () => {
     expect(comparison.originalCount).toBeGreaterThan(0)
     if (frontEndCase.name === 'main menu') {
       expect(comparison.matchedCount / comparison.originalCount).toBeGreaterThan(MENU_MATCHED_SHARE)
+      expect(getIsFigureAtOriginalPlace(commands, originalFrame)).toBe(true)
     }
   })
 })

@@ -38,4 +38,6 @@ export type GeometryBones = {
   readonly directory: string
   readonly skeletonName: string
   readonly animationName: string
+  // Where the animation file is, when it is not beside the skeleton (the menu figures: `LEGOMAN.ADB` is in MENUDATA).
+  readonly animationDirectory?: string
 }

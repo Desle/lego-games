@@ -15,6 +15,7 @@ export type {
 } from './types/figure-builder.types.ts'
 export {
   createDriverSession,
+  getBodyModelIndex,
   getDriverChoice,
   getDriverSessionPartBytes,
   mixDriver,

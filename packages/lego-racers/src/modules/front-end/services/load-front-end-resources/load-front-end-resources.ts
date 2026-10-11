@@ -1,6 +1,8 @@
 import { decodeBitmap } from '../../../bitmap/index.ts'
 import { loadBuilderCatalog, loadSavedCars } from '../../../car-builder/index.ts'
 import type { BuilderCatalog, SavedCar } from '../../../car-builder/index.ts'
+import { parseDriverDatabase } from '../../../driver-database/index.ts'
+import type { DriverDatabase } from '../../../driver-database/index.ts'
 import { parseBodyPartCatalog } from '../../../figure-builder/index.ts'
 import type { BodyPartCatalog } from '../../../figure-builder/index.ts'
 import { parseSaveFile } from '../../../save-data/index.ts'
@@ -24,6 +26,7 @@ import type {
 
 const MENU_DIRECTORY = 'MENUDATA'
 const DEFAULT_SAVE_PATH = 'MENUDATA\\DEFAULT.LRS'
+const DRIVER_DATABASE_PATH = 'MENUDATA\\PARTDB\\DRIVERS.DDB'
 const BODY_PART_CATALOG_PATH = 'MENUDATA\\PARTDB\\BODYPART.PCB'
 const SEPARATOR = '\\'
 
@@ -152,8 +155,15 @@ export const loadFrontEndResources = (
     return driverCatalog
   }
 
+  let driverDatabase: DriverDatabase | null = null
+  const getDriverDatabase = (): DriverDatabase => {
+    driverDatabase ??= parseDriverDatabase(archive.readFile(DRIVER_DATABASE_PATH))
+    return driverDatabase
+  }
+
   return Object.freeze({
     getBuilderCatalog,
+    getDriverDatabase,
     getRacerTemplate,
     getDefaultCar,
     getDriverCatalog,

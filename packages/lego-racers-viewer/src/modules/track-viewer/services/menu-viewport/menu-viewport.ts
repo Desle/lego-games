@@ -21,8 +21,6 @@ import type { MenuViewport, MenuWorld } from './menu-viewport.types.ts'
 
 // The engine's worlds are Z-up (default instance up (0, 0, 1), GolDP.dll 0x1002cc30).
 const WORLD_UP = new Vector3(0, 0, 1)
-// The editor's camera looks at the middle of the figure; his feet are this far below (**hypothesis**: the model is 3 units tall).
-const DRIVER_FEET_BELOW_TARGET = 1.5
 
 export const createMenuViewport = (archive: JamArchive): MenuViewport => {
   const renderer = new WebGLRenderer({ antialias: true, alpha: true })
@@ -75,14 +73,15 @@ export const createMenuViewport = (archive: JamArchive): MenuViewport => {
     if (world === null || width <= 0 || height <= 0) return false
     if (command.builder !== null) world.carView().show(command.builder)
     if (command.driver !== null) {
-      const [x, y, z] = getMenuCamera(command.camera).target
-      world.driverView().show(command.driver, [x, y, z - DRIVER_FEET_BELOW_TARGET])
+      const driverView = world.driverView()
+      driverView.show(command.driver)
+      driverView.animate(deltaMilliseconds)
     }
     const menuCamera =
-      command.builder === null ? getMenuCamera(command.camera) : getBuilderCamera(command.builder)
+      command.builder === null ? getMenuCamera(command.driver?.camera ?? command.camera) : getBuilderCamera(command.builder)
     renderer.setSize(width, height, false)
     camera.fov = menuCamera.fieldOfViewDegrees
-    camera.aspect = width / height
+    camera.aspect = menuCamera.aspectRatio ?? width / height
     camera.near = menuCamera.nearPlane
     camera.far = menuCamera.farPlane
     camera.position.set(...menuCamera.position)

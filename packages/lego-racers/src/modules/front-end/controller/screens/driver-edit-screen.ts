@@ -14,6 +14,10 @@ import type {
   ScreenResult,
   ScreenRuntime,
 } from '../../types/front-end-screen.types.ts'
+import {
+  EDITOR_FIGURE_POSITION,
+  IDENTITY_FIGURE_FORWARD,
+} from '../../types/menu-figure/menu-figure.ts'
 import { getSettingsWithPlayerCar } from '../profile/profile.ts'
 import { getBaseCar } from '../driver-base/driver-base.ts'
 import { findEntry, getAbsoluteRectangle } from '../screen-layout/screen-layout.ts'
@@ -157,7 +161,12 @@ const getWidgets = (runtime: ScreenRuntime): readonly FrontEndWidget[] => {
     {
       kind: 'viewport',
       itemName: 'platform',
-      driver: { partBytes: getDriverSessionPartBytes(driver) },
+      driver: {
+        partBytes: getDriverSessionPartBytes(driver),
+        position: EDITOR_FIGURE_POSITION,
+        forward: IDENTITY_FIGURE_FORWARD,
+        camera: null,
+      },
     },
   ]
 }
