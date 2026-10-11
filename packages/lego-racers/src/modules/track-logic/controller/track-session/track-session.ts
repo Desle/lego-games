@@ -1,4 +1,10 @@
-import { updateEmitterPool } from '../../../emitter/index.ts'
+import {
+  getHasEmitterDefinition,
+  releaseEmitter,
+  spawnEmitter,
+  updateEmitterPool,
+} from '../../../emitter/index.ts'
+import type { EmitterPlacement } from '../../../emitter/index.ts'
 import type { EmitterPool } from '../../../emitter/index.ts'
 import type { Vector3 } from '../../../event/index.ts'
 import {
@@ -23,6 +29,7 @@ import {
 } from '../../types/track-event-state/track-event-state.ts'
 import type {
   TrackEffect,
+  TrackEmitterHandle,
   TrackEvent,
   TrackLogicContext,
   TrackLogicState,
@@ -372,6 +379,30 @@ export const createTrackSession = (
       )
     )
 
+  // 0x0045eaf0: the common pool answers first when it holds an emitter of this name, else the track's.
+  const spawnEventEmitter = (
+    name: string,
+    placement: EmitterPlacement
+  ): TrackEmitterHandle | null => {
+    const isCommonPool = emitters.common !== null && getHasEmitterDefinition(emitters.common, name)
+    const pool = isCommonPool ? emitters.common : emitters.track
+    if (pool === null || !getHasEmitterDefinition(pool, name)) return null
+    const spawn = spawnEmitter(context.arithmetic, pool, name, placement)
+    emitters = isCommonPool
+      ? { ...emitters, common: spawn.pool }
+      : { ...emitters, track: spawn.pool }
+    return spawn.handleIndex === null ? null : { isCommonPool, handleIndex: spawn.handleIndex }
+  }
+
+  const releaseEventEmitter = (handle: TrackEmitterHandle): void => {
+    const pool = handle.isCommonPool ? emitters.common : emitters.track
+    if (pool === null) return
+    const released = releaseEmitter(pool, handle.handleIndex)
+    emitters = handle.isCommonPool
+      ? { ...emitters, common: released }
+      : { ...emitters, track: released }
+  }
+
   // Emitters_Update 0x00489fa0 for race +0x2150 and then +0x248c; their births draw from the random table.
   const updateEmitterPools = (milliseconds: number): void => {
     const update = (pool: EmitterPool | null): EmitterPool | null => {
@@ -419,6 +450,8 @@ export const createTrackSession = (
         blended: advanceWorldAnimation(worlds.blended, milliseconds),
       }
     },
+    spawnEmitter: spawnEventEmitter,
+    releaseEmitter: releaseEventEmitter,
     updateEmitters: updateEmitterPools,
     updateHazards: (milliseconds) => updateHazards(hazardStore, hazardSession, milliseconds),
     updateHazardsAfterRacers: (cameraPositions) =>

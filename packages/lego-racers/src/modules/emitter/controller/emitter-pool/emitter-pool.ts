@@ -81,6 +81,12 @@ const getDefinitionIndex = (pool: EmitterPool, name: string): number => {
   return index
 }
 
+// 0x00489d50: the pool holds an emitter of this name (the hash lookup 0x004119a0 finds it).
+export const getHasEmitterDefinition = (pool: EmitterPool, name: string): boolean => {
+  const key = getNameKey(name)
+  return pool.list.emitters.some((emitter) => getNameKey(emitter.name) === key)
+}
+
 const getDefinition = (pool: EmitterPool, instance: EmitterInstance): Emitter | null =>
   instance.definitionIndex === null ? null : (pool.list.emitters[instance.definitionIndex] ?? null)
 

@@ -6,6 +6,7 @@ export {
 export {
   createEmitterPool,
   EMITTER_HANDLE_COUNT,
+  getHasEmitterDefinition,
   releaseAllEmitters,
   releaseEmitter,
   releaseEmitterImmediately,

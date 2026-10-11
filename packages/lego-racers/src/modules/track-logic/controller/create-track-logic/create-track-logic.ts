@@ -75,6 +75,7 @@ const createEvent = <Kind extends TrackEvent['kind'], Record extends EventBlockH
   position: ORIGIN,
   chance: BYTE_MASK,
   isHandleHeld: false,
+  emitterHandle: null,
   isSignalHeld: false,
 })
 

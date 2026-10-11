@@ -1,5 +1,10 @@
 import { TrackEventKind, TrackEventState } from '../../types/track-event-state/track-event-state.ts'
-import type { TrackEventHandlers } from '../../types/track-logic.types.ts'
+import type {
+  TrackEmitterHandle,
+  TrackEvent,
+  TrackEventHandlers,
+  TrackSession,
+} from '../../types/track-logic.types.ts'
 import {
   announceAndSet,
   emitAction,
@@ -90,6 +95,20 @@ export const HANDLERS_29: TrackEventHandlers = Object.freeze({
   },
 })
 
+// The emitter 0x0045eaf0 and 0x0045ebe0 start: the name (event +0x28), the position (+0x3c) and the facing and up
+// directions (+0x48, +0x54).
+const getEmitterHandle = (event: TrackEvent, session: TrackSession): TrackEmitterHandle | null => {
+  if (event.kind !== TrackEventKind.KIND_3D) return null
+  const { orientation } = event.record
+  return session.spawnEmitter(event.record.secondName, {
+    position: { x: event.position[0], y: event.position[1], z: event.position[2] },
+    orientation: {
+      facing: { x: orientation[0], y: orientation[1], z: orientation[2] },
+      up: { x: orientation[3], y: orientation[4], z: orientation[5] },
+    },
+  })
+}
+
 // 0x0045eaf0, 0x0045eb90, 0x0045ebe0: a particle emitter that follows an object (the object is not ported).
 export const HANDLERS_3D: TrackEventHandlers = Object.freeze({
   ...IDLE_HANDLERS,
@@ -99,22 +118,20 @@ export const HANDLERS_3D: TrackEventHandlers = Object.freeze({
       parameter !== null && (event.flags & POSITION_FROM_SIGNAL_FLAG) !== 0
         ? { ...event, position: parameter }
         : event
-    const { objectReference } = positioned.record
-    const isEmitterCreated =
-      objectReference !== null && session.context.world.getIsEmitterAvailable(objectReference)
+    const emitterHandle = getEmitterHandle(positioned, session)
     return announceAndSet(
       session,
-      { ...positioned, isHandleHeld: isEmitterCreated || positioned.isHandleHeld },
+      { ...positioned, emitterHandle: emitterHandle ?? positioned.emitterHandle },
       positioned.state,
       FIRST_SIGNAL,
       TrackEventState.RUNNING
     )
   },
   end: (event, session) => {
-    emitAction(session, event, 'end')
+    if (event.emitterHandle !== null) session.releaseEmitter(event.emitterHandle)
     return announceAndSet(
       session,
-      { ...event, isHandleHeld: false },
+      { ...event, emitterHandle: null },
       event.state,
       NO_SIGNAL_PHASE,
       TrackEventState.INACTIVE
@@ -122,13 +139,8 @@ export const HANDLERS_3D: TrackEventHandlers = Object.freeze({
   },
   update: (event, session) => {
     const base = endIfRequested(event, session)
-    if (base.kind !== TrackEventKind.KIND_3D || base.state === TrackEventState.INACTIVE) return base
-    const { objectReference } = base.record
-    const isEmitterCreated =
-      !base.isHandleHeld &&
-      objectReference !== null &&
-      session.context.world.getIsEmitterAvailable(objectReference)
-    return isEmitterCreated ? { ...base, isHandleHeld: true } : base
+    if (base.state === TrackEventState.INACTIVE || base.emitterHandle !== null) return base
+    return { ...base, emitterHandle: getEmitterHandle(base, session) }
   },
 })
 
