@@ -59,3 +59,32 @@ export {
   QUICK_BUILD_SAVE_PATH,
 } from './controller/load-saved-cars/load-saved-cars.ts'
 export type { SavedCar } from './types/save-file.types.ts'
+export {
+  createBuilderSession,
+  getBuilderPlacement,
+  getBuilderPreviewDesign,
+  moveBuilderSession,
+  placeBuilderBrick,
+  raiseBuilderCamera,
+  rotateBuilderSession,
+  selectBuilderPiece,
+  selectBuilderSet,
+  turnBuilderCamera,
+  undoBuilderBrick,
+} from './controller/builder-session/builder-session.ts'
+export { loadBuilderCatalog } from './controller/load-builder-catalog/load-builder-catalog.ts'
+export { serializeCarDesign } from './controller/serialize-car-design/serialize-car-design.ts'
+export {
+  BuilderRefusal,
+  CAMERA_PITCH_COUNT,
+  CAMERA_YAW_COUNT,
+  DIRECTION_X_STEPS,
+  DIRECTION_Y_STEPS,
+} from './types/builder-session/builder-session.ts'
+export type {
+  BuilderCatalog,
+  BuilderCursor,
+  BuilderPlacementResult,
+  BuilderRefusal as BuilderRefusalValue,
+  BuilderSession,
+} from './types/builder-session/builder-session.types.ts'
