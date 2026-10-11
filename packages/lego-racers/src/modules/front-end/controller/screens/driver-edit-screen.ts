@@ -165,6 +165,7 @@ const getWidgets = (runtime: ScreenRuntime): readonly FrontEndWidget[] => {
         partBytes: getDriverSessionPartBytes(driver),
         position: EDITOR_FIGURE_POSITION,
         forward: IDENTITY_FIGURE_FORWARD,
+        animation: null,
       },
     },
   ]

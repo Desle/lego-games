@@ -855,3 +855,7 @@
 0047e0a0 FigureWidget_Constructor
 00480e40 MainMenu_CreateViewports
 0046c480 Viewport_CreateFromItem
+0040dae0 Figure_PlayFrom
+00481450 MainMenu_Update
+0046e970 MenuSound_Play
+00480e10 MainMenu_ResetTimers

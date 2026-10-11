@@ -5,6 +5,7 @@ import {
 } from '../../../../shared/testing/original-files.ts'
 import type { Circuit } from '../../../circuit-database/index.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
+import type { SkeletalAnimation } from '../../../skeletal-animation/index.ts'
 import type { RaceCatalogEntry } from '../../../race-catalog/index.ts'
 import { loadFrontEndResources } from '../../services/load-front-end-resources/load-front-end-resources.ts'
 import { FrontEndScreen } from '../../types/front-end-screen/front-end-screen.ts'
@@ -21,6 +22,23 @@ import {
   getFrontEndRaceRequest,
   stepFrontEnd,
 } from './front-end.ts'
+
+const MENU_FIGURE_CLIP = {
+  name: 'clip',
+  framesPerMillisecond: 0.03,
+  velocity: [0, 0, 0] as const,
+  firstTrackIndex: 0,
+  frameCount: 100,
+  loopLength: 101,
+}
+
+const MENU_FIGURE_ANIMATION: SkeletalAnimation = {
+  positions: [],
+  rotations: [],
+  times: [],
+  tracks: [],
+  clips: [MENU_FIGURE_CLIP, MENU_FIGURE_CLIP, MENU_FIGURE_CLIP],
+}
 
 const getCircuit = (name: string): Circuit => ({
   name,
@@ -79,6 +97,7 @@ const resources: FrontEndResources = {
   getDriverDatabase: () => {
     throw new RangeError('The test has no driver database')
   },
+  getMenuFigureAnimation: () => MENU_FIGURE_ANIMATION,
 }
 
 const environment: FrontEndEnvironment = {
