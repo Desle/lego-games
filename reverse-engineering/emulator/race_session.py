@@ -17,7 +17,7 @@ SLOT_STRIDE = 0x5C
 SLOT_BASE = 0x104
 CONTROL_BASE = 0x348
 CONTROL_STRIDE = 0x28
-DEFAULT_KEY_CODES = (0xCB, 0xCD, 0xC8, 0xD0, 0x1C, 0x9D, 0x32, 0x39, 0xB8)
+DEFAULT_BINDING_TABLE = 0x004B0624
 
 
 def write_text(machine, address: int, text: str, size: int) -> None:
@@ -51,8 +51,8 @@ def fill_settings(machine, scenario: dict) -> None:
         base = SETTINGS + CONTROL_BASE + CONTROL_STRIDE * player
         machine.write_bytes(base, bytes(CONTROL_STRIDE))
         machine.write_bytes(base, bytes([3]))
-        for binding, scan_code in enumerate(DEFAULT_KEY_CODES):
-            machine.write_u32(base + 4 + 4 * binding, 0x10000000 | scan_code)
+        for binding in range(9):
+            machine.write_u32(base + 4 + 4 * binding, machine.read_u32(DEFAULT_BINDING_TABLE + 4 * binding))
 
 
 def begin_race(machine, scenario: dict) -> int:

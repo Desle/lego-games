@@ -42,6 +42,7 @@ export {
 } from './types/vector/vector.ts'
 export type {
   FloatArithmetic,
+  FpuPrecision as FpuPrecisionValue,
   Frame,
   FrameAxes,
   Matrix3,

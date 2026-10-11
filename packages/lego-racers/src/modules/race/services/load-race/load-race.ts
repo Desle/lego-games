@@ -108,7 +108,7 @@ export const loadRaceDefinition = (
   const getIsPresent = (path: string): boolean => paths.has(`GAMEDATA${JAM_SEPARATOR}${path}`)
   const description = parseRaceDescription(readFile(`${folder}.RAB`), isMirrored)
   const tables = readRacerTables(executable)
-  const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
+  const arithmetic = createFloatArithmetic(options.fpuPrecision ?? RACE_FPU_PRECISION)
   const kinds = Array.from({ length: racerCount }, (_, index) =>
     index < Math.max(1, localPlayerCount) ? PLAYER_CONTROLLER : COMPUTER_CONTROLLER
   )
@@ -149,6 +149,7 @@ export const loadRaceDefinition = (
     playerCars: options.playerCars ?? [],
     defaultPlayerCar: DEFAULT_PLAYER_CAR,
     racerCodes,
+    isPlayerChampionCar: options.isPlayerChampionCar ?? false,
   })
   const isMultiplayer = localPlayerCount >= 2
   const racers: readonly RaceRacerDefinition[] = kinds.map((controllerKind, index) => {

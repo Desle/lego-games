@@ -4,6 +4,7 @@ export { IDLE_RACER_CONTROLS, NO_RACE_CONTACTS } from './controller/race-world/r
 export { endRaceFromMenu, stepRace } from './controller/step-race/step-race.ts'
 export { updateRace } from './controller/update-race/update-race.ts'
 export { loadRaceDefinition } from './services/load-race/load-race.ts'
+export { getCircuitRacerCodes } from './services/load-race/load-racers.ts'
 export { runHeadlessRace } from './controller/run-headless-race/run-headless-race.ts'
 export { getLapGapMilliseconds } from './types/lap-gap/lap-gap.ts'
 export { getPlaceholderCarBodyDefinition } from './types/placeholder-car/placeholder-car.ts'

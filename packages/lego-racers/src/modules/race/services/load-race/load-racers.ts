@@ -42,7 +42,7 @@ export const getCircuitRacerCodes = (
 // 0x0043b480 for every racer of the race.
 export const describeRacers = (request: RacerDescriptionRequest): readonly RacerDescription[] =>
   Array.from({ length: request.racerCount }, (_, index) => {
-    if (index < request.localPlayerCount) {
+    if (index < request.localPlayerCount && !request.isPlayerChampionCar) {
       return describeBuiltRacer(
         request.arithmetic,
         request.databases,

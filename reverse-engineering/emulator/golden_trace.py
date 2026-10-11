@@ -14,6 +14,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from unicorn.x86_const import UC_X86_REG_FPCW  # noqa: E402
+
 import boot  # noqa: E402
 import race_session  # noqa: E402
 
@@ -136,7 +138,7 @@ def run_scenario(scenario: dict) -> None:
     trace = TraceRun(machine, race, scenario)
     machine.add_address_hook(race_session.PUMP_MESSAGES, trace.on_pump)
     reason = machine.call_function_until_stop(race_session.RACE_RUN_LOOP, "thiscall", [race])
-    sys.stdout.write(json.dumps({"done": True, "reason": reason, "frames": trace.pump_count}) + "\n")
+    sys.stdout.write(json.dumps({"isDone": True, "reason": reason, "frames": trace.pump_count, "controlWord": machine.uc.reg_read(UC_X86_REG_FPCW)}) + "\n")
     sys.stdout.flush()
 
 
