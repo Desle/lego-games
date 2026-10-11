@@ -49,6 +49,8 @@ export type {
   RaceStepResult,
   ZoneCrossing,
 } from './types/race.types.ts'
+export { NO_MENU_INPUT } from './controller/pause-menu/pause-menu.ts'
+export type { RaceMenuInput } from './types/pause-menu/pause-menu.types.ts'
 export type {
   HeadlessRaceOptions,
   HeadlessRaceReport,

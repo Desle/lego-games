@@ -10,6 +10,7 @@ export { HudFont } from './types/hud-font/hud-font.ts'
 export type {
   HudCommand,
   HudFont as HudFontValue,
+  HudFillCommand,
   HudFrame,
   HudHeldPowerUp,
   HudImageCommand,

@@ -6,17 +6,28 @@ import {
 import type { FrontEndRaceRequest } from '@lego-games/lego-racers/front-end'
 import { advanceFrameClock, createFrameClock } from '@lego-games/lego-racers/frame-clock'
 import {
+  abortSession,
   createGameSession,
   finishRace,
+  getIsFirstRace,
   loadGameResources,
   recordRaceStep,
+  requestCircuitRestart,
+  restartRace,
   startNextRace,
 } from '@lego-games/lego-racers/game-session'
-import type { GameResources, GameSession } from '@lego-games/lego-racers/game-session'
+import type {
+  GameResources,
+  GameSession,
+  RaceStart,
+  SessionEnd,
+} from '@lego-games/lego-racers/game-session'
 import {
   createRace,
   IDLE_RACER_CONTROLS,
   NO_RACE_CONTACTS,
+  PauseMenuMode,
+  RaceExit,
   stepRace,
 } from '@lego-games/lego-racers/race'
 import type { RaceState } from '@lego-games/lego-racers/race'
@@ -25,6 +36,7 @@ import { getRacerControls } from '@lego-games/lego-racers/race-input'
 import {
   createRacePresentation,
   getEffectViews,
+  getPauseMenuCommands,
   getRacerPoses,
   stepRacePresentation,
 } from '@lego-games/lego-racers/race-presentation'
@@ -39,6 +51,7 @@ import { getDevelopmentJam } from '../../services/jam-file/jam-file.ts'
 import { createRaceAudioPlayer } from '../../services/race-audio-player/race-audio-player.ts'
 import { loadRaceAssets } from '../../services/race-assets/race-assets.ts'
 import type { LoadedGameFiles, RaceAssets } from '../../services/race-assets/race-assets.types.ts'
+import { createRaceMenuInputSource } from '../../services/race-menu-input-source/race-menu-input-source.ts'
 import { createRaceInputSource } from '../../services/race-input-source/race-input-source.ts'
 import { createRaceViewport } from '../../services/race-viewport/race-viewport.ts'
 import { RaceStatus } from '../../types/race-status/race-status.ts'
@@ -185,15 +198,10 @@ export const useRaceController = (): RaceController => {
     })
   }, [])
 
-  // RaceSession_Play 0x0042c330: the session says which race is next, or that it is over.
-  const advanceSession = useCallback(
-    (session: GameSession, racerCount: number) => {
+  // The race the session started is loaded and run.
+  const beginRace = useCallback(
+    (next: RaceStart) => {
       if (gameFiles === null) return
-      const next = startNextRace(session)
-      if (next.kind === 'finished') {
-        returnToMenu(next.session, racerCount)
-        return
-      }
       sessionReference.current = next.session
       setScreen({ ...INITIAL_SCREEN, status: RaceStatus.LOADING })
       // Lets the loading state paint before the synchronous load.
@@ -212,9 +220,34 @@ export const useRaceController = (): RaceController => {
         }
       }, 0)
     },
-    [gameFiles, returnToMenu, showFailure]
+    [gameFiles, showFailure]
+  )
+
+  // RaceSession_Play 0x0042c330: the session says which race is next, or that it is over.
+  const advanceSession = useCallback(
+    (session: GameSession, racerCount: number) => {
+      const next = startNextRace(session)
+      if (next.kind === 'finished') returnToMenu(next.session, racerCount)
+      else beginRace(next)
+    },
+    [beginRace, returnToMenu]
   )
   advanceReference.current = advanceSession
+
+  // The pause menu's restart (0x00436160 with 0x004362e0): the same race starts over, or the whole circuit does.
+  const restartReference = useRef<(session: GameSession, raceState: RaceState) => void>(
+    () => undefined
+  )
+  restartReference.current = (session: GameSession, raceState: RaceState) => {
+    const racerCount = raceState.racerSet.racers.length
+    if (session.standings !== null && !getIsFirstRace(session)) {
+      advanceSession(finishRace(requestCircuitRestart(session), raceState), racerCount)
+      return
+    }
+    const restarted: RaceStart | SessionEnd = restartRace(session, raceState)
+    if (restarted.kind === 'race') beginRace(restarted)
+    else returnToMenu(restarted.session, racerCount)
+  }
 
   // The menus chose a race, a circuit or a time trial: the game session plays it.
   const startRace = useCallback(
@@ -238,6 +271,7 @@ export const useRaceController = (): RaceController => {
     if (assets === null || container === null) return undefined
     const viewport = createRaceViewport(container, assets, RACE_STAGE_SIZE)
     const input = createRaceInputSource()
+    const menuInput = createRaceMenuInputSource()
     const audio = createRaceAudioPlayer(assets)
     const hudContext = getHudContext(assets)
     const hudImageUrls = createHudImageUrls(assets.hudImages)
@@ -266,18 +300,19 @@ export const useRaceController = (): RaceController => {
         const controls = getRacerControls(input.read())
         const step = stepRace(
           raceState,
-          { controls: [controls], contacts: NO_RACE_CONTACTS },
+          { controls: [controls], contacts: NO_RACE_CONTACTS, menu: menuInput.read() },
           advance.frameMilliseconds
         )
         raceState = step.raceState
         if (sessionReference.current !== null) {
           sessionReference.current = recordRaceStep(sessionReference.current, step)
         }
+        const isMenuOpen = raceState.pauseMenu.mode !== PauseMenuMode.NONE
         const frame = stepRacePresentation(
           presentation,
           step,
           { ...IDLE_RACER_CONTROLS, ...controls },
-          advance.frameMilliseconds,
+          isMenuOpen ? 0 : advance.frameMilliseconds,
           hudContext
         )
         presentation = frame.presentation
@@ -292,14 +327,26 @@ export const useRaceController = (): RaceController => {
         setScreen((previous) => ({
           ...previous,
           phase: raceState.phase,
-          hudCommands: frame.hudFrame?.commands ?? [],
+          hudCommands: [
+            ...(frame.hudFrame?.commands ?? []),
+            ...getPauseMenuCommands(raceState, hudContext),
+          ],
         }))
         if (!raceState.isRunning && sessionReference.current !== null) {
-          // finishRace and the next turn of the session's loop (Race_RunLoop 0x00432540 ends, PlayCircuit continues).
-          const finished = finishRace(sessionReference.current, raceState)
+          // The loop ended (Race_RunLoop 0x00432540): the pause menu's restart and quit are answered by the session,
+          // anything else finishes the race and PlayCircuit continues.
+          const session = sessionReference.current
           sessionReference.current = null
           cancelAnimationFrame(animationFrame)
-          advanceReference.current(finished, raceState.racerSet.racers.length)
+          if (raceState.exit === RaceExit.RESTART) {
+            restartReference.current(session, raceState)
+          } else {
+            const isQuit = raceState.exit === RaceExit.QUIT
+            const finished = finishRace(isQuit ? abortSession(session) : session, raceState, {
+              isAborted: isQuit,
+            })
+            advanceReference.current(finished, raceState.racerSet.racers.length)
+          }
           return
         }
       }
@@ -310,6 +357,7 @@ export const useRaceController = (): RaceController => {
       cancelAnimationFrame(animationFrame)
       window.removeEventListener('keydown', resumeAudio)
       input.dispose()
+      menuInput.dispose()
       audio.dispose()
       viewport.dispose()
     }

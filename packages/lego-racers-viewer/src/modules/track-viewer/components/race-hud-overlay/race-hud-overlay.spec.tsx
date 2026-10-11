@@ -105,4 +105,28 @@ describe('RaceHudOverlay', () => {
     expect(container).toMatchSnapshot()
     expect(container.querySelectorAll('img')).toHaveLength(2)
   })
+
+  it('renders the pause menu: its dimmer is drawn on the canvas, its lines as accessible text', () => {
+    // Arrange
+    const commands: HudCommand[] = [
+      { kind: 'fill', x: 0, y: 0, width: 800, height: 600, color: 0x40000000 },
+      text({
+        text: 'GAME PAUSED',
+        font: 'text',
+        x: 340,
+        y: 245,
+        scaleX: 1,
+        scaleY: 1,
+        color: null,
+      }),
+    ]
+
+    // Act
+    const { container, getByText } = render(<RaceHudOverlay {...getProps({ commands })} />)
+
+    // Assert
+    expect(container).toMatchSnapshot()
+    expect(getByText('GAME PAUSED')).toBeInTheDocument()
+    expect(container.querySelectorAll('img')).toHaveLength(0)
+  })
 })
