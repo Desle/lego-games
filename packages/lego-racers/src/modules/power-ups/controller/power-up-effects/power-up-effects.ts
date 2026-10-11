@@ -70,6 +70,7 @@ const createIdleEffect = (id: number, kind: PowerUpEffectKindValue): PowerUpEffe
     sparkMilliseconds: 0,
     heldMilliseconds: 0,
     emitterHandleIndex: null,
+    warpDestination: null,
   })
 
 // 0x00457cf0 → 0x00457d30 (pool sizes) and 0x004590f0 (free lists, first object at the head).
@@ -107,9 +108,17 @@ const IMMEDIATE_EMITTER_RELEASE_KINDS: readonly PowerUpEffectKindValue[] = Objec
 ])
 
 // The racer-side calls each class's reset (vtable slot 7) makes.
-const getResetEvents = (effect: PowerUpEffect): readonly PowerUpEvent[] => {
+const getResetEvents = (effect: PowerUpEffect, isStolen: boolean): readonly PowerUpEvent[] => {
   if (effect.kind === PowerUpEffectKind.TURBO && effect.ownerRacer !== null) {
     return [{ type: 'power_ups.racer_turbo_ended', racer: effect.ownerRacer }]
+  }
+  if (effect.kind === PowerUpEffectKind.WARP && effect.ownerRacer !== null) {
+    return [
+      {
+        type: isStolen ? 'power_ups.racer_warp_stolen' : 'power_ups.racer_warp_reset',
+        racer: effect.ownerRacer,
+      },
+    ]
   }
   if (effect.kind === PowerUpEffectKind.WAND && effect.targetRacer !== null) {
     return [{ type: 'power_ups.racer_released_by_lightning', racer: effect.targetRacer }]
@@ -123,7 +132,8 @@ const getResetEvents = (effect: PowerUpEffect): readonly PowerUpEvent[] => {
 // Vtable slot 7 (0x00451ad0, 0x00452970, 0x00452f90, 0x00453e90, 0x00454d10, 0x00455a90, 0x004568a0, 0x00457250, 0x0045c060, 0x0045d360).
 export const resetPowerUpEffect = (
   stepBeforeRelease: PowerUpStep,
-  effectId: number
+  effectId: number,
+  isStolen = false
 ): PowerUpStep => {
   const step = releaseEffectEmitter(
     stepBeforeRelease,
@@ -149,8 +159,9 @@ export const resetPowerUpEffect = (
       targetTrackPoint: null,
       attachmentSlotIndices: Object.freeze([]),
       emitterHandleIndex: null,
+      warpDestination: null,
     }),
-    getResetEvents(effect)
+    getResetEvents(effect, isStolen)
   )
 }
 
@@ -203,7 +214,7 @@ export const takePowerUpEffect = (
     })
   }
   const effectId = getStolenEffectId(step, request)
-  const reset = resetPowerUpEffect(step, effectId)
+  const reset = resetPowerUpEffect(step, effectId, true)
   const effects = reset.world.effects
   const activeEffectIds = effects.activeEffectIds.filter((activeId) => activeId !== effectId)
   return Object.freeze({

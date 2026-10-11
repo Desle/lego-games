@@ -56,6 +56,11 @@ export type PowerUpEvent =
   | { readonly type: 'power_ups.racer_warp_started'; readonly racer: number }
   // 0x0045dc90 state 3: the racer is put down ahead (not ported) and 0x00439660 clears 0x10.
   | { readonly type: 'power_ups.racer_warp_ended'; readonly racer: number }
+  // 0x0045e000 (the warp's reset, slot 7): the vehicle's parts take the scale 1.0 and a negative radius (0x00440160).
+  | { readonly type: 'power_ups.racer_warp_reset'; readonly racer: number }
+  // The same reset when a new warp takes the effect over (0x0045b2e0), which the racers' power-up pass does after the
+  // frame's vehicle update.
+  | { readonly type: 'power_ups.racer_warp_stolen'; readonly racer: number }
   // 0x0043a130: +0xd04 |= 0x100000.
   | { readonly type: 'power_ups.racer_magnetized'; readonly racer: number }
   // 0x0043a1a0.

@@ -40,4 +40,7 @@ export type FlightRacer = {
   // The first axis of a rocket's frame once it has left the car (0x00456db0 state 2 builds it from the owner's
   // rotation and the missile's skeleton; model data the port does not read).
   readonly rocketHeading: Vector3
+  // Racer +0xd08 is 2: a computer's warp is not carried (0x0045d780 needs the flag +0xdc, which 0x0045dc90 sets only for a
+  // human); its scripted body flies the route itself.
+  readonly isComputer: boolean
 }

@@ -1,4 +1,5 @@
 export {
+  activateLauncherWarp,
   activatePowerUp,
   getStepWithRacerTurbosEnded,
 } from './controller/activate-power-up/activate-power-up.ts'
@@ -97,6 +98,7 @@ export type {
   PowerUpBrickPlacement,
   BrickBase,
   PowerUpEffect,
+  WarpDestination,
   PowerUpEffects,
   PowerUpWorld,
   RacerPowerUpAbilities,

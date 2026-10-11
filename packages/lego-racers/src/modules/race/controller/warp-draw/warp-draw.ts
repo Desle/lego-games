@@ -26,13 +26,27 @@ const getStateWithRacer = (
     }),
   })
 
-const getStateAfterWarpDraw = (state: RaceState, effect: PowerUpEffect): RaceState => {
+// Race_Render 0x004354d0 draws a local player's view with the effects' fade (0x0045a8a0) only while that player's racer
+// is not off the track (racer flag 0x10); otherwise it draws the effects without it (0x0045a7b0).
+const WARP_DISABLED_FLAG = 0x10
+
+const getIsFadeDrawn = (state: RaceState): boolean =>
+  state.playerRacerIndices.some((index) => {
+    const racer = state.racerSet.racers[index]
+    return racer !== undefined && (racer.flags & WARP_DISABLED_FLAG) === 0
+  })
+
+const getStateAfterWarpDraw = (
+  state: RaceState,
+  effect: PowerUpEffect,
+  isFadeDrawn: boolean
+): RaceState => {
   const owner = effect.ownerRacer
   if (owner === null) return state
   const { arithmetic, tables } = state.context
   if (effect.state === EffectState.STARTING) {
     // 0x0045dbe0: the fade runs in every racer's warp.
-    if (effect.timerMilliseconds >= FADE_MILLISECONDS) return state
+    if (!isFadeDrawn || effect.timerMilliseconds >= FADE_MILLISECONDS) return state
     const scale = getWarpFadeScale(arithmetic, tables, effect.timerMilliseconds)
     return getStateWithRacer(state, owner, (racer) =>
       getRacerWithPartsMarked(arithmetic, racer, scale)
@@ -47,10 +61,28 @@ const getStateAfterWarpDraw = (state: RaceState, effect: PowerUpEffect): RaceSta
 
 // The draw after Race_Update touches the warping racer's parts; the original does it inside its draw, and the next
 // update and the golden trace see it, so it is part of the frame here.
-export const getStateWithWarpsDrawn = (state: RaceState): RaceState =>
-  state.powerUpStep.world.effects.activeEffectIds.reduce((current, effectId) => {
+export const getStateWithWarpsDrawn = (state: RaceState): RaceState => {
+  const isFadeDrawn = getIsFadeDrawn(state)
+  const marked = state.racerSet.racers.reduce(
+    (current, racer, index) =>
+      racer.vehicle.pendingPartsMarkScale === null
+        ? current
+        : getStateWithRacer(current, index, (candidate) =>
+            getRacerWithPartsMarked(
+              current.context.arithmetic,
+              Object.freeze({
+                ...candidate,
+                vehicle: Object.freeze({ ...candidate.vehicle, pendingPartsMarkScale: null }),
+              }),
+              racer.vehicle.pendingPartsMarkScale ?? 1
+            )
+          ),
+    state
+  )
+  return marked.powerUpStep.world.effects.activeEffectIds.reduce((current, effectId) => {
     const effect = state.powerUpStep.world.effects.effects[effectId]
     return effect === undefined || effect.kind !== PowerUpEffectKind.WARP
       ? current
-      : getStateAfterWarpDraw(current, effect)
-  }, state)
+      : getStateAfterWarpDraw(current, effect, isFadeDrawn)
+  }, marked)
+}
