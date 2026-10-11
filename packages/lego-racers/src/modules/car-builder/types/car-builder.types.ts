@@ -167,12 +167,6 @@ export type BrickSections = {
   readonly footprintPairs: Uint8Array
 }
 
-// The data of a save's blocks and the position after them.
-export type LogicalBytes = {
-  readonly data: Uint8Array
-  readonly end: number
-}
-
 // The triangles of a car, grouped by the material that draws them (an index into the brick material library,
 // `LPieceLo.mdb`), over one vertex list.
 export type CarGeometry = {

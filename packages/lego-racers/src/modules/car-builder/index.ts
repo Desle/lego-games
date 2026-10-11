@@ -33,8 +33,7 @@ export {
   getBrickFaces,
 } from './controller/build-car-geometry/build-car-geometry.ts'
 export { getCarWeight } from './controller/get-car-weight/get-car-weight.ts'
-export { getDriverPartBytes, parseSaveFile } from './controller/parse-save-file/parse-save-file.ts'
-export { SaveFileError } from './types/save-file-error.ts'
+export { getDriverPartBytes } from './controller/get-driver-part-bytes/get-driver-part-bytes.ts'
 export type {
   BrickColor,
   BrickDatabase,
@@ -59,4 +58,4 @@ export {
   loadSavedCars,
   QUICK_BUILD_SAVE_PATH,
 } from './controller/load-saved-cars/load-saved-cars.ts'
-export type { SavedCar, SaveFile, SaveRacerRecord } from './types/save-file.types.ts'
+export type { SavedCar } from './types/save-file.types.ts'

@@ -12,3 +12,8 @@ export type PhaseChange = {
 }
 
 export type RaceWorldChanger = (racerSet: RaceRacerSet) => RaceRacerSet
+
+export type TuneChange = {
+  readonly raceState: RaceState
+  readonly events: readonly RaceEvent[]
+}

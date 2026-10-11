@@ -1,6 +1,6 @@
 import { loadCarDesign } from '../load-car-design/load-car-design.ts'
 import { parseBrickDatabase } from '../parse-brick-database/parse-brick-database.ts'
-import { parseSaveFile } from '../parse-save-file/parse-save-file.ts'
+import { parseSaveFile } from '../../../save-data/index.ts'
 import type { SavedCar } from '../../types/save-file.types.ts'
 
 // The menu data the builder reads (0x0042d730): the brick database and the racer saves.
@@ -17,7 +17,10 @@ export const loadSavedCars = (
   const database = parseBrickDatabase(readFile(BRICK_DATABASE_PATH))
   return Object.freeze(
     parseSaveFile(readFile(savePath)).racers.map((racer) =>
-      Object.freeze({ record: racer, design: loadCarDesign(racer.designBytes, database) })
+      Object.freeze({
+        record: racer,
+        design: loadCarDesign(Uint8Array.from(racer.designBytes), database),
+      })
     )
   )
 }

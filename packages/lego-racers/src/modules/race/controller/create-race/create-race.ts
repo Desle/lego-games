@@ -17,7 +17,7 @@ import type { Racer, RacerSet } from '../../../racer/index.ts'
 import { drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
 import { createTrackLogic } from '../../../track-logic/index.ts'
-import { RacePhase } from '../../types/race-phase/race-phase.ts'
+import { INTRODUCTION_TUNE_INDEX, RacePhase } from '../../types/race-phase/race-phase.ts'
 import type {
   RaceDefinition,
   RaceRacerDefinition,
@@ -167,6 +167,11 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     isMultiplayer,
     isDemonstration,
     isCountdownSkipped: definition.isCountdownSkipped,
+    isPointsRecordPresent: definition.isPointsRecordPresent,
+    ghost: definition.ghost,
+    musicTuneCount: definition.musicTuneCount,
+    tuneIndex: definition.musicTuneCount > 0 ? INTRODUCTION_TUNE_INDEX : null,
+    pauseState: 0,
     unidentifiedCountdownMilliseconds: 0,
     raceModeFlags: definition.raceModeFlags,
     placements: Object.freeze(racers.map(() => 0)),

@@ -1,4 +1,18 @@
+import {
+  FrontEndScreen,
+  getSessionSettings,
+  getStandingRows,
+} from '@lego-games/lego-racers/front-end'
+import type { FrontEndRaceRequest } from '@lego-games/lego-racers/front-end'
 import { advanceFrameClock, createFrameClock } from '@lego-games/lego-racers/frame-clock'
+import {
+  createGameSession,
+  finishRace,
+  loadGameResources,
+  recordRaceStep,
+  startNextRace,
+} from '@lego-games/lego-racers/game-session'
+import type { GameResources, GameSession } from '@lego-games/lego-racers/game-session'
 import {
   createRace,
   IDLE_RACER_CONTROLS,
@@ -43,7 +57,10 @@ const INITIAL_SCREEN: RaceScreen = Object.freeze({
   phase: null,
   hudCommands: [],
   hudImageUrls: new Map(),
+  hudFonts: null,
   lapCount: 0,
+  menuScreenId: FrontEndScreen.MAIN_MENU,
+  standingRows: [],
 })
 
 const getErrorMessage = (error: unknown): string =>
@@ -95,7 +112,7 @@ const getChosenGameFiles = async (files: readonly File[]): Promise<LoadedGameFil
 }
 
 const getHudContext = (assets: RaceAssets): HudContext => {
-  const measureText = createHudTextMeasure()
+  const measureText = createHudTextMeasure(assets.hudFonts)
   const getString = (stringId: number) => assets.getString(stringId)
   const holder = assets.hudImages.get(HOLDER_IMAGE_NAME) ?? FALLBACK_HOLDER_SIZE
   return {
@@ -119,25 +136,24 @@ export const useRaceController = (): RaceController => {
   const containerReference = useRef<HTMLDivElement | null>(null)
   const [screen, setScreen] = useState<RaceScreen>(INITIAL_SCREEN)
   const [assets, setAssets] = useState<RaceAssets | null>(null)
+  const [gameFiles, setGameFiles] = useState<LoadedGameFiles | null>(null)
+  const [gameResources, setGameResources] = useState<GameResources | null>(null)
+  // The session the race that runs belongs to: a circuit's four races, or the one race of a single race.
+  const sessionReference = useRef<GameSession | null>(null)
+  const advanceReference = useRef<(session: GameSession, racerCount: number) => void>(
+    () => undefined
+  )
 
-  const startRace = useCallback((getFiles: () => Promise<LoadedGameFiles>) => {
+  // The game's files are opened first: the front end shows its menus from them, and they stay open for every race.
+  const openGame = useCallback((getFiles: () => Promise<LoadedGameFiles>) => {
     setAssets(null)
     setScreen({ ...INITIAL_SCREEN, status: RaceStatus.LOADING })
     getFiles()
-      // Lets the loading state paint before the synchronous load.
-      .then(({ jam, files }) =>
-        window.setTimeout(() => {
-          try {
-            setAssets(loadRaceAssets(jam, files))
-          } catch (error) {
-            setScreen({
-              ...INITIAL_SCREEN,
-              status: RaceStatus.FAILED,
-              errorMessage: getErrorMessage(error),
-            })
-          }
-        }, 0)
-      )
+      .then((files) => {
+        setGameResources(loadGameResources(files.jam, files.files.executable))
+        setGameFiles(files)
+        setScreen({ ...INITIAL_SCREEN, status: RaceStatus.MENU })
+      })
       .catch((error: unknown) =>
         setScreen({
           ...INITIAL_SCREEN,
@@ -146,6 +162,76 @@ export const useRaceController = (): RaceController => {
         })
       )
   }, [])
+
+  const showFailure = useCallback(
+    (error: unknown) =>
+      setScreen({
+        ...INITIAL_SCREEN,
+        status: RaceStatus.FAILED,
+        errorMessage: getErrorMessage(error),
+      }),
+    []
+  )
+
+  // The session has ended: the menus open on the screen it names (2, the main menu, or a circuit's result screen).
+  const returnToMenu = useCallback((session: GameSession, racerCount: number) => {
+    sessionReference.current = null
+    setAssets(null)
+    setScreen({
+      ...INITIAL_SCREEN,
+      status: RaceStatus.MENU,
+      menuScreenId: session.resultScreen,
+      standingRows: getStandingRows(session, racerCount),
+    })
+  }, [])
+
+  // RaceSession_Play 0x0042c330: the session says which race is next, or that it is over.
+  const advanceSession = useCallback(
+    (session: GameSession, racerCount: number) => {
+      if (gameFiles === null) return
+      const next = startNextRace(session)
+      if (next.kind === 'finished') {
+        returnToMenu(next.session, racerCount)
+        return
+      }
+      sessionReference.current = next.session
+      setScreen({ ...INITIAL_SCREEN, status: RaceStatus.LOADING })
+      // Lets the loading state paint before the synchronous load.
+      window.setTimeout(() => {
+        try {
+          setAssets(
+            loadRaceAssets(
+              gameFiles.jam,
+              gameFiles.files,
+              { raceFolder: next.race.folder },
+              next.definition
+            )
+          )
+        } catch (error) {
+          showFailure(error)
+        }
+      }, 0)
+    },
+    [gameFiles, returnToMenu, showFailure]
+  )
+  advanceReference.current = advanceSession
+
+  // The menus chose a race, a circuit or a time trial: the game session plays it.
+  const startRace = useCallback(
+    (request: FrontEndRaceRequest) => {
+      if (gameResources === null) return
+      try {
+        const session = createGameSession(
+          gameResources,
+          getSessionSettings(gameResources, request, 0)
+        )
+        advanceSession(session, request.racerCount)
+      } catch (error) {
+        showFailure(error)
+      }
+    },
+    [advanceSession, gameResources, showFailure]
+  )
 
   useEffect(() => {
     const container = containerReference.current
@@ -168,6 +254,7 @@ export const useRaceController = (): RaceController => {
       status: RaceStatus.RUNNING,
       phase: raceState.phase,
       hudImageUrls,
+      hudFonts: assets.hudFonts,
       lapCount: raceState.lapCount,
     })
 
@@ -183,6 +270,9 @@ export const useRaceController = (): RaceController => {
           advance.frameMilliseconds
         )
         raceState = step.raceState
+        if (sessionReference.current !== null) {
+          sessionReference.current = recordRaceStep(sessionReference.current, step)
+        }
         const frame = stepRacePresentation(
           presentation,
           step,
@@ -200,6 +290,14 @@ export const useRaceController = (): RaceController => {
           phase: raceState.phase,
           hudCommands: frame.hudFrame?.commands ?? [],
         }))
+        if (!raceState.isRunning && sessionReference.current !== null) {
+          // finishRace and the next turn of the session's loop (Race_RunLoop 0x00432540 ends, PlayCircuit continues).
+          const finished = finishRace(sessionReference.current, raceState)
+          sessionReference.current = null
+          cancelAnimationFrame(animationFrame)
+          advanceReference.current(finished, raceState.racerSet.racers.length)
+          return
+        }
       }
       viewport.render()
     }
@@ -217,14 +315,25 @@ export const useRaceController = (): RaceController => {
     ...screen,
     containerReference,
     isDevelopmentFilesAvailable: import.meta.env.DEV,
+    gameJam: screen.status === RaceStatus.MENU ? (gameFiles?.jam ?? null) : null,
     // A production build replaces DEV with false and drops the development fetches entirely.
-    onDevelopmentRaceRequested: import.meta.env.DEV
-      ? () => startRace(getDevelopmentGameFiles)
+    onDevelopmentGameRequested: import.meta.env.DEV
+      ? () => openGame(getDevelopmentGameFiles)
       : () => undefined,
-    onGameFilesChosen: (files) => startRace(() => getChosenGameFiles(files)),
-    onRaceStopped: () => {
+    onGameFilesChosen: (files) => openGame(() => getChosenGameFiles(files)),
+    onRaceRequested: startRace,
+    onGameClosed: () => {
       setAssets(null)
+      setGameFiles(null)
       setScreen(INITIAL_SCREEN)
+    },
+    onRaceStopped: () => {
+      sessionReference.current = null
+      setAssets(null)
+      setScreen({
+        ...INITIAL_SCREEN,
+        status: gameFiles === null ? RaceStatus.IDLE : RaceStatus.MENU,
+      })
     },
   }
 }

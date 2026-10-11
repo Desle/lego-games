@@ -1,0 +1,43 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`FrontEndStage > renders default snapshot 1`] = `
+<div>
+  <div
+    class="relative"
+    data-testid="front-end-stage"
+    style="width: 800px; height: 600px;"
+  >
+    <canvas
+      aria-label="LEGO Racers menus"
+      class="absolute inset-0"
+      height="480"
+      style="width: 800px; height: 600px; image-rendering: pixelated;"
+      width="640"
+    />
+  </div>
+</div>
+`;
+
+exports[`FrontEndStage > renders the failure message over the stage 1`] = `
+<div>
+  <div
+    class="relative"
+    data-testid="front-end-stage"
+    style="width: 800px; height: 600px;"
+  >
+    <canvas
+      aria-label="LEGO Racers menus"
+      class="absolute inset-0"
+      height="480"
+      style="width: 800px; height: 600px; image-rendering: pixelated;"
+      width="640"
+    />
+    <p
+      class="absolute inset-x-0 top-2 text-center text-sm text-red-400"
+      role="alert"
+    >
+      No MENUDATA
+    </p>
+  </div>
+</div>
+`;

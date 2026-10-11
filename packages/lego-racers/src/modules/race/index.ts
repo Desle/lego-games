@@ -1,7 +1,7 @@
 export { createRace } from './controller/create-race/create-race.ts'
 export { RACE_STEP_DEPENDENCIES } from './controller/race-dependencies/race-dependencies.ts'
 export { IDLE_RACER_CONTROLS, NO_RACE_CONTACTS } from './controller/race-world/race-world.ts'
-export { stepRace } from './controller/step-race/step-race.ts'
+export { endRaceFromMenu, stepRace } from './controller/step-race/step-race.ts'
 export { updateRace } from './controller/update-race/update-race.ts'
 export { loadRaceDefinition } from './services/load-race/load-race.ts'
 export { runHeadlessRace } from './controller/run-headless-race/run-headless-race.ts'
@@ -14,6 +14,8 @@ export {
 export {
   COUNTDOWN_MILLISECONDS,
   FINISHING_MILLISECONDS,
+  GHOST_MENU_MILLISECONDS,
+  GHOST_MENU_PAUSE_STATE,
   INTRODUCTION_MILLISECONDS,
   RACE_PHASE_STATE_NUMBERS,
   RacePhase,

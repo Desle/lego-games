@@ -1,3 +1,4 @@
+import { recordGhostSample } from '../../../ghost/index.ts'
 import { updateTrackLogicFrame } from '../../../track-logic/index.ts'
 import { updatePowerUpsWithProjectiles } from '../../../projectiles/index.ts'
 import type { ProjectileWorld } from '../../../projectiles/index.ts'
@@ -126,12 +127,14 @@ export const updateRace = (
           stepMilliseconds
         )
       )
+  const ghostRacerIndex = counted.playerRacerIndices[0]
+  let ghost = counted.ghost
   const stepped = updateRacePhysics(
     arithmetic,
     controlled.racerSet,
     timeInput,
-    (racerSet, subStepMilliseconds) =>
-      getRaceRacerSetOf(
+    (racerSet, subStepMilliseconds) => {
+      const steppedSet = getRaceRacerSetOf(
         stepRacerSet({
           context: counted.context,
           racerSet,
@@ -139,9 +142,20 @@ export const updateRace = (
           dependencies: RACE_STEP_DEPENDENCIES,
         })
       )
+      const ghostRacer =
+        ghostRacerIndex === undefined ? undefined : steppedSet.racers[ghostRacerIndex]
+      if (ghost !== null && ghostRacer !== undefined) {
+        const { position, rotation } = ghostRacer.carBody.rigidBody.displayFrame
+        ghost = recordGhostSample(arithmetic, ghost, subStepMilliseconds, { position, rotation })
+      }
+      return steppedSet
+    }
   )
-  return getStateWithProgress(Object.freeze({ ...counted, projectileWorld }), {
-    controllers: controlled.controllers,
-    racerSet: stepped,
+  return Object.freeze({
+    ...getStateWithProgress(Object.freeze({ ...counted, projectileWorld }), {
+      controllers: controlled.controllers,
+      racerSet: stepped,
+    }),
+    ghost,
   })
 }
