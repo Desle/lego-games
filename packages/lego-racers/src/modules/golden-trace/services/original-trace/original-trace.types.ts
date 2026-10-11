@@ -5,4 +5,5 @@ export type TraceLine = {
   readonly isDone?: boolean
   readonly controlWord?: number
   readonly introductionCameraLimit?: number
+  readonly introductionCameraRate?: number
 }

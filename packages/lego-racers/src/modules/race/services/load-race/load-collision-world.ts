@@ -1,9 +1,13 @@
 import { loadCollisionObject } from '../../../collision/index.ts'
 import type { CollisionObject } from '../../../collision/index.ts'
 import { getRotationFromFrameAxes } from '../../../simulation-math/index.ts'
-import type { FloatArithmetic } from '../../../simulation-math/index.ts'
+import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 import { readWorld } from '../../../world/index.ts'
 import type { CollisionWorld } from './load-race.types.ts'
+
+// 0x00411040 (BspVolumeInstance_Mirror's second half, from 0x00403f80): the y of the forward axis, the up axis and the
+// position is negated and the rotation is built again from the axes.
+const getMirroredVector = (vector: Vector3): Vector3 => Object.freeze({ ...vector, y: -vector.y })
 
 // The collision world of a race (RAB keyword 0x2b, race +0x3a0, loaded by 0x00432e20): a world file whose BSP volume
 // instances name the .BVB files the cars collide with and place them (position, forward and up axes). The instances
@@ -24,15 +28,14 @@ export const loadCollisionWorld = (
     if (instance.materialAssignmentIndex !== -1) {
       throw new RangeError(`The instance ${instance.name} replaces its material list`)
     }
+    const forward = isMirrored ? getMirroredVector(instance.forward) : instance.forward
+    const up = isMirrored ? getMirroredVector(instance.up) : instance.up
     return loadCollisionObject({
       bytes: readFile(`${volumeName.toUpperCase()}.BVB`),
       isMirrored,
       frame: Object.freeze({
-        rotation: getRotationFromFrameAxes(arithmetic, {
-          first: instance.forward,
-          third: instance.up,
-        }),
-        position: instance.position,
+        rotation: getRotationFromFrameAxes(arithmetic, { first: forward, third: up }),
+        position: isMirrored ? getMirroredVector(instance.position) : instance.position,
       }),
     })
   })

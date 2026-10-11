@@ -83,8 +83,10 @@ export const stepRace = (
     Object.freeze({
       raceState: Object.freeze({
         ...updated.raceState,
-        introductionCameraMilliseconds:
-          updated.raceState.introductionCameraMilliseconds + frameMilliseconds,
+        introductionCameraTime: Math.fround(
+          frameMilliseconds * updated.raceState.introductionCameraRate +
+            updated.raceState.introductionCameraTime
+        ),
       }),
       events: [...keyed.events, ...phased.events, ...updated.events],
     })

@@ -28,6 +28,8 @@ const getScenarioForEmulator = (scenario: GoldenTraceScenario) => ({
   racerCount: scenario.racerCount,
   localPlayerCount: scenario.localPlayerCount,
   randomPosition: scenario.randomPosition,
+  circuit: scenario.circuitName,
+  isMirrored: scenario.isMirrored,
   fpu: scenario.precision,
   frames: scenario.frames.map((frame) => ({ dt: frame.milliseconds, keys: frame.scanCodes })),
 })
@@ -39,7 +41,12 @@ export const readOriginalTrace = async (scenario: GoldenTraceScenario): Promise<
   })
   child.stdin.end(JSON.stringify(getScenarioForEmulator(scenario)))
   const frames: TraceFrame[] = []
-  const progress = { isDone: false, controlWord: 0, introductionCameraLimit: -1 }
+  const progress = {
+    isDone: false,
+    controlWord: 0,
+    introductionCameraLimit: -1,
+    introductionCameraRate: 0.03,
+  }
   const lines = createInterface({ input: child.stdout })
   lines.on('line', (text) => {
     const line = JSON.parse(text) as TraceLine
@@ -47,6 +54,7 @@ export const readOriginalTrace = async (scenario: GoldenTraceScenario): Promise<
       progress.isDone = true
       progress.controlWord = line.controlWord ?? 0
       progress.introductionCameraLimit = line.introductionCameraLimit ?? -1
+      progress.introductionCameraRate = line.introductionCameraRate ?? 0.03
     }
     if (line.frame !== undefined && line.dt !== undefined && line.fields !== undefined) {
       frames.push({ frame: line.frame, milliseconds: line.dt, fields: line.fields })
@@ -62,5 +70,6 @@ export const readOriginalTrace = async (scenario: GoldenTraceScenario): Promise<
     frames,
     controlWord: progress.controlWord,
     introductionCameraLimit: progress.introductionCameraLimit,
+    introductionCameraRate: progress.introductionCameraRate,
   }
 }

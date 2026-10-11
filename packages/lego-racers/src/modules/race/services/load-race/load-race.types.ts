@@ -14,6 +14,7 @@ export type LoadRaceOptions = {
   readonly isPlayerChampionCar?: boolean
   // See RaceDefinition.introductionCameraLimit; the golden trace reads it from the original's camera.
   readonly introductionCameraLimit?: number | null
+  readonly introductionCameraRate?: number
   // The race's folder below GAMEDATA; the first race is RACEC0R0.
   readonly raceFolder?: string
   // Game settings +0x100: racer 0 is the player, the others are computer racers.

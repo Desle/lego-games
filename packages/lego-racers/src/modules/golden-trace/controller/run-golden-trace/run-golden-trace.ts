@@ -39,12 +39,14 @@ export const runGoldenTrace = async (
     racerCount: scenario.racerCount,
     localPlayerCount: scenario.localPlayerCount,
     randomPosition: scenario.randomPosition,
+    isMirrored: scenario.isMirrored,
     fpuPrecision: precision,
     isPlayerChampionCar: true,
     // The emulator has no sound device, so the original starts no music stream and spares the racing tune's draw.
     musicTuneCount: 0,
     introductionCameraLimit:
       original.introductionCameraLimit < 0 ? null : original.introductionCameraLimit,
+    introductionCameraRate: original.introductionCameraRate,
   })
   const port = getPortTrace(scenario, definition)
   const first = original.frames[0]

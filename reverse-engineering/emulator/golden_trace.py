@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from unicorn.x86_const import UC_X86_REG_FPCW  # noqa: E402
 
 import boot  # noqa: E402
+import computer_trace  # noqa: E402
 import race_session  # noqa: E402
 
 APPLICATION_BASE = 0x004C4A38 + 4
@@ -151,6 +152,7 @@ def snapshot_fields(machine, race: int, racer_count: int, local_players: int) ->
         fields[f"racer{index}.display.sphere"] = read_words(machine, display + 0x04, 4)
         fields[f"racer{index}.display.position"] = read_words(machine, display + 0x4C, 3)
         fields[f"racer{index}.display.rotation"] = read_words(machine, display + 0x28, 9)
+    computer_trace.snapshot_computer_fields(machine, fields, racers, race + RACER_SET_OFFSET, racer_count)
     for index in range(local_players):
         controller = race + CONTROLLER_OFFSET + CONTROLLER_STRIDE * index
         for name, offset, count in CONTROLLER_FIELDS:
@@ -202,6 +204,15 @@ class TraceRun:
         self.pump_count += 1
 
 
+def read_introduction_camera_rate(machine, race: int) -> float:
+    """The camera animation's clock rate in ticks per millisecond (skeleton instance +0xb8)."""
+    camera = machine.read_u32(race + 0x2ACC)
+    if camera == 0 or machine.read_u32(race + 0x3AC) == 0:
+        return 0.03
+    animation = machine.read_u32(camera + 0x28)
+    return 0.03 if animation == 0 else machine.read_f32(animation + 0xB8)
+
+
 def read_introduction_camera_limit(machine, race: int) -> int:
     """The length minus one of the introduction camera's animation (Race_UpdateState1 0x004349a0 via 0x0040e360), or -1."""
     camera = machine.read_u32(race + 0x2ACC)
@@ -224,9 +235,10 @@ def run_scenario(scenario: dict) -> None:
     machine.apply_fpu_option()
     trace = TraceRun(machine, race, scenario)
     introduction_limit = read_introduction_camera_limit(machine, race)
+    introduction_rate = read_introduction_camera_rate(machine, race)
     machine.add_address_hook(race_session.PUMP_MESSAGES, trace.on_pump)
     reason = machine.call_function_until_stop(race_session.RACE_RUN_LOOP, "thiscall", [race])
-    sys.stdout.write(json.dumps({"isDone": True, "reason": reason, "frames": trace.pump_count, "controlWord": machine.uc.reg_read(UC_X86_REG_FPCW), "introductionCameraLimit": introduction_limit}) + "\n")
+    sys.stdout.write(json.dumps({"isDone": True, "reason": reason, "frames": trace.pump_count, "controlWord": machine.uc.reg_read(UC_X86_REG_FPCW), "introductionCameraLimit": introduction_limit, "introductionCameraRate": introduction_rate}) + "\n")
     sys.stdout.flush()
 
 
