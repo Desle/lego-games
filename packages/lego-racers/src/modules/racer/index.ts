@@ -37,7 +37,8 @@ export {
   getRacerWithColourShiftOverride,
   stepColourShiftOverride,
   TIMED_EFFECT_COLOUR_SHIFT,
-  TIMED_EFFECT_COLOUR_SHIFT_MILLISECONDS,
+  COPIED_FIGURE_DISTANCE,
+  POWER_UP_EFFECT_FIGURE_DISTANCE,
   WAND_COLOUR_SHIFT,
   WAND_COLOUR_SHIFT_MILLISECONDS,
 } from './types/colour-shift-override/colour-shift-override.ts'

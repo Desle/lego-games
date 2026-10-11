@@ -392,6 +392,9 @@ export type Racer = {
   // Vehicle_Update when the milliseconds are used up. While it is set the models keep the shift 0x00440100 gave
   // them, and 0x004400a0 and 0x004400e0 touch only the stored one.
   readonly isColourShiftOverridden: boolean
+  // Racer +0x29c + 0x84: the level distance bits of the figure the timed effect copies onto the racer. 0x00439900 hands
+  // them on as the override's milliseconds, and stores 0 in every copy.
+  readonly timedEffectFigureDistance: number
   // Vehicle +0x3c8: uint32 milliseconds the override has left.
   readonly colourShiftOverrideMilliseconds: number
   // The shift 0x00440100 put on the models (it is not stored in the vehicle); null before the first override.
