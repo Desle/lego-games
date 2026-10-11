@@ -110,8 +110,8 @@ describe.runIf(isOriginalPresent)('stepRacePresentation on Royal Knights Raceway
   })
 
   it('shows the HUD from the countdown on with the countdown numerals', () => {
-    // Arrange / Act
-    const { frames } = drive(200)
+    // Arrange / Act (the introduction camera's clip holds the state about 230 ms before its 2 s)
+    const { frames } = drive(240)
 
     // Assert
     const numerals = frames.flatMap((frame) =>
