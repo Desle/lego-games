@@ -50,10 +50,17 @@ const RacePanel = ({
         </button>
       )}
       {status === RaceStatus.MENU && (
-        <p className="text-slate-300">
-          Menus: arrow keys or the d-pad move, Enter or button A chooses, Escape or button B goes
-          back.
-        </p>
+        <>
+          <p className="text-slate-300">
+            Menus: arrow keys or the d-pad move, Enter or button A chooses, Escape or button B goes
+            back.
+          </p>
+          <p className="text-slate-400">
+            Car builder: arrows move the brick, R turns it, Enter adds it, U takes the last one off,
+            Page Up / Page Down (or Q / E) change the brick, Insert / Delete (or Z / C) the set, A /
+            D turn the view, S / X raise and lower it. Escape keeps the car for the next race.
+          </p>
+        </>
       )}
       {status === RaceStatus.LOADING && <p className="text-slate-300">Loading...</p>}
       {status === RaceStatus.FAILED && (

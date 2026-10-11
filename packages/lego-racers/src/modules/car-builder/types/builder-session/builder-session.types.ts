@@ -53,3 +53,29 @@ export type BuilderMoveResult = {
   readonly cursor: BuilderCursor
   readonly isMoved: boolean
 }
+
+// The rectangle a brick covers along the grid's x and y once its orientation is applied.
+export type BuilderExtent = {
+  readonly width: number
+  readonly height: number
+}
+
+export type BuilderAnchor = {
+  readonly anchorX: number
+  readonly anchorY: number
+}
+
+export type BuilderTopLeft = {
+  readonly x: number
+  readonly y: number
+}
+
+export type BuilderSessionMove = {
+  readonly session: BuilderSession
+  readonly isMoved: boolean
+}
+
+export type BuilderPlacementCheck = {
+  readonly baseHeight: number
+  readonly refusal: BuilderRefusal | null
+}

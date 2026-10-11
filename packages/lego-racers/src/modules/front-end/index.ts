@@ -8,6 +8,7 @@ export { getRaceLoadOptions } from './controller/race-launch/get-race-load-optio
 export { getSessionSettings } from './controller/race-launch/get-session-settings.ts'
 export { getStandingRows } from './controller/race-launch/get-standing-rows.ts'
 export { loadFrontEndResources } from './services/load-front-end-resources/load-front-end-resources.ts'
+export { getBuilderCamera } from './controller/builder-camera/builder-camera.ts'
 export { getMenuCamera } from './controller/menu-camera/menu-camera.ts'
 export { getMenuWorldPath } from './types/menu-world/menu-world.ts'
 export type { MenuCamera } from './types/menu-world/menu-world.types.ts'
@@ -19,6 +20,7 @@ export {
   IMPLEMENTED_SCREEN_IDS,
 } from './types/front-end-screen/front-end-screen.ts'
 export type {
+  BuilderPreview,
   FrontEndDrawCommand,
   FrontEndEnvironment,
   FrontEndFillCommand,

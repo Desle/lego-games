@@ -1,7 +1,10 @@
 import type { BrickPiece } from '../../types/car-builder.types.ts'
 import type {
+  BuilderAnchor,
   BuilderCursor,
+  BuilderExtent,
   BuilderMoveResult,
+  BuilderTopLeft,
 } from '../../types/builder-session/builder-session.types.ts'
 import { BUILD_GRID_HEIGHT, BUILD_GRID_WIDTH } from '../build-grid/build-grid.ts'
 
@@ -13,10 +16,8 @@ const BOTTOM_RIGHT = 3
 const HALF_WIDTH_CELL = 5
 const HALF_HEIGHT_CELL = 3
 
-type Extent = { readonly width: number; readonly height: number }
-
 // The rectangle's extent along the grid's x and y after the orientation (a quarter turn swaps the footprint's two sides).
-const getExtent = (piece: BrickPiece, orientation: number): Extent =>
+const getBuilderExtent = (piece: BrickPiece, orientation: number): BuilderExtent =>
   (orientation & 1) === 0
     ? { width: piece.footprint.width, height: piece.footprint.height }
     : { width: piece.footprint.height, height: piece.footprint.width }
@@ -25,9 +26,9 @@ const getExtent = (piece: BrickPiece, orientation: number): Extent =>
 const getAnchor = (
   x: number,
   y: number,
-  extent: Extent,
+  extent: BuilderExtent,
   pivotCorner: number
-): { readonly anchorX: number; readonly anchorY: number } => ({
+): BuilderAnchor => ({
   anchorX: pivotCorner === TOP_RIGHT || pivotCorner === BOTTOM_RIGHT ? x + extent.width : x,
   anchorY: pivotCorner === BOTTOM_LEFT || pivotCorner === BOTTOM_RIGHT ? y + extent.height : y,
 })
@@ -36,9 +37,9 @@ const getAnchor = (
 const getTopLeft = (
   anchorX: number,
   anchorY: number,
-  extent: Extent,
+  extent: BuilderExtent,
   pivotCorner: number
-): { readonly x: number; readonly y: number } => ({
+): BuilderTopLeft => ({
   x: pivotCorner === TOP_RIGHT || pivotCorner === BOTTOM_RIGHT ? anchorX - extent.width : anchorX,
   y:
     pivotCorner === BOTTOM_LEFT || pivotCorner === BOTTOM_RIGHT ? anchorY - extent.height : anchorY,
@@ -51,7 +52,7 @@ const getPivotedCursor = (cursor: BuilderCursor): BuilderCursor => {
   const isTop = cursor.anchorY < HALF_HEIGHT_CELL
   const pivotCorner = isLeft ? (isTop ? TOP_LEFT : BOTTOM_LEFT) : isTop ? TOP_RIGHT : BOTTOM_RIGHT
   if (pivotCorner === cursor.pivotCorner) return cursor
-  const extent = getExtent(cursor.piece, cursor.orientation)
+  const extent = getBuilderExtent(cursor.piece, cursor.orientation)
   return Object.freeze({
     ...cursor,
     pivotCorner,
@@ -70,7 +71,7 @@ const getCursorAt = (
     x,
     y,
     orientation,
-    ...getAnchor(x, y, getExtent(cursor.piece, orientation), cursor.pivotCorner),
+    ...getAnchor(x, y, getBuilderExtent(cursor.piece, orientation), cursor.pivotCorner),
   })
 
 // 0x00499890: the cursor takes a brick. A first brick sits in the middle of the grid (turned a quarter when it does not fit
@@ -98,7 +99,7 @@ export const createBuilderCursor = (
       y,
       orientation,
       pivotCorner: TOP_LEFT,
-      ...getAnchor(x, y, getExtent(piece, orientation), TOP_LEFT),
+      ...getAnchor(x, y, getBuilderExtent(piece, orientation), TOP_LEFT),
     })
   }
   const isQuarterTurned = (previous.orientation & 1) !== 0
@@ -106,7 +107,7 @@ export const createBuilderCursor = (
     ? width <= BUILD_GRID_HEIGHT && height <= BUILD_GRID_WIDTH
     : width <= BUILD_GRID_WIDTH && height <= BUILD_GRID_HEIGHT
   const orientation = (previous.orientation + (isFitting ? 0 : 1)) & 3
-  const extent = getExtent(piece, orientation)
+  const extent = getBuilderExtent(piece, orientation)
   const topLeft = getTopLeft(previous.anchorX, previous.anchorY, extent, previous.pivotCorner)
   const x = Math.max(0, Math.min(topLeft.x, BUILD_GRID_WIDTH - extent.width))
   const y = Math.max(0, Math.min(topLeft.y, BUILD_GRID_HEIGHT - extent.height))
@@ -141,7 +142,7 @@ export const getBuilderCursorAtBrick = (
       y,
       orientation: turned,
       pivotCorner: TOP_LEFT,
-      ...getAnchor(x, y, getExtent(piece, turned), TOP_LEFT),
+      ...getAnchor(x, y, getBuilderExtent(piece, turned), TOP_LEFT),
     }),
     piece,
     colorIndex,
@@ -155,7 +156,7 @@ const getSteppedCursor = (
   stepX: number,
   stepY: number
 ): BuilderMoveResult => {
-  const extent = getExtent(cursor.piece, cursor.orientation)
+  const extent = getBuilderExtent(cursor.piece, cursor.orientation)
   const x = cursor.x + stepX
   const y = cursor.y + stepY
   const isInside =
@@ -215,7 +216,7 @@ export const rotateBuilderCursor = (cursor: BuilderCursor): BuilderCursor => {
   const { width, height } = cursor.piece.footprint
   const isFittingTurned = isQuarterTurned ? height < 7 && width < 0xb : width < 7 && height < 0xb
   const orientation = (cursor.orientation + (isFittingTurned ? 1 : 2)) & 3
-  const extent = getExtent(cursor.piece, orientation)
+  const extent = getBuilderExtent(cursor.piece, orientation)
   const topLeft = getTopLeft(cursor.anchorX, cursor.anchorY, extent, cursor.pivotCorner)
   const x = Math.max(0, Math.min(topLeft.x, BUILD_GRID_WIDTH - extent.width))
   const y = Math.max(0, Math.min(topLeft.y, BUILD_GRID_HEIGHT - extent.height))

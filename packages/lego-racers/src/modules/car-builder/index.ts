@@ -78,8 +78,8 @@ export {
   BuilderRefusal,
   CAMERA_PITCH_COUNT,
   CAMERA_YAW_COUNT,
-  DIRECTION_X_STEPS,
-  DIRECTION_Y_STEPS,
+  getDirectionXStep,
+  getDirectionYStep,
 } from './types/builder-session/builder-session.ts'
 export type {
   BuilderCatalog,

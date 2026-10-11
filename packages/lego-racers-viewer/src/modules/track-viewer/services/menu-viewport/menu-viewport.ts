@@ -1,4 +1,8 @@
-import { getMenuCamera, getMenuWorldPath } from '@lego-games/lego-racers/front-end'
+import {
+  getBuilderCamera,
+  getMenuCamera,
+  getMenuWorldPath,
+} from '@lego-games/lego-racers/front-end'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import { loadScene } from '@lego-games/lego-racers/scene'
 import {
@@ -8,17 +12,13 @@ import {
   Vector3,
   WebGLRenderer,
 } from 'three'
+import { createBuilderCarView } from '../builder-car-view/builder-car-view.ts'
+import type { BuilderCarView } from '../builder-car-view/builder-car-view.types.ts'
 import { createSceneObject } from '../scene-object/scene-object.ts'
-import type { SceneObject } from '../scene-object/scene-object.types.ts'
-import type { MenuViewport } from './menu-viewport.types.ts'
+import type { MenuViewport, MenuWorld } from './menu-viewport.types.ts'
 
 // The engine's worlds are Z-up (default instance up (0, 0, 1), GolDP.dll 0x1002cc30).
 const WORLD_UP = new Vector3(0, 0, 1)
-
-type MenuWorld = {
-  readonly three: ThreeScene
-  readonly object: SceneObject
-}
 
 export const createMenuViewport = (archive: JamArchive): MenuViewport => {
   const renderer = new WebGLRenderer({ antialias: true, alpha: true })
@@ -38,7 +38,15 @@ export const createMenuViewport = (archive: JamArchive): MenuViewport => {
       })
       const three = new ThreeScene()
       three.add(object.group)
-      return { three, object }
+      let carView: BuilderCarView | null = null
+      return {
+        three,
+        object,
+        carView: () => {
+          carView ??= createBuilderCarView(archive, three)
+          return carView
+        },
+      }
     } catch {
       return null
     }
@@ -56,7 +64,9 @@ export const createMenuViewport = (archive: JamArchive): MenuViewport => {
     const width = right - left
     const height = bottom - top
     if (world === null || width <= 0 || height <= 0) return false
-    const menuCamera = getMenuCamera(command.camera)
+    if (command.builder !== null) world.carView().show(command.builder)
+    const menuCamera =
+      command.builder === null ? getMenuCamera(command.camera) : getBuilderCamera(command.builder)
     renderer.setSize(width, height, false)
     camera.fov = menuCamera.fieldOfViewDegrees
     camera.aspect = width / height

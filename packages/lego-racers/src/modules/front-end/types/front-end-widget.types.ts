@@ -1,4 +1,5 @@
 import type {
+  BuilderPreview,
   FrontEndRectangle,
   FrontEndResources,
   FrontEndScreenFiles,
@@ -49,6 +50,8 @@ export type FillWidget = {
 export type ViewportWidget = {
   readonly kind: 'viewport'
   readonly itemName: string
+  // The car the builder screen shows in it.
+  readonly builder?: BuilderPreview | null
 }
 
 // A rectangle the screen computed itself (a list row, a chooser).

@@ -11,9 +11,7 @@ const CAR_SET_MANAGER_PATH = `${PIECE_DIRECTORY}\\CRSTMGR.LEB`
 const TEXT_EXTENSION = /\.leg$/i
 
 // 0x0042d730: the front end loads the brick database, the colours and the car sets the builder offers.
-export const loadBuilderCatalog = (
-  readFile: (path: string) => Uint8Array
-): BuilderCatalog => {
+export const loadBuilderCatalog = (readFile: (path: string) => Uint8Array): BuilderCatalog => {
   const database = parseBrickDatabase(readFile(BRICK_DATABASE_PATH))
   const colors = parseBrickColors(readFile(BRICK_COLORS_PATH))
   const sets = parseCarSetFileNames(readFile(CAR_SET_MANAGER_PATH)).map((name) =>

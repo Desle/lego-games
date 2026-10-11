@@ -339,7 +339,10 @@ export const getWidgetCommands = (
       const frameName = getStringValue(getPropertyValues(entry, 0x3a)?.[0])
       const frameEntry = frameName === '' ? null : findEntry(context.files.description, frameName)
       const frame = frameEntry === null ? [] : getFrameCommands(context, frameEntry, rectangle)
-      return [...frame, { kind: 'viewport', modelName: model, rectangle, camera }]
+      return [
+        ...frame,
+        { kind: 'viewport', modelName: model, rectangle, camera, builder: widget.builder ?? null },
+      ]
     }
   }
 }

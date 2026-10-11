@@ -21,24 +21,16 @@ export const CAMERA_YAW_COUNT = 8
 export const CAMERA_PITCH_COUNT = 3
 
 // 0x004c1d78 and 0x004c1e78: for each of the eight views, the (x, y) step of each of the eight directions the numeric
-// keypad names (8 up, 9, 6, 3, 2, 1, 4, 7 starting with index 0 = key 8 clockwise).
-export const DIRECTION_X_STEPS: readonly (readonly number[])[] = Object.freeze([
-  [-1, -1, 0, 1, 1, 1, 0, -1],
-  [-1, -1, -1, 0, 1, 1, 1, 0],
-  [0, -1, -1, -1, 0, 1, 1, 1],
-  [1, 0, -1, -1, -1, 0, 1, 1],
-  [1, 1, 0, -1, -1, -1, 0, 1],
-  [1, 1, 1, 0, -1, -1, -1, 0],
-  [0, 1, 1, 1, 0, -1, -1, -1],
-  [-1, 0, 1, 1, 1, 0, -1, -1],
-])
-export const DIRECTION_Y_STEPS: readonly (readonly number[])[] = Object.freeze([
-  [0, 1, 1, 1, 0, -1, -1, -1],
-  [-1, 0, 1, 1, 1, 0, -1, -1],
-  [-1, -1, 0, 1, 1, 1, 0, -1],
-  [-1, -1, -1, 0, 1, 1, 1, 0],
-  [0, -1, -1, -1, 0, 1, 1, 1],
-  [1, 0, -1, -1, -1, 0, 1, 1],
-  [1, 1, 0, -1, -1, -1, 0, 1],
-  [1, 1, 1, 0, -1, -1, -1, 0],
-])
+// keypad names (index 0 = key 8, then clockwise: 9, 6, 3, 2, 1, 4, 7). Both tables are one ring of eight steps shifted by the
+// view, and the y table is the x table two directions on (every row of the two tables was compared with this rule).
+const DIRECTION_RING: readonly number[] = Object.freeze([-1, -1, 0, 1, 1, 1, 0, -1])
+const DIRECTION_COUNT = 8
+
+const getRingStep = (index: number): number =>
+  DIRECTION_RING[((index % DIRECTION_COUNT) + DIRECTION_COUNT) % DIRECTION_COUNT] ?? 0
+
+export const getDirectionXStep = (view: number, direction: number): number =>
+  getRingStep(direction - view)
+
+export const getDirectionYStep = (view: number, direction: number): number =>
+  getRingStep(direction - view + 2)

@@ -171,11 +171,13 @@ export const loadRaceDefinition = (
       : parseStartPositions(startPositionBytes, isMirrored).startPositions
   const defaultCars = loadSavedCars(archive.readFile, DEFAULT_SAVE_PATH)
   const chosenCars = options.playerCars ?? []
+  const chosenSavedCars = options.playerSavedCars ?? []
+  const drivenCars = chosenSavedCars.length > 0 ? chosenSavedCars : defaultCars
   // A session that chose no car drives the save's racers (the front end loaded at least `default.lrs`).
   const playerCars =
     chosenCars.length > 0
       ? chosenCars
-      : defaultCars.flatMap((saved) => {
+      : drivenCars.flatMap((saved) => {
           const car = getBuiltCar(arithmetic, saved)
           return car === null ? [] : [car]
         })
@@ -226,7 +228,7 @@ export const loadRaceDefinition = (
       appearance,
       figures: racerFigures,
       // A local player's car is the save's racer of its slot (the first when the save has fewer).
-      savedCar: index < localPlayerCount ? (defaultCars[index] ?? defaultCars[0] ?? null) : null,
+      savedCar: index < localPlayerCount ? (drivenCars[index] ?? drivenCars[0] ?? null) : null,
     }
   })
   const sky = loadRaceSky(readArchiveFile, raceDirectory, description)

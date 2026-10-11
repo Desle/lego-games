@@ -6,7 +6,8 @@ import {
 } from '../../types/builder-session/builder-session.ts'
 import type {
   BuilderCatalog,
-  BuilderRefusal as BuilderRefusalValue,
+  BuilderPlacementCheck,
+  BuilderSessionMove,
   BuilderCursor,
   BuilderPlacementResult,
   BuilderSession,
@@ -128,7 +129,7 @@ export const moveBuilderSession = (
   stepX: number,
   stepY: number,
   isDiagonalAtomic: boolean
-): { readonly session: BuilderSession; readonly isMoved: boolean } => {
+): BuilderSessionMove => {
   const result = moveBuilderCursor(session.cursor, stepX, stepY, isDiagonalAtomic)
   return { session: Object.freeze({ ...session, cursor: result.cursor }), isMoved: result.isMoved }
 }
@@ -138,9 +139,7 @@ export const rotateBuilderSession = (session: BuilderSession): BuilderSession =>
   Object.freeze({ ...session, cursor: rotateBuilderCursor(session.cursor) })
 
 // 0x0049a1e0: where the cursor's brick would rest and why it could not.
-export const getBuilderPlacement = (
-  session: BuilderSession
-): { readonly baseHeight: number; readonly refusal: BuilderRefusalValue | null } => {
+export const getBuilderPlacement = (session: BuilderSession): BuilderPlacementCheck => {
   const { cursor, design } = session
   const { footprint } = cursor.piece
   const baseHeight = getRestingHeight(

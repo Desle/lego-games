@@ -1,3 +1,7 @@
+import {
+  getDirectionXStep,
+  getDirectionYStep,
+} from '../../types/builder-session/builder-session.ts'
 import type { BrickPiece } from '../../types/car-builder.types.ts'
 import {
   createBuilderCursor,
@@ -118,5 +122,41 @@ describe('builder cursor (0x00499890 and the moves around it)', () => {
 
     // Assert
     expect(cursor).toMatchObject({ x: 3, y: 1, orientation: 1, colorIndex: 5, setId: 12 })
+  })
+
+  it('steps as the original tables do (0x004c1d78 and 0x004c1e78, read from the executable)', () => {
+    // Arrange
+    const originalX = [
+      [-1, -1, 0, 1, 1, 1, 0, -1],
+      [-1, -1, -1, 0, 1, 1, 1, 0],
+      [0, -1, -1, -1, 0, 1, 1, 1],
+      [1, 0, -1, -1, -1, 0, 1, 1],
+      [1, 1, 0, -1, -1, -1, 0, 1],
+      [1, 1, 1, 0, -1, -1, -1, 0],
+      [0, 1, 1, 1, 0, -1, -1, -1],
+      [-1, 0, 1, 1, 1, 0, -1, -1],
+    ]
+    const originalY = [
+      [0, 1, 1, 1, 0, -1, -1, -1],
+      [-1, 0, 1, 1, 1, 0, -1, -1],
+      [-1, -1, 0, 1, 1, 1, 0, -1],
+      [-1, -1, -1, 0, 1, 1, 1, 0],
+      [0, -1, -1, -1, 0, 1, 1, 1],
+      [1, 0, -1, -1, -1, 0, 1, 1],
+      [1, 1, 0, -1, -1, -1, 0, 1],
+      [1, 1, 1, 0, -1, -1, -1, 0],
+    ]
+
+    // Act
+    const steps = originalX.map((row, view) =>
+      row.map((_, direction) => [
+        getDirectionXStep(view, direction),
+        getDirectionYStep(view, direction),
+      ])
+    )
+
+    // Assert
+    expect(steps.map((row) => row.map(([x]) => x))).toEqual(originalX)
+    expect(steps.map((row) => row.map(([, y]) => y))).toEqual(originalY)
   })
 })

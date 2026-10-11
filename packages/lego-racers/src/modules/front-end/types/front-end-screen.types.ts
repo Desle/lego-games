@@ -1,3 +1,4 @@
+import type { BuilderSession } from '../../car-builder/index.ts'
 import type {
   FrontEndEnvironment,
   FrontEndInput,
@@ -13,6 +14,8 @@ export type ScreenRuntime = {
   readonly environment: FrontEndEnvironment
   readonly settings: FrontEndSettings
   readonly selection: FrontEndSelection
+  // The builder screen's car (null until it opens).
+  readonly builder: BuilderSession | null
   // Milliseconds since the screen opened (the circuit race screen cycles its races on it).
   readonly screenMilliseconds: number
 }
@@ -29,6 +32,7 @@ export type ScreenNavigation =
 export type ScreenResult = {
   readonly selection: FrontEndSelection
   readonly settings: FrontEndSettings
+  readonly builder: BuilderSession | null
   readonly navigation: ScreenNavigation
   // Sounds of MENUDATA\SOUNDS by file name (without `.pcm`); see front-end.md for how they were chosen.
   readonly soundNames: readonly string[]

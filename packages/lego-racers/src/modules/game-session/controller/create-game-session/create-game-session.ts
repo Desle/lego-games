@@ -71,6 +71,7 @@ const getBaseSettings = (
     raceModeFlags: mode === GameMode.SINGLE_RACE ? (request.raceModeFlags ?? 0) : 0,
     isCountdownSkipped: request.isCountdownSkipped ?? false,
     playerCars: Object.freeze(request.playerCars ?? []),
+    playerSavedCars: Object.freeze(request.playerSavedCars ?? []),
     playerNames: Object.freeze(request.playerNames ?? []),
     randomPosition: request.randomPosition ?? 0,
   })
