@@ -21,6 +21,8 @@ import type {
 import {
   addCarBodyImpulse,
   getRacer,
+  getRacerSphere,
+  getRacerVolumeParts,
   getTableCosine,
   setCarBodyPush,
   setRacer,
@@ -86,6 +88,8 @@ export const getRaceRacerSet = (state: RaceState, contacts: RaceContacts): RaceR
     collisionObjectNames: state.collisionObjectNames,
     taggedPositionMilliseconds: state.taggedPositionMilliseconds,
     registryObjects: state.registryObjects,
+    projectileWorld: state.projectileWorld,
+    projectileModelData: state.projectileModelData,
     raceModeFlags: state.raceModeFlags,
     pendingContacts: contacts,
     trackLogic: state.trackLogic,
@@ -273,8 +277,11 @@ const NO_LINE_HIT: LineProbe = () => null
 // (+0x8), +0x9e0 and +0x9ec its velocity direction and speed (+0x5f8, +0x604), +0x550 its heading (+0x168), +0xe08 and
 // +0xe20 the display frame's position and first row, +0xcc4 the checkpoint. Not ported, so fixed: the vehicle
 // object (+0xb2c, absent) and the wand's bend radius (+0x2c, model data, 0).
-export const getFlightRacer = (racer: Racer): FlightRacer => {
+export const getFlightRacer = (context: RacerSetContext, racer: Racer): FlightRacer => {
   const { rigidBody } = racer.carBody
+  // 0x0043fdc0 tests the beam against the sphere of the car body model (vehicle +0x3c, 0x00411510).
+  const sphere =
+    getRacerVolumeParts(context.arithmetic, racer).body ?? getRacerSphere(context, racer)
   const { displayFrame } = rigidBody
   const row = Object.freeze({
     x: displayFrame.rotation[0],
@@ -291,8 +298,8 @@ export const getFlightRacer = (racer: Racer): FlightRacer => {
     speed: rigidBody.speed,
     muzzlePosition: displayFrame.position,
     muzzleDirection: row,
-    boundingCenter: displayFrame.position,
-    boundingRadius: rigidBody.displayBoundingRadius,
+    boundingCenter: sphere.centre,
+    boundingRadius: sphere.radius,
     beamRadius: 0,
     routeNodeIndex: racer.checkpointIndex < 0 ? null : racer.checkpointIndex,
     rocketHeading: row,
@@ -301,24 +308,32 @@ export const getFlightRacer = (racer: Racer): FlightRacer => {
 
 // The line probe 0x0041f730 over the first collision object (the track); the material flag 0x20000 test needs the
 // track-material table of the track, which the race does not carry, so no hit is passed through.
+export const createProjectileContext = (
+  context: RacerSetContext,
+  modelData: RaceState['projectileModelData'],
+  racerSet: RaceRacerSet,
+  powerUps: PowerUpContext
+): ProjectileContext => {
+  const track = context.collisionObjects[racerSet.racers[0]?.collisionObjectIndices[0] ?? 0]
+  return Object.freeze({
+    powerUps,
+    racers: Object.freeze(racerSet.racers.map((racer) => getFlightRacer(context, racer))),
+    route: modelData.routeNodes,
+    rocketLaunchMilliseconds: modelData.rocketLaunchMilliseconds,
+    debrisAnimations: modelData.debrisAnimations,
+    probe:
+      track === undefined
+        ? NO_LINE_HIT
+        : createTrackLineProbe(context.arithmetic, track.volume, () => false),
+  })
+}
+
 export const getProjectileContext = (
   state: RaceState,
   racerSet: RaceRacerSet,
   powerUps: PowerUpContext
-): ProjectileContext => {
-  const track = state.context.collisionObjects[racerSet.racers[0]?.collisionObjectIndices[0] ?? 0]
-  return Object.freeze({
-    powerUps,
-    racers: Object.freeze(racerSet.racers.map(getFlightRacer)),
-    route: state.projectileModelData.routeNodes,
-    rocketLaunchMilliseconds: state.projectileModelData.rocketLaunchMilliseconds,
-    debrisAnimations: state.projectileModelData.debrisAnimations,
-    probe:
-      track === undefined
-        ? NO_LINE_HIT
-        : createTrackLineProbe(state.context.arithmetic, track.volume, () => false),
-  })
-}
+): ProjectileContext =>
+  createProjectileContext(state.context, state.projectileModelData, racerSet, powerUps)
 
 // 0x00439570 makes the racer tumble; the other events call car body slots that are not ported (they stay in the
 // events the race reports).

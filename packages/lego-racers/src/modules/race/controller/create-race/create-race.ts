@@ -5,7 +5,8 @@ import {
 } from '../../../racer-ai/index.ts'
 import { createPowerUpWorld, setBrickSoundsEnabled } from '../../../power-ups/index.ts'
 import { getRaceModeRacerFlags, getRacerPowerUpAbilities } from '../../../racer-setup/index.ts'
-import { createProjectileWorld } from '../../../projectiles/index.ts'
+import { createProjectileWorld, createTrackLineProbe } from '../../../projectiles/index.ts'
+import type { GroundQuery } from '../../../power-ups/index.ts'
 import {
   createCarBody,
   createPlayerController,
@@ -182,7 +183,28 @@ const getFoundIntroductionCameraObject = (
 // Race_LoadRaceDescription 0x00431e00 and Race_LoadTrackContent 0x00433480, as far as the simulation is
 // concerned: the lap count (0x004327f0), the racers (RacerSet_Setup 0x0043b190), the timers' draws and the
 // power-ups (PowerUps_Initialize 0x00457c20), ending in the state Race_RunLoop starts from.
+// The track world's line query 0x0041f4d0 over the track's collision object, as the hazards and the enhancement bricks
+// use it (0x00456360, 0x00439490).
+const groundQueries = new WeakMap<RaceDefinition, GroundQuery | null>()
+
+const getTrackGroundQuery = (definition: RaceDefinition): GroundQuery | null => {
+  if (definition.getGroundPoint !== null) return definition.getGroundPoint
+  const known = groundQueries.get(definition)
+  if (known !== undefined) return known
+  const track = definition.collisionObjects[0]
+  const query =
+    track === undefined
+      ? null
+      : ((): GroundQuery => {
+          const probe = createTrackLineProbe(definition.arithmetic, track.volume, () => false)
+          return (start, end) => probe(start, end)?.point ?? null
+        })()
+  groundQueries.set(definition, query)
+  return query
+}
+
 export const createRace = (definition: RaceDefinition): RaceState => {
+  const getGroundPoint = getTrackGroundQuery(definition)
   const isMultiplayer = definition.localPlayerCount >= 2
   const isDemonstration = definition.localPlayerCount === 0
   const lapCount = isMultiplayer ? definition.multiplayerLapCount : SINGLE_PLAYER_LAP_COUNT
@@ -268,7 +290,13 @@ export const createRace = (definition: RaceDefinition): RaceState => {
   )
   const registryEntries = getRegistryEntries(
     definition.arithmetic,
-    { registryObjects, trackLogic, powerUpStep },
+    {
+      registryObjects,
+      trackLogic,
+      powerUpStep,
+      projectileWorld: createProjectileWorld(powerUpStep),
+      projectileModelData: definition.projectileModelData,
+    },
     []
   )
   return Object.freeze({
@@ -320,7 +348,7 @@ export const createRace = (definition: RaceDefinition): RaceState => {
     ),
     powerUpStep,
     powerUpSetups: Object.freeze(setups.map((made) => made.setup)),
-    getGroundPoint: definition.getGroundPoint,
+    getGroundPoint: getGroundPoint,
     trackTargets: definition.trackTargets,
     surfaces: createSurfaceMaterials(
       definition.trackMaterials,

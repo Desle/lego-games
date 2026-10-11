@@ -24,13 +24,12 @@ const ROYAL_KNIGHTS_RACEWAY = 'RACEC0R0'
 // The unported emitters of power-up objects and projectiles (oil slicks, cannon balls) draw from the random table in
 // the original; the race of each is named in golden-trace.md.
 const OTHER_TRACKS = [
-  { folder: 'RACEC0R1', expected: null },
-  { folder: 'RACEC0R2', expected: { frame: 226, field: 'race.randomPosition' } },
+  { folder: 'RACEC0R1', expected: { frame: 436, field: 'powerUps.registry' } },
+  { folder: 'RACEC0R2', expected: { frame: 278, field: 'racer0.body.forwardSpeed' } },
   { folder: 'RACEC0R3', expected: null },
-  { folder: 'RACEC1R0', expected: { frame: 426, field: 'race.randomPosition' } },
-  { folder: 'RACEC3R0', expected: { frame: 280, field: 'racer1.body.position' } },
+  { folder: 'RACEC1R0', expected: null },
+  { folder: 'RACEC3R0', expected: { frame: 278, field: 'powerUps.registry' } },
 ] as const
-const RANDOM_CURSOR = 'race.randomPosition'
 
 // Where the port first leaves the original in any compared field, or null for a match.
 type ExpectedDivergence = { readonly frame: number; readonly field: string } | null
@@ -76,7 +75,7 @@ const getCases = (): readonly ScenarioCase[] => {
     { scenario: royalKnights('royal-knights-steering', getSteeringSweepFrames()), expected: null },
     {
       scenario: royalKnights('royal-knights-weaving', getWeavingFrames(1200)),
-      expected: { frame: 738, field: RANDOM_CURSOR },
+      expected: { frame: 1208, field: 'powerUps.registry' },
     },
     {
       scenario: royalKnights('royal-knights-frame-times', getFrameTimes()),
@@ -93,7 +92,7 @@ const getCases = (): readonly ScenarioCase[] => {
       scenario: royalKnights('royal-knights-route-driving', [
         ...getRouteDrivingFrames(drivingDefinition, 3000),
       ]),
-      expected: { frame: 775, field: RANDOM_CURSOR },
+      expected: { frame: 1609, field: 'powerUps.registry' },
     },
     {
       scenario: createTraceScenario({

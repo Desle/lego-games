@@ -52,8 +52,14 @@ export type RocketMotion = {
   readonly homing: HomingFlight | null
 }
 
+// The oil slick and the curse (0x004573a0, 0x00452ae0): the ground point under the racer, 1 up, where their sphere sits.
+export type HazardMotion = {
+  readonly kind: 'hazard'
+  readonly position: Vector3
+}
+
 export type EffectMotion =
-  BallisticMotion | GrappleMotion | MagnetMotion | RocketMotion | WandMotion
+  BallisticMotion | GrappleMotion | HazardMotion | MagnetMotion | RocketMotion | WandMotion
 
 // Everything the projectiles keep between frames, beside the power-ups' own state.
 export type ProjectileWorld = {

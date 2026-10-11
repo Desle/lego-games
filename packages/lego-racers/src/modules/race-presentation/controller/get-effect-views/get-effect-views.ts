@@ -61,6 +61,7 @@ const getMotionView = (effect: PowerUpEffect, motion: EffectMotion | null): Effe
     case 'grapple':
       return { kind: effect.kind, position: motion.hook.flight.framePosition, heading: null }
     case 'wand':
+    case 'hazard':
       return null
   }
 }
