@@ -10,6 +10,7 @@
     "./bitmap": "./src/modules/bitmap/index.ts",
     "./bsp-tree": "./src/modules/bsp-tree/index.ts",
     "./bsp-volume": "./src/modules/bsp-volume/index.ts",
+    "./car-builder": "./src/modules/car-builder/index.ts",
     "./champion-database": "./src/modules/champion-database/index.ts",
     "./chassis-database": "./src/modules/chassis-database/index.ts",
     "./checkpoint": "./src/modules/checkpoint/index.ts",

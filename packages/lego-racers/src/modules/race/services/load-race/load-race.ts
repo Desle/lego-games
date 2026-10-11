@@ -21,8 +21,10 @@ import {
   getStartSlot,
 } from '../../../racer-setup/index.ts'
 import type { BuiltCar } from '../../../racer-setup/index.ts'
+import { DEFAULT_SAVE_PATH, getCarWeight, loadSavedCars } from '../../../car-builder/index.ts'
 import { parseRaceDescription } from '../../../race-description/index.ts'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
+import type { FloatArithmetic } from '../../../simulation-math/index.ts'
 import { parseStartPositions } from '../../../start-position/index.ts'
 import { parseTimers } from '../../../timer/index.ts'
 import { parseTriggers, TriggerFileKind } from '../../../trigger/index.ts'
@@ -44,14 +46,6 @@ const JAM_SEPARATOR = '\\'
 const DEFAULT_RACE_FOLDER = 'RACEC0R0'
 const DEFAULT_RACER_COUNT = 6
 const DEFAULT_LAP_COUNT = 3
-// The first chassis of CMB and the first racer of DEFAULT.LRS: a car without bricks. The car builder
-// (0x0049c6a0, not ported) would compute the weight and its centre offsets from the design.
-const DEFAULT_PLAYER_CAR: BuiltCar = Object.freeze({
-  chassisName: 'dachas0',
-  weight: 0,
-  centreOffsetX: 0,
-  centreOffsetY: 0,
-})
 // The scale of the model the figure builder makes for a car built from bricks' driver: the pelvis models of the
 // game's drivers use 1/64 (GDB keyword 0x33). The figure builder (0x0042dfa0) is not ported, so this is a
 // hypothesis for the built driver.
@@ -59,6 +53,25 @@ const BUILT_DRIVER_MODEL_SCALE = 0.015625
 
 // The RAB names the text files (.cpf, .sps); the loaders read the binary twin, whose extension ends in b.
 const getJamFileName = (name: string): string => `${name.slice(0, -1)}b`.toUpperCase()
+
+// 0x0042d730 → 0x0042dcb0: the front end takes each local player's car from its racer save (`default.lrs` when the player
+// has not saved one): the chassis, and the weight and centre offsets of the design on the grid (0x0049c6a0).
+const getDefaultPlayerCars = (
+  readFile: (path: string) => Uint8Array,
+  arithmetic: FloatArithmetic
+): readonly BuiltCar[] =>
+  loadSavedCars(readFile, DEFAULT_SAVE_PATH).flatMap((saved) => {
+    if (saved.design === null) return []
+    const { weight, centreOffsetX, centreOffsetY } = getCarWeight(arithmetic, saved.design)
+    return [
+      Object.freeze({
+        chassisName: saved.record.chassisName,
+        weight,
+        centreOffsetX,
+        centreOffsetY,
+      }),
+    ]
+  })
 
 // Race_LoadAiRoutes 0x00433190: each computer racer draws its route variant from the random table.
 const loadRoutes = (
@@ -143,13 +156,13 @@ export const loadRaceDefinition = (
       : readFile(`${description.firstCollisionObject.toUpperCase()}.BVB`)
   const startPositions =
     startPositionBytes === null ? [] : parseStartPositions(startPositionBytes, false).startPositions
+  const playerCars = options.playerCars ?? getDefaultPlayerCars(archive.readFile, arithmetic)
   const request = {
     arithmetic,
     databases: readRacerDatabases(archive.readFile),
     racerCount,
     localPlayerCount,
-    playerCars: options.playerCars ?? [],
-    defaultPlayerCar: DEFAULT_PLAYER_CAR,
+    playerCars,
     racerCodes,
   }
   const descriptions = describeRacers(request)

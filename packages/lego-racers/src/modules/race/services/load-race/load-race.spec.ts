@@ -123,7 +123,8 @@ describe('loadRaceDefinition', () => {
 
       // Assert
       const [player, king] = definition.racers
-      expect(player?.carBody.rigidBody.mass).toBe(2500)
+      // The chassis's 2,500 and the 214 unit cells of the default car's bricks (car-builder).
+      expect(player?.carBody.rigidBody.mass).toBe(2714)
       expect(king?.carBody.rigidBody.mass).toBe(4500)
       expect(king?.carBody.rigidBody.localCentreOfMass).toEqual({ x: -1, y: 0, z: -1 })
       expect(king?.carBody.steeringScale).toBeCloseTo(0.7 + 60 * 0.003, 6)
