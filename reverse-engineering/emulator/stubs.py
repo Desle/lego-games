@@ -32,6 +32,7 @@ def read_st0(uc) -> tuple:
 @dataclass(frozen=True)
 class StubContext:
     uc: object
+    machine: object = None
 
     def read_st0_exact(self) -> Fraction:
         mantissa, sign_exponent = read_st0(self.uc)

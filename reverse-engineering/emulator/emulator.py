@@ -1,5 +1,6 @@
 """Runs functions of LEGORacers.exe and GolDP.dll in Unicorn (x86, 32-bit) with trapped imports."""
 
+import inspect
 import os
 import struct
 
@@ -29,7 +30,7 @@ FLOAT_RESULT_ADDRESS = STUB_BASE + 0xFD00
 SCRATCH_BASE = 0x20000000
 SCRATCH_SIZE = 0x4000000
 STACK_BASE = 0x30000000
-STACK_SIZE = 0x100000
+STACK_SIZE = 0x1000000
 PRECISION_CONTROL_WORDS = {"single": 0x007F, "double": 0x027F}
 MAXIMUM_INSTRUCTIONS = 5_000_000
 
@@ -52,6 +53,9 @@ class Emulator:
         self.uc.mem_write(REPLACE_SNIPPET, b"\xdd\xd8" + load_result + b"\xc3")
         self.uc.mem_write(POP_SNIPPET, b"\xdd\xd8\xc3")
         self.uc.mem_write(SENTINEL_ADDRESS, b"\xf4")
+        self.handlers = dict(STUB_HANDLERS)
+        self.pending_guest_calls = []
+        self.continuation_address = self.new_stub("continuation")
         self.images = [self.load_image(os.path.join(game_files_directory, name)) for name in IMAGE_FILE_NAMES]
         self.uc.hook_add(UC_HOOK_CODE, self.on_stub_executed, begin=STUB_BASE, end=STUB_BASE + 0xFC00)
 
@@ -60,17 +64,49 @@ class Emulator:
         self.uc.mem_map(image.image_base, align_up(image.image_size))
         for section in image.sections:
             self.uc.mem_write(image.image_base + section.virtual_address, section.raw_data)
-        for index, entry in enumerate(image.imports):
-            stub_address = STUB_BASE + len(self.stub_names) * STUB_SLOT_SIZE
-            self.stub_names[stub_address] = f"{entry.dll_name.lower()}!{entry.function_name}"
-            self.uc.mem_write(entry.table_entry_address, struct.pack("<I", stub_address))
+        for entry in image.imports:
+            self.uc.mem_write(entry.table_entry_address, struct.pack("<I", self.resolve_import(entry)))
         return image
 
+    def resolve_import(self, entry) -> int:
+        return self.new_stub(f"{entry.dll_name.lower()}!{entry.function_name}")
+
+    def new_stub(self, name: str) -> int:
+        stub_address = STUB_BASE + len(self.stub_names) * STUB_SLOT_SIZE
+        if stub_address >= STUB_BASE + 0xFC00:
+            raise MemoryError("stub table exhausted")
+        self.stub_names[stub_address] = name
+        return stub_address
+
+    def make_stub_context(self) -> StubContext:
+        return StubContext(self.uc)
+
+    def advance_guest_call(self, result):
+        """Steps the innermost generator stub: it yields (address, arguments) to call guest code, and returns the stub's result."""
+        uc = self.uc
+        pending = self.pending_guest_calls[-1]
+        generator, esp, return_address, cleanup = pending
+        try:
+            address, arguments = generator.send(result)
+        except StopIteration as finished:
+            self.pending_guest_calls.pop()
+            uc.reg_write(UC_X86_REG_EAX, (finished.value or 0) & 0xFFFFFFFF)
+            uc.reg_write(UC_X86_REG_ESP, esp + 4 + cleanup)
+            uc.reg_write(UC_X86_REG_EIP, return_address)
+            return
+        frame = esp - 4 * len(arguments) - 4
+        uc.mem_write(frame, struct.pack(f"<{len(arguments) + 1}I", self.continuation_address, *[a & 0xFFFFFFFF for a in arguments]))
+        uc.reg_write(UC_X86_REG_ESP, frame)
+        uc.reg_write(UC_X86_REG_EIP, address)
+
     def on_stub_executed(self, uc, address, size, user_data):
+        if address == self.continuation_address:
+            self.advance_guest_call(uc.reg_read(UC_X86_REG_EAX))
+            return
         name = self.stub_names.get(address)
         if name is None:
             return
-        handler = STUB_HANDLERS.get(name.split("!", 1)[1])
+        handler = self.handlers.get(name.split("!", 1)[1])
         if handler is None:
             self.pending_error = UnstubbedImportError(f"unstubbed import {name}")
             uc.emu_stop()
@@ -81,7 +117,11 @@ class Emulator:
         def read_argument(index: int) -> int:
             return struct.unpack("<I", uc.mem_read(esp + 4 + index * 4, 4))[0]
 
-        result = handler(StubContext(uc), read_argument)
+        result = handler(self.make_stub_context(), read_argument)
+        if inspect.isgenerator(result):
+            self.pending_guest_calls.append([result, esp, return_address, getattr(handler, "callee_cleanup_bytes", 0)])
+            self.advance_guest_call(None)
+            return
         new_esp = esp + 4 + result.callee_cleanup_bytes
         uc.reg_write(UC_X86_REG_EAX, result.integer & 0xFFFFFFFF)
         uc.reg_write(UC_X86_REG_EDX, result.high_integer & 0xFFFFFFFF)
