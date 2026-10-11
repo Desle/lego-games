@@ -14,6 +14,7 @@
     "./chassis-database": "./src/modules/chassis-database/index.ts",
     "./checkpoint": "./src/modules/checkpoint/index.ts",
     "./circuit-database": "./src/modules/circuit-database/index.ts",
+    "./circuit-standings": "./src/modules/circuit-standings/index.ts",
     "./collision": "./src/modules/collision/index.ts",
     "./computer-racer-route": "./src/modules/computer-racer-route/index.ts",
     "./driver-database": "./src/modules/driver-database/index.ts",
