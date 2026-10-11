@@ -634,3 +634,6 @@
 0042b330 SaveRacer_GetFigureParts
 00442910 SaveFile_ReadRecordBlocks
 004429d0 SaveFile_GetBlockChecksum
+00498740 BodyPartCatalog_Load
+00407690 BuilderGeometry_Load
+0049dab0 DriverModel_Build
