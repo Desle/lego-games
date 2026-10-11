@@ -19,6 +19,14 @@ export type PresentationScenario = {
   readonly isRenderRecorded: boolean
 }
 
+// A scripted visit to the front end: the keys of each frame are tapped (pressed and released within it).
+export type FrontEndScenario = {
+  readonly name: string
+  readonly frames: readonly PresentationFrameInput[]
+  readonly recordFrames: readonly number[] | null
+  readonly isRenderRecorded: boolean
+}
+
 // DDPIXELFORMAT masks of a texture surface (red, green, blue, alpha) and its raw rows.
 export type OriginalTexture = {
   readonly hash: string

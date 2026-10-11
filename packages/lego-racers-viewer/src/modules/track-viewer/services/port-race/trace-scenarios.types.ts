@@ -12,3 +12,9 @@ export type TraceScenarioRequest = {
 export type AudioTraceCase = TraceScenarioRequest & {
   readonly gapSoundIds: readonly number[]
 }
+
+// A scripted visit to the menus: the keys tapped one after the other once the main menu shows.
+export type FrontEndAudioCase = {
+  readonly name: string
+  readonly scanCodes: readonly number[]
+}

@@ -55,7 +55,7 @@ class AudioRecorder:
         machine.add_address_hook(MUSIC_LIST_OPEN, self.on_music_open)
         machine.add_address_hook(SOUND_LOAD, self.on_sound_load)
         machine.add_address_hook(STREAM_PLAY, self.on_stream_play)
-        machine.add_address_hook(STREAM_STOP, lambda: self.add({"kind": "streamStop", "stream": self.stream_name()}))
+        machine.add_address_hook(STREAM_STOP, lambda: self.add({"kind": "streamStop", "from": self.caller(), "stream": self.stream_name()}))
         machine.add_address_hook(STREAM_VOLUME, self.on_stream_volume)
 
     # Frames ---------------------------------------------------------------------------------------------------------
@@ -103,13 +103,13 @@ class AudioRecorder:
         index = self.argument(0)
         names = self.machine.read_u32(list_object + MUSIC_NAME_TABLE_OFFSET)
         name = self.machine.read_c_string(names + index * MUSIC_NAME_STRIDE) if names else ""
-        self.add({"kind": "musicOpen", "index": index, "name": name})
+        self.add({"kind": "musicOpen", "from": self.caller(), "index": index, "name": name})
 
     def stream_name(self) -> str:
         return self.machine.read_c_string(self.this() + STREAM_NAME_OFFSET)
 
     def on_stream_play(self) -> None:
-        self.add({"kind": "streamPlay", "stream": self.stream_name(), "isLooping": self.argument(0) != 0})
+        self.add({"kind": "streamPlay", "from": self.caller(), "stream": self.stream_name(), "isLooping": self.argument(0) != 0})
 
     def on_stream_volume(self) -> None:
         self.add({"kind": "streamVolume", "stream": self.stream_name(), "volume": struct.unpack("<f", struct.pack("<I", self.argument(0)))[0]})

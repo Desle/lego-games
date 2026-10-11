@@ -17,6 +17,7 @@ import type {
   OriginalTexture,
   OriginalVertex,
   OriginalViewport,
+  FrontEndScenario,
   PresentationScenario,
 } from '../../types/presentation-trace.types.ts'
 import type {
@@ -29,6 +30,7 @@ import type {
 } from './original-presentation.types.ts'
 
 const TRACE_SCRIPT_PATH = resolve(EMULATOR_DIRECTORY, 'presentation_trace.py')
+const FRONT_END_SCRIPT_PATH = resolve(EMULATOR_DIRECTORY, 'front_end_trace.py')
 const VERTEX_BYTES = 32
 const VERTEX_FLOAT_OFFSETS = [0, 4, 8, 12, 24, 28] as const
 
@@ -126,13 +128,27 @@ const getAudioFrame = (line: AudioFrameLine): OriginalAudioFrame =>
 
 // Runs the original race in the emulator (reverse-engineering/emulator/presentation_trace.py) and collects what it
 // draws and plays: the textures it uploaded, the Direct3D draws of the recorded frames and the DirectSound calls.
-export const readOriginalPresentation = async (
+export const readOriginalPresentation = (
   scenario: PresentationScenario
+): Promise<OriginalPresentation> =>
+  readTraceScript(TRACE_SCRIPT_PATH, getScenarioForEmulator(scenario))
+
+// The same for the front end (reverse-engineering/emulator/front_end_trace.py): the scenario's keys are taps.
+export const readOriginalFrontEnd = (scenario: FrontEndScenario): Promise<OriginalPresentation> =>
+  readTraceScript(FRONT_END_SCRIPT_PATH, {
+    recordFrames: scenario.recordFrames,
+    isRenderRecorded: scenario.isRenderRecorded,
+    frames: scenario.frames.map((frame) => ({ dt: frame.milliseconds, keys: frame.scanCodes })),
+  })
+
+const readTraceScript = async (
+  scriptPath: string,
+  scenario: object
 ): Promise<OriginalPresentation> => {
-  const child = spawn(EMULATOR_PYTHON_PATH, ['-I', TRACE_SCRIPT_PATH], {
+  const child = spawn(EMULATOR_PYTHON_PATH, ['-I', scriptPath], {
     stdio: ['pipe', 'pipe', 'inherit'],
   })
-  child.stdin.end(JSON.stringify(getScenarioForEmulator(scenario)))
+  child.stdin.end(JSON.stringify(scenario))
   const textures = new Map<string, OriginalTexture>()
   const renderFrames: OriginalRenderFrame[] = []
   const audioFrames: OriginalAudioFrame[] = []

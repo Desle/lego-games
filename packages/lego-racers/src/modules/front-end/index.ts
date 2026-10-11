@@ -4,6 +4,7 @@ export {
   getFrontEndRaceRequest,
   stepFrontEnd,
 } from './controller/front-end/front-end.ts'
+export { getFrontEndMusicIndex } from './controller/front-end-music/front-end-music.ts'
 export { getRaceLoadOptions } from './controller/race-launch/get-race-load-options.ts'
 export { getSessionSettings } from './controller/race-launch/get-session-settings.ts'
 export { getStandingRows } from './controller/race-launch/get-standing-rows.ts'

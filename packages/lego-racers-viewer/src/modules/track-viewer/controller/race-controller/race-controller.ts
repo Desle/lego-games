@@ -310,6 +310,7 @@ export const useRaceController = (): RaceController => {
     containerReference,
     isDevelopmentFilesAvailable: import.meta.env.DEV,
     gameJam: screen.status === RaceStatus.MENU ? (gameFiles?.jam ?? null) : null,
+    readTune: screen.status === RaceStatus.MENU ? (gameFiles?.readTune ?? null) : null,
     // A production build replaces DEV with false and drops the development fetches entirely.
     onDevelopmentGameRequested: import.meta.env.DEV
       ? () => openGame(getDevelopmentGameFiles)

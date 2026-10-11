@@ -10,6 +10,7 @@ export { matchTextures } from './controller/render-trace/texture-matching.ts'
 export type { TextureMatch } from './controller/render-trace/texture-matching.types.ts'
 export {
   getIsOriginalPresentationAvailable,
+  readOriginalFrontEnd,
   readOriginalPresentation,
 } from './services/original-presentation/original-presentation.ts'
 export type {
@@ -47,6 +48,7 @@ export type {
   OriginalTexture,
   OriginalVertex,
   OriginalViewport,
+  FrontEndScenario,
   PresentationFrameInput,
   PresentationScenario,
 } from './types/presentation-trace.types.ts'
