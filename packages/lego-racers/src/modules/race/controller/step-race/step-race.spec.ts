@@ -183,4 +183,84 @@ describe('stepRace', () => {
     expect(ended.raceState.isRunning).toBe(false)
     expect(ended.events).toEqual([{ type: 'race.ended' }])
   })
+
+  it('starts the introduction tune and, outside a circuit, picks the racing tune with the random table', () => {
+    // Arrange
+    const musicRace = createRace({ ...createFixtureDefinition(), musicTuneCount: 7 })
+    const countdown = stepRace(musicRace, IDLE_INPUTS, INTRODUCTION_MILLISECONDS)
+
+    // Act
+    const step = stepRace(countdown.raceState, IDLE_INPUTS, COUNTDOWN_MILLISECONDS)
+
+    // Assert
+    const before = countdown.raceState.racerSet.randomPosition
+    const tuneEvents = step.events.filter((event) => event.type === 'race.tune_changed')
+    expect(musicRace.tuneIndex).toBe(0)
+    expect(tuneEvents).toHaveLength(1)
+    expect(step.raceState.racerSet.randomPosition).not.toBe(before)
+    expect([1, 4, 5, 6]).toContain(step.raceState.tuneIndex)
+  })
+
+  it('keeps tune 1 and draws nothing for a circuit race or a short music list', () => {
+    // Arrange
+    const circuit = createRace({
+      ...createFixtureDefinition(),
+      musicTuneCount: 7,
+      isPointsRecordPresent: true,
+    })
+    const shortList = createRace({ ...createFixtureDefinition(), musicTuneCount: 4 })
+    const getRacingStep = (race: RaceState) =>
+      stepRace(
+        stepRace(race, IDLE_INPUTS, INTRODUCTION_MILLISECONDS).raceState,
+        IDLE_INPUTS,
+        COUNTDOWN_MILLISECONDS
+      )
+
+    // Act
+    const circuitStep = getRacingStep(circuit)
+    const shortStep = getRacingStep(shortList)
+
+    // Assert
+    expect(circuitStep.raceState.tuneIndex).toBe(1)
+    expect(shortStep.raceState.tuneIndex).toBe(1)
+    expect(circuitStep.raceState.racerSet.randomPosition).toBe(
+      shortStep.raceState.racerSet.randomPosition
+    )
+  })
+
+  it('plays the winning tune for a human who finishes first and the losing tune otherwise', () => {
+    // Arrange
+    const racing = stepUntil(
+      createRace({ ...createFixtureDefinition(), musicTuneCount: 4 }),
+      RacePhase.RACING
+    )
+    const first = withLaps(racing, PLAYER, FINISHED_LAPS)
+    const computerFirst = stepRace(withLaps(racing, COMPUTER, FINISHED_LAPS), IDLE_INPUTS, 33)
+    const second = withLaps(computerFirst.raceState, PLAYER, FINISHED_LAPS)
+
+    // Act
+    const firstStep = stepRace(first, IDLE_INPUTS, 33)
+    const secondStep = stepRace(second, IDLE_INPUTS, 33)
+
+    // Assert
+    expect(firstStep.raceState.tuneIndex).toBe(3)
+    expect(secondStep.raceState.tuneIndex).toBe(2)
+  })
+
+  it('plays no music without a music list', () => {
+    // Arrange
+    const state = createFixtureRace()
+
+    // Act
+    const step = stepRace(
+      stepRace(state, IDLE_INPUTS, INTRODUCTION_MILLISECONDS).raceState,
+      IDLE_INPUTS,
+      COUNTDOWN_MILLISECONDS
+    )
+
+    // Assert
+    expect(state.tuneIndex).toBeNull()
+    expect(step.raceState.tuneIndex).toBeNull()
+    expect(step.events.some((event) => event.type === 'race.tune_changed')).toBe(false)
+  })
 })

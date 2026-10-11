@@ -167,7 +167,9 @@ export const recordRaceStep = (session: GameSession, step: RaceStepResult): Game
 
 const getTimesWithRecord = (session: GameSession, raceState: RaceState) =>
   session.raceTimes.map((record, slot) =>
-    slot === session.raceIndex ? recordRaceTimes(record, raceState) : record
+    slot === session.raceIndex
+      ? recordRaceTimes(record, raceState.racerSet.racers, raceState.playerRacerIndices)
+      : record
   )
 
 // The end of Race_RunLoop 0x00432540 and of one turn of PlayCircuit: the times go into the slot's record, a race

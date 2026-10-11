@@ -1,5 +1,5 @@
-import type { RaceState } from '../../../race/index.ts'
 import type { RaceTimeRecord } from '../../types/game-session.types.ts'
+import type { TimedRacer } from './race-times.types.ts'
 
 const NO_TIME = 0xffffffff
 
@@ -7,12 +7,16 @@ const NO_TIME = 0xffffffff
 // their laps, the fastest single lap and the lowest total are folded into the slot's record. A time replaces the
 // stored one when none is stored or it is not larger. Both records name the racer with the fastest lap (`local_c`),
 // as the original does, not the racer with the lowest total.
-export const recordRaceTimes = (record: RaceTimeRecord, raceState: RaceState): RaceTimeRecord => {
+export const recordRaceTimes = (
+  record: RaceTimeRecord,
+  racers: readonly TimedRacer[],
+  humanRacerIndices: readonly number[]
+): RaceTimeRecord => {
   let bestLap = NO_TIME
   let bestLapRacerIndex = 0
   let bestRace = NO_TIME
-  raceState.playerRacerIndices.forEach((racerIndex) => {
-    const racer = raceState.racerSet.racers[racerIndex]
+  humanRacerIndices.forEach((racerIndex) => {
+    const racer = racers[racerIndex]
     if (racer === undefined || racer.lapCount > racer.currentLap) return
     const laps = racer.lapMilliseconds.slice(0, racer.lapCount)
     laps.forEach((milliseconds) => {
