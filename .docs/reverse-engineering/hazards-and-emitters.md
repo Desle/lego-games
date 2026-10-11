@@ -58,7 +58,7 @@ Effects named `hazard.power_up_activated` carry the power-up system activation t
 
 ## What the hazards do to racers
 
-Only through those effects and the registry. The hazards `0x2b`, `0x2c`, `0x2e` and `0x48` have a registry callback (vtable `+0`); the collision registry's overlap tests are not ported, so `touchHazard` is an input the caller must deliver and no race delivers it yet. The collision object toggles (`pilcol`, `sphinx`, `mmrocc`, door) are reported as `hazard.collision_object_changed`; the track's collision list holds only `COLLIDE.BVB`, so they change nothing yet.
+Only through those effects and the registry. The hazards `0x2b`, `0x2c`, `0x2e` and `0x48` have a registry callback (vtable `+0`); `collideRacers` now runs the registry's overlap tests (race-contacts.md) but only for triggers and bricks: hazards are not registered, so `touchHazard` is still an input the caller must deliver and no race delivers it. **Open** (not a small step): each hazard's registration in `Race_LoadTrackContent` (its order in the list, flags, and the sphere its vtable gives) is not traced; once it is, add a `hazard` registry object beside `main_trigger` in `registry-objects.ts` and answer it in `answerRegistryContacts` with `touchHazard`. The collision object toggles (`pilcol`, `sphinx`, `mmrocc`, door) are reported as `hazard.collision_object_changed`; the track's collision list holds only `COLLIDE.BVB`, so they change nothing yet.
 
 ## Sky (`Sky_Update` `0x0041ccb0`)
 
