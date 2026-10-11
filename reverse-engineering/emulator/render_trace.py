@@ -16,6 +16,8 @@ DEVICE_MODEL_OFFSET = 0xC8518
 DEVICE_SCALE_OFFSET = 0xC8400
 # Slots FUN_10012f50 fills with the transform variant (+0xc8764) and the culling draw (+0xc8768).
 DEVICE_TRANSFORM_OFFSET = 0xC8764
+# Transform variants whose matrix is clip-style: the pixel is x/w * scale + offset (device +0xc8400), applied after the divide.
+SCALED_TRANSFORMS = (0x1000C630, 0x1000CAF0, 0x1000CD20)
 # The per-variant draw functions of GolDP.dll (FUN_10012f50 selects one); each is entered with the Gol device in ecx.
 DRAW_FUNCTION_ADDRESSES = (0x1000EBD0, 0x1000ECE0, 0x1000EDF0, 0x10010330, 0x10010500, 0x100106D0, 0x1000EB90)
 VERTEX_STRIDE = 32
@@ -164,7 +166,14 @@ class RenderRecorder:
         if matrix_pointer:
             result["clip"] = list(struct.unpack("<16f", read(matrix_pointer, 64)))
         if model_pointer:
-            result["model"] = list(struct.unpack("<16f", read(model_pointer, 64)))
+            matrix = list(struct.unpack("<16f", read(model_pointer, 64)))
+            if result["transform"] in SCALED_TRANSFORMS:
+                scale_x, scale_y, offset_x, offset_y = result["scale"]
+                for row in range(4):
+                    x, y, w = matrix[4 * row], matrix[4 * row + 1], matrix[4 * row + 3]
+                    matrix[4 * row] = x * scale_x + w * offset_x
+                    matrix[4 * row + 1] = y * scale_y + w * offset_y
+            result["model"] = matrix
         return result
 
     def record_draw(self, indexed: bool, argument) -> None:

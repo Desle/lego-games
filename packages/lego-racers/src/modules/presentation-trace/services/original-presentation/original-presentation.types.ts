@@ -46,8 +46,7 @@ export type AudioFrameLine = {
 }
 
 export type DoneLine = {
-  readonly introductionCameraLimit: number
-  readonly introductionCameraRate: number
+  readonly frames: number
 }
 
 // A line of the emulator's output.

@@ -91,6 +91,4 @@ export type OriginalPresentation = {
   readonly textures: ReadonlyMap<string, OriginalTexture>
   readonly renderFrames: readonly OriginalRenderFrame[]
   readonly audioFrames: readonly OriginalAudioFrame[]
-  readonly introductionCameraLimit: number
-  readonly introductionCameraRate: number
 }

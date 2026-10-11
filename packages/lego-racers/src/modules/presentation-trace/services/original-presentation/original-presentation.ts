@@ -31,7 +31,6 @@ import type {
 const TRACE_SCRIPT_PATH = resolve(EMULATOR_DIRECTORY, 'presentation_trace.py')
 const VERTEX_BYTES = 32
 const VERTEX_FLOAT_OFFSETS = [0, 4, 8, 12, 24, 28] as const
-const DEFAULT_INTRODUCTION_CAMERA_RATE = 0.03
 
 export const getIsOriginalPresentationAvailable = (): boolean =>
   existsSync(EMULATOR_PYTHON_PATH) &&
@@ -139,8 +138,6 @@ export const readOriginalPresentation = async (
   const audioFrames: OriginalAudioFrame[] = []
   const progress = {
     isDone: false,
-    introductionCameraLimit: -1,
-    introductionCameraRate: DEFAULT_INTRODUCTION_CAMERA_RATE,
   }
   const lines = createInterface({ input: child.stdout })
   lines.on('line', (text) => {
@@ -154,8 +151,6 @@ export const readOriginalPresentation = async (
       audioFrames.push(getAudioFrame(line))
     } else {
       progress.isDone = true
-      progress.introductionCameraLimit = line.introductionCameraLimit
-      progress.introductionCameraRate = line.introductionCameraRate
     }
   })
   // 'close' comes after the output is read to its end.
@@ -169,7 +164,5 @@ export const readOriginalPresentation = async (
     textures,
     renderFrames,
     audioFrames,
-    introductionCameraLimit: progress.introductionCameraLimit,
-    introductionCameraRate: progress.introductionCameraRate,
   })
 }

@@ -61,12 +61,25 @@ const getVertexPairing = (original: ScreenTriangle, port: ScreenTriangle): Verte
     return { permutation, distance }
   }).reduce((best, candidate) => (candidate.distance < best.distance ? candidate : best))
 
-const getStateDifferences = (original: DrawState, port: DrawState): readonly string[] => {
-  const names = Object.keys(original) as (keyof DrawState)[]
-  return names
+// The state fields that matter under the state: blend factors only with blending on, the alpha test only when enabled.
+const getRelevantStateNames = (state: DrawState): readonly (keyof DrawState)[] => [
+  'shading',
+  'colorOperation',
+  'isAlphaTestEnabled',
+  'isBlendEnabled',
+  'isDepthTestEnabled',
+  'isDepthWriteEnabled',
+  ...(state.isAlphaTestEnabled ? (['alphaFunction', 'alphaReference'] as const) : []),
+  ...(state.isBlendEnabled ? (['sourceBlend', 'destinationBlend'] as const) : []),
+  ...(state.colorOperation === TextureOperation.SELECT_DIFFUSE
+    ? []
+    : (['filter', 'addressing'] as const)),
+]
+
+const getStateDifferences = (original: DrawState, port: DrawState): readonly string[] =>
+  getRelevantStateNames(original)
     .filter((name) => original[name] !== port[name])
     .map((name) => `${name} ${String(original[name])} -> ${String(port[name])}`)
-}
 
 const getIsTextured = (triangle: DrawnTriangle): boolean =>
   triangle.state.colorOperation !== TextureOperation.SELECT_DIFFUSE

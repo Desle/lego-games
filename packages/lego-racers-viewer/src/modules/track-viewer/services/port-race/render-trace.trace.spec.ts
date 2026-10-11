@@ -85,7 +85,7 @@ describe.skipIf(!isGamePresent())('render trace', () => {
       report.push(
         `frame ${String(frame)}: original ${String(comparison.originalCount)} port ${String(comparison.portCount)} matched ${String(comparison.matchedCount)} clipped ${String(comparison.clippedCount)}`
       )
-      for (const group of comparison.groups.slice(0, 25)) {
+      for (const group of comparison.groups.slice(0, 40)) {
         report.push(`  ${group.kind} ${group.source} x${String(group.count)}: ${group.firstDetail}`)
       }
     })

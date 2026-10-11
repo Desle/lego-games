@@ -61,12 +61,10 @@ def run_scenario(scenario: dict) -> None:
     machine.apply_fpu_option()
     race = race_session.begin_race(machine, scenario)
     machine.apply_fpu_option()
-    limit = golden_trace.read_introduction_camera_limit(machine, race)
-    rate = golden_trace.read_introduction_camera_rate(machine, race)
     run = PresentationRun(machine, race, scenario, recorders)
     machine.add_address_hook(race_session.PUMP_MESSAGES, run.on_pump)
     reason = machine.call_function_until_stop(race_session.RACE_RUN_LOOP, "thiscall", [race])
-    emit({"type": "done", "reason": reason, "frames": run.pump_count, "introductionCameraLimit": limit, "introductionCameraRate": rate})
+    emit({"type": "done", "reason": reason, "frames": run.pump_count})
     sys.stdout.flush()
 
 
