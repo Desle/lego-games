@@ -446,13 +446,15 @@ const getBounced = (arithmetic: FloatArithmetic, body: CarRigidBody): CarRigidBo
   return replaceAllWheels(bounced, () => ({ isOnGround: false }))
 }
 
-// 0x004463e0..0x00446488: gravity along the ground, and each grounded wheel's share of the weight.
-const getGroundLoads = (arithmetic: FloatArithmetic, body: CarRigidBody): CarRigidBody => {
-  const { multiply, divide, subtract, storeFloat } = arithmetic
+// Gravity along the ground (0x004463e0, 0x00446dbc): the weight minus its part along the ground normal.
+export const getBodyWithSlopeForce = (
+  arithmetic: FloatArithmetic,
+  body: CarRigidBody
+): CarRigidBody => {
+  const { multiply, subtract, storeFloat } = arithmetic
   const { groundNormal, weight } = body
   const normalWeight = multiply(weight, groundNormal.z)
-  const share = storeFloat(multiply(weight, -divide(1, body.groundedWheelCount + 8)))
-  const loaded = Object.freeze({
+  return Object.freeze({
     ...body,
     slopeForce: Object.freeze({
       x: storeFloat(-multiply(groundNormal.x, normalWeight)),
@@ -460,6 +462,29 @@ const getGroundLoads = (arithmetic: FloatArithmetic, body: CarRigidBody): CarRig
       z: storeFloat(subtract(weight, multiply(groundNormal.z, normalWeight))),
     }),
   })
+}
+
+// Without a hit the body sinks 0.008 per pass when it had ground before (0x00446488, 0x00446b04).
+export const getBodyAfterMissingGround = (
+  arithmetic: FloatArithmetic,
+  body: CarRigidBody,
+  previousCount: number
+): CarRigidBody =>
+  previousCount === 0
+    ? body
+    : Object.freeze({
+        ...body,
+        linearVelocity: Object.freeze({
+          ...body.linearVelocity,
+          z: arithmetic.storeFloat(arithmetic.subtract(body.linearVelocity.z, AIRBORNE_SINK)),
+        }),
+      })
+
+// 0x004463e0..0x00446488: gravity along the ground, and each grounded wheel's share of the weight.
+const getGroundLoads = (arithmetic: FloatArithmetic, body: CarRigidBody): CarRigidBody => {
+  const { multiply, divide, storeFloat } = arithmetic
+  const share = storeFloat(multiply(body.weight, -divide(1, body.groundedWheelCount + 8)))
+  const loaded = getBodyWithSlopeForce(arithmetic, body)
   const load = Object.freeze({ x: 0, y: 0, z: share })
   return replaceAllWheels(loaded, (wheel) => (wheel.isOnGround ? { groundForce: load } : {}))
 }
@@ -586,15 +611,7 @@ export const probeGround = (
       ? afterObjects
       : probeTrack(arithmetic, afterObjects, track, probeHeight, probeDepth)
   if (probed.deepest === undefined) {
-    if (previousCount === 0) return probed.body
-    const { linearVelocity } = probed.body
-    return Object.freeze({
-      ...probed.body,
-      linearVelocity: Object.freeze({
-        ...linearVelocity,
-        z: storeFloat(subtract(linearVelocity.z, AIRBORNE_SINK)),
-      }),
-    })
+    return getBodyAfterMissingGround(arithmetic, probed.body, previousCount)
   }
   return getGrounded(arithmetic, probed.body, probed.deepest, isLanding)
 }

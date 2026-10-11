@@ -622,3 +622,13 @@
 004402c0 PointsRecord_RecordPlace
 00440330 PointsRecord_Tick
 00440860 PointsRecord_Clear
+00448840 RigidBody_SetTwoPointTargetTilt
+004465c0 RigidBody_ProbeTwoPoints
+00445bb0 RigidBody_StartPitch
+00448660 RigidBody_EnterTwoPointMode
+00448730 RigidBody_LeaveTwoPointMode
+00429b40 CarBody_EnterTwoPointMode
+00429bc0 CarBody_LeaveTwoPointMode
+00429380 CarBody_Hold
+00429c30 CarBody_EndFlaggedState
+004397b0 Racer_EndCarBodyEffect

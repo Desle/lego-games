@@ -17,6 +17,8 @@ import { getIsFlagSet, getRotationRow, setPitchRate } from '../car-forces/car-fo
 import { CarRigidBodyFlag, getWithWheelAnchors } from '../car-rigid-body/car-rigid-body.ts'
 import {
   findCachedTriangle,
+  getBodyAfterMissingGround,
+  getBodyWithSlopeForce,
   getAwakeBody,
   getDeeper,
   getUnstoredSquaredDistance,
@@ -36,7 +38,6 @@ const ONE = getFloatFromBits(0x3f800000) // 0x004af388
 const TURN_RADIUS_FOR_FULL_TILT = getFloatFromBits(0x45800000) // 0x004b0cd4, 4096
 const FULL_TILT = getFloatFromBits(0x3f490fdb) // 0x004b0d3c, π/4
 const PROBE_DEPTH_PER_MILLISECOND = getFloatFromBits(0x3c23d70a) // 0x004b0d00, 0.01
-const AIRBORNE_SINK = getFloatFromBits(0x3c03126f) // 0x004b0d04, 0.008
 const GROUND_DEPTH_TOLERANCE = getFloatFromBits(0x3ecccccd) // 0x004b0cf4, 0.4
 const HARD_LANDING_SPEED = getFloatFromBits(0x3d4ccccd) // 0x004b0d2c, 0.05
 const LANDING_BOUNCE = getFloatFromBits(0x3fa66666) // 0x004b0d30, 1.3
@@ -419,18 +420,9 @@ const getLanding = (arithmetic: FloatArithmetic, body: CarRigidBody): TwoPointLa
 
 // 0x00446dbc..0x00446e53: gravity along the ground, and half the weight pushing down at each point on the ground.
 const getBodyWithGroundLoads = (arithmetic: FloatArithmetic, body: CarRigidBody): CarRigidBody => {
-  const { multiply, subtract, storeFloat } = arithmetic
-  const { groundNormal, weight } = body
-  const normalWeight = multiply(weight, groundNormal.z)
-  const load = Object.freeze({ x: 0, y: 0, z: storeFloat(-multiply(weight, HALF)) })
-  const loaded = Object.freeze({
-    ...body,
-    slopeForce: Object.freeze({
-      x: storeFloat(-multiply(groundNormal.x, normalWeight)),
-      y: storeFloat(-multiply(groundNormal.y, normalWeight)),
-      z: storeFloat(subtract(weight, multiply(groundNormal.z, normalWeight))),
-    }),
-  })
+  const { multiply, storeFloat } = arithmetic
+  const load = Object.freeze({ x: 0, y: 0, z: storeFloat(-multiply(body.weight, HALF)) })
+  const loaded = getBodyWithSlopeForce(arithmetic, body)
   return Object.freeze({
     ...loaded,
     wheels: Object.freeze(
@@ -453,7 +445,6 @@ export const probeTwoPoints = (
   collisionObjects: readonly CollisionObject[],
   query: SegmentQuery = getSegmentQueryResult
 ): CarRigidBody => {
-  const { subtract, storeFloat } = arithmetic
   const awake = getAwakeBody(arithmetic, body)
   if (awake === undefined) return body
   const previousCount = awake.groundedWheelCount
@@ -465,15 +456,7 @@ export const probeTwoPoints = (
   const afterObjects = probeObjects(arithmetic, cleared, collisionObjects.slice(1), query)
   const probed = probeTrack(arithmetic, afterObjects, collisionObjects[0], query)
   if (probed.deepest === undefined) {
-    if (previousCount === 0) return probed.body
-    const { linearVelocity } = probed.body
-    return Object.freeze({
-      ...probed.body,
-      linearVelocity: Object.freeze({
-        ...linearVelocity,
-        z: storeFloat(subtract(linearVelocity.z, AIRBORNE_SINK)),
-      }),
-    })
+    return getBodyAfterMissingGround(arithmetic, probed.body, previousCount)
   }
   const grounded = getBodyWithGroundNormal(arithmetic, probed.body, probed.deepest.depthSquared)
   const moved = getBodyAtDeepestContact(arithmetic, grounded, probed.deepest.wheelIndex)

@@ -14,7 +14,7 @@ Ported in `packages/lego-racers/src/modules/race` (and the modules it uses). Eve
 - `0x00429d40`/`0x0042a220`: the loop advances to contact (`RigidBody_AdvanceToContact`) with the track test off, saves the step start, clears contacts and uses the contact speed factor. `0x00429680` separates a scripted body.
 - `0x0042a100` (flag `0x8`, target tilt), `0x004464a0` (two point offsets) and `0x0042a290` (tilts and spins): differential-tested (`scripted-orientation.differential.spec.ts`, 1,500 cases, both precisions).
 - `0x004a5750` `moveRouteFollower` is now complete (backward and crossing moves) and returns the displacement; differential spec updated.
-- Open: the free body's two-point mode (flag `0x8`, `0x00448840`, `0x004465c0`) still throws `TwoPointModeNotPortedError`; the setter (slot 12, `0x00429b40`) has no traced caller. The flip start `0x00429cf0` is not added.
+- Two-point mode (flag `0x8`) is ported: `0x00448840` (target tilt from the turn radius over 4096), `0x004464a0`, `0x004465c0` (probes the midpoints of the front and rear wheel pairs, `+0x664..0x678`, instead of four wheels; landing has no air-time condition and bounces 1.3 times; each point on the ground carries half the weight) and the flag-8 wheel loop of `0x00445500`. Enter and leave: `0x00448660`, `0x00448730` (free body), `0x00429b40`, `0x00429bc0` (car body slots 12 and 13). The flip start `0x00429cf0` (scripted: rate, angle, pitch timer; free: `0x00445bb0`) is ported. The callers of the vtable slots are power-up effects (`0x0045cd70`, `0x004560b0`, `0x004573a0`), not wired here. `0x004465c0` is verified against the original with the segment query `0x00403fa0` replaced by a table-driven stub.
 
 ## Collision list
 
@@ -38,6 +38,10 @@ Ported in `packages/lego-racers/src/modules/race` (and the modules it uses). Eve
 
 - Demonstration (`localPlayerCount: 0`, routes by `0x0043d070` nearest route): a 3-lap computer run shows checkpoint and lap progress and finish places 1 to 5; a full demonstration reaches RESULTS with exit FINISHED, 6 placed, identical on two runs (`run-headless-race.spec.ts`).
 
+## Timed effect (the curse)
+
+`0x00439900` (pass on: the receiver takes the giver's milliseconds left, charge 1000, racer flag `0x800`, driver flag `0x10`, vehicle reaction 2, car body held by `0x00429380`), `0x00439b00` (end: countdown 0, flags cleared, `0x004293c0`) and `0x004397b0` (car body slot `0x00429c30`) are ported with differential specs (figure, effect object and vehicle look stubbed out: presentation, not modelled). `0x00429330` (boost end, top speed = scale x 120) is ported with them; car body `+0x734` is not modelled. The boost start `0x004292e0` is not ported.
+
 ## Still open
 
-`updateVehicle` (driver figure data not loaded), `transferTimedEffect`/`endTimedEffect` (curse), `endCarBodyEffect`, probe height (a constant bounds radius, not the current clip), hazards, emitters and sky, fades, sounds and force feedback (presentation, skipped). Differential specs still missing for `0x0042a900`, `0x0043d070`, `0x0042a570` and `0x00429680`.
+`updateVehicle` (owned by the car builder), probe height (a constant bounds radius, not the current clip), hazards, emitters and sky, fades, sounds and force feedback (presentation, skipped).

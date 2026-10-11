@@ -22,6 +22,7 @@ import type {
   RacerSetContext,
 } from '../../types/racer.types.ts'
 import { endRacerKick, respondToRacerContact } from '../racer-contact/racer-contact.ts'
+import { endTimedEffect, transferTimedEffect } from '../timed-effect/timed-effect.ts'
 
 const CONTACT_TIMER_PERIOD_MILLISECONDS = 750 // 0x2ee, 0x00438e60
 
@@ -193,8 +194,8 @@ const keepRacerSet = (_context: RacerSetContext, racerSet: RacerSet): RacerSet =
 export const RACER_COLLISION_DEPENDENCIES_NOT_YET_PORTED: RacerPassDependencies = Object.freeze({
   getIsTouchingRegistryEntry: () => false,
   separateScriptedCarBody: keepRacerSet,
-  transferTimedEffect: keepRacerSet,
-  endTimedEffect: keepRacerSet,
+  transferTimedEffect,
+  endTimedEffect,
 })
 
 export const createCollideRacers =

@@ -34,6 +34,7 @@ import {
   createCollideRacers,
   RACER_COLLISION_DEPENDENCIES_NOT_YET_PORTED,
 } from '../collide-racers/collide-racers.ts'
+import { endCarBodyEffect, endTimedEffect } from '../timed-effect/timed-effect.ts'
 import { notifyRacerContact } from '../notify-racer-contact/notify-racer-contact.ts'
 import { updatePlayerGuidance } from '../update-player-guidance/update-player-guidance.ts'
 import { followDriverRoute } from '../follow-driver-route/follow-driver-route.ts'
@@ -98,8 +99,8 @@ export const RACER_SET_STEP_DEPENDENCIES_NOT_YET_PORTED: RacerSetStepDependencie
   updateVehicle,
   updateRacerSounds: keepRacerSetNotYetPorted,
   considerComputerPowerUp: keepRacerSetNotYetPorted,
-  endCarBodyEffect: keepRacerSetNotYetPorted,
-  endTimedEffect: keepRacerSetNotYetPorted,
+  endCarBodyEffect,
+  endTimedEffect,
   tauntNearestRacer: keepRacerSetNotYetPorted,
   updatePlayerGuidance,
   notifyRacerContact,

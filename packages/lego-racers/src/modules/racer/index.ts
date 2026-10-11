@@ -23,10 +23,19 @@ export {
   createPlayerController,
   updatePlayerController,
 } from './controller/update-player-controller/update-player-controller.ts'
+export {
+  endCarBodyEffect,
+  endTimedEffect,
+  transferTimedEffect,
+} from './controller/timed-effect/timed-effect.ts'
 export { readRacerTables } from './services/read-racer-tables/read-racer-tables.ts'
 export {
   addCarBodyImpulse,
   clearCarBodyTwoPointMode,
+  endCarBodyBoost,
+  endCarBodyFlaggedState,
+  holdCarBody,
+  releaseCarBody,
   setCarBodyPush,
   setCarBodyTwoPointMode,
   startCarBodyFlip,

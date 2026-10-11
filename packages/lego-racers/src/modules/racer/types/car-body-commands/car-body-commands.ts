@@ -1,7 +1,9 @@
 import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
 import {
+  CAR_BODY_HELD_FLAG,
   createRouteFollower,
   getPushedSpeedState,
+  getReleasedSpeedState,
   getRestoredSpeedState,
   moveRouteFollower,
   setRouteFollowerSpeedFactor,
@@ -15,6 +17,7 @@ import {
   getBodyOutOfTwoPointMode,
   setExtraForce,
   setPitchRate,
+  setTopSpeed,
   startSpin,
 } from '../../../racer-physics/index.ts'
 import {
@@ -35,6 +38,11 @@ const FORWARD_RATE = getFloatFromBits(0x3d4ccccd) // 0x004b0544, 0.05
 const BACKWARD_RATE = getFloatFromBits(0x3e800000) // 0x004b053c, 0.25
 const MAXIMUM_SPEED_FACTOR = getFloatFromBits(0x40300000) // 0x004b04a0, 2.75
 const MINIMUM_SPEED_FACTOR = getFloatFromBits(0xbf000000) // 0x004b04a4, -0.5
+
+const BASE_TOP_SPEED = getFloatFromBits(0x42f00000) // 0x004b0448, 120
+const HELD_SPEED_FACTOR = getFloatFromBits(0x3f000000) // 0x004b049c, 0.5
+const RAMPED_TARGET_FLAG = 0x10000
+const TARGET_KEPT_FLAGS = 0x40002
 
 const TWO_POINT_FLIP_RATE = getFloatFromBits(0xbb449ba6) // -0.003, pushed by 0x00429b40
 const TWO_POINT_FLIP_MILLISECONDS = 250 // 0xfa
@@ -307,3 +315,53 @@ export const clearCarBodyTwoPointMode = (body: CarBody): CarBody => {
     }),
   })
 }
+
+// 0x00429330 (fastcall): the boost ends. Flag 0x10000 is cleared, a scripted body that is neither slowed nor pushed
+// gets the target speed factor 1, the grip scale returns to 1 and slot 6 (0x0042ad50) sets the top speed to the top
+// speed scale times 120. Car body +0x734 (120), which nothing else reads here, is not modelled.
+export const endCarBodyBoost = (arithmetic: FloatArithmetic, body: CarBody): CarBody => {
+  const { rigidBody } = body
+  const isTargetReset = body.isScripted && (rigidBody.flags & TARGET_KEPT_FLAGS) === 0
+  return Object.freeze({
+    ...body,
+    targetSpeedFactor: isTargetReset ? 1 : body.targetSpeedFactor,
+    rigidBody: setTopSpeed(
+      arithmetic,
+      Object.freeze({ ...rigidBody, flags: rigidBody.flags & ~RAMPED_TARGET_FLAG, gripScale: 1 }),
+      arithmetic.storeFloat(arithmetic.multiply(body.topSpeedScale, BASE_TOP_SPEED))
+    ),
+  })
+}
+
+// 0x00429380 (fastcall): the body is held by an effect (flag 0x80000). A boost in progress ends first, and a scripted
+// body slows to a speed factor of 0.5.
+export const holdCarBody = (arithmetic: FloatArithmetic, body: CarBody): CarBody => {
+  const ended =
+    (body.rigidBody.flags & RAMPED_TARGET_FLAG) === 0 ? body : endCarBodyBoost(arithmetic, body)
+  return Object.freeze({
+    ...ended,
+    speedFactor: ended.isScripted ? HELD_SPEED_FACTOR : ended.speedFactor,
+    rigidBody: Object.freeze({
+      ...ended.rigidBody,
+      flags: ended.rigidBody.flags | CAR_BODY_HELD_FLAG,
+    }),
+  })
+}
+
+// 0x004293c0 (fastcall): the hold ends (flag 0x80000), and a scripted body with none of 0x50002 set gets the target
+// speed factor 1.
+export const releaseCarBody = (body: CarBody): CarBody =>
+  getWithSpeedState(body, getReleasedSpeedState(getSpeedState(body), body.isScripted))
+
+// 0x00429c30 (car body slot 15, which 0x004397b0 calls): a free body's flagged state (0x80) and its countdown end.
+export const endCarBodyFlaggedState = (body: CarBody): CarBody =>
+  body.isScripted
+    ? body
+    : Object.freeze({
+        ...body,
+        rigidBody: Object.freeze({
+          ...body.rigidBody,
+          flaggedTimer: 0,
+          flags: body.rigidBody.flags & ~CarRigidBodyFlag.FLAGGED,
+        }),
+      })

@@ -9,10 +9,13 @@ import {
 } from '../../../power-ups/index.ts'
 import {
   createCollideRacers,
+  endCarBodyEffect,
+  endTimedEffect,
   followDriverRoute,
   getRacer,
   getRacerSphere,
   keepRacerSetNotYetPorted,
+  transferTimedEffect,
 } from '../../../racer/index.ts'
 import type {
   RacerBoundary,
@@ -67,8 +70,8 @@ const RACE_COLLISION_DEPENDENCIES: RacerPassDependencies = Object.freeze({
   },
   separateScriptedCarBody: separateScriptedRacerBody,
   separateFreeCarBody: separateFreeRacerBody,
-  transferTimedEffect: keepRacerSetNotYetPorted,
-  endTimedEffect: keepRacerSetNotYetPorted,
+  transferTimedEffect,
+  endTimedEffect,
 })
 
 const collideRegisteredRacers = createCollideRacers(RACE_COLLISION_DEPENDENCIES)
@@ -211,8 +214,8 @@ export const RACE_STEP_DEPENDENCIES: RacerSetStepDependencies = Object.freeze({
   updateVehicle: keepRacerSetNotYetPorted,
   updateRacerSounds: keepRacerSetNotYetPorted,
   considerComputerPowerUp: considerPowerUp,
-  endCarBodyEffect: keepRacerSetNotYetPorted,
-  endTimedEffect: keepRacerSetNotYetPorted,
+  endCarBodyEffect,
+  endTimedEffect,
   tauntNearestRacer: keepRacerSetNotYetPorted,
   updatePlayerGuidance: guidePlayer,
   notifyRacerContact: keepRacerSetNotYetPorted,

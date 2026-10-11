@@ -20,6 +20,10 @@ import type { CarBody } from '../racer.types.ts'
 import {
   addCarBodyImpulse,
   clearCarBodyTwoPointMode,
+  endCarBodyBoost,
+  endCarBodyFlaggedState,
+  holdCarBody,
+  releaseCarBody,
   setCarBodyPush,
   setCarBodyTwoPointMode,
   startCarBodyFlip,
@@ -35,9 +39,9 @@ const TEST_TIMEOUT_IN_MILLISECONDS = 120_000
 const FLOAT_OFFSETS: readonly number[] = [
   0x08, 0x0c, 0x10, 0xa4, 0xa8, 0xac, 0x630, 0x634, 0x638, 0x63c, 0x640, 0x644, 0x778, 0x7ec, 0x7e8,
   0x7d4, 0x7d8, 0x658, 0x65c, 0x660, 0x664, 0x668, 0x66c, 0x670, 0x674, 0x678, 0x67c, 0x680, 0x7dc,
-  0x7e0,
+  0x7e0, 0x608, 0x5ec, 0x5f4,
 ]
-const INTEGER_OFFSETS: readonly number[] = [0x6c0, 0x5e0, 0x5e8, 0x5e4, 0x5d8, 0x5dc]
+const INTEGER_OFFSETS: readonly number[] = [0x6c0, 0x5e0, 0x5e8, 0x5e4, 0x5d8, 0x5dc, 0x6e0]
 
 // Slots 8, 9, 12, 13, 16, 17, 18 and 19 of the car body's vtable: 0x00429770, 0x00429c40, 0x00429b40, 0x00429bc0,
 // 0x004298a0, 0x004298d0, 0x004298f0, 0x00429920; and the flip 0x00429cf0 they call.
@@ -51,6 +55,10 @@ const Command = Object.freeze({
   FLIP: { address: 0x00429cf0 },
   TWO_POINT_ON: { address: 0x00429b40 },
   TWO_POINT_OFF: { address: 0x00429bc0 },
+  HOLD: { address: 0x00429380 },
+  RELEASE: { address: 0x004293c0 },
+  END_BOOST: { address: 0x00429330 },
+  END_FLAGGED: { address: 0x00429c30 },
 })
 type CommandName = keyof typeof Command
 const COMMAND_NAMES = Object.keys(Command) as readonly CommandName[]
@@ -75,6 +83,7 @@ type CommandCase = {
   readonly timers: readonly number[]
   readonly wheelGeometry: readonly number[]
   readonly flip: readonly number[]
+  readonly boost: readonly number[]
 }
 
 const buildWords = (length: number, entries: readonly Entry[]): readonly EmulatorArgument[] => {
@@ -97,7 +106,25 @@ const sampleCase = (sampler: FloatSampler): CommandCase => {
   return {
     command: COMMAND_NAMES[sampler.sampleIntegerBelow(COMMAND_NAMES.length)] ?? 'IMPULSE',
     isScripted: sampler.getIsChance(60),
-    flags: sampleChoice(sampler, 0, 0, 0x2, 0x20, 0x40, 0x40000, 0x40002, 0x8, 0x8, 0x28),
+    flags: sampleChoice(
+      sampler,
+      0,
+      0,
+      0x2,
+      0x20,
+      0x40,
+      0x40000,
+      0x40002,
+      0x8,
+      0x8,
+      0x28,
+      0x10000,
+      0x80000,
+      0x50002,
+      0x90002,
+      0x80,
+      0x10002
+    ),
     heading: heading.map((value) => Math.fround(value / length)),
     speedFactor: Math.abs(sampler.sampleUniform(2)),
     defaultTarget: sampleChoice(sampler, -1, 0.5, 1),
@@ -120,6 +147,14 @@ const sampleCase = (sampler: FloatSampler): CommandCase => {
       sampler.sampleUniform(5),
     ],
     flip: [Math.fround(sampler.sampleUniform(0.01)), sampleChoice(sampler, 125, 150, 250)],
+    boost: [
+      Math.fround(sampler.sampleUniform(2)),
+      Math.fround(sampler.sampleUniform(3)),
+      Math.fround(sampler.sampleUniform(2)),
+      sampleChoice(sampler, 0, 0, 40),
+      Math.fround(10 + Math.abs(sampler.sampleUniform(100))),
+      Math.fround(sampler.sampleUniform(0.01)),
+    ],
   }
 }
 
@@ -145,6 +180,13 @@ const getBodyWords = (item: CommandCase): readonly EmulatorArgument[] => {
       item.twoPoint[2] ?? 0,
     ]),
     ...getFloatEntries(at(0x67c), [item.twoPoint[3] ?? 0, item.twoPoint[4] ?? 0]),
+    ...getFloatEntries(at(0x628), [item.boost[0] ?? 0]),
+    ...getFloatEntries(at(0x730), [Math.abs(item.boost[1] ?? 0)]),
+    ...getFloatEntries(at(0x5f4), [item.boost[2] ?? 0]),
+    ...getFloatEntries(at(0xc8), [Math.fround(2)]),
+    ...getFloatEntries(at(0x608), [item.boost[4] ?? 0]),
+    ...getFloatEntries(at(0x5ec), [item.boost[5] ?? 0]),
+    [at(0x6e0), item.boost[3] ?? 0],
     [at(0x5d8), item.timers[0] ?? 0],
     [at(0x5dc), item.timers[1] ?? 0],
     ...getFloatEntries(at(0x358), item.wheelGeometry.slice(0, 3)),
@@ -210,6 +252,9 @@ const getPortWords = (body: CarBody): readonly number[] => {
       rigidBody.twoPointTilt,
       body.flipRate,
       body.flipAngle,
+      rigidBody.topSpeed,
+      rigidBody.drag,
+      rigidBody.gripScale,
     ].map(getBitsFromFloat),
     rigidBody.flags,
     rigidBody.yawTimer,
@@ -217,6 +262,7 @@ const getPortWords = (body: CarBody): readonly number[] => {
     rigidBody.spinTimer,
     rigidBody.rollTimer,
     rigidBody.pitchTimer,
+    rigidBody.flaggedTimer,
   ].map((bits) => bits >>> 0)
 }
 
@@ -228,6 +274,7 @@ const getPortBody = (item: CommandCase): CarBody => {
   return Object.freeze({
     ...body,
     isScripted: item.isScripted,
+    topSpeedScale: Math.abs(item.boost[1] ?? 0),
     speedFactor: item.speedFactor,
     defaultTargetSpeedFactor: item.defaultTarget,
     targetSpeedFactor: item.target,
@@ -245,6 +292,11 @@ const getPortBody = (item: CommandCase): CarBody => {
       twoPointHeightRate: item.twoPoint[2] ?? 0,
       twoPointTargetTilt: item.twoPoint[3] ?? 0,
       twoPointTilt: item.twoPoint[4] ?? 0,
+      throttle: item.boost[0] ?? 0,
+      topSpeed: item.boost[4] ?? 0,
+      drag: item.boost[5] ?? 0,
+      gripScale: item.boost[2] ?? 0,
+      flaggedTimer: item.boost[3] ?? 0,
       rollTimer: item.timers[0] ?? 0,
       pitchTimer: item.timers[1] ?? 0,
       localWheelAnchor: {
@@ -283,6 +335,14 @@ const getPortResult = (precision: EmulatorPrecision, item: CommandCase): CarBody
       return setCarBodyTwoPointMode(arithmetic, body)
     case 'TWO_POINT_OFF':
       return clearCarBodyTwoPointMode(body)
+    case 'HOLD':
+      return holdCarBody(arithmetic, body)
+    case 'RELEASE':
+      return releaseCarBody(body)
+    case 'END_BOOST':
+      return endCarBodyBoost(arithmetic, body)
+    case 'END_FLAGGED':
+      return endCarBodyFlaggedState(body)
   }
 }
 
