@@ -5,12 +5,7 @@ import { createFloatArithmetic, FpuPrecision } from '../../../simulation-math/in
 import { createPowerUpWorld } from '../power-up-world/power-up-world.ts'
 import { getEffect } from '../power-up-step/power-up-step.ts'
 import type { PowerUpStep } from '../power-up-step/power-up-step.types.ts'
-import {
-  checkEffectEmitter,
-  releaseEffectEmitter,
-  startEffectEmitter,
-  startStepEmitter,
-} from './effect-emitters.ts'
+import { checkEffectEmitter, releaseEffectEmitter, startEffectEmitter } from './effect-emitters.ts'
 
 const SINGLE = createFloatArithmetic(FpuPrecision.SINGLE)
 
@@ -93,20 +88,6 @@ describe('startEffectEmitter', () => {
 
     // Assert
     expect(getEffect(started, 0).emitterHandleIndex).toBeNull()
-  })
-})
-
-describe('startStepEmitter', () => {
-  it('starts an emitter in the common pool without any handle', () => {
-    // Arrange
-    const step = createStep()
-
-    // Act
-    const started = startStepEmitter(step, SINGLE, 'explode', { x: 1, y: 2, z: 3 })
-
-    // Assert
-    const instances = started.world.emitters.common?.instances ?? []
-    expect(instances.some((instance) => instance.system.isActive)).toBe(true)
   })
 })
 

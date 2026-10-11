@@ -7,7 +7,7 @@ import {
   spawnEmitter,
 } from '../../../emitter/index.ts'
 import type { EmitterPool } from '../../../emitter/index.ts'
-import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
+import type { FloatArithmetic } from '../../../simulation-math/index.ts'
 import { getEffect, getStepWithEffect } from '../power-up-step/power-up-step.ts'
 import type { PowerUpStep } from '../power-up-step/power-up-step.types.ts'
 
@@ -22,20 +22,6 @@ const getStepWithPool = (step: PowerUpStep, pool: EmitterPool): PowerUpStep =>
       emitters: Object.freeze({ ...step.world.emitters, common: pool }),
     }),
   })
-
-// 0x00489d70 on the common pool for something that keeps no handle (the explosion's "explode"): the emitter starts
-// at the position, a pool without such an emitter does nothing.
-export const startStepEmitter = (
-  step: PowerUpStep,
-  arithmetic: FloatArithmetic,
-  name: string,
-  position: Vector3 | null
-): PowerUpStep => {
-  const { common } = step.world.emitters
-  if (common === null || !getHasEmitterDefinition(common, name)) return step
-  const spawn = spawnEmitter(arithmetic, common, name, { position, orientation: null })
-  return getStepWithPool(step, spawn.pool)
-}
 
 // 0x00489d70 for an effect: the handle it returns (null for none free, no such emitter or a one-shot) replaces the
 // effect's field whatever it was.

@@ -11,7 +11,6 @@ export {
   checkEffectEmitter,
   releaseEffectEmitter,
   startEffectEmitter,
-  startStepEmitter,
 } from './controller/effect-emitters/effect-emitters.ts'
 export {
   endProjectileFlight,

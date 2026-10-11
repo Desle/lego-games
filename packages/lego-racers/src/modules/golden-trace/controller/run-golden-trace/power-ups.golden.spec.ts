@@ -66,6 +66,27 @@ describe('golden trace: power-ups', () => {
             frames: getFrames(),
             powerUpGrants: getGrants(kind, level),
           })
+          if (process.env['POWER_UP_DUMP'] !== undefined) {
+            writeFileSync(
+              `${process.env['POWER_UP_DUMP']}/${scenario.name}.json`,
+              JSON.stringify({
+                raceFolder: scenario.raceFolder,
+                racerCodes: scenario.racerCodes,
+                racerCount: scenario.racerCount,
+                localPlayerCount: 1,
+                randomPosition: 0,
+                circuit: scenario.circuitName,
+                isMirrored: scenario.isMirrored,
+                fpu: 'auto',
+                powerUpGrants: scenario.powerUpGrants,
+                frames: scenario.frames.map((frame) => ({
+                  dt: frame.milliseconds,
+                  keys: frame.scanCodes,
+                })),
+              })
+            )
+            continue
+          }
           const result = await runGoldenTrace(scenario, jam, readOriginalExecutable())
           const fields = [...result.comparison.divergenceByField].sort(
             (left, right) => left.frame - right.frame

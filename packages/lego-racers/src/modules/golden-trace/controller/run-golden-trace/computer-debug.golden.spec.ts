@@ -29,6 +29,7 @@ describe('golden trace debug', () => {
         circuit: string
         isMirrored: boolean
         frames: { dt: number; keys: number[] }[]
+        powerUpGrants?: GoldenTraceScenario['powerUpGrants']
       }
       const scenario: GoldenTraceScenario = {
         name: 'debug',
@@ -41,7 +42,7 @@ describe('golden trace debug', () => {
         isMirrored: raw.isMirrored,
         precision: 'auto',
         frames: raw.frames.map((frame) => ({ milliseconds: frame.dt, scanCodes: frame.keys })),
-        powerUpGrants: [],
+        powerUpGrants: raw.powerUpGrants ?? [],
       }
       const original = await readOriginalTrace(scenario)
       const definition = loadRaceDefinition(readOriginalJam(), readOriginalExecutable(), {

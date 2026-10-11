@@ -1,9 +1,8 @@
-import { getEffect, PowerUpEffectKind, startStepEmitter } from '../../../power-ups/index.ts'
+import { getEffect, PowerUpEffectKind } from '../../../power-ups/index.ts'
 import type { PowerUpEffect, PowerUpStep } from '../../../power-ups/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
 import { getThrownDebris, getUpdatedDebris } from '../../types/debris/debris.ts'
 import {
-  ExplosionState,
   getPoolWithExplosion,
   getRecycledPool,
   getUpdatedExplosion,
@@ -34,19 +33,6 @@ const getExplosionBase = (
   return null
 }
 
-// 0x00421520 starts the explosion's "explode" emitter at its position unless it lies outside the world.
-const getStepWithExplosionEmitter = (
-  step: PowerUpStep,
-  context: ProjectileContext,
-  pool: ExplosionPool,
-  position: Vector3
-): PowerUpStep => {
-  const started = pool.explosions[pool.activeIndices[0] ?? -1]
-  return started === undefined || started.state === ExplosionState.IDLE
-    ? step
-    : startStepEmitter(step, context.powerUps.arithmetic, 'explode', position)
-}
-
 const getStepWithExplosion = (
   step: PowerUpStep,
   world: ProjectileWorld,
@@ -71,7 +57,7 @@ const getStepWithExplosion = (
     effect.ownerRacer
   )
   return Object.freeze({
-    step: getStepWithExplosionEmitter(step, context, spawned, position),
+    step,
     world: Object.freeze(
       event.isSpiked ? { ...world, spikedExplosions: spawned } : { ...world, explosions: spawned }
     ),
