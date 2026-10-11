@@ -1,4 +1,3 @@
-import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import type {
   Scene,
   SceneInstance,
@@ -6,6 +5,7 @@ import type {
   SceneInstanceLevel,
   SceneMesh,
 } from '@lego-games/lego-racers/scene'
+import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import type {
   Box3,
   BufferGeometry,
@@ -18,6 +18,8 @@ import type {
 
 export type SceneObject = {
   readonly group: Group
+  // Puts the skeleton instance with this name in the given clip state (the race simulation drives its clips).
+  readonly setSkeletonState: (name: string, state: SkeletonAnimationState) => void
   // The instances' world-space bounds, for framing the camera.
   readonly bounds: Box3
   // Advances every animated instance by this many whole milliseconds.

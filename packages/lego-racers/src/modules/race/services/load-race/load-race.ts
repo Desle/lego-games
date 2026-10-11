@@ -38,6 +38,7 @@ import type { RaceDefinition, RaceRacerDefinition } from '../../types/race.types
 import { getStartFrame } from '../../types/start-frame/start-frame.ts'
 import { loadCollisionWorld } from './load-collision-world.ts'
 import type { LoadRaceOptions, RouteDraws, RouteDrawer, RouteFiles } from './load-race.types.ts'
+import { loadRaceEmitters, loadRaceSky, loadRaceWorlds } from './load-race-worlds.ts'
 import {
   describeAppearances,
   describeRacers,
@@ -121,6 +122,8 @@ export const loadRaceDefinition = (
     archive.readFile(
       folder.length > 0 ? `GAMEDATA${JAM_SEPARATOR}${folder}${JAM_SEPARATOR}${name}` : name
     )
+  const raceDirectory = `GAMEDATA${JAM_SEPARATOR}${folder}`
+  const readArchiveFile = (path: string): Uint8Array => archive.readFile(path)
   const paths = new Set(archive.getFilePaths())
   const getIsPresent = (path: string): boolean => paths.has(`GAMEDATA${JAM_SEPARATOR}${path}`)
   const description = parseRaceDescription(readFile(`${folder}.RAB`), isMirrored)
@@ -226,6 +229,8 @@ export const loadRaceDefinition = (
       savedCar: index < localPlayerCount ? (defaultCars[index] ?? defaultCars[0] ?? null) : null,
     }
   })
+  const sky = loadRaceSky(readArchiveFile, raceDirectory, description)
+  const optionalSky = sky === undefined ? {} : { sky }
   return Object.freeze({
     arithmetic,
     tables,
@@ -276,6 +281,9 @@ export const loadRaceDefinition = (
         ? null
         : parseTriggers(environmentTriggerBytes, TriggerFileKind.ENVIRONMENT, isMirrored),
     hazards: hazardBytes === null ? null : parseHazards(hazardBytes, isMirrored),
+    worlds: loadRaceWorlds(readArchiveFile, raceDirectory, description),
+    emitters: loadRaceEmitters(readArchiveFile, raceDirectory, description),
+    ...optionalSky,
     randomPosition: routeDraws.position,
     getGroundPoint: null,
     trackTargets: [],

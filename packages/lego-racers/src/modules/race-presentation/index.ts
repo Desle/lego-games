@@ -5,6 +5,7 @@ export {
   stepRacePresentation,
 } from './controller/race-presentation/race-presentation.ts'
 export type {
+  BrickView,
   EffectView,
   EffectViews,
   ExplosionView,

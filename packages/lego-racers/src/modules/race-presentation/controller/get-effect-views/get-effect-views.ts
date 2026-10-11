@@ -1,9 +1,15 @@
-import { EffectState } from '../../../power-ups/index.ts'
+import { BrickState, EffectState } from '../../../power-ups/index.ts'
 import type { PowerUpEffect } from '../../../power-ups/index.ts'
 import { BallisticFlightState, ExplosionState } from '../../../projectiles/index.ts'
 import type { EffectMotion, ExplosionPool } from '../../../projectiles/index.ts'
 import type { RaceState } from '../../../race/index.ts'
-import type { EffectView, EffectViews, ExplosionView } from '../../types/race-presentation.types.ts'
+import type {
+  BrickView,
+  DrawnBrick,
+  EffectView,
+  EffectViews,
+  ExplosionView,
+} from '../../types/race-presentation.types.ts'
 
 // The states in which an effect has a body to draw: after the launch and before its pool takes it back.
 const DRAWN_STATES: readonly string[] = [
@@ -12,6 +18,30 @@ const DRAWN_STATES: readonly string[] = [
   EffectState.ENDING,
   EffectState.FINAL_STAGE,
 ]
+
+// The states in which a brick is on the track: waiting, growing in and shrinking after a collect.
+const SHOWN_BRICK_STATES: readonly string[] = [
+  BrickState.AVAILABLE,
+  BrickState.APPEARING,
+  BrickState.COLLECTED,
+]
+
+const getBrickViews = (
+  bricks: readonly DrawnBrick[],
+  isEnhancement: boolean
+): readonly BrickView[] =>
+  bricks.flatMap((brick) =>
+    SHOWN_BRICK_STATES.includes(brick.state)
+      ? [
+          {
+            isEnhancement,
+            kind: isEnhancement ? null : (brick.kind ?? null),
+            position: brick.position,
+            scale: brick.scale,
+          },
+        ]
+      : []
+  )
 
 const getMotionView = (effect: PowerUpEffect, motion: EffectMotion | null): EffectView | null => {
   if (motion === null) return null
@@ -60,7 +90,13 @@ export const getEffectViews = (raceState: RaceState): EffectViews => {
     const view = getMotionView(effect, raceState.projectileWorld.motions[effectId] ?? null)
     return view === null ? [] : [view]
   })
+  const { world } = raceState.powerUpStep
   return Object.freeze({
+    bricks: Object.freeze([
+      ...getBrickViews(world.bricks, false),
+      ...getBrickViews(world.enhancementBricks, true),
+    ]),
+    spinAngle: world.brickSpinAngle,
     effects: Object.freeze(views),
     explosions: Object.freeze([
       ...getExplosionViews(raceState.projectileWorld.explosions, false),

@@ -5,13 +5,19 @@ import type {
   EventSet,
 } from '../../../event/index.ts'
 import { NO_SIGNAL } from '../../../event/index.ts'
+import { createHazardRuntime, EMPTY_HAZARD_RUNTIME } from '../../../hazard/index.ts'
+import type { HazardSession } from '../../../hazard/index.ts'
 import { drawRandomValue } from '../../../random-table/index.ts'
+import { EMPTY_WORLD_ANIMATION } from '../../../world-animation/index.ts'
+import type { RaceWorlds } from '../../../world-animation/index.ts'
 import type { FloatArithmetic } from '../../../simulation-math/index.ts'
 import { getTruncatedInteger } from '../../../simulation-math/index.ts'
 import { TrackEventKind, TrackEventState } from '../../types/track-event-state/track-event-state.ts'
 import type {
   TrackEvent,
   TrackEventBase,
+  LoadedHazards,
+  TrackEmitters,
   TrackEventSet,
   TrackLogicInput,
   TrackLogicState,
@@ -258,8 +264,52 @@ const createEventState = (
   return Object.freeze({ events, links: eventSet.links, random: soundEvents.random })
 }
 
-// Race_LoadTrackContent 0x00433480 after the racers: Events_Load (the 2A events' draws), then Timers_Load (the marked
-// second values' draws). Hazards, triggers and emitters draw nothing while they load.
+const EMPTY_WORLDS: RaceWorlds = Object.freeze({
+  track: EMPTY_WORLD_ANIMATION,
+  blended: EMPTY_WORLD_ANIMATION,
+  local: EMPTY_WORLD_ANIMATION,
+})
+const NO_EMITTERS: TrackEmitters = Object.freeze({ common: null, track: null })
+
+// Hazards_Load 0x0048a4d0: the loaders may change the worlds and draw (class 0x2d begins as it loads). Their
+// signals and effects have nobody to hear them yet.
+const createHazards = (
+  input: TrackLogicInput,
+  arithmetic: FloatArithmetic,
+  random: TrackRandom
+): LoadedHazards => {
+  let worlds = input.worlds ?? EMPTY_WORLDS
+  let position = random.position
+  const session: HazardSession = {
+    arithmetic,
+    drawRandomValue: () => {
+      const draw = drawRandomValue(random.table, position)
+      position = draw.position
+      return draw.value
+    },
+    startSignal: () => undefined,
+    startStopSignal: () => undefined,
+    stopSignal: () => undefined,
+    getWorld: (key) => worlds[key],
+    setWorld: (key, world) => {
+      worlds = { ...worlds, [key]: world }
+    },
+    getEmitters: () => input.emitters?.track ?? null,
+    setEmitters: () => undefined,
+    getRacer: () => null,
+    getTableCosine: () => 1,
+    probe: () => null,
+    emit: () => undefined,
+  }
+  const hazards =
+    input.hazardList === undefined || input.hazardList === null
+      ? EMPTY_HAZARD_RUNTIME
+      : createHazardRuntime(input.hazardList, { isMirrored: input.isMirrored ?? false, session })
+  return { hazards, worlds: Object.freeze(worlds), position }
+}
+
+// Race_LoadTrackContent 0x00433480 after the racers: Events_Load (the 2A events' draws), Hazards_Load, then
+// Timers_Load (the marked second values' draws). Triggers and emitters draw nothing while they load.
 export const createTrackLogic = (
   input: TrackLogicInput,
   arithmetic: FloatArithmetic,
@@ -267,10 +317,17 @@ export const createTrackLogic = (
 ): TrackLogicState => {
   const { eventSet, timerList, mainTriggers, environmentTriggers } = input
   const events = createEventState(eventSet, arithmetic, random)
-  const timers = createTimers(timerList, random.table, events.random.position)
+  const loadedHazards = createHazards(input, arithmetic, {
+    table: random.table,
+    position: events.random.position,
+  })
+  const timers = createTimers(timerList, random.table, loadedHazards.position)
   return Object.freeze({
     ...events,
     timers: timers.state,
+    worlds: loadedHazards.worlds,
+    hazards: loadedHazards.hazards,
+    emitters: input.emitters ?? NO_EMITTERS,
     triggers: createTriggers(mainTriggers, environmentTriggers),
     random: Object.freeze({ table: random.table, position: timers.position }),
   })

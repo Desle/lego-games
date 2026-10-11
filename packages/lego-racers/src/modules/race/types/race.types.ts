@@ -5,7 +5,9 @@ import type { ComputerRacerRoute } from '../../computer-racer-route/index.ts'
 import type { EventSet } from '../../event/index.ts'
 import type { GhostSession } from '../../ghost/index.ts'
 import type { HazardList } from '../../hazard/index.ts'
-import type { TrackEffect, TrackLogicState } from '../../track-logic/index.ts'
+import type { TrackEffect, TrackEmitters, TrackLogicState } from '../../track-logic/index.ts'
+import type { Sky, SkyState } from '../../sky/index.ts'
+import type { RaceWorlds, WorldAnimation } from '../../world-animation/index.ts'
 import type {
   CarBodyDefinition,
   PlayerController,
@@ -115,6 +117,12 @@ export type RaceDefinition = {
   readonly pointsRecord: PointsRecord | null
   // Game settings +0x1e & 0x40 (meaning not traced): a restart inside a circuit then runs in place.
   readonly isSettingsFlag40Set: boolean
+  // The worlds the race animates (race +0x390, +0x398, +0x3a4) and the two emitter pools (race +0x2150, +0x248c); a
+  // definition without them has worlds and pools that hold nothing.
+  readonly worlds?: RaceWorlds
+  readonly emitters?: TrackEmitters
+  // Sky_Load 0x0041c550: the sky file and the background world it loads (race +0x2f90).
+  readonly sky?: RaceSkyDefinition
   // The random table position (0x004c6ee4) after the loaders that ran before RacerSet_Setup.
   readonly randomPosition: RandomTablePosition
   // The track world's line query 0x0041f4d0 (world module); null answers every query with a miss.
@@ -136,6 +144,17 @@ export type ProjectileModelData = {
 export type RaceRacerPowerUpSetup = {
   readonly personality: ComputerPowerUpPersonality
   readonly abilities: RacerPowerUpAbilities
+}
+
+export type RaceSkyDefinition = {
+  readonly sky: Sky
+  readonly background: WorldAnimation
+}
+
+// The sky at runtime: the settings' time and transition (sky +0xa8..+0xc0) and the background world (sky +0x9c).
+export type RaceSky = {
+  readonly state: SkyState
+  readonly background: WorldAnimation
 }
 
 export type RaceState = {
@@ -213,6 +232,8 @@ export type RaceState = {
   readonly mainTriggers: TriggerList | null
   readonly environmentTriggers: TriggerList | null
   readonly hazards: HazardList | null
+  // Race +0x2f90, updated by Sky_Update 0x0041ccb0 at the end of Race_Update; null for a race without a sky.
+  readonly sky: RaceSky | null
   readonly startPositions: readonly StartPosition[]
 }
 
