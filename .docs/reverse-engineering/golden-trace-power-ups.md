@@ -54,8 +54,8 @@ With every racer holding the brick (`POWER_UP_COMPUTERS=1`, before the hit react
 ## Open
 
 - Shape centres: the hook's bounds centre is placed with a hypothesis (the frame faces along the horizontal velocity); the barrel's spin and the missile's animated figure bounds (its first registered centre is about 6 units off the owner) are not ported.
-- Warp (`0x0045d560`, `0x0045dc90`, `0x004395d0`): the vehicle is torn down (emitters, figure hidden, radius -1) and the car is carried; the events `racer_moved` and `racer_landed` are not applied.
-- Debris animation lengths and the warp route (`routeNodes`) are still the empty values of `EMPTY_PROJECTILE_MODEL_DATA`; `trackTargets` (the TGB points the cannon and grapple aim at) are empty.
+- Warp: the route (checkpoints), the carry (`0x0045d780`), the start (`0x004395d0`: flag 0x10, timed effect and spin end, tows end, flag 0x1000) and the landing (`0x0045dc90`) are ported for a human's free body. Open: `0x00440160` sets the radius of the vehicle's parts to -1 (a dirty bounds cache that nothing refreshes while the racer is off the track), which the composite volume and the wand then read; the computer's scripted warp (`0x00429a90`, `0x00429af0`); the vehicle's smoke and fade (`0x0043dcd0`, `0x0043dbb0`).
+- Debris animation lengths are still the empty values of `EMPTY_PROJECTILE_MODEL_DATA` (the warp route now comes from the checkpoints); `trackTargets` (the TGB points the cannon and grapple aim at) are empty.
 - Sound-driven random draws (`tauntNearestRacer`, `updateRacerSounds`) are stand-ins: a draw is missing or extra after some hits (wand, frame 199).
 - `racec0r3` shows a track event difference at frame 797 (`track.events.2a[61]`) that the random cursor used to hide.
 - Brick colours per kind belong to the render-trace branch (PR 37): `pbrickP`, `pbrickS`, `pbrickT`, `pbrickM` (`0x00458a80`, `0x0045ba90`).

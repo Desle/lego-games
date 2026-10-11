@@ -6,7 +6,10 @@ import {
   enterZoneTwo,
   enterZoneZero,
   getRacerAfterCheckpointTouch,
+  getRacerAfterPowerUpEvent,
   getRacerAfterTurboStart,
+  getRacerLanded,
+  getRacerMoved,
   releaseRacerAtStart,
   resetRacerForRace,
 } from './racer-transitions.ts'
@@ -148,5 +151,42 @@ describe('racer transitions', () => {
     expect(tumbling.turboLevel).toBe(2)
     expect(tumbling.flags & 0x8).toBe(0x8)
     expect(tumbling.carBody.rigidBody.flags & 0x8).toBe(0x8)
+  })
+
+  it('takes a warping racer off the track and puts it back (0x004395d0, 0x00439660)', () => {
+    // Arrange
+    const racer = Object.freeze({ ...getRacer(), flags: 0x200000 })
+
+    // Act
+    const warping = getRacerAfterPowerUpEvent(FIXTURE_ARITHMETIC, racer, {
+      type: 'power_ups.racer_warp_started',
+      racer: 0,
+    })
+    const landed = getRacerAfterPowerUpEvent(FIXTURE_ARITHMETIC, warping, {
+      type: 'power_ups.racer_warp_ended',
+      racer: 0,
+    })
+
+    // Assert
+    expect(warping.flags & 0x200010).toBe(0x10)
+    expect(warping.carBody.rigidBody.flags & 0x1000).toBe(0x1000)
+    expect(landed.flags & 0x10).toBe(0)
+    expect(landed.carBody.rigidBody.flags & 0x1000).toBe(0)
+  })
+
+  it('carries both frames along the route and lands a human racer facing forward (0x0045d780, 0x0045dc90)', () => {
+    // Arrange
+    const racer = Object.freeze({ ...getRacer(), controllerKind: 0 })
+    const position = { x: 1, y: 2, z: 3 }
+
+    // Act
+    const moved = getRacerMoved(racer, position)
+    const landed = getRacerLanded(FIXTURE_ARITHMETIC, moved, position, { x: 0, y: 1, z: 0 }, 0)
+
+    // Assert
+    expect(moved.carBody.rigidBody.displayFrame.position).toEqual(position)
+    expect(moved.carBody.rigidBody.frame.position).toEqual(position)
+    expect(landed.carBody.rigidBody.linearVelocity).toEqual({ x: 0, y: 0, z: 0 })
+    expect(landed.carBody.rigidBody.displayFrame.rotation.slice(0, 3)).toEqual([0, 1, 0])
   })
 })
