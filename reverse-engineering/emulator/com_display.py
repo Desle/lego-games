@@ -29,7 +29,7 @@ class DisplayMethods:
             pixel_format = bytes(description[0x48:0x68])
         else:
             pixel_format = DISPLAY_FORMAT
-        if capabilities & DDSCAPS_PRIMARYSURFACE:
+        if capabilities & (DDSCAPS_PRIMARYSURFACE | DDSCAPS_BACKBUFFER):
             width, height = DISPLAY_WIDTH, DISPLAY_HEIGHT
         bits_per_pixel = struct.unpack_from("<I", pixel_format, 0x0C)[0] or 16
         pitch = (width * max(bits_per_pixel // 8, 1) + 3) & ~3

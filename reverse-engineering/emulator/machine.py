@@ -247,6 +247,14 @@ class GameMachine(Emulator):
             return "returned"
         raise RuntimeError(self.describe_failure(RuntimeError("emulation stopped")))
 
+    def apply_fpu_option(self) -> None:
+        if self.options.get("fpu") in ("single", "double"):
+            self.set_fpu_precision(self.options["fpu"])
+
+    def call_function_until_stop(self, address: int, convention: str, arguments: list) -> str:
+        self.prepare_call(convention, arguments)
+        return self.run(address)
+
     def resume(self) -> str:
         eip = self.uc.reg_read(UC_X86_REG_EIP)
         self.skip_hook_address = eip if eip in self.address_hooks else None

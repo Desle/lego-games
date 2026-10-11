@@ -131,6 +131,7 @@ class ComWorld(DisplayMethods):
         self.object_kinds = {}
         self.hooks = {}
         self.log = []
+        self.input_queues = {}
 
     def vtable_for(self, kind: str) -> int:
         if kind not in self.vtables:
@@ -206,6 +207,11 @@ class ComWorld(DisplayMethods):
     DirectDraw2_GetCaps = DirectDraw_GetCaps
     DirectDraw4_GetCaps = DirectDraw_GetCaps
 
+    def DirectDraw_SetCooperativeLevel(self, this, record, argument):
+        if argument(2) & 0x800 and self.machine.options.get("fpu") == "auto":
+            self.machine.set_fpu_precision("single")
+        return S_OK
+
     def DirectDraw_GetDisplayMode(self, this, record, argument):
         data = bytearray(108)
         struct.pack_into("<IIII", data, 0, 108, 0x100F, 480, 640)
@@ -244,7 +250,8 @@ class ComWorld(DisplayMethods):
         struct.pack_into("<IIII", data, 0x1C, 16, 3, 1, 8)
         for base in (0x2C, 0x64):
             struct.pack_into("<14I", data, base, 56, 0xFFFFFFFF, 0xFFFFFFFF, 0xFF, 0xFFFF, 0xFFFF, 0xFF, 0xFF, 0xFFFF, 0xFFFF, 0xFF, 0xFF, 32, 32)
-        struct.pack_into("<IIII", data, 0x98, 0x0700, 0x0700, 0x100000, 0xFFFF)
+        struct.pack_into("<IIIIIIII", data, 0x9C, 0x0700, 0x0700, 0, 0xFFFF, 1, 1, 2048, 2048)
+        struct.pack_into("<IIII", data, 0xD0, 2048, 2048, 1, 0)
         return bytes(data)
 
     # DirectInput --------------------------------------------------------------------------------------------------
@@ -265,8 +272,20 @@ class ComWorld(DisplayMethods):
         return S_OK
 
     def DirectInputDevice_GetDeviceData(self, this, record, argument):
-        self.machine.write_u32(argument(3), 0)
+        queue = self.input_queues.setdefault(record["device_type"], [])
+        capacity = self.machine.read_u32(argument(3))
+        count = min(capacity, len(queue))
+        timestamp = self.machine.operating_system.now_milliseconds
+        for index in range(count):
+            offset, data = queue[index]
+            self.machine.write_bytes(argument(2) + 16 * index, struct.pack("<IIII", offset, data, timestamp, 0))
+        if not argument(4) & 1:
+            del queue[:count]
+        self.machine.write_u32(argument(3), count)
         return S_OK
+
+    def send_key(self, scan_code: int, is_pressed: bool) -> None:
+        self.input_queues.setdefault("keyboard", []).append((scan_code, 0x80 if is_pressed else 0))
 
     # Shared IUnknown ----------------------------------------------------------------------------------------------
 
