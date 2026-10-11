@@ -70,6 +70,17 @@ const getAlongHeading = (
 const getIsSpinning = (body: CarBody): boolean =>
   (body.rigidBody.flags & CarRigidBodyFlag.SPINNING) !== 0
 
+// Car body +0x778 is the route follower's speed factor (+0x2c of the follower at +0x74c): one cell in the original.
+const getWithSpeedFactor = (body: CarBody, speedFactor: number): CarBody =>
+  Object.freeze({
+    ...body,
+    speedFactor,
+    routeFollower:
+      body.routeFollower === null
+        ? null
+        : setRouteFollowerSpeedFactor(body.routeFollower, speedFactor),
+  })
+
 // Car body slot 8 (0x00429770, thiscall: direction, amount). A free body takes the car rigid body's
 // 0x00448110. A scripted body has no velocity: the impulse along its heading (at most 240) moves
 // the route speed factor, up by 0.05 per unit of the cosine's complement when pushed forward and down by
@@ -100,24 +111,20 @@ export const addCarBodyImpulse = (
       ? add(SPIN_SPEED_FACTOR, SPIN_SPEED_MARGIN)
       : add(body.speedFactor, fraction)
     const factor = add(rate, base)
-    return Object.freeze({
-      ...body,
-      speedFactor: getIsBelowOrEqual(factor, MAXIMUM_SPEED_FACTOR)
-        ? storeFloat(factor)
-        : MAXIMUM_SPEED_FACTOR,
-    })
+    return getWithSpeedFactor(
+      body,
+      getIsBelowOrEqual(factor, MAXIMUM_SPEED_FACTOR) ? storeFloat(factor) : MAXIMUM_SPEED_FACTOR
+    )
   }
   const rate = multiply(add(signedAlong, 1), BACKWARD_RATE)
   const base = isSpinning
     ? subtract(SPIN_SPEED_FACTOR, SPIN_SPEED_MARGIN)
     : subtract(body.speedFactor, fraction)
   const factor = subtract(base, rate)
-  return Object.freeze({
-    ...body,
-    speedFactor: getIsBelow(factor, MINIMUM_SPEED_FACTOR)
-      ? MINIMUM_SPEED_FACTOR
-      : storeFloat(factor),
-  })
+  return getWithSpeedFactor(
+    body,
+    getIsBelow(factor, MINIMUM_SPEED_FACTOR) ? MINIMUM_SPEED_FACTOR : storeFloat(factor)
+  )
 }
 
 // Car body slot 9 (0x00429c40, thiscall: factor, rate, spin time). A free body takes 0x00448160. A
@@ -143,11 +150,13 @@ export const startCarBodySpin = (
     flags: body.rigidBody.flags | CarRigidBodyFlag.SPINNING,
   })
   return Object.freeze({
-    ...body,
+    ...getWithSpeedFactor(
+      body,
+      body.rigidBody.groundedWheelCount === 0 ? body.speedFactor : SPIN_SPEED_FACTOR
+    ),
     rigidBody,
     scriptedSpinPeriod: rate,
     scriptedSpinTime: 0,
-    speedFactor: body.rigidBody.groundedWheelCount === 0 ? body.speedFactor : SPIN_SPEED_FACTOR,
   })
 }
 
@@ -344,8 +353,7 @@ export const startCarBodyBoost = (arithmetic: FloatArithmetic, body: CarBody): C
   const { rigidBody } = body
   if ((rigidBody.flags & CAR_BODY_HELD_FLAG) !== 0) return body
   return Object.freeze({
-    ...body,
-    speedFactor: body.isScripted ? BOOST_SPEED_FACTOR : body.speedFactor,
+    ...getWithSpeedFactor(body, body.isScripted ? BOOST_SPEED_FACTOR : body.speedFactor),
     rigidBody: setTopSpeed(
       arithmetic,
       Object.freeze({
@@ -368,8 +376,7 @@ export const holdCarBody = (arithmetic: FloatArithmetic, body: CarBody): CarBody
   const ended =
     (body.rigidBody.flags & RAMPED_TARGET_FLAG) === 0 ? body : endCarBodyBoost(arithmetic, body)
   return Object.freeze({
-    ...ended,
-    speedFactor: ended.isScripted ? HELD_SPEED_FACTOR : ended.speedFactor,
+    ...getWithSpeedFactor(ended, ended.isScripted ? HELD_SPEED_FACTOR : ended.speedFactor),
     rigidBody: Object.freeze({
       ...ended.rigidBody,
       flags: ended.rigidBody.flags | CAR_BODY_HELD_FLAG,
