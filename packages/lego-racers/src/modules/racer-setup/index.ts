@@ -2,6 +2,7 @@ export { createCarBodySetup } from './controller/create-car-body/create-car-body
 export {
   describeBuiltRacer,
   describeChampionRacer,
+  getRacerRecord,
 } from './controller/describe-racer/describe-racer.ts'
 export {
   BASE_TOP_SPEED,

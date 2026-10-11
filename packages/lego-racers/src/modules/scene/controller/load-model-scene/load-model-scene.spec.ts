@@ -24,6 +24,8 @@ describe.runIf(isOriginalPresent)('loadModelScene on the original LEGO.JAM', () 
       textureNames: ['RRCM', 'RRPELVIS'],
       materialNames: ['RRCM', 'RRPELVIS'],
       meshNames: ['RRCM', 'RRPELVIS'],
+      skeletonName: null,
+      animationName: null,
     })
 
     // Assert
@@ -32,5 +34,34 @@ describe.runIf(isOriginalPresent)('loadModelScene on the original LEGO.JAM', () 
     expect(meshScales[0]).toBeCloseTo(0.007849, 6)
     expect(meshScales[1]).toBe(0.015625)
     expect(scene.textures.every((texture) => texture.bitmap !== null)).toBe(true)
+  })
+
+  it("loads a racer's wheels as a skeleton instance with their skeleton and two animations", () => {
+    // Arrange
+    if (archive === null) return
+
+    // Act
+    const { scene, meshScales } = loadModelScene(archive, {
+      directory: 'GAMEDATA\\COMMON',
+      textureNames: ['DAJMW'],
+      materialNames: ['DAJMW'],
+      meshNames: ['DAJMW'],
+      skeletonName: 'DAJMW',
+      animationName: 'DAJMW',
+    })
+
+    // Assert
+    expect(scene.instances[0]).toMatchObject({ kind: 'skeleton' })
+    expect(scene.instances[0]?.levels[0]).toMatchObject({ skeletonIndex: 0, animationIndex: 0 })
+    expect(scene.skeletons[0]?.skeleton.bones.map((bone) => bone.name)).toEqual([
+      'dajmw',
+      'da_frt',
+      'da_brt',
+    ])
+    expect(scene.animations[0]?.animation.clips.map((clip) => clip.name)).toEqual([
+      'frwrd',
+      'rvrse',
+    ])
+    expect(meshScales[0]).toBe(0.015625)
   })
 })

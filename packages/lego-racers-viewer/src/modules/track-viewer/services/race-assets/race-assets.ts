@@ -6,8 +6,19 @@ import { parseImageDatabase } from '@lego-games/lego-racers/image-database'
 import type { ImageDefinition } from '@lego-games/lego-racers/image-database'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
+import { getDriverPartBytes } from '@lego-games/lego-racers/car-builder'
 import { loadRaceDefinition } from '@lego-games/lego-racers/race'
-import type { LoadRaceOptions, RaceDefinition } from '@lego-games/lego-racers/race'
+import type {
+  LoadRaceOptions,
+  RaceDefinition,
+  RaceRacerDefinition,
+} from '@lego-games/lego-racers/race'
+import {
+  loadBuiltCarScene,
+  loadBuiltDriverScene,
+  RACER_FILE_DIRECTORY,
+} from '@lego-games/lego-racers/racer-appearance'
+import type { ModelResourceNames } from '@lego-games/lego-racers/racer-appearance'
 import { parseRaceDescription } from '@lego-games/lego-racers/race-description'
 import {
   COMMON_DIRECTORY,
@@ -19,8 +30,10 @@ import {
 } from '@lego-games/lego-racers/scene'
 import { parseSky } from '@lego-games/lego-racers/sky'
 import { getString, parseStringTable } from '@lego-games/lego-racers/string-table'
+import type { ModelScene } from '@lego-games/lego-racers/scene'
 import { HUD_FONT_NAMES } from '../../types/hud-fonts/hud-fonts.ts'
 import type {
+  EffectModels,
   HudBitmapFont,
   HudFonts,
   HudImage,
@@ -35,24 +48,62 @@ const ENGLISH_DIRECTORY = `${COMMON_DIRECTORY}\\ENGLISH`
 const SEPARATOR = '\\'
 // The image database flag for a colour key (IMAGE_KEYWORD_2B_FLAG, 0x20).
 const COLOR_KEY_FLAG = 0x20
-// PLACEHOLDER: until the chassis and driver databases are ported every racer takes the next prefix; the car is
-// `<prefix>CM` and the driver `<prefix>PELVIS` (GAMEDATA\COMMON).
-const RACER_MODEL_PREFIXES: readonly string[] = Object.freeze(['RR', 'KK', 'VV', 'JT', 'BB', 'GM'])
+const loadResourceModel = (archive: JamArchive, names: ModelResourceNames): ModelScene =>
+  loadModelScene(archive, {
+    directory: RACER_FILE_DIRECTORY,
+    textureNames: [names.textureDatabaseName.toUpperCase()],
+    materialNames: [names.materialLibraryName.toUpperCase()],
+    meshNames: [names.modelName.toUpperCase()],
+    skeletonName: names.skeletonName === '' ? null : names.skeletonName.toUpperCase(),
+    animationName: names.animationName === '' ? null : names.animationName.toUpperCase(),
+  })
 
-const getRacerModels = (archive: JamArchive, prefix: string): RacerModels =>
+// The files a racer's appearance names (RacerSet_SetupRacer 0x0043b480): the champion's body, the chassis's wheels and
+// the driver's model.
+const getBodyModel = (archive: JamArchive, racer: RaceRacerDefinition): ModelScene | null => {
+  if (racer.appearance.bodyModel !== null)
+    return loadResourceModel(archive, racer.appearance.bodyModel)
+  const design = racer.savedCar?.design ?? null
+  return design === null ? null : loadBuiltCarScene(archive, design)
+}
+
+const getBuiltDriver = (archive: JamArchive, racer: RaceRacerDefinition): ModelScene | null =>
+  racer.savedCar === null
+    ? null
+    : loadBuiltDriverScene(archive, getDriverPartBytes(racer.savedCar.record))
+
+const getRacerModels = (archive: JamArchive, racer: RaceRacerDefinition): RacerModels => {
+  const { appearance } = racer
+  return Object.freeze({
+    body: getBodyModel(archive, racer),
+    wheels: loadResourceModel(archive, appearance.wheelModel),
+    driver:
+      appearance.driverModel === null
+        ? getBuiltDriver(archive, racer)
+        : loadResourceModel(archive, appearance.driverModel),
+  })
+}
+
+// The effect models name materials the power-up libraries hold (GAMEDATA\COMMON POWERUP, GRAPPLE, BARREL, DBRICKS).
+const EFFECT_TEXTURE_LIBRARIES = ['POWERUP', 'BARREL', 'DBRICKS']
+const EFFECT_MATERIAL_LIBRARIES = ['POWERUP', 'GRAPPLE', 'BARREL', 'DBRICKS']
+
+const loadEffectModel = (archive: JamArchive, name: string, isSkeletal: boolean): ModelScene =>
+  loadModelScene(archive, {
+    directory: RACER_FILE_DIRECTORY,
+    textureNames: EFFECT_TEXTURE_LIBRARIES,
+    materialNames: EFFECT_MATERIAL_LIBRARIES,
+    meshNames: [name],
+    skeletonName: isSkeletal ? name : null,
+    animationName: isSkeletal ? name : null,
+  })
+
+const getEffectModels = (archive: JamArchive): EffectModels =>
   Object.freeze({
-    car: loadModelScene(archive, {
-      directory: COMMON_DIRECTORY,
-      textureNames: [`${prefix}CM`],
-      materialNames: [`${prefix}CM`],
-      meshNames: [`${prefix}CM`],
-    }),
-    driver: loadModelScene(archive, {
-      directory: COMMON_DIRECTORY,
-      textureNames: [`${prefix}PELVIS`],
-      materialNames: [`${prefix}PELVIS`],
-      meshNames: [`${prefix}PELVIS`],
-    }),
+    rocket: loadEffectModel(archive, 'DMISSILE', true),
+    barrel: loadEffectModel(archive, 'BARREL', false),
+    magnet: loadEffectModel(archive, 'MAGNET04', true),
+    spikedExplosion: loadEffectModel(archive, 'SPIKEXP', false),
   })
 
 const getHudImage = (archive: JamArchive, definition: ImageDefinition): HudImage | null => {
@@ -143,11 +194,8 @@ export const loadRaceAssets = (
       sky: skyPath === null ? null : parseSky(archive.readFile(skyPath)),
       backgroundWorldPath: getRaceBackgroundWorldPath(raceDirectory, description),
     }),
-    racerModels: Object.freeze(
-      definition.racers.map((_, index) =>
-        getRacerModels(archive, RACER_MODEL_PREFIXES[index % RACER_MODEL_PREFIXES.length] ?? 'RR')
-      )
-    ),
+    racerModels: Object.freeze(definition.racers.map((racer) => getRacerModels(archive, racer))),
+    effectModels: getEffectModels(archive),
     getString: (stringId: number) => getString(table, stringId) ?? '',
     imageNames: Object.freeze(imageDatabase.images.map((image) => image.name.toUpperCase())),
     hudFonts: loadHudFonts(archive),

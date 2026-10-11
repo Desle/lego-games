@@ -608,6 +608,30 @@
 004202f0 RacerDriver_SetRoute
 0042b0c0 CarBody_ResetRoute
 00422100 ForceFeedback_NotifyContact
+# Car builder and vehicle presentation (car-builder.md)
+0043e740 Vehicle_UpdateLean
+0043ebd0 Frame_CopyRotation
+0049e2d0 BuildGrid_GetRestingHeight
+0049e450 BuildGrid_GetOverlapCount
+0049e710 BuildGrid_PlaceBrick
+0049df40 BuildGrid_MarkBrick
+0049e280 BuildGrid_Clear
+0049eb40 BuildPiece_GetHeight
+0049eae0 BuildPiece_GetOriginVertexIndex
+0049f460 BrickDatabase_FindPieceById
+0049f4e0 BrickDatabase_FindPieceByName
+0049ebf0 BuildPiece_CompareName
+0049f530 BuildPiece_GetVariant
+0049f710 CarDesign_AddBrick
+0049fac0 CarDesign_ReadUnsignedShort
+0049b920 MeshBuilder_Build
+0049a450 MeshBuilder_AddPieceFaces
+0049b740 MeshBuilder_SetOrigin
+0049c840 MeshBuilder_WriteModel
+0049c7f0 MeshBuilder_LoadDesign
+00497d80 LegoColors_FindColorIndex
+0042dfa0 FrontEnd_BuildDriverFigure
+0049dab0 DriverModel_Build
 # Game progression: circuit standings, ghost object, save files (feature/game-progression)
 00440220 CircuitStandings_Constructor
 00440240 CircuitStandings_Clear

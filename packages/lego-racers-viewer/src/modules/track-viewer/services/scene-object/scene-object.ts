@@ -1,4 +1,5 @@
 import type { Scene, SceneInstance } from '@lego-games/lego-racers/scene'
+import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import { SceneInstanceKind } from '@lego-games/lego-racers/scene'
 import { AmbientLight, Box3, Color, DirectionalLight, Group } from 'three'
 import type { BufferGeometry, Material } from 'three'
@@ -60,6 +61,7 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
   }
   const group = new Group()
   const animators: ((deltaMilliseconds: number) => void)[] = []
+  const stateSetters: ((state: SkeletonAnimationState) => void)[] = []
   for (const instance of scene.instances.filter(options.includeInstance)) {
     const levelMesh = getInstanceLevelMesh(scene, instance)
     const instanceObject =
@@ -67,6 +69,7 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
     if (instanceObject === null) continue
     group.add(instanceObject.group)
     if (instanceObject.animate !== null) animators.push(instanceObject.animate)
+    if (instanceObject.setState !== null) stateSetters.push(instanceObject.setState)
   }
   group.updateMatrixWorld(true)
   const bounds = new Box3().setFromObject(group)
@@ -86,6 +89,9 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
       for (const animator of animators) animator(deltaMilliseconds)
     },
     animatedInstanceCount: animators.length,
+    setAnimationState: (state: SkeletonAnimationState) => {
+      for (const setState of stateSetters) setState(state)
+    },
     dispose,
   })
 }

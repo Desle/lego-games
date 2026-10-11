@@ -24,6 +24,7 @@ import { getHudLayout } from '@lego-games/lego-racers/race-hud'
 import { getRacerControls } from '@lego-games/lego-racers/race-input'
 import {
   createRacePresentation,
+  getEffectViews,
   getRacerPoses,
   stepRacePresentation,
 } from '@lego-games/lego-racers/race-presentation'
@@ -282,7 +283,7 @@ export const useRaceController = (): RaceController => {
         presentation = frame.presentation
         for (const sound of frame.sounds) audio.playSound(sound)
         if (frame.music !== null) audio.playMusic(frame.music)
-        viewport.update(getRacerPoses(raceState), frame.cameraView)
+        viewport.update(getRacerPoses(raceState), frame.cameraView, getEffectViews(raceState))
         viewport.animate(advance.frameMilliseconds)
         setScreen((previous) => ({
           ...previous,

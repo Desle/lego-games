@@ -5,7 +5,7 @@ import type { RegistryContact, RegistryEntry } from '../../projectiles/index.ts'
 import type { RouteFollower, RubberBand } from '../../racer-ai/index.ts'
 import type { CarRigidBody } from '../../racer-physics/index.ts'
 import type { RandomTable, RandomTablePosition } from '../../random-table/index.ts'
-import type { FloatArithmetic, Quaternion, Vector3 } from '../../simulation-math/index.ts'
+import type { FloatArithmetic, Matrix3, Quaternion, Vector3 } from '../../simulation-math/index.ts'
 
 // The two lookup tables in LEGORacers.exe that the racer code reads.
 export type RacerTables = {
@@ -278,6 +278,15 @@ export type Vehicle = {
   readonly smokeEmitterAge: number | null
   readonly dustEmitterAge: number | null
   readonly boostEmitterAge: number | null
+  // +0x4c..+0x54: where the driver sits, in the car model frame (the chassis's `vehiclePoint`, 0x0043d7a0).
+  readonly seatPoint: Vector3
+  // +0x3c: the car model frame's rotation. 0x0043e740 leans it towards the display frame every update; it starts
+  // as the identity (the frame constructor 0x004108c0). Its position is the display frame's.
+  readonly bodyRotation: Matrix3
+  // +0x398: float32, the lean's forward spring. The side spring is +0x39c, which is `Racer.vehicleSlideAngle`.
+  readonly forwardLean: number
+  // The driver figure's world position, the seat point carried by the car model frame (0x0043e740 ends with it).
+  readonly driverPosition: Vector3
 }
 
 // The racer (0xe34 bytes; constructor 0x00436990, field reset 0x00436bd0). Only the fields the ported passes touch.

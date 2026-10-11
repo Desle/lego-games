@@ -12,6 +12,7 @@ import {
   keepRacerSetNotYetPorted,
   setRacer,
   stepRacerRigidBody,
+  updateVehicle,
 } from '../../../racer/index.ts'
 import type {
   Racer,
@@ -174,7 +175,7 @@ const guidePlayer: RacerBoundary = (context, racerSet, racerIndex, stepMilliseco
 // RacerSetStepDependencies for a race. Wired: the car rigid body, the scripted car body, the contacts a frame
 // delivers, the computer's power-up use and the permanent turbo, the player's wrong-way warning. Audio and
 // presentation (sounds, camera, effects) keep the racer's stand-in. Still stubs: the driver's route following
-// 0x004203b0, racer-against-racer collisions, Vehicle_Update 0x0043e070 (it moves the random cursor), the
+// 0x004203b0, racer-against-racer collisions, the
 // car body effect 0x004397b0, the end of the curse 0x00439b00, the taunt 0x00439c90 and the contact sound.
 export const RACE_STEP_DEPENDENCIES: RacerSetStepDependencies = Object.freeze({
   followDriverRoute: keepRacerSetNotYetPorted,
@@ -183,7 +184,7 @@ export const RACE_STEP_DEPENDENCIES: RacerSetStepDependencies = Object.freeze({
   updateEngineSound: keepRacerSetNotYetPorted,
   endPowerSlideEffects: keepRacerSetNotYetPorted,
   collideRacers: deliverContacts,
-  updateVehicle: keepRacerSetNotYetPorted,
+  updateVehicle,
   updateRacerSounds: keepRacerSetNotYetPorted,
   considerComputerPowerUp: considerPowerUp,
   endCarBodyEffect: keepRacerSetNotYetPorted,

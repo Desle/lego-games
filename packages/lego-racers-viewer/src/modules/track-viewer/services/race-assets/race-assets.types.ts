@@ -13,13 +13,23 @@ export type RaceGameFiles = {
   readonly tunes: ReadonlyMap<string, Uint8Array>
 }
 
-// One racer's car and driver models.
-// PLACEHOLDER: the chassis and driver databases (CHASSIS.CMB, DRIVERS.DDB, CHAMPS.CCB; the `cars-and-drivers`
-// branch) say which models a racer uses and where the driver sits; until they are on main every racer takes a model
-// pair from RACER_MODEL_PREFIXES and the driver sits at DRIVER_SEAT_OFFSET.
+// One racer's car, wheels and driver. The wheels and the driver have bones that the race's figures animate; the body
+// of a champion's car is a plain model. A racer with a car built from bricks has no body or driver here until the car
+// builder and the figure builder make them (null).
 export type RacerModels = {
-  readonly car: ModelScene
-  readonly driver: ModelScene
+  readonly body: ModelScene | null
+  readonly wheels: ModelScene
+  readonly driver: ModelScene | null
+}
+
+// The models of the effects the race draws (GAMEDATA\COMMON): the rocket and the magnet have bones, the barrel and the
+// spiked explosion are plain. The cannon ball, the grapple hook, the wand's beam and the plain explosion are not drawn:
+// the files that give them their look are not traced (projectiles.md).
+export type EffectModels = {
+  readonly rocket: ModelScene
+  readonly barrel: ModelScene
+  readonly magnet: ModelScene
+  readonly spikedExplosion: ModelScene
 }
 
 export type RaceAssets = {
@@ -28,6 +38,7 @@ export type RaceAssets = {
   readonly scene: Scene
   readonly background: SceneBackground
   readonly racerModels: readonly RacerModels[]
+  readonly effectModels: EffectModels
   readonly getString: (stringId: number) => string
   readonly imageNames: readonly string[]
   readonly hudImages: ReadonlyMap<string, HudImage>
