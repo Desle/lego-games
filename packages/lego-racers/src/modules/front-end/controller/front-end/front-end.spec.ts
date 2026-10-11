@@ -76,6 +76,9 @@ const resources: FrontEndResources = {
   getDriverCatalog: () => {
     throw new RangeError('The test has no driver catalog')
   },
+  getDriverDatabase: () => {
+    throw new RangeError('The test has no driver database')
+  },
 }
 
 const environment: FrontEndEnvironment = {

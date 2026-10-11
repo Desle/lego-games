@@ -57,6 +57,8 @@ export const getBuilderCamera = (preview: BuilderPreview): MenuCamera => {
     fieldOfViewDegrees: FIELD_OF_VIEW_DEGREES,
     nearPlane: NEAR_PLANE,
     farPlane: FAR_PLANE,
+    aspectRatio: null,
+    up: [0, 0, 1],
   }
   return Object.freeze(camera)
 }

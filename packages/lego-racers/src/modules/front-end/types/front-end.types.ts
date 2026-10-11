@@ -6,6 +6,7 @@ import type {
   SavedCar,
 } from '../../car-builder/index.ts'
 import type { BodyPartCatalog, DriverSession } from '../../figure-builder/index.ts'
+import type { DriverDatabase } from '../../driver-database/index.ts'
 import type { CircuitDatabase } from '../../circuit-database/index.ts'
 import type { MenuFile } from '../../menu-file/index.ts'
 import type { SaveFile, SaveRacer } from '../../save-data/index.ts'
@@ -50,6 +51,8 @@ export type FrontEndResources = {
   readonly getDefaultCar: () => SavedCar
   // `BODYPART.PCB` (0x00498740): the hats, heads, torsos and legs of the driver editor.
   readonly getDriverCatalog: () => BodyPartCatalog
+  // `DRIVERS.DDB` of the menus: the main menu shows the figure of one of its drivers.
+  readonly getDriverDatabase: () => DriverDatabase
 }
 
 // What the menus read from the machine: the original's input manager (`+0x98` of it counts the controllers).
@@ -215,6 +218,9 @@ export type FrontEndViewportCommand = {
 export type DriverPreview = {
   // The five part bytes the figure builder takes: hat, face, torso, legs, expression.
   readonly partBytes: readonly number[]
+  // Where the figure stands in the screen's world and the way it faces (its frame's forward vector).
+  readonly position: readonly [number, number, number]
+  readonly forward: readonly [number, number, number]
 }
 
 export type BuilderPreview = {

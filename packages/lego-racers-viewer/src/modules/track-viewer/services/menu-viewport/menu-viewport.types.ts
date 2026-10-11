@@ -1,4 +1,4 @@
-import type { FrontEndViewportCommand } from '@lego-games/lego-racers/front-end'
+import type { FrontEndViewportCommand, WorldCamera } from '@lego-games/lego-racers/front-end'
 import type { Scene as ThreeScene } from 'three'
 import type { DriverView } from '../driver-view/driver-view.types.ts'
 import type { BuilderCarView } from '../builder-car-view/builder-car-view.types.ts'
@@ -18,6 +18,8 @@ export type MenuViewport = {
 export type MenuWorld = {
   readonly three: ThreeScene
   readonly object: SceneObject
+  // The world's own camera (`Camera01`), when it has one.
+  readonly camera: WorldCamera | null
   // The car the builder screen puts in this world (created when it first asks).
   readonly carView: () => BuilderCarView
   // The driver the editor puts in this world.

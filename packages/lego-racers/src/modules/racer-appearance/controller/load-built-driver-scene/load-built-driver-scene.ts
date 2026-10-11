@@ -1,23 +1,16 @@
-import {
-  buildDriverModel,
-  parseBodyPartCatalog,
-  parsePartGeometry,
-} from '../../../figure-builder/index.ts'
+import { parseBodyPartCatalog } from '../../../figure-builder/index.ts'
 import type { JamArchive } from '../../../jam-archive/index.ts'
-import { parseMaterialLibrary } from '../../../material/index.ts'
-import { parseModel } from '../../../model/index.ts'
-import { loadGeometryScene } from '../../../scene/index.ts'
 import type { ModelScene } from '../../../scene/index.ts'
 import { DRIVER_ANIMATION_NAME, DRIVER_SKELETON_NAME } from '../../types/racer-appearance-names.ts'
-import { BUILT_LIGHTS } from '../../types/built-lights.ts'
+import {
+  loadDriverFigureScene,
+  PART_DIRECTORY,
+} from '../load-driver-figure-scene/load-driver-figure-scene.ts'
 
-// BodyPartCatalog_Load 0x00498740 and FUN_00498120: the catalogue and the part materials (`bodypart.tdf`, `bodypart.mdf`)
-// are in MENUDATA\PARTDB; the game's parts (mode 1, 0x00498020: the second directory and world of the catalogue) are in
-// MENUDATA\PARTDB\GAMEPART.
-const PART_DIRECTORY = 'MENUDATA\\PARTDB'
+// BodyPartCatalog_Load 0x00498740: the catalogue is in MENUDATA\PARTDB; the game's parts (mode 1, 0x00498020: the second
+// directory and world of the catalogue) are in MENUDATA\PARTDB\GAMEPART.
 const GAME_PART_DIRECTORY = `${PART_DIRECTORY}\\GAMEPART`
 const CATALOG_PATH = `${PART_DIRECTORY}\\BODYPART.PCB`
-const PART_MATERIAL_LIBRARY = 'BODYPART'
 const GEOMETRY_PATH = `${GAME_PART_DIRECTORY}\\ICB_CHAR.GCB`
 const COMMON_DIRECTORY = 'GAMEDATA\\COMMON'
 
@@ -29,39 +22,18 @@ export const loadBuiltDriverScene = (
 ): ModelScene => {
   const catalog = parseBodyPartCatalog(archive.readFile(CATALOG_PATH))
   const bodyName = catalog.bodyModelNames.at(-1) ?? ''
-  const model = buildDriverModel({
-    catalog,
-    geometry: parsePartGeometry(archive.readFile(GEOMETRY_PATH)),
-    body: parseModel(archive.readFile(`${GAME_PART_DIRECTORY}\\${bodyName.toUpperCase()}.GDB`)),
-    partBytes,
-  })
-  const materialNames = parseMaterialLibrary(
-    archive.readFile(`${PART_DIRECTORY}\\${PART_MATERIAL_LIBRARY}.MDB`)
-  ).materials.map((material) => material.name)
-  return loadGeometryScene(
+  return loadDriverFigureScene(
     archive,
     {
-      directory: PART_DIRECTORY,
-      textureNames: [PART_MATERIAL_LIBRARY],
-      materialNames: [PART_MATERIAL_LIBRARY],
-      ...BUILT_LIGHTS,
+      catalog,
+      geometryPath: GEOMETRY_PATH,
+      bodyPath: `${GAME_PART_DIRECTORY}\\${bodyName.toUpperCase()}.GDB`,
       bones: {
         directory: COMMON_DIRECTORY,
         skeletonName: DRIVER_SKELETON_NAME.toUpperCase(),
         animationName: DRIVER_ANIMATION_NAME.toUpperCase(),
       },
     },
-    {
-      positions: model.positions,
-      normals: model.normals,
-      textureCoordinates: model.textureCoordinates,
-      batches: model.batches.map((batch) => ({
-        materialIndex: materialNames.indexOf(batch.materialName),
-        vertexIndices: batch.vertexIndices,
-        transformIndices: batch.transformIndices,
-        ...(batch.tint === null ? {} : { tint: batch.tint }),
-      })),
-    },
-    model.scale
+    partBytes
   )
 }

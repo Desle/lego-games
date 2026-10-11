@@ -94,9 +94,9 @@ export type Camera = {
   readonly position: Vector3
   readonly forward: Vector3
   readonly negatedUp: Vector3
-  readonly keyword45Value: number
-  readonly keyword46Value: number
-  readonly keyword47Value: number
+  readonly nearPlane: number
+  readonly farPlane: number
+  readonly fieldOfViewDegrees: number
 }
 
 export type AmbientLight = {

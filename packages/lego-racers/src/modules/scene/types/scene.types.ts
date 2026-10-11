@@ -175,6 +175,11 @@ export type SceneCamera = {
   readonly position: SceneVector
   readonly forward: SceneVector
   readonly up: SceneVector
+  // World camera keywords 0x45, 0x46 and 0x47: the clipping planes and the vertical field of view in degrees (confirmed
+  // by the original's menu draws: the matrices of the main menu, the racer showcase and the race cinemas).
+  readonly nearPlane: number
+  readonly farPlane: number
+  readonly fieldOfViewDegrees: number
 }
 
 export type SceneAmbientLight = {
