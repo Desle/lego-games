@@ -53,7 +53,7 @@ const getTextureKey = (
 ): string => {
   const known = keys.get(texture)
   if (known !== undefined) return known
-  const key = `${materialName}#${String(keys.size)}`
+  const key = texture.name === '' ? `${materialName}#${String(keys.size)}` : texture.name
   keys.set(texture, key)
   const { data, width, height } = texture.image
   textures.set(key, {

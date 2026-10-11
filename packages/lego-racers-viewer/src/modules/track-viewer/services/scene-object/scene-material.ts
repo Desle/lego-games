@@ -96,6 +96,7 @@ const getTexture = (
   texture.wrapS = wrapping
   texture.wrapT = wrapping
   texture.generateMipmaps = false
+  texture.name = textures[textureIndex]?.name ?? ''
   texture.colorSpace = NoColorSpace
   texture.needsUpdate = true
   cache.set(key, texture)

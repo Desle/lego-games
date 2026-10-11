@@ -9,6 +9,9 @@ import {
 import { getEffectViews, getRacerPoses } from '@lego-games/lego-racers/race-presentation'
 import { FpuPrecision } from '@lego-games/lego-racers/simulation-math'
 import { loadRaceAssets } from '../race-assets/race-assets.ts'
+import type { RaceAssets } from '../race-assets/race-assets.types.ts'
+import type { PortTexture } from '@lego-games/lego-racers/presentation-trace'
+import type { Scene } from '@lego-games/lego-racers/scene'
 import { createRaceStage } from '../race-viewport/race-viewport.ts'
 import { readOriginalExecutable, readOriginalJam } from './original-game-files.ts'
 import { ORIGINAL_STAGE_SIZE, runPortRace } from './port-race.ts'
@@ -20,6 +23,31 @@ import type {
 } from './render-comparison.types.ts'
 import { createPresentationScenario } from './trace-scenarios.ts'
 import type { TraceScenarioRequest } from './trace-scenarios.types.ts'
+
+const getEffectScenes = (assets: RaceAssets): readonly Scene[] => {
+  const { powerUpBricks, ...models } = assets.effectModels
+  return [...Object.values(models), ...Object.values(powerUpBricks)].map((model) => model.scene)
+}
+
+const getSceneTextures = (assets: RaceAssets): ReadonlyMap<string, PortTexture> =>
+  new Map(
+    [assets.scene, ...getEffectScenes(assets)].flatMap((scene) =>
+      scene.textures.flatMap((texture) =>
+        texture.bitmap === null
+          ? []
+          : [
+              [
+                texture.name,
+                {
+                  width: texture.bitmap.width,
+                  height: texture.bitmap.height,
+                  colors: texture.bitmap.colors,
+                },
+              ] as const,
+            ]
+      )
+    )
+  )
 
 const CANDIDATE_COUNT = 6
 const TOLERANCES = Object.freeze({ positionPixels: 0.25, textureCoordinate: 0.001, colorLevels: 2 })
@@ -46,6 +74,10 @@ export const runRenderComparison = async (
     }
   )
   const stage = createRaceStage(assets, ORIGINAL_STAGE_SIZE)
+  // Every texture the race has, used or not, so a surface the port draws with another texture still finds its own.
+  const sceneTextures = getSceneTextures(assets)
+  const allTextures = (used: ReadonlyMap<string, PortTexture>): ReadonlyMap<string, PortTexture> =>
+    new Map([...sceneTextures, ...used])
   const groups = new Map<string, AggregatedGroup>()
   const totals: FrameTotals[] = []
   runPortRace(assets, scenario.frames, (portFrame) => {
@@ -60,7 +92,7 @@ export const runRenderComparison = async (
     if (originalFrame === undefined) return
     const portTriangles = getPortWorldTriangles([stage.backgroundScene, stage.trackScene])
     const originalTriangles = getOriginalTriangles(originalFrame)
-    const textureMatches = matchTextures(original.textures, portTriangles.textures)
+    const textureMatches = matchTextures(original.textures, allTextures(portTriangles.textures))
     const comparisons = getCandidateMatrices(originalFrame, CANDIDATE_COUNT).map((matrix) =>
       compareRenderFrame({
         original: originalTriangles,

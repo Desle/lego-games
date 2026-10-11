@@ -18,7 +18,6 @@ import {
   loadBuiltDriverScene,
   RACER_FILE_DIRECTORY,
 } from '@lego-games/lego-racers/racer-appearance'
-import type { ModelResourceNames } from '@lego-games/lego-racers/racer-appearance'
 import { parseRaceDescription } from '@lego-games/lego-racers/race-description'
 import {
   COMMON_DIRECTORY,
@@ -30,13 +29,14 @@ import {
 } from '@lego-games/lego-racers/scene'
 import { parseSky } from '@lego-games/lego-racers/sky'
 import { getString, parseStringTable } from '@lego-games/lego-racers/string-table'
-import type { ModelScene } from '@lego-games/lego-racers/scene'
+import type { ModelScene, Scene } from '@lego-games/lego-racers/scene'
 import { HUD_FONT_NAMES } from '../../types/hud-fonts/hud-fonts.ts'
 import type {
   EffectModels,
   HudBitmapFont,
   HudFonts,
   HudImage,
+  ModelLoader,
   RaceAssets,
   RaceGameFiles,
   RacerModels,
@@ -48,21 +48,37 @@ const ENGLISH_DIRECTORY = `${COMMON_DIRECTORY}\\ENGLISH`
 const SEPARATOR = '\\'
 // The image database flag for a colour key (IMAGE_KEYWORD_2B_FLAG, 0x20).
 const COLOR_KEY_FLAG = 0x20
-const loadResourceModel = (archive: JamArchive, names: ModelResourceNames): ModelScene =>
-  loadModelScene(archive, {
-    directory: RACER_FILE_DIRECTORY,
-    textureNames: [names.textureDatabaseName.toUpperCase()],
-    materialNames: [names.materialLibraryName.toUpperCase()],
-    meshNames: [names.modelName.toUpperCase()],
-    skeletonName: names.skeletonName === '' ? null : names.skeletonName.toUpperCase(),
-    animationName: names.animationName === '' ? null : names.animationName.toUpperCase(),
-  })
+// The race loads its worlds and every racer's models into one container (LEGORacers.exe 0x00432e20): a texture name a
+// database registered first keeps its texture, so a car's `adnubint` is the track's and a later racer's textures
+// yield to an earlier racer's of the same name. The chain starts with the race's scene and grows with each model.
+const createModelLoader = (archive: JamArchive, raceScene: Scene): ModelLoader => {
+  let container = raceScene
+  return (names) => {
+    const model = loadModelScene(
+      archive,
+      {
+        directory: RACER_FILE_DIRECTORY,
+        textureNames: [names.textureDatabaseName.toUpperCase()],
+        materialNames: [names.materialLibraryName.toUpperCase()],
+        meshNames: [names.modelName.toUpperCase()],
+        skeletonName: names.skeletonName === '' ? null : names.skeletonName.toUpperCase(),
+        animationName: names.animationName === '' ? null : names.animationName.toUpperCase(),
+      },
+      container
+    )
+    container = model.scene
+    return model
+  }
+}
 
 // The files a racer's appearance names (RacerSet_SetupRacer 0x0043b480): the champion's body, the chassis's wheels and
 // the driver's model.
-const getBodyModel = (archive: JamArchive, racer: RaceRacerDefinition): ModelScene | null => {
-  if (racer.appearance.bodyModel !== null)
-    return loadResourceModel(archive, racer.appearance.bodyModel)
+const getBodyModel = (
+  archive: JamArchive,
+  racer: RaceRacerDefinition,
+  loadModel: ModelLoader
+): ModelScene | null => {
+  if (racer.appearance.bodyModel !== null) return loadModel(racer.appearance.bodyModel)
   const design = racer.savedCar?.design ?? null
   return design === null ? null : loadBuiltCarScene(archive, design)
 }
@@ -72,15 +88,19 @@ const getBuiltDriver = (archive: JamArchive, racer: RaceRacerDefinition): ModelS
     ? null
     : loadBuiltDriverScene(archive, getDriverPartBytes(racer.savedCar.record))
 
-const getRacerModels = (archive: JamArchive, racer: RaceRacerDefinition): RacerModels => {
+const getRacerModels = (
+  archive: JamArchive,
+  racer: RaceRacerDefinition,
+  loadModel: ModelLoader
+): RacerModels => {
   const { appearance } = racer
   return Object.freeze({
-    body: getBodyModel(archive, racer),
-    wheels: loadResourceModel(archive, appearance.wheelModel),
+    body: getBodyModel(archive, racer, loadModel),
+    wheels: loadModel(appearance.wheelModel),
     driver:
       appearance.driverModel === null
         ? getBuiltDriver(archive, racer)
-        : loadResourceModel(archive, appearance.driverModel),
+        : loadModel(appearance.driverModel),
   })
 }
 
@@ -98,13 +118,53 @@ const loadEffectModel = (archive: JamArchive, name: string, isSkeletal: boolean)
     animationName: isSkeletal ? name : null,
   })
 
+// LEGORacers.exe 0x00458a80 looks up the materials pbrickP, pbrickM, pbrickS and pbrickT; 0x0045ba90 gives a brick of
+// kind 1 to 4 the models P, S, T and M: red, blue, green and yellow. The brick mesh itself names the yellow ptrailM.
+const BRICK_DEFAULT_MATERIAL = 'ptrailM'
+const BRICK_MATERIALS: Readonly<Record<string, string>> = Object.freeze({
+  projectile: 'pbrickP',
+  shield: 'pbrickS',
+  turbo: 'pbrickT',
+  hazard: 'pbrickM',
+})
+
+const getBrickInMaterial = (model: ModelScene, materialName: string): ModelScene => {
+  const { materials } = model.scene
+  const target = materials.findLastIndex((material) => material.name === materialName)
+  const source = materials.findLastIndex((material) => material.name === BRICK_DEFAULT_MATERIAL)
+  if (target === -1 || source === -1) return model
+  return Object.freeze({
+    ...model,
+    scene: Object.freeze({
+      ...model.scene,
+      meshes: Object.freeze(
+        model.scene.meshes.map((mesh) =>
+          Object.freeze({
+            ...mesh,
+            materialIndices: Object.freeze(
+              mesh.materialIndices.map((index) => (index === source ? target : index))
+            ),
+          })
+        )
+      ),
+    }),
+  })
+}
+
 const getEffectModels = (archive: JamArchive): EffectModels =>
   Object.freeze({
     rocket: loadEffectModel(archive, 'DMISSILE', true),
     barrel: loadEffectModel(archive, 'BARREL', false),
     magnet: loadEffectModel(archive, 'MAGNET04', true),
     spikedExplosion: loadEffectModel(archive, 'SPIKEXP', false),
-    powerUpBrick: loadEffectModel(archive, 'PUBRICKY', true),
+    powerUpBricks: Object.freeze(
+      Object.fromEntries(
+        Object.entries(BRICK_MATERIALS).map(([kind, materialName]) => [
+          kind,
+          getBrickInMaterial(loadEffectModel(archive, 'PUBRICKY', true), materialName),
+        ])
+      )
+    ),
     enhancementBrick: loadEffectModel(archive, 'ENHABRIK', true),
   })
 
@@ -180,6 +240,7 @@ export const loadRaceAssets = (
       ? []
       : [getRaceBackgroundWorldPath(raceDirectory, description) ?? '']),
   ])
+  const loadModel = createModelLoader(archive, scene)
   const skyPath = getRaceSkyPath(raceDirectory, description)
   const imageDatabase = parseImageDatabase(archive.readFile(`${COMMON_DIRECTORY}\\LEGOIMGS.IDB`))
   const table = parseStringTable(archive.readFile(`${ENGLISH_DIRECTORY}\\GAME.SRF`))
@@ -196,7 +257,9 @@ export const loadRaceAssets = (
       sky: skyPath === null ? null : parseSky(archive.readFile(skyPath)),
       backgroundWorldPath: getRaceBackgroundWorldPath(raceDirectory, description),
     }),
-    racerModels: Object.freeze(definition.racers.map((racer) => getRacerModels(archive, racer))),
+    racerModels: Object.freeze(
+      definition.racers.map((racer) => getRacerModels(archive, racer, loadModel))
+    ),
     effectModels: getEffectModels(archive),
     getString: (stringId: number) => getString(table, stringId) ?? '',
     imageNames: Object.freeze(imageDatabase.images.map((image) => image.name.toUpperCase())),
