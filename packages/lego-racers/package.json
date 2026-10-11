@@ -39,6 +39,7 @@
     "./racer-physics": "./src/modules/racer-physics/index.ts",
     "./racer-setup": "./src/modules/racer-setup/index.ts",
     "./random-table": "./src/modules/random-table/index.ts",
+    "./save-data": "./src/modules/save-data/index.ts",
     "./scene": "./src/modules/scene/index.ts",
     "./simulation-math": "./src/modules/simulation-math/index.ts",
     "./skeletal-animation": "./src/modules/skeletal-animation/index.ts",
