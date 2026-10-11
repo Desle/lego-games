@@ -44,11 +44,21 @@ export type HudContext = {
 export type RacePresentationFrame = {
   readonly presentation: RacePresentation
   readonly cameraView: CameraView
+  // The warp's tunnel scene while the player is carried (0x0045d940), else null.
+  readonly warpView: WarpView | null
   // null in the introduction and the results, when the original draws no HUD.
   readonly hudFrame: HudFrame | null
   readonly sounds: readonly SoundRequest[]
   // The music track to switch to this frame, if any.
   readonly music: MusicCue | null
+}
+
+// What the player's warp draws instead of the track: the tunnel animated for `tunnelMilliseconds`, the car at the origin
+// (`pose`) and the camera that follows it.
+export type WarpView = {
+  readonly tunnelMilliseconds: number
+  readonly pose: RacerPose
+  readonly cameraView: CameraView
 }
 
 // A racer on the track: where its display frame is, and what hangs on it. The wheels (a skeleton instance) sit in the

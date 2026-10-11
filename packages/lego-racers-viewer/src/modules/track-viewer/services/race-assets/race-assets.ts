@@ -105,8 +105,8 @@ const getRacerModels = (
 }
 
 // The effect models name materials the power-up libraries hold (GAMEDATA\COMMON POWERUP, GRAPPLE, BARREL, DBRICKS).
-const EFFECT_TEXTURE_LIBRARIES = ['POWERUP', 'BARREL', 'DBRICKS']
-const EFFECT_MATERIAL_LIBRARIES = ['POWERUP', 'GRAPPLE', 'BARREL', 'DBRICKS']
+const EFFECT_TEXTURE_LIBRARIES = ['POWERUP', 'BARREL', 'DBRICKS', 'DTUBE']
+const EFFECT_MATERIAL_LIBRARIES = ['POWERUP', 'GRAPPLE', 'BARREL', 'DBRICKS', 'DTUBE']
 
 const loadEffectModel = (archive: JamArchive, name: string, isSkeletal: boolean): ModelScene =>
   loadModelScene(archive, {
@@ -151,6 +151,10 @@ const getBrickInMaterial = (model: ModelScene, materialName: string): ModelScene
   })
 }
 
+// 0x0045d940 draws the world of TURBO3.WDB: the instances `dbricks` and `dtube`, each with its own skeleton and animation.
+const getWarpTunnel = (archive: JamArchive): Scene =>
+  loadScene(archive, [`${COMMON_DIRECTORY}\\TURBO3.WDB`])
+
 const getEffectModels = (archive: JamArchive): EffectModels =>
   Object.freeze({
     rocket: loadEffectModel(archive, 'DMISSILE', true),
@@ -166,6 +170,7 @@ const getEffectModels = (archive: JamArchive): EffectModels =>
       )
     ),
     enhancementBrick: loadEffectModel(archive, 'ENHABRIK', true),
+    warpTunnel: getWarpTunnel(archive),
   })
 
 const getHudImage = (archive: JamArchive, definition: ImageDefinition): HudImage | null => {

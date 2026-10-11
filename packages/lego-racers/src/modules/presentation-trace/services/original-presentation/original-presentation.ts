@@ -49,6 +49,7 @@ const getScenarioForEmulator = (scenario: PresentationScenario) => ({
   isMirrored: scenario.isMirrored,
   recordFrames: scenario.recordFrames,
   isRenderRecorded: scenario.isRenderRecorded,
+  powerUpGrants: scenario.powerUpGrants ?? [],
   frames: scenario.frames.map((frame) => ({ dt: frame.milliseconds, keys: frame.scanCodes })),
 })
 

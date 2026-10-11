@@ -1,5 +1,5 @@
-import { getFrameControls } from '@lego-games/lego-racers/golden-trace'
-import type { TraceFrameInput } from '@lego-games/lego-racers/golden-trace'
+import { getFrameControls, getRaceStateWithGrants } from '@lego-games/lego-racers/golden-trace'
+import type { PowerUpGrant, TraceFrameInput } from '@lego-games/lego-racers/golden-trace'
 import {
   createRace,
   IDLE_RACER_CONTROLS,
@@ -25,7 +25,8 @@ export const ORIGINAL_STAGE_SIZE: RaceStageSize = Object.freeze({ width: 640, he
 export const runPortRace = (
   assets: RaceAssets,
   frames: readonly TraceFrameInput[],
-  onFrame: (portFrame: PortRaceFrame) => void
+  onFrame: (portFrame: PortRaceFrame) => void,
+  powerUpGrants: readonly PowerUpGrant[] = []
 ) => {
   const hudContext = getHudContext(assets, ORIGINAL_STAGE_SIZE)
   let raceState: RaceState = createRace(assets.definition)
@@ -34,7 +35,10 @@ export const runPortRace = (
   frames.forEach((input, frame) => {
     const controls = getFrameControls(input)
     const step = stepRace(
-      raceState,
+      getRaceStateWithGrants(
+        raceState,
+        powerUpGrants.filter((grant) => grant.frame === frame)
+      ),
       { controls: [controls], contacts: NO_RACE_CONTACTS },
       input.milliseconds
     )
