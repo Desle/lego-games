@@ -10,6 +10,7 @@ export const CheckId = createEnum({
   STALE_TODOS: 'stale-todos',
   FEATURE_SPECS: 'feature-specs',
   GATE_WIRING: 'gate-wiring',
+  TRACKED_SYMLINKS: 'tracked-symlinks',
 })
 export type CheckId = EnumValues<typeof CheckId>
 
