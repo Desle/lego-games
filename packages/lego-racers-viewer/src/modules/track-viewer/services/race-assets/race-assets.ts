@@ -26,8 +26,10 @@ import {
   getRaceWorldPaths,
   loadModelScene,
   loadScene,
+  loadSceneOnto,
 } from '@lego-games/lego-racers/scene'
 import { parseSky } from '@lego-games/lego-racers/sky'
+import { readWorld } from '@lego-games/lego-racers/world'
 import { getString, parseStringTable } from '@lego-games/lego-racers/string-table'
 import type { ModelScene, Scene } from '@lego-games/lego-racers/scene'
 import { HUD_FONT_NAMES } from '../../types/hud-fonts/hud-fonts.ts'
@@ -44,6 +46,8 @@ import type {
 
 // The race the original starts first; the menus choose another through `LoadRaceOptions.raceFolder`.
 const DEFAULT_RACE_FOLDER = 'RACEC0R0'
+// The warp's tunnel world (LEGORacers.exe 0x0045d940 draws its `dbricks` and `dtube`).
+export const WARP_WORLD_PATH = `${COMMON_DIRECTORY}\\TURBO3.WDB`
 const ENGLISH_DIRECTORY = `${COMMON_DIRECTORY}\\ENGLISH`
 const SEPARATOR = '\\'
 // The image database flag for a colour key (IMAGE_KEYWORD_2B_FLAG, 0x20).
@@ -152,10 +156,17 @@ const getBrickInMaterial = (model: ModelScene, materialName: string): ModelScene
 }
 
 // 0x0045d940 draws the world of TURBO3.WDB: the instances `dbricks` and `dtube`, each with its own skeleton and animation.
-const getWarpTunnel = (archive: JamArchive): Scene =>
-  loadScene(archive, [`${COMMON_DIRECTORY}\\TURBO3.WDB`])
+const getWarpTunnel = (archive: JamArchive, scene: Scene): Scene =>
+  loadSceneOnto(archive, scene, [WARP_WORLD_PATH])
 
-const getEffectModels = (archive: JamArchive): EffectModels =>
+const getWarpTextureScroll = (archive: JamArchive): readonly [number, number] => {
+  const values = readWorld(archive.readFile(WARP_WORLD_PATH)).skeletonInstances.find(
+    (instance) => instance.name === 'dtube'
+  )?.keyword3fValues
+  return [values?.[0] ?? 0, values?.[1] ?? 0]
+}
+
+const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
   Object.freeze({
     rocket: loadEffectModel(archive, 'DMISSILE', true),
     barrel: loadEffectModel(archive, 'BARREL', false),
@@ -170,7 +181,8 @@ const getEffectModels = (archive: JamArchive): EffectModels =>
       )
     ),
     enhancementBrick: loadEffectModel(archive, 'ENHABRIK', true),
-    warpTunnel: getWarpTunnel(archive),
+    warpTunnel: getWarpTunnel(archive, raceScene),
+    warpTextureScroll: getWarpTextureScroll(archive),
   })
 
 const getHudImage = (archive: JamArchive, definition: ImageDefinition): HudImage | null => {
@@ -265,7 +277,7 @@ export const loadRaceAssets = (
     racerModels: Object.freeze(
       definition.racers.map((racer) => getRacerModels(archive, racer, loadModel))
     ),
-    effectModels: getEffectModels(archive),
+    effectModels: getEffectModels(archive, scene),
     getString: (stringId: number) => getString(table, stringId) ?? '',
     imageNames: Object.freeze(imageDatabase.images.map((image) => image.name.toUpperCase())),
     hudFonts: loadHudFonts(archive),

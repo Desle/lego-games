@@ -24,6 +24,7 @@ import {
   NO_RACE_CONTACTS,
   updateTaggedPositions,
 } from '../race-world/race-world.ts'
+import { getStateWithWarpsDrawn } from '../warp-draw/warp-draw.ts'
 import type { PlayerControllerProgress, PlayerControllerRun } from './update-race.types.ts'
 
 // Race settings +0x20 bit 0x100 scales the time by 1.75.
@@ -201,5 +202,5 @@ export const updateRace = (
     }),
     ghost,
   })
-  return getStateWithSkyUpdated(progressed, stepMilliseconds)
+  return getStateWithWarpsDrawn(getStateWithSkyUpdated(progressed, stepMilliseconds))
 }

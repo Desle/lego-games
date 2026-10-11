@@ -55,6 +55,11 @@ export type WorldVertex = {
 
 export type WorldTriangle = {
   readonly vertices: readonly [WorldVertex, WorldVertex, WorldVertex]
+  // The same corners in the space of the object tree they belong to (a car part's own frame), where the original draws
+  // them with a model matrix of its own.
+  readonly localVertices: readonly [WorldVertex, WorldVertex, WorldVertex]
+  // Which object tree the triangle belongs to (the track, a car part, the tunnel...).
+  readonly root: number
   readonly textureKey: string | null
   readonly state: DrawState
   readonly source: string
@@ -102,6 +107,8 @@ export type RenderFrameComparison = {
   // Triangles left out because the original clipped them against the viewport (or the port's leave it).
   readonly clippedCount: number
   readonly groups: readonly RenderMismatchGroup[]
+  // The original's triangles a port triangle was matched with.
+  readonly matchedOriginals: readonly DrawnTriangle[]
 }
 
 export type RenderTolerances = {

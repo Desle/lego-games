@@ -22,6 +22,8 @@ const WHEELS_SPINNING_FLAG = 0x100
 const LANDING_PENDING_FLAG = 0x200
 // Vehicle_Update 0x0043e070: 400 ms without a wheel on the ground make the next landing count.
 const LANDING_AIRBORNE_MILLISECONDS = 400
+// 0x2 the fade, 0x4 and 0x10 presentation, 0x100 the wheels spin.
+const WARP_CLEARED_VEHICLE_FLAGS = 0x116
 // A dust emitter that has born more than 9 particles is let go, a boost smoke emitter more than 3.
 const DUST_MAXIMUM_BORN_COUNT = 9
 const BOOST_SMOKE_MAXIMUM_BORN_COUNT = 3
@@ -161,6 +163,15 @@ export const stopVehicleTireSmoke = (racerSet: RacerSet, racerIndex: number): Ra
     flags: current.flags & ~TIRE_SMOKE_RUNNING_FLAG,
   }))
 }
+
+// 0x004395d0's vehicle part (0x0043dcd0, 0x0043dbb0, the flags 0x14 cleared, 0x0043fd70 and 0x0043fdb0): the tire smoke
+// is let go, the fade (flag 2) and the presentation flags 4 and 0x10 go, and the wheels stop spinning. The skid
+// marks (vehicle +0x1e4) are presentation and not kept.
+export const stopVehicleEffectsForWarp = (racerSet: RacerSet, racerIndex: number): RacerSet =>
+  setVehicle(stopVehicleTireSmoke(racerSet, racerIndex), racerIndex, (vehicle) => ({
+    ...vehicle,
+    flags: vehicle.flags & ~WARP_CLEARED_VEHICLE_FLAGS,
+  }))
 
 // 0x0043fd30 (from 0x004396c0, before it records the level): a racer that is not a computer starts its dust and boost
 // smoke, and the tire smoke when its previous turbo had a level.

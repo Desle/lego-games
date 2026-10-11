@@ -1,4 +1,5 @@
-import { getFrameControls, getRaceStateWithGrants } from '@lego-games/lego-racers/golden-trace'
+import { getFrameControls } from '@lego-games/lego-racers/golden-trace'
+import { getRaceStateWithGrants } from '@lego-games/lego-racers/race'
 import type { PowerUpGrant, TraceFrameInput } from '@lego-games/lego-racers/golden-trace'
 import {
   createRace,

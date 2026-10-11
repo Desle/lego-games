@@ -9,9 +9,23 @@ export const getBoundingSphere = (
   arithmetic: FloatArithmetic,
   frame: Frame,
   centre: Vector3,
-  radius: number
-): BoundingSphere =>
-  Object.freeze({ centre: getFrameTransformedPoint(arithmetic, frame, centre), radius })
+  radius: number,
+  scale = 1
+): BoundingSphere => {
+  const { multiply, storeFloat } = arithmetic
+  return Object.freeze({
+    centre: getFrameTransformedPoint(
+      arithmetic,
+      frame,
+      Object.freeze({
+        x: storeFloat(multiply(centre.x, scale)),
+        y: storeFloat(multiply(centre.y, scale)),
+        z: storeFloat(multiply(centre.z, scale)),
+      })
+    ),
+    radius: storeFloat(multiply(scale, radius)),
+  })
+}
 
 // 0x00410f10: the sphere's extent along x, `centre − radius` and `radius + centre`, each stored.
 export const getBoundingInterval = (

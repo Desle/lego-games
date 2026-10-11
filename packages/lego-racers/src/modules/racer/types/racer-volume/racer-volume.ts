@@ -8,7 +8,7 @@ import type { RacerVolumeParts } from './racer-volume.types.ts'
 
 // 0x004113c0 -> 0x0040e0b0: a figure's sphere carried by its frame; a figure without a model part has radius 0
 // around the origin.
-const getFigureSphere = (
+export const getFigureSphere = (
   arithmetic: FloatArithmetic,
   figure: Figure,
   frame: Frame
@@ -21,7 +21,7 @@ const getFigureSphere = (
 // The spheres of the volume's children: the car body model (vehicle +0x3c), the second chassis figure (+0x40), the
 // display figure (+0x44) and the driver (+0x48). The body and the driver share the leaned rotation; the body sits at
 // the display frame's position and the driver at the seat.
-export const getRacerVolumeParts = (
+export const getFreshRacerVolumeParts = (
   arithmetic: FloatArithmetic,
   racer: Racer
 ): RacerVolumeParts => {
@@ -37,7 +37,8 @@ export const getRacerVolumeParts = (
             arithmetic,
             bodyFrame,
             vehicle.bodyBounds.centre,
-            vehicle.bodyBounds.radius
+            vehicle.bodyBounds.radius,
+            vehicle.bodyScale
           ),
     second:
       vehicle.secondFigure === null
@@ -48,8 +49,46 @@ export const getRacerVolumeParts = (
   })
 }
 
+// The caches as they stand (the trace reads them raw): a part the vehicle holds a cache for shows it, the others are
+// fresh.
+export const getRacerVolumeParts = (
+  arithmetic: FloatArithmetic,
+  racer: Racer
+): RacerVolumeParts => {
+  const fresh = getFreshRacerVolumeParts(arithmetic, racer)
+  const caches = racer.vehicle.boundsCaches
+  if (caches === null) return fresh
+  return Object.freeze({
+    body: caches.body ?? fresh.body,
+    second: caches.second ?? fresh.second,
+    wheels: caches.wheels ?? fresh.wheels,
+    driver: caches.driver ?? fresh.driver,
+  })
+}
+
+// What a getter (0x00411c60, 0x00411ca0) hands out: a cache with a negative radius is refreshed first, so it reads as
+// the fresh sphere; a valid cache is read as it stands.
+export const getRacerReadVolumeParts = (
+  arithmetic: FloatArithmetic,
+  racer: Racer
+): RacerVolumeParts => {
+  const fresh = getFreshRacerVolumeParts(arithmetic, racer)
+  const caches = racer.vehicle.boundsCaches
+  if (caches === null) return fresh
+  const read = <Current extends BoundingSphere | null>(
+    cache: BoundingSphere | null,
+    current: Current
+  ): Current | BoundingSphere => (cache !== null && cache.radius >= 0 ? cache : current)
+  return Object.freeze({
+    body: read(caches.body, fresh.body),
+    second: read(caches.second, fresh.second),
+    wheels: read(caches.wheels, fresh.wheels),
+    driver: read(caches.driver, fresh.driver),
+  })
+}
+
 const getChildSpheres = (arithmetic: FloatArithmetic, racer: Racer): readonly BoundingSphere[] => {
-  const { body, second, wheels, driver } = getRacerVolumeParts(arithmetic, racer)
+  const { body, second, wheels, driver } = getFreshRacerVolumeParts(arithmetic, racer)
   return [body, second, wheels, driver].filter((sphere) => sphere !== null)
 }
 

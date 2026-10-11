@@ -25,7 +25,7 @@ const RACER_COUNT = 6
 const GRANT_FRAME = Number(process.env['POWER_UP_GRANT_FRAME'] ?? '162')
 const USE_FRAME = Number(process.env['POWER_UP_USE_FRAME'] ?? '165')
 const USE_FRAME_COUNT = 3
-const REPORTED_FIELD_COUNT = 14
+const REPORTED_FIELD_COUNT = Number(process.env['POWER_UP_REPORT_FIELDS'] ?? '14')
 
 const getScanCodes = (bindings: readonly ('accelerate' | 'use_power_up')[]): readonly number[] =>
   holdBindings(1, bindings)[0]?.scanCodes ?? []
