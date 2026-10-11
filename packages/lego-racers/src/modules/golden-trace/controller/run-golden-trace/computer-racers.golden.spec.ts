@@ -42,7 +42,14 @@ describe('golden trace: the computer racers', () => {
         if (entry.name === 'test') continue
         if (SELECTED !== '' && !SELECTED.split(',').includes(entry.name)) continue
         const circuit = circuits.circuits.find((candidate) => candidate.name === entry.circuitName)
-        const racerCodes = circuit?.racerCodes ?? []
+        const sibling = catalog.entries.find(
+          (candidate) => candidate.firstName === entry.firstName && candidate.circuitName !== ''
+        )
+        const racerCodes =
+          circuit?.racerCodes ??
+          circuits.circuits.find((candidate) => candidate.name === sibling?.circuitName)
+            ?.racerCodes ??
+          []
         const scenario = createTraceScenario({
           name: `${entry.name}-${KIND}`,
           raceFolder: entry.firstName.toUpperCase(),

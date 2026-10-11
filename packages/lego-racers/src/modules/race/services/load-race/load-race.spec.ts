@@ -258,4 +258,25 @@ describe('loadRaceDefinition', () => {
       )
     }
   )
+
+  it.skipIf(!getIsGamePresent())(
+    'mirrors the frames of the collision world instances (0x00411040)',
+    () => {
+      // Arrange
+      const jam = readOriginalJam()
+      const executable = readOriginalExecutable()
+      const options = { raceFolder: 'RACEC0R1', musicTuneCount: 0 }
+
+      // Act
+      const forward = loadRaceDefinition(jam, executable, options)
+      const mirrored = loadRaceDefinition(jam, executable, { ...options, isMirrored: true })
+
+      // Assert
+      const forwardFrames = forward.collisionObjects.map(({ frame }) => frame.position)
+      const mirroredFrames = mirrored.collisionObjects.map(({ frame }) => frame.position)
+      expect(forwardFrames.some(({ y }) => y !== 0)).toBe(true)
+      expect(mirroredFrames.map(({ y }) => y)).toEqual(forwardFrames.map(({ y }) => -y))
+      expect(mirroredFrames.map(({ x }) => x)).toEqual(forwardFrames.map(({ x }) => x))
+    }
+  )
 })
