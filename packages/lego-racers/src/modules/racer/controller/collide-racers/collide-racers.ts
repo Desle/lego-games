@@ -12,6 +12,7 @@ import type {
   OrientedBox,
 } from '../../../racer-collision/index.ts'
 import { getFigureBounds } from '../../types/figure/figure.ts'
+import { getRacerVolume } from '../../types/racer-volume/racer-volume.ts'
 import { getRacer, setRacer } from '../../types/racer-state/racer-state.ts'
 import type {
   Racer,
@@ -140,7 +141,7 @@ const sweepRacerPairs = (
 const COMPUTER_CONTROLLER = 2
 
 // 0x0043d270 with 0x0043d200: the entries registered with the manager are sorted, each racer in list order is
-// matched against the entries along its sphere's x extent (projectiles' registry), and the entries sort again.
+// matched against the entries along its volume's x extent (the volume the last Vehicle_Update measured, 0x0043aaf0) (projectiles' registry), and the entries sort again.
 // Every racer node is active.
 const touchRegistryEntries = (
   context: RacerSetContext,
@@ -149,7 +150,10 @@ const touchRegistryEntries = (
 ): RacerSet => {
   const racers = racerSet.collisionOrder.map((racerIndex) => {
     const racer = getRacer(racerSet, racerIndex)
-    const interval = getInterval(context, racer)
+    const interval = getBoundingInterval(
+      context.arithmetic,
+      racer.vehicle.volume ?? getRacerVolume(context.arithmetic, racer)
+    )
     return {
       racer: racerIndex,
       isComputer: racer.controllerKind === COMPUTER_CONTROLLER,
