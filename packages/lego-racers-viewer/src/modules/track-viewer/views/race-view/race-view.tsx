@@ -39,6 +39,7 @@ const RaceView = () => {
               standingRows={race.standingRows}
               width={RACE_STAGE_SIZE.width}
               height={RACE_STAGE_SIZE.height}
+              onMenuMemoryChanged={race.onMenuMemoryChanged}
               onRaceRequested={race.onRaceRequested}
               onQuit={race.onGameClosed}
             />

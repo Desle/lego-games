@@ -15,6 +15,7 @@ export type FrontEndViewProps = {
   readonly height: number
   readonly firstScreenId: number
   readonly standingRows: readonly FrontEndStandingRow[]
+  readonly onMenuMemoryChanged: (memory: FrontEndMemory) => void
   readonly onRaceRequested: (request: FrontEndRaceRequest) => void
   readonly onQuit: () => void
 }

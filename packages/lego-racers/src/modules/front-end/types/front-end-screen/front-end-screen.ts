@@ -40,6 +40,8 @@ export const FrontEndScreen = Object.freeze({
   LEGAL: 0x28,
   LEGO_INTRODUCTION: 0x29,
   PICK_LANGUAGE: 0x2c,
+  // `newracer` (`0x00481fe0`): the name of a new racer. The factory gives it id 0x90, which MENUNAME.SRF does not name.
+  NEW_RACER: 0x90,
 })
 
 // The screens this port runs; any other id is shown as a static page of its description with a way back.
@@ -48,6 +50,7 @@ export const IMPLEMENTED_SCREEN_IDS: readonly number[] = Object.freeze([
   FrontEndScreen.GARAGE,
   FrontEndScreen.CAR_BUILD,
   FrontEndScreen.EDIT_DRIVER,
+  FrontEndScreen.NEW_RACER,
   FrontEndScreen.CIRCUIT_RACE,
   FrontEndScreen.SINGLE_RACE,
   FrontEndScreen.TIME_TRIAL,

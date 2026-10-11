@@ -6,9 +6,12 @@ import {
 } from '@lego-games/lego-racers/front-end'
 import type { FrontEndMemory, FrontEndRaceRequest } from '@lego-games/lego-racers/front-end'
 import { loadRandomTable } from '@lego-games/lego-racers/random-table'
+import { parseSaveFile, serializeSaveFile } from '@lego-games/lego-racers/save-data'
+import type { SaveFile } from '@lego-games/lego-racers/save-data'
 import { advanceFrameClock, createFrameClock } from '@lego-games/lego-racers/frame-clock'
 import {
   abortSession,
+  applySessionOutcomeToSave,
   createGameSession,
   finishRace,
   getIsFirstRace,
@@ -49,6 +52,7 @@ import { getDevelopmentJam } from '../../services/jam-file/jam-file.ts'
 import { createRaceAudioPlayer } from '../../services/race-audio-player/race-audio-player.ts'
 import { loadRaceAssets } from '../../services/race-assets/race-assets.ts'
 import type { LoadedGameFiles, RaceAssets } from '../../services/race-assets/race-assets.types.ts'
+import { createIndexedDbSaveStorage } from '../../services/indexed-db-save-storage/indexed-db-save-storage.ts'
 import { createRaceMenuInputSource } from '../../services/race-menu-input-source/race-menu-input-source.ts'
 import { createRaceInputSource } from '../../services/race-input-source/race-input-source.ts'
 import { createRaceViewport } from '../../services/race-viewport/race-viewport.ts'
@@ -57,6 +61,10 @@ import type { RaceController, RaceScreen } from './race-controller.types.ts'
 
 // The race is drawn at 4:3 and the HUD is laid out for the same size.
 export const RACE_STAGE_SIZE = Object.freeze({ width: 800, height: 600 })
+// The save slot the game plays on (the original loads two, 0x00443520, and starts from the first) and the file the defaults
+// come from (0x004bef94).
+const SAVE_SLOT = 0
+const DEFAULT_SAVE_PATH = 'MENUDATA\\DEFAULT.LRS'
 const EXECUTABLE_NAME = 'LEGORacers.exe'
 const JAM_NAME = 'LEGO.JAM'
 
@@ -146,6 +154,8 @@ export const useRaceController = (): RaceController => {
   const [gameResources, setGameResources] = useState<GameResources | null>(null)
   // What the menus keep between two visits: the car and driver the player made, and the shared random position.
   const memoryReference = useRef<FrontEndMemory>(NO_FRONT_END_MEMORY)
+  // The save slots of the browser (IndexedDB); the game runs without them when the browser has none.
+  const saveStorage = useMemo(() => createIndexedDbSaveStorage(), [])
   const randomTable = useMemo(
     () => (gameFiles === null ? null : loadRandomTable(gameFiles.files.executable)),
     [gameFiles]
@@ -156,24 +166,53 @@ export const useRaceController = (): RaceController => {
     () => undefined
   )
 
+  const persistSave = useCallback(
+    (saveFile: SaveFile) =>
+      void saveStorage.writeSlot(SAVE_SLOT, serializeSaveFile(saveFile)).catch(() => undefined),
+    [saveStorage]
+  )
+
+  const loadSaveFile = useCallback(
+    async (resources: GameResources): Promise<SaveFile> => {
+      try {
+        const bytes = await saveStorage.readSlot(SAVE_SLOT)
+        if (bytes !== null) return parseSaveFile(bytes)
+      } catch {
+        // A save that does not parse is replaced by the defaults, as a missing one is (0x00443420).
+      }
+      const created = parseSaveFile(resources.archive.readFile(DEFAULT_SAVE_PATH))
+      await saveStorage.writeSlot(SAVE_SLOT, serializeSaveFile(created))
+      return created
+    },
+    [saveStorage]
+  )
+
   // The game's files are opened first: the front end shows its menus from them, and they stay open for every race.
-  const openGame = useCallback((getFiles: () => Promise<LoadedGameFiles>) => {
-    setAssets(null)
-    setScreen({ ...INITIAL_SCREEN, status: RaceStatus.LOADING })
-    getFiles()
-      .then((files) => {
-        setGameResources(loadGameResources(files.jam, files.files.executable))
-        setGameFiles(files)
-        setScreen({ ...INITIAL_SCREEN, status: RaceStatus.MENU })
-      })
-      .catch((error: unknown) =>
-        setScreen({
-          ...INITIAL_SCREEN,
-          status: RaceStatus.FAILED,
-          errorMessage: getErrorMessage(error),
+  const openGame = useCallback(
+    (getFiles: () => Promise<LoadedGameFiles>) => {
+      setAssets(null)
+      setScreen({ ...INITIAL_SCREEN, status: RaceStatus.LOADING })
+      getFiles()
+        .then(async (files) => {
+          const resources = loadGameResources(files.jam, files.files.executable)
+          memoryReference.current = {
+            ...NO_FRONT_END_MEMORY,
+            saveFile: await loadSaveFile(resources),
+          }
+          setGameResources(resources)
+          setGameFiles(files)
+          setScreen({ ...INITIAL_SCREEN, status: RaceStatus.MENU })
         })
-      )
-  }, [])
+        .catch((error: unknown) =>
+          setScreen({
+            ...INITIAL_SCREEN,
+            status: RaceStatus.FAILED,
+            errorMessage: getErrorMessage(error),
+          })
+        )
+    },
+    [loadSaveFile]
+  )
 
   const showFailure = useCallback(
     (error: unknown) =>
@@ -186,17 +225,32 @@ export const useRaceController = (): RaceController => {
   )
 
   // The session has ended: the menus open on the screen it names (2, the main menu, or a circuit's result screen).
-  const returnToMenu = useCallback((session: GameSession, racerCount: number) => {
-    memoryReference.current = { ...memoryReference.current, randomPosition: session.randomPosition }
-    sessionReference.current = null
-    setAssets(null)
-    setScreen({
-      ...INITIAL_SCREEN,
-      status: RaceStatus.MENU,
-      menuScreenId: session.resultScreen,
-      standingRows: getStandingRows(session, racerCount),
-    })
-  }, [])
+  const returnToMenu = useCallback(
+    (session: GameSession, racerCount: number) => {
+      const memory = memoryReference.current
+      // The best times, the beaten champion, the circuit's place, trophy and unlock go into the save (0x0042e490,
+      // 0x0042e680, 0x004767b0) and the save is written.
+      const outcome =
+        memory.saveFile === null
+          ? null
+          : applySessionOutcomeToSave(session, memory.saveFile, memory.racerIndex)
+      memoryReference.current = {
+        ...memory,
+        randomPosition: session.randomPosition,
+        saveFile: outcome?.saveFile ?? memory.saveFile,
+      }
+      if (outcome !== null && outcome.saveFile !== memory.saveFile) persistSave(outcome.saveFile)
+      sessionReference.current = null
+      setAssets(null)
+      setScreen({
+        ...INITIAL_SCREEN,
+        status: RaceStatus.MENU,
+        menuScreenId: outcome?.resultScreen ?? session.resultScreen,
+        standingRows: getStandingRows(session, racerCount),
+      })
+    },
+    [persistSave]
+  )
 
   // The race the session started is loaded and run.
   const beginRace = useCallback(
@@ -253,6 +307,7 @@ export const useRaceController = (): RaceController => {
     (request: FrontEndRaceRequest) => {
       if (gameResources === null) return
       memoryReference.current = {
+        ...memoryReference.current,
         playerCar: request.playerCar,
         randomPosition: request.randomPosition,
       }
@@ -380,6 +435,12 @@ export const useRaceController = (): RaceController => {
       : () => undefined,
     onGameFilesChosen: (files) => openGame(() => getChosenGameFiles(files)),
     onRaceRequested: startRace,
+    onMenuMemoryChanged: (memory) => {
+      if (memory.saveFile !== null && memory.saveFile !== memoryReference.current.saveFile) {
+        persistSave(memory.saveFile)
+      }
+      memoryReference.current = memory
+    },
     onGameClosed: () => {
       setAssets(null)
       setGameFiles(null)
