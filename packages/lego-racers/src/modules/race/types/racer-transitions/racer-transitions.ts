@@ -9,6 +9,7 @@ import {
   endCarBodyFlaggedState,
   endCarBodySpin,
   getDriven,
+  getRacerWithTimedEffect,
   setCarBodyHeadingFromFrame,
   setCarBodyTwoPointMode,
   setDriven,
@@ -311,10 +312,7 @@ export const getRacerAfterPowerUpEvent = (
     case 'power_ups.racer_shield_struck':
       return Object.freeze({ ...racer, unidentifiedCountdownD74Milliseconds: 500 })
     case 'power_ups.racer_cursed':
-      return Object.freeze({
-        ...getRacerWithFlags(racer, racer.flags | 0x800),
-        timedEffectMilliseconds: event.durationMilliseconds,
-      })
+      return getRacerWithTimedEffect(arithmetic, racer, event.durationMilliseconds)
     case 'power_ups.racer_warp_pending':
       return getRacerWithFlags(racer, racer.flags | 0x200000)
     case 'power_ups.racer_warp_started':
