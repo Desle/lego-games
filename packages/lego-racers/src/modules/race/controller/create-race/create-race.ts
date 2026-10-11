@@ -25,6 +25,8 @@ import {
   getWorldWithSkeletonInstance,
   INSTANCE_LOOPING_FLAG,
 } from '../../../world-animation/index.ts'
+import type { SkeletonInstanceRuntime } from '../../../world-animation/index.ts'
+import type { Vector3 } from '../../../skeletal-animation/index.ts'
 import { createTrackLogic } from '../../../track-logic/index.ts'
 import type { TrackLogicState } from '../../../track-logic/index.ts'
 import { CLOSED_PAUSE_MENU } from '../../types/pause-menu/pause-menu.ts'
@@ -125,9 +127,30 @@ const createRacerFromDefinition = (
 // The camera follows the track world's skeleton instance named by the race description (RAB keyword 0x49); the
 // original's trace shows the instance without the looping flag from the first frame, which is what lets its clip
 // finish (0x0040e360). **Hypothesis**: the camera's attachment clears the flag; the writer is not traced.
+// The trace shows the mirrored race's camera instance with the y of its velocity and of its clip's velocity at -0:
+// the camera takes its clip's (mirrored) velocities. **Hypothesis**: the attachment copies them.
+const getMirroredClipVelocity = (
+  instance: SkeletonInstanceRuntime,
+  isMirrored: boolean
+): SkeletonInstanceRuntime => {
+  const { clip } = instance
+  if (!isMirrored || clip === null) return instance
+  const flip = (vector: Vector3): Vector3 =>
+    Object.freeze([vector[0], -vector[1], vector[2]] as const)
+  return Object.freeze({
+    ...instance,
+    clip: Object.freeze({
+      ...clip,
+      velocity: flip(clip.velocity),
+      clip: Object.freeze({ ...clip.clip, velocity: flip(clip.clip.velocity) }),
+    }),
+  })
+}
+
 const getTrackLogicWithIntroductionCamera = (
   trackLogic: TrackLogicState,
-  name: string | null
+  name: string | null,
+  isMirrored: boolean
 ): TrackLogicState => {
   const world = trackLogic.worlds.track
   const index = name === null ? -1 : findSkeletonInstanceIndex(world, name)
@@ -141,7 +164,10 @@ const getTrackLogicWithIntroductionCamera = (
           track: getWorldWithSkeletonInstance(
             world,
             index,
-            getSkeletonInstanceWithFlagsChanged(instance, 0, INSTANCE_LOOPING_FLAG)
+            getMirroredClipVelocity(
+              getSkeletonInstanceWithFlagsChanged(instance, 0, INSTANCE_LOOPING_FLAG),
+              isMirrored
+            )
           ),
         }),
       })
@@ -204,7 +230,8 @@ export const createRace = (definition: RaceDefinition): RaceState => {
   )
   const createdTrackLogic = getTrackLogicWithIntroductionCamera(
     loadedTrackLogic,
-    definition.introductionCameraObject
+    definition.introductionCameraObject,
+    definition.isMirrored
   )
   // The pools belong to the racer set: vehicles spawn into them as well. The track logic gets them back whenever it
   // runs (changeTrackLogic).
