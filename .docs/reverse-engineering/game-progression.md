@@ -216,12 +216,13 @@ for (;;) {
     break
   }
   let race = createRace(next.definition) // next.race: folder, load screen, music tunes
+  let current = next.session
   while (race.isRunning) {
     const step = stepRace(race, inputs, frameMilliseconds) // race.tune_changed events tell which tune to play
-    session = recordRaceStep(next.session, step) // points as racers are placed
+    current = recordRaceStep(current, step) // points as racers are placed
     race = step.raceState
   }
-  session = finishRace(session, race) // times, ghost result, slot counter, random cursor
+  session = finishRace(current, race) // times, ghost result, slot counter, random cursor
 }
 session.standings // totals and the last race's points
 getCircuitOutcome(session) // rank and result screen 0x16..0x19
@@ -230,7 +231,7 @@ const result = applyCircuitResultToSave(session, save, session.resultScreen, rac
 // serializeSaveFile(result.saveFile) -> SaveStorage.writeSlot(slot, bytes)
 ```
 
-Single races and time trials use `createSingleRaceSettings` / `createTimeTrialSettings` the same way (`startNextRace` answers one race, then `finished`); a time trial's race stops at the menu (`race.pauseState === 2`): `endRaceFromMenu(race)` leaves, `restartRace(session, race)` starts again. `pauseSession` is not needed: a host pauses by not stepping.
+Single races and time trials use `createSingleRaceSettings` / `createTimeTrialSettings` the same way (`startNextRace` answers one race, then `finished`); a time trial's race stops at the menu (`race.pauseState === 2`): `endRaceFromMenu(race)` leaves, `restartRace(session, race)` starts again.
 
 ## What is not ported
 
