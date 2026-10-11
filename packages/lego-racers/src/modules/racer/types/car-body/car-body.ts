@@ -45,7 +45,6 @@ export const createCarBody = (definition: CarBodyDefinition): CarBody =>
     scriptedSpinTime: 0,
     routeFollower: null,
     isRouteHeld: false,
-    rampMilliseconds: 0,
     lateralOffset: 0,
     bounceHeight: 0,
     bounceVerticalSpeed: 0,

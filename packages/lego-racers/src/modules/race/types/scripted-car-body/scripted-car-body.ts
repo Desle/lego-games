@@ -211,7 +211,7 @@ const runScriptedPass = (
 }
 
 // The part of 0x00429d40 before its loop: the tilt the body leans to (flag 0x8, 0x0042a100) and the target speed
-// factor of a ramped body (flag 0x10000, while the ramp time is under 2,000).
+// factor of a ramped body (flag 0x10000, while the follower's time, car body +0x77c, is under 2,000).
 const getBodyBeforeLoop = (arithmetic: FloatArithmetic, carBody: CarBody): CarBody => {
   const tilted =
     (carBody.rigidBody.flags & CarRigidBodyFlag.TWO_POINT) !== 0
@@ -220,7 +220,7 @@ const getBodyBeforeLoop = (arithmetic: FloatArithmetic, carBody: CarBody): CarBo
   const ramped = getRampedTargetSpeedFactor(
     arithmetic,
     getSpeedState(tilted),
-    tilted.rampMilliseconds
+    tilted.routeFollower?.time ?? 0
   )
   return Object.freeze({ ...tilted, targetSpeedFactor: ramped.targetSpeedFactor })
 }
