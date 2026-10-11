@@ -1,5 +1,5 @@
 import type { Vector3 } from '../../../simulation-math/index.ts'
-import type { RaceEvent, RacePhase, RaceState } from '../../types/race.types.ts'
+import type { RaceEvent, RaceExit, RacePhase, RaceState } from '../../types/race.types.ts'
 
 export type HeadlessRaceOptions = {
   readonly frameCount: number
@@ -18,8 +18,13 @@ export type HeadlessRacerReport = {
   readonly routeTimeMilliseconds: number | null
   readonly routeSampleIndex: number | null
   readonly checkpointIndex: number
+  // Race +0xd18: the laps counted by the checkpoint at the start line (-1 before the first line).
   readonly lap: number
+  // Racer +0xce4: the laps completed, counted by the start line zone (the race ends a racer's laps at the lap count).
+  readonly currentLap: number
   readonly racePosition: number
+  // Racer flag 0x1000: the racer has been given its final place.
+  readonly isPlaced: boolean
 }
 
 export type HeadlessRaceReport = {
@@ -29,6 +34,10 @@ export type HeadlessRaceReport = {
   readonly phaseMilliseconds: number
   readonly randomPosition: number
   readonly racers: readonly HeadlessRacerReport[]
+  // Race +0x3330 and the final place of each racer (settings +0x15e + 0x5c·i).
+  readonly finishedRacerCount: number
+  readonly placements: readonly number[]
+  readonly exit: RaceExit
   readonly events: readonly RaceEvent[]
   readonly raceState: RaceState
 }

@@ -44,6 +44,7 @@ const getCarDescription = (
   weight: number
 ): CarDescription =>
   Object.freeze({
+    chassisName: chassis.name,
     mass,
     centreOfMass,
     wheelPoints: Object.freeze(chassis.wheelPoints.map(toVector)),

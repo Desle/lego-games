@@ -1,4 +1,4 @@
-import { createCarBody, createRacer, createRacerSet } from '../../../racer/index.ts'
+import { createCarBody, createFigure, createRacer, createRacerSet } from '../../../racer/index.ts'
 import type { Racer, RacerSet } from '../../../racer/index.ts'
 import {
   createFloatArithmetic,
@@ -14,6 +14,7 @@ export const FIXTURE_ARITHMETIC = createFloatArithmetic(FpuPrecision.SINGLE)
 
 export const createFixtureRacerDefinition = (controllerKind: number): RaceRacerDefinition => ({
   controllerKind,
+  figure: createFigure([], { centre: ZERO_VECTOR3, radius: 5, radiusScale: 1 }),
   carBody: getPlaceholderCarBodyDefinition(
     FIXTURE_ARITHMETIC,
     Object.freeze({ rotation: IDENTITY_MATRIX3, position: ZERO_VECTOR3 })

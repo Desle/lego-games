@@ -8,7 +8,6 @@ import { getRaceModeRacerFlags, getRacerPowerUpAbilities } from '../../../racer-
 import { createProjectileWorld } from '../../../projectiles/index.ts'
 import {
   createCarBody,
-  createFigure,
   createPlayerController,
   createRacer,
   createRacerSet,
@@ -17,7 +16,6 @@ import type { Racer, RacerSet } from '../../../racer/index.ts'
 import { drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
 import { createTrackLogic } from '../../../track-logic/index.ts'
-import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import { CLOSED_PAUSE_MENU } from '../../types/pause-menu/pause-menu.ts'
 import { RaceExit } from '../../types/race-exit/race-exit.ts'
 import { RacePhase } from '../../types/race-phase/race-phase.ts'
@@ -59,18 +57,11 @@ const createRacerFromDefinition = (
   const timers = createComputerTimers(tables.randomTable, position)
   const vehicleDraw = drawRandomValue(tables.randomTable, timers.position)
   const carBody = createCarBody(racerDefinition.carBody)
-  // The display figure's bounding sphere (0x0040e0b0): the frame's bounding radius that the ground probes take is the
-  // same radius, so the car body's value is used for both.
-  const figure = createFigure([], {
-    centre: ZERO_VECTOR3,
-    radius: carBody.rigidBody.displayBoundingRadius,
-    radiusScale: 1,
-  })
   const base = createRacer(
     racerDefinition.route === null
       ? carBody
       : placeCarBodyOnRoute(arithmetic, carBody, racerDefinition.route),
-    figure
+    racerDefinition.figure
   )
   const racer: Racer = Object.freeze({
     ...base,

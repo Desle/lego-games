@@ -1,8 +1,15 @@
 import { runTrackLogic } from '../../../track-logic/index.ts'
 import type { TrackSession } from '../../../track-logic/index.ts'
 import { moveOutOfContact, stepCarRigidBody } from '../../../racer-physics/index.ts'
+import type { CarRigidBodyHooks } from '../../../racer-physics/index.ts'
 import { getRacer, getRacerCollisionObjects, setRacer } from '../../../racer/index.ts'
-import type { RacerBoundary, RacerSetContext, RacerSet } from '../../../racer/index.ts'
+import type {
+  CarBody,
+  Racer,
+  RacerBoundary,
+  RacerSetContext,
+  RacerSet,
+} from '../../../racer/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
 import { createCarBodyContactHooks } from '../../types/car-body-contacts/car-body-contacts.ts'
 import { getRacerAfterCheckpointContact } from '../../types/checkpoint-touch/checkpoint-touch.ts'
@@ -75,6 +82,25 @@ export const applyCarBodyContacts = (
     }
   }, racerSet)
 
+const stepRacerBodyWithContacts = (
+  context: RacerSetContext,
+  racerSet: RacerSet,
+  racerIndex: number,
+  getSteppedCarBody: (racer: Racer, hooks: CarRigidBodyHooks) => CarBody
+): RacerSet => {
+  const raced = getRaceRacerSetOf(racerSet)
+  const racer = getRacer(raced, racerIndex)
+  const contacts: CarBodyContact[] = []
+  const carBody = getSteppedCarBody(
+    racer,
+    createCarBodyContactHooks(raced.surfaces, (contact) => void contacts.push(contact))
+  )
+  const stepped = getRaceRacerSetOf(
+    setRacer(raced, racerIndex, Object.freeze({ ...racer, carBody }))
+  )
+  return applyCarBodyContacts(context, stepped, racerIndex, contacts)
+}
+
 // Pass 2, CarBody_Update 0x004293f0 → RigidBody_Step 0x00444ef0 with the car body's own contact filter and surface
 // walk (vtable 0x004b04e4 slots +0x0c and +0x10).
 export const stepRacerRigidBodyWithContacts: RacerBoundary = (
@@ -82,25 +108,18 @@ export const stepRacerRigidBodyWithContacts: RacerBoundary = (
   racerSet,
   racerIndex,
   stepMilliseconds
-) => {
-  const raced = getRaceRacerSetOf(racerSet)
-  const racer = getRacer(raced, racerIndex)
-  const contacts: CarBodyContact[] = []
-  const rigidBody = stepCarRigidBody(
-    context.arithmetic,
-    racer.carBody.rigidBody,
-    { stepMilliseconds, collisionObjects: context.collisionObjects },
-    createCarBodyContactHooks(raced.surfaces, (contact) => void contacts.push(contact))
+) =>
+  stepRacerBodyWithContacts(context, racerSet, racerIndex, (racer, hooks) =>
+    Object.freeze({
+      ...racer.carBody,
+      rigidBody: stepCarRigidBody(
+        context.arithmetic,
+        racer.carBody.rigidBody,
+        { stepMilliseconds, collisionObjects: context.collisionObjects },
+        hooks
+      ),
+    })
   )
-  const stepped = getRaceRacerSetOf(
-    setRacer(
-      raced,
-      racerIndex,
-      Object.freeze({ ...racer, carBody: Object.freeze({ ...racer.carBody, rigidBody }) })
-    )
-  )
-  return applyCarBodyContacts(context, stepped, racerIndex, contacts)
-}
 
 // Pass 2, CarBody_Update → CarBody_StepOnRoute 0x00429d40 for a computer racer's scripted body: its hull points
 // still run against the checkpoint object, so it touches checkpoints like a car.
@@ -109,21 +128,15 @@ export const stepRacerScriptWithContacts: RacerBoundary = (
   racerSet,
   racerIndex,
   stepMilliseconds
-) => {
-  const raced = getRaceRacerSetOf(racerSet)
-  const racer = getRacer(raced, racerIndex)
-  const contacts: CarBodyContact[] = []
-  const carBody = stepScriptedCarBody(
-    context.arithmetic,
-    racer.carBody,
-    { stepMilliseconds, collisionObjects: context.collisionObjects },
-    createCarBodyContactHooks(raced.surfaces, (contact) => void contacts.push(contact))
+) =>
+  stepRacerBodyWithContacts(context, racerSet, racerIndex, (racer, hooks) =>
+    stepScriptedCarBody(
+      context.arithmetic,
+      racer.carBody,
+      { stepMilliseconds, collisionObjects: context.collisionObjects },
+      hooks
+    )
   )
-  const stepped = getRaceRacerSetOf(
-    setRacer(raced, racerIndex, Object.freeze({ ...racer, carBody }))
-  )
-  return applyCarBodyContacts(context, stepped, racerIndex, contacts)
-}
 
 // 0x00429680 on a scripted body: the route follower is moved by the displacement (0x004a5750).
 export const separateScriptedRacerBody = (

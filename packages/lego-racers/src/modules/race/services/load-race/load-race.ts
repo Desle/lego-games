@@ -12,7 +12,7 @@ import { openJamArchive } from '../../../jam-archive/index.ts'
 import { parsePowerUps } from '../../../power-up/index.ts'
 import { createRandomTablePosition, drawRandomValue } from '../../../random-table/index.ts'
 import type { RandomTablePosition } from '../../../random-table/index.ts'
-import { readRacerTables } from '../../../racer/index.ts'
+import { getFigureBounds, readRacerTables } from '../../../racer/index.ts'
 import {
   createCarBodySetup,
   getIsCarBodyFlagged,
@@ -33,6 +33,7 @@ import type { RaceDefinition, RaceRacerDefinition } from '../../types/race.types
 import { getStartFrame } from '../../types/start-frame/start-frame.ts'
 import type { LoadRaceOptions, RouteDraws, RouteDrawer, RouteFiles } from './load-race.types.ts'
 import { describeRacers, getCircuitRacerCodes, readRacerDatabases } from './load-racers.ts'
+import { loadChassisFigure } from './load-chassis-figure.ts'
 import { loadCollisionWorld } from './load-collision-world.ts'
 
 const JAM_SEPARATOR = '\\'
@@ -47,10 +48,6 @@ const DEFAULT_PLAYER_CAR: BuiltCar = Object.freeze({
   centreOffsetX: 0,
   centreOffsetY: 0,
 })
-// The car model frame's bounding radius (frame +0x10, 0x0040e0b0) comes from the model's bounding sphere, which
-// the model module does not compute yet; this is the rigid body specs' stand-in.
-const PROVISIONAL_DISPLAY_BOUNDING_RADIUS = 5
-
 // The RAB names the text files (.cpf, .sps); the loaders read the binary twin, whose extension ends in b.
 const getJamFileName = (name: string): string => `${name.slice(0, -1)}b`.toUpperCase()
 
@@ -148,9 +145,10 @@ export const loadRaceDefinition = (
   const trackMaterialBytes = readNamed(description.trackMaterials)
   const startPositions =
     startPositionBytes === null ? [] : parseStartPositions(startPositionBytes, false).startPositions
+  const databases = readRacerDatabases(archive.readFile)
   const descriptions = describeRacers({
     arithmetic,
-    databases: readRacerDatabases(archive.readFile),
+    databases,
     racerCount,
     localPlayerCount,
     playerCars: options.playerCars ?? [],
@@ -162,8 +160,14 @@ export const loadRaceDefinition = (
     const route = routeDraws.routes[index] ?? null
     const description = descriptions[index]
     if (description === undefined) throw new RangeError(`No description for racer ${String(index)}`)
+    const chassis = databases.chassis.chassis.find(
+      (candidate) => candidate.name === description.car.chassisName
+    )
+    if (chassis === undefined) throw new RangeError(`No chassis ${description.car.chassisName}`)
+    const figure = loadChassisFigure(archive.readFile, chassis)
     return {
       controllerKind,
+      figure,
       carBody: createCarBodySetup(arithmetic, description.car, {
         displayFrame: getStartFrame(
           arithmetic,
@@ -171,7 +175,7 @@ export const loadRaceDefinition = (
           getStartSlot(index, isMultiplayer),
           route
         ),
-        displayBoundingRadius: PROVISIONAL_DISPLAY_BOUNDING_RADIUS,
+        displayBoundingRadius: getFigureBounds(arithmetic, figure)?.radius ?? 0,
         isRaceModeFlagged: getIsCarBodyFlagged(raceModeFlags),
       }),
       route,

@@ -7,6 +7,7 @@ import type { HazardList } from '../../hazard/index.ts'
 import type { TrackEffect, TrackLogicState } from '../../track-logic/index.ts'
 import type {
   CarBodyDefinition,
+  Figure,
   PlayerController,
   RacerControls,
   RacerSet,
@@ -51,6 +52,8 @@ export type RaceRacerDefinition = {
   readonly controllerKind: number
   // What 0x004371c0 builds from the chassis and the champion (racer-setup's createCarBodySetup).
   readonly carBody: CarBodyDefinition
+  // The display figure (racer +0x5c): the chassis's model part and animations, whose bounding sphere sizes the car.
+  readonly figure: Figure
   // Race +0x3104 + 0x48·i (racer +0xe2c), chosen by computer-racer-route; null for a racer without a route.
   readonly route: ComputerRacerRoute | null
   // Description +0x6c..+0x71: the driver's personality bytes (100 each for a car built from bricks).
@@ -268,17 +271,20 @@ export type RaceStepResult = {
 }
 
 // The race with the power-ups riding on the racer set while a sub-step runs (see race-world).
-export type RaceRacerSet = RacerSet & {
-  readonly powerUpStep: PowerUpStep
-  readonly powerUpSetups: readonly RaceRacerPowerUpSetup[]
-  readonly getGroundPoint: GroundQuery | null
-  readonly trackTargets: readonly ConeQueryTarget[]
-  readonly surfaces: SurfaceMaterials
-  readonly collisionObjectNames: readonly string[]
-  readonly taggedPositionMilliseconds: readonly (readonly number[])[]
-  readonly registryObjects: readonly RegistryObject[]
-  readonly raceModeFlags: number
-  readonly pendingContacts: RaceContacts
-  readonly trackLogic: TrackLogicState
-  readonly trackEffects: readonly TrackEffect[]
-}
+export type RaceRacerSet = RacerSet &
+  Pick<
+    RaceState,
+    | 'powerUpStep'
+    | 'powerUpSetups'
+    | 'getGroundPoint'
+    | 'trackTargets'
+    | 'surfaces'
+    | 'collisionObjectNames'
+    | 'taggedPositionMilliseconds'
+    | 'registryObjects'
+    | 'trackLogic'
+    | 'trackEffects'
+  > & {
+    readonly raceModeFlags: number
+    readonly pendingContacts: RaceContacts
+  }

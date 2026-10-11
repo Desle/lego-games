@@ -608,3 +608,17 @@
 004202f0 RacerDriver_SetRoute
 0042b0c0 CarBody_ResetRoute
 00422100 ForceFeedback_NotifyContact
+0042a900 CarBody_UpdateSurfaceValues
+0042a100 CarBody_SetTargetTilt
+00429680 CarBody_SeparateScripted
+004464a0 CarBody_SetTwoPointOffsets
+0043d070 Race_GetNearestRoute
+0045b740 PowerUps_WarpFinishedRacers
+0045e520 TaggedPositions_Add
+0045e470 TaggedPositions_Tick
+0045e3f0 TaggedPositions_Remove
+00435d20 Race_UpdatePauseMenu
+004362e0 Race_RestartInPlace
+004402c0 PointsRecord_RecordPlace
+00440330 PointsRecord_Tick
+00440860 PointsRecord_Clear
