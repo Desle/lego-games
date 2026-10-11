@@ -28,9 +28,7 @@ const getProps = (overrides: Partial<RaceHudOverlayProps> = {}): RaceHudOverlayP
 describe('RaceHudOverlay', () => {
   it('renders default snapshot', () => {
     // Arrange / Act
-    const { container } = render(
-      <RaceHudOverlay {...getProps({ commands: [] })} />
-    )
+    const { container } = render(<RaceHudOverlay {...getProps({ commands: [] })} />)
 
     // Assert
     expect(container).toMatchSnapshot()
@@ -55,9 +53,7 @@ describe('RaceHudOverlay', () => {
     ]
 
     // Act
-    const { container } = render(
-      <RaceHudOverlay {...getProps({ commands })} />
-    )
+    const { container } = render(<RaceHudOverlay {...getProps({ commands })} />)
 
     // Assert
     expect(container).toMatchSnapshot()
@@ -103,9 +99,7 @@ describe('RaceHudOverlay', () => {
     ])
 
     // Act
-    const { container } = render(
-      <RaceHudOverlay {...getProps({ commands, imageUrls })} />
-    )
+    const { container } = render(<RaceHudOverlay {...getProps({ commands, imageUrls })} />)
 
     // Assert
     expect(container).toMatchSnapshot()

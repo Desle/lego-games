@@ -11,7 +11,7 @@ import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import { useEffect, useRef, useState } from 'react'
 import { createFrontEndAudioPlayer } from '../../services/front-end-audio-player/front-end-audio-player.ts'
 import { createFrontEndInputSource } from '../../services/front-end-input-source/front-end-input-source.ts'
-import { createFrontEndRenderer } from '../../services/front-end-renderer/front-end-renderer.ts'
+import { createFrontEndRenderer } from '../front-end-renderer/front-end-renderer.ts'
 import type { FrontEndController, FrontEndControllerOptions } from './front-end-controller.types.ts'
 
 // The original never steps a frame by more than 100 ms (Application_ResetFrameClock 0x004162c0).

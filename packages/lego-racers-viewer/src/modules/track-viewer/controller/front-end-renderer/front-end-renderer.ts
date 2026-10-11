@@ -29,7 +29,12 @@ const getFillStyle = (
   command: FrontEndFillCommand
 ): string | CanvasGradient => {
   if (command.color === command.bottomColor) return getCssColor(command.color)
-  const gradient = context.createLinearGradient(0, command.rectangle.top, 0, command.rectangle.bottom)
+  const gradient = context.createLinearGradient(
+    0,
+    command.rectangle.top,
+    0,
+    command.rectangle.bottom
+  )
   gradient.addColorStop(0, getCssColor(command.color))
   gradient.addColorStop(1, getCssColor(command.bottomColor))
   return gradient

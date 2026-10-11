@@ -1,5 +1,5 @@
 import type { HudCommand } from '@lego-games/lego-racers/race-hud'
-import type { HudFonts } from '../../services/race-assets/race-assets.types.ts'
+import type { HudFonts } from '../../types/hud-fonts/hud-fonts.types.ts'
 
 export type RaceHudOverlayProps = {
   readonly commands: readonly HudCommand[]

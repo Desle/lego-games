@@ -1,7 +1,7 @@
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-racers/simulation-math'
 import { layoutText } from '@lego-games/lego-racers/font-rendering'
 import { useEffect, useMemo, useRef } from 'react'
-import { createBitmapFontPainter } from '../../services/bitmap-font-painter/bitmap-font-painter.ts'
+import { createBitmapFontPainter } from '../../controller/bitmap-font-painter/bitmap-font-painter.ts'
 import type { RaceHudOverlayProps } from './race-hud-overlay.types.ts'
 
 // 0xAARRGGBB; null is the font's own white.

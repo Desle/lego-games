@@ -87,7 +87,9 @@ const loadHudFonts = (archive: JamArchive): HudFonts => {
   const entries = Object.entries(HUD_FONT_NAMES).flatMap(([hudFont, fontName]) => {
     const definition = database.fonts.find((candidate) => candidate.name === fontName)
     if (definition === undefined) return []
-    const bitmap = decodeBitmap(archive.readFile(`${ENGLISH_DIRECTORY}\\${fontName.toUpperCase()}.BMP`))
+    const bitmap = decodeBitmap(
+      archive.readFile(`${ENGLISH_DIRECTORY}\\${fontName.toUpperCase()}.BMP`)
+    )
     const font = buildBitmapFont(definition, bitmap)
     const hudBitmapFont: HudBitmapFont = Object.freeze({
       font,
@@ -113,7 +115,10 @@ export const loadRaceAssets = (
   const archive = openJamArchive(jam)
   const raceFolder = options.raceFolder ?? DEFAULT_RACE_FOLDER
   const raceDirectory = `GAMEDATA\\${raceFolder}`
-  const description = parseRaceDescription(archive.readFile(`${raceDirectory}\\${raceFolder}.RAB`), false)
+  const description = parseRaceDescription(
+    archive.readFile(`${raceDirectory}\\${raceFolder}.RAB`),
+    false
+  )
   const definition = loadRaceDefinition(jam, files.executable, options)
   const scene = loadScene(archive, [
     ...getRaceWorldPaths(raceDirectory, description),

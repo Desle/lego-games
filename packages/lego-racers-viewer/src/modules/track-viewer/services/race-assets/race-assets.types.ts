@@ -3,7 +3,7 @@ import type { ModelScene } from '@lego-games/lego-racers/scene'
 import type { RaceDefinition } from '@lego-games/lego-racers/race'
 import type { Scene } from '@lego-games/lego-racers/scene'
 import type { SoundBank } from '@lego-games/lego-racers/audio'
-import type { BitmapFont } from '@lego-games/lego-racers/font-rendering'
+import type { HudFonts, HudImage } from '../../types/hud-fonts/hud-fonts.types.ts'
 import type { SceneBackground } from '../../types/track-viewer.types.ts'
 
 // The original files a race needs besides LEGO.JAM: the executable (the race reads its tables) and the music.
@@ -21,23 +21,6 @@ export type RacerModels = {
   readonly car: ModelScene
   readonly driver: ModelScene
 }
-
-export type HudImage = {
-  readonly name: string
-  readonly width: number
-  readonly height: number
-  // RGBA, rows top to bottom.
-  readonly colors: Uint8Array
-}
-
-// A font of the HUD: its glyph table and its image (RGBA, colour key applied).
-export type HudBitmapFont = {
-  readonly font: BitmapFont
-  readonly image: HudImage
-}
-
-// The HUD's fonts by HudFont value (`text`, `digits`).
-export type HudFonts = ReadonlyMap<string, HudBitmapFont>
 
 export type RaceAssets = {
   readonly archive: JamArchive
@@ -61,3 +44,5 @@ export type LoadedGameFiles = {
   readonly jam: Uint8Array
   readonly files: RaceGameFiles
 }
+
+export type { HudBitmapFont, HudFonts, HudImage } from '../../types/hud-fonts/hud-fonts.types.ts'

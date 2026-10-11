@@ -2,7 +2,7 @@ import type { HudCommand } from '@lego-games/lego-racers/race-hud'
 import type { LoadRaceOptions } from '@lego-games/lego-racers/race'
 import type { RefObject } from 'react'
 import type { EnumValues } from '../../../../shared/types/enum.types.ts'
-import type { HudFonts } from '../../services/race-assets/race-assets.types.ts'
+import type { HudFonts } from '../../types/hud-fonts/hud-fonts.types.ts'
 import type { RaceStatus as RaceStatusValues } from '../../types/race-status/race-status.ts'
 
 export type RaceStatus = EnumValues<typeof RaceStatusValues>

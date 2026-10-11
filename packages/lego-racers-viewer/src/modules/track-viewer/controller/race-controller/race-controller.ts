@@ -245,7 +245,10 @@ export const useRaceController = (): RaceController => {
     },
     onRaceStopped: () => {
       setAssets(null)
-      setScreen({ ...INITIAL_SCREEN, status: gameFiles === null ? RaceStatus.IDLE : RaceStatus.MENU })
+      setScreen({
+        ...INITIAL_SCREEN,
+        status: gameFiles === null ? RaceStatus.IDLE : RaceStatus.MENU,
+      })
     },
   }
 }

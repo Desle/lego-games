@@ -1,7 +1,7 @@
 import { getTextWidth } from '@lego-games/lego-racers/font-rendering'
 import { HudFont } from '@lego-games/lego-racers/race-hud'
 import type { HudMeasureText } from '@lego-games/lego-racers/race-hud'
-import type { HudFonts, HudImage } from '../race-assets/race-assets.types.ts'
+import type { HudFonts, HudImage } from '../../types/hud-fonts/hud-fonts.types.ts'
 
 // FUN_00408be0: the size of a string in the HUD's bitmap font, in the font's own pixels.
 export const createHudTextMeasure =
