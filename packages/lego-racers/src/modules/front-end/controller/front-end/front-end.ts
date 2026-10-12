@@ -37,6 +37,7 @@ import {
   getStateWithShowcaseReaction,
   getStateWithShowcaseStep,
 } from '../front-end-showcase/front-end-showcase.ts'
+import { advanceRacePreviewClock, createRacePreviewClock } from '../race-preview/race-preview.ts'
 import { getFrontEndMusicIndex } from '../front-end-music/front-end-music.ts'
 import { getWidgetCommands } from '../widget-commands/widget-commands.ts'
 
@@ -55,6 +56,7 @@ const getRuntime = (
     builder: state.builder,
     driver: state.driver,
     screenMilliseconds: state.screenMilliseconds,
+    racePreview: state.racePreview,
     menuFigureAnimation: state.menuFigure?.animation ?? null,
     showcase: state.showcase,
   }
@@ -101,6 +103,7 @@ export const createFrontEnd = (
           builder: null,
           driver: null,
           screenMilliseconds: 0,
+          racePreview: createRacePreviewClock(),
           menuFigureAnimation: null,
           showcase: null,
         }),
@@ -109,6 +112,7 @@ export const createFrontEnd = (
     settings,
     outcome: 'running',
     screenMilliseconds: 0,
+    racePreview: createRacePreviewClock(),
     musicListIndex: getFrontEndMusicIndex(firstScreenId, null),
     menuFigure:
       firstScreenId === FrontEndScreen.MAIN_MENU
@@ -150,6 +154,7 @@ const applyNavigation = (
           builder: getBuilderForScreen(screenId, navigated.builder, resources),
           driver: getDriverForScreen(screenId, navigated.settings, resources, environment),
           screenMilliseconds: 0,
+          racePreview: createRacePreviewClock(),
         },
         screenId
       )
@@ -159,7 +164,12 @@ const applyNavigation = (
       if (screens.length <= 1) return { state: navigated, soundNames, musicListIndex: null }
       const remaining = screens.slice(0, -1)
       const opened = getOpenedState(
-        { ...navigated, screens: remaining, screenMilliseconds: 0 },
+        {
+          ...navigated,
+          screens: remaining,
+          screenMilliseconds: 0,
+          racePreview: createRacePreviewClock(),
+        },
         remaining.at(-1)?.screenId ?? FrontEndScreen.MAIN_MENU
       )
       return { ...opened, soundNames }
@@ -235,6 +245,15 @@ const getEnteredFigure = (
     : restartMenuFigureAnimation(state.menuFigure, animation)
 }
 
+// Only the circuit race screen switches races (0x0047a3f0), and not on the last circuit.
+const getIsPreviewCycling = (state: FrontEndState, resources: FrontEndResources): boolean => {
+  const screen = state.screens.at(-1)
+  return (
+    screen?.screenId === FrontEndScreen.CIRCUIT_RACE &&
+    screen.selection.circuitIndex !== resources.circuits.circuits.length - 1
+  )
+}
+
 // One pass of the loop of 0x0042d510: the time advances and the input, if any, reaches the current screen, which
 // answers with the next screen, the race or the exit (0x004812c0, 0x004850a0).
 export const stepFrontEnd = (
@@ -248,6 +267,11 @@ export const stepFrontEnd = (
   const advanced: FrontEndState = {
     ...getStateWithShowcaseStep(state, resources, environment, frameMilliseconds),
     screenMilliseconds: state.screenMilliseconds + frameMilliseconds,
+    racePreview: advanceRacePreviewClock(
+      state.racePreview,
+      frameMilliseconds,
+      getIsPreviewCycling(state, resources)
+    ),
     menuFigure: figureStep?.figure ?? state.menuFigure,
   }
   const figureSounds = figureStep?.soundNames ?? []
@@ -263,10 +287,21 @@ export const stepFrontEnd = (
   ) {
     return { ...stepped, state: { ...stepped.state, outcome: 'demonstration' } }
   }
+  const isScreenChanged =
+    stepped.state.screens.length !== advanced.screens.length ||
+    stepped.state.screens.at(-1)?.screenId !== advanced.screens.at(-1)?.screenId
   const entered: FrontEndState = getStateWithShowcaseOpened(
     advanced,
     {
       ...stepped.state,
+      // The frame that opens a screen already runs its update (0x0047a3f0).
+      racePreview: isScreenChanged
+        ? advanceRacePreviewClock(
+            createRacePreviewClock(),
+            frameMilliseconds,
+            getIsPreviewCycling(stepped.state, resources)
+          )
+        : stepped.state.racePreview,
       menuFigure:
         stepped.state.screens.length === advanced.screens.length &&
         stepped.state.screens.at(-1)?.screenId === advanced.screens.at(-1)?.screenId

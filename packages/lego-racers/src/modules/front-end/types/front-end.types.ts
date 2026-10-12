@@ -1,3 +1,4 @@
+import type { RacePreviewClock } from './race-preview.types.ts'
 import type { BitmapFont, FontDrawCommand } from '../../font-rendering/index.ts'
 import type {
   BuilderCatalog,
@@ -181,6 +182,8 @@ export type FrontEndState = {
   readonly outcome: FrontEndOutcome
   // Milliseconds since the current screen opened.
   readonly screenMilliseconds: number
+  // The race select's preview timers.
+  readonly racePreview: RacePreviewClock
   // The entry of MENUDATA\LEGOMSC the music stream plays (FrontEnd_SetMusic 0x00480470), or null before any.
   readonly musicListIndex: number | null
   // The main menu's figure and its timers; they run only while that screen is the top one.
