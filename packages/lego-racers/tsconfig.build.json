@@ -5,5 +5,5 @@
     "rootDir": "src"
   },
   "include": ["src"],
-  "exclude": ["src/**/*.spec.ts", "src/shared/emulator"]
+  "exclude": ["src/**/*.spec.ts", "src/**/*-differential-suite.ts", "src/shared/emulator"]
 }

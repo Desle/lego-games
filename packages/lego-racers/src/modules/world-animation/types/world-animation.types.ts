@@ -18,6 +18,8 @@ export type SkeletonInstanceRuntime = {
   // The scale of the nearest level's model (mesh +0x38) with the instance's own (+0x58, 1): the bones' positions are scaled
   // by it (0x0045ebe0).
   readonly scale: number
+  // The bounding radius of the nearest level's model (mesh +0x34, scale applied): 0 for a model without vertices.
+  readonly boundsRadius: number
   // The skeleton of the nearest level; null for a camera's skeleton without one.
   readonly skeleton: Skeleton | null
   // +0xb4..+0xf0; null while the instance has no clip.
@@ -83,6 +85,8 @@ export type WorldAnimationInput = {
   readonly skeletons?: readonly Skeleton[]
   // The scale of each model of `world.meshes` that a skeleton instance uses (1 for the others).
   readonly meshScales?: readonly number[]
+  // The bounding radius (model +0x34) of the same models (0 for the others).
+  readonly meshRadii?: readonly number[]
   // In the order of `world.materialAnimations`.
   readonly materialAnimations: readonly MaterialAnimation[]
   // A mirrored race (Race_LoadTrackContent's flag): 0x00416140 negates the y of every instance's position (0x00411040).

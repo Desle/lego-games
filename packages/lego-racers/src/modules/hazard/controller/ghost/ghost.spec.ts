@@ -1,5 +1,11 @@
 import { HazardLifecycle } from '../../types/hazard-lifecycle/hazard-lifecycle.ts'
-import { createTestRacer, createTestSession } from '../hazard-fixtures/hazard-fixtures.ts'
+import {
+  createTestRacer,
+  createTestSession,
+  createTestSkeletonInstance,
+  createTestWorld,
+  TEST_SKELETON,
+} from '../hazard-fixtures/hazard-fixtures.ts'
 import { GHOST, GHOST_IDENTIFIER } from './ghost.ts'
 
 const create = () => {
@@ -70,7 +76,51 @@ describe('the ghost', () => {
 
     // Assert
     expect(test.effects).toEqual([
-      { type: 'hazard.racer_affected', keyword: 0x2b, racerIndex: 1, reaction: 'flung_by_ghost' },
+      {
+        type: 'hazard.racer_affected',
+        keyword: 0x2b,
+        racerIndex: 1,
+        reaction: 'flung',
+        vector: [0, 0, 150],
+      },
     ])
+  })
+
+  it('spares a racer that is spinning already or standing still', () => {
+    // Arrange
+    const { test, loaded } = create()
+
+    // Act
+    GHOST.touch(loaded, test.session, createTestRacer(1, 0, { isSpinning: true }))
+    GHOST.touch(loaded, test.session, createTestRacer(2, 0, { forwardSpeed: 0 }))
+
+    // Assert
+    expect(test.effects).toEqual([])
+  })
+
+  it('registers a sphere of the model radius and 8 on its second bone while it is active', () => {
+    // Arrange
+    const test = createTestSession({
+      track: createTestWorld([
+        createTestSkeletonInstance('ghostly', {
+          skeleton: TEST_SKELETON,
+          scale: 2,
+          boundsRadius: 5,
+        }),
+      ]),
+    })
+    const loaded = GHOST.create({ keyword: 0x2b }, { isMirrored: false, session: test.session })
+
+    // Act
+    const begun = GHOST.begin(loaded, test.session, null)
+    const updated = GHOST.update(begun, test.session, 33)
+    const ending = { ...updated, lifecycle: HazardLifecycle.ENDING }
+    const ended = GHOST.end(ending, test.session, null)
+
+    // Assert
+    expect(GHOST.getRegisteredSphere(loaded)).toBeNull()
+    expect(GHOST.getRegisteredSphere(updated)).toEqual({ centre: [3, 4, 5], radius: 13 })
+    expect(GHOST.getRegisteredSphere(ending)).not.toBeNull()
+    expect(GHOST.getRegisteredSphere(ended)).toBeNull()
   })
 })

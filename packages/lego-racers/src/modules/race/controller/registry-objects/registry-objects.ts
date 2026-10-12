@@ -52,7 +52,7 @@ const getRegistryFlags = (source: RegistrySource, object: RegistryObject): numbe
   return BRICK_FLAGS
 }
 
-// The volume of a registered object: a trigger's sphere (0x00464e80 and 0x00463b60 give its radius), or a brick, a
+// The volume of a registered object: a track hazard's or power-up object's shape, a trigger's sphere (0x00464e80 and 0x00463b60 give its radius), or a brick, a
 // sphere of radius 0 at its position (0x004539b0).
 export const getRegistrySphere = (
   source: RegistrySource,
@@ -71,7 +71,8 @@ export const getRegistrySphere = (
   if (
     object.type === 'effect_flight' ||
     object.type === 'effect_hazard' ||
-    object.type === 'explosion'
+    object.type === 'explosion' ||
+    object.type === 'hazard'
   ) {
     return getProjectileRegistrySphere(source, object)
   }

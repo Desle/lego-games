@@ -90,7 +90,8 @@ const createSkeletonInstance = (
   instance: SkeletonInstance,
   animations: readonly SkeletalAnimation[],
   skeletons: readonly Skeleton[],
-  meshScales: readonly number[]
+  meshScales: readonly number[],
+  meshRadii: readonly number[]
 ): SkeletonInstanceRuntime => {
   const used = getUsedSkeletonLevels(instance)
   const levels = used.map((level): InstanceLevel => ({
@@ -115,6 +116,7 @@ const createSkeletonInstance = (
     animation,
     rotation: getInstanceRotation(instance.forward, instance.up),
     scale: meshScales[nearest?.meshIndex ?? -1] ?? 1,
+    boundsRadius: meshRadii[nearest?.meshIndex ?? -1] ?? 0,
     skeleton: nearest === undefined ? null : (skeletons[nearest.skeletonIndex] ?? null),
     clip,
     isAnimated: clip !== null,
@@ -207,7 +209,8 @@ export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation
             instance,
             input.animations,
             input.skeletons ?? [],
-            input.meshScales ?? []
+            input.meshScales ?? [],
+            input.meshRadii ?? []
           )
         )
       )

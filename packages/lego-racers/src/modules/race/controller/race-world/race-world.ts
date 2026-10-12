@@ -51,6 +51,7 @@ import {
   getRacerAfterPowerUpEvent,
   getRacerLanded,
   getRacerMoved,
+  getRacerAfterHazardReaction,
   getRacerThrown,
   getRacerTumbling,
 } from '../../types/racer-transitions/racer-transitions.ts'
@@ -63,6 +64,7 @@ const CURSED_FLAG = 0x800
 const WARP_WITHHELD_FLAG = 0x1000
 const WARP_PENDING_FLAG = 0x200000
 const AIRBORNE_FLAG = 0x2
+const SPINNING_FLAG = 0x2
 const LIGHTNING_FLAG = 0x80
 const FULL_THROTTLE_FLAG = 0x1
 
@@ -438,11 +440,14 @@ export const getRacerSetAfterProjectileEvents = (
 
 const getHazardRacer = (racer: Racer | undefined, racerIndex: number): HazardRacer | null => {
   if (racer === undefined) return null
-  const { position } = racer.carBody.rigidBody.displayFrame
+  const { displayFrame, flags, forwardSpeed } = racer.carBody.rigidBody
+  const { position } = displayFrame
   return Object.freeze({
     index: racerIndex,
     flags: racer.flags,
     position: Object.freeze([position.x, position.y, position.z] as const),
+    isSpinning: (flags & SPINNING_FLAG) !== 0,
+    forwardSpeed,
   })
 }
 
@@ -641,6 +646,12 @@ const getRacerSetAfterTrackEffect = (
           vector === null ? undefined : Object.freeze({ x: vector[0], y: vector[1], z: vector[2] })
         ),
       })
+    )
+  }
+  if (effect.type === 'hazard.racer_affected') {
+    if (racerSet.racers[effect.racerIndex] === undefined) return racerSet
+    return changeRacer(racerSet, effect.racerIndex, (racer) =>
+      getRacerAfterHazardReaction(context.arithmetic, racer, effect.reaction, effect.vector)
     )
   }
   if (effect.type === 'hazard.collision_object_changed') {

@@ -3,8 +3,8 @@
 Usage: presentation_trace.py <scenario.json>   (or the scenario on stdin when no path is given)
 
 The scenario is the golden trace's ({"raceFolder", "racerCodes", "racerCount", "localPlayerCount", "circuit", "isMirrored", "fpu", "frames"})
-plus "recordFrames": [frame indices whose draws are recorded; absent = all], "isRenderRecorded" and "isAudioRecorded".
-One JSON object per line goes to stdout: {"type": "texture" | "render_frame" | "audio_frame" | "done", ...}.
+plus "recordFrames": [frame indices whose draws are recorded; absent = all], "isRenderRecorded", "isAudioRecorded" and "isDecalRecorded" (the triangles of the decals, see decal_trace.py).
+One JSON object per line goes to stdout: {"type": "texture" | "render_frame" | "audio_frame" | "decal_frame" | "done", ...}.
 """
 
 import json
@@ -17,6 +17,7 @@ import boot  # noqa: E402
 import golden_trace  # noqa: E402
 import race_session  # noqa: E402
 from audio_trace import AudioRecorder  # noqa: E402
+from decal_trace import DecalRecorder  # noqa: E402
 from render_trace import RenderRecorder  # noqa: E402
 
 
@@ -55,6 +56,8 @@ def run_scenario(scenario: dict) -> None:
         recorders.append(render)
     if scenario.get("isAudioRecorded", True):
         recorders.append(AudioRecorder(machine, emit))
+    if scenario.get("isDecalRecorded", False):
+        recorders.append(DecalRecorder(machine, emit))
     for recorder in recorders:
         recorder.install()
     boot.boot_to_front_end(machine)

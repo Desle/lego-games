@@ -1,3 +1,11 @@
+export {
+  CRANE_SHADOW_DECAL_LIMITS,
+  EXPLOSION_SCAR_DECAL_LIMITS,
+  getCraneShadowPlacement,
+  getExplosionScarPlacement,
+  getOilSlickPlacement,
+  OIL_SLICK_DECAL_LIMITS,
+} from './controller/decal-placements/decal-placements.ts'
 export { createDecalFrame } from './controller/create-decal-frame/create-decal-frame.ts'
 export {
   getDecalLeaves,

@@ -1,5 +1,6 @@
 import { createSkeletonAnimationState } from '../../../skeletal-animation/index.ts'
 import type { SkeletalAnimation } from '../../../skeletal-animation/index.ts'
+import type { Skeleton } from '../../../skeleton/index.ts'
 import { createFloatArithmetic, FpuPrecision } from '../../../simulation-math/index.ts'
 import { EMPTY_WORLD_ANIMATION } from '../../../world-animation/index.ts'
 import type {
@@ -37,6 +38,17 @@ export const TEST_ANIMATION: SkeletalAnimation = Object.freeze({
   ],
 })
 
+// A skeleton of a root at (3, 4, 5), a child of it at (1, 1, 1) and a grandchild at (0, 0, 2).
+export const TEST_SKELETON: Skeleton = Object.freeze({
+  bones: [
+    { name: 'root', position: [3, 4, 5] as const, quaternion: null, parentIndex: null },
+    { name: 'child', position: [1, 1, 1] as const, quaternion: null, parentIndex: 0 },
+    { name: 'tip', position: [0, 0, 2] as const, quaternion: null, parentIndex: 1 },
+    { name: 'end', position: [0, 0, 0] as const, quaternion: null, parentIndex: 2 },
+  ],
+  readByteCount: 0,
+})
+
 export const createTestSkeletonInstance = (
   name: string,
   overrides: Partial<SkeletonInstanceRuntime> = {}
@@ -46,6 +58,7 @@ export const createTestSkeletonInstance = (
   skeleton: null,
   rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
   scale: 1,
+  boundsRadius: 0,
   clip: createSkeletonAnimationState(TEST_ANIMATION, 0),
   isAnimated: true,
   otherFlags: 0,
@@ -66,10 +79,17 @@ export const createTestWorld = (
   meshInstances: readonly MeshInstanceRuntime[] = []
 ): WorldAnimation => ({ ...EMPTY_WORLD_ANIMATION, skeletonInstances, meshInstances })
 
-export const createTestRacer = (index: number, flags = 0): HazardRacer => ({
+export const createTestRacer = (
+  index: number,
+  flags = 0,
+  overrides: Partial<HazardRacer> = {}
+): HazardRacer => ({
   index,
   flags,
   position: [10, 20, 30] as Vector3,
+  isSpinning: false,
+  forwardSpeed: 50,
+  ...overrides,
 })
 
 // A session that records what a hazard does to the bus, the worlds and the random table. `draws` are the table values

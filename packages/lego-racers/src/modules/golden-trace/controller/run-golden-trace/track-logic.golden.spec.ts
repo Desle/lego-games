@@ -49,16 +49,8 @@ const getIsPhysicsField = (field: string): boolean =>
 // draw the port misses ends the part of the race the suite can judge (golden-trace.md).
 const RANDOM_POSITION_FIELD = 'race.randomPosition'
 
-// A track logic difference the power-up fixes uncovered (the random cursor used to end the judged part of the race
-// before it): event record 0x2a of racec0r3 at frame 797. Not traced yet. The original opens the track material
-// mmrocc (flags 0x30001) in the same frame (track.surfaces); hypothesis: the rock hazard 0x2e that a racer's touch
-// begins, which no race delivers yet (hazards-and-emitters.md).
-const KNOWN_TRACK_DIVERGENCES: Readonly<Record<string, string>> = Object.freeze({
-  racec0r3: [
-    'frame 797 track.events.2a[61]: original 0x00000003 port 0x00000001 (703 frames differ)',
-    'frame 797 track.surfaces[8]: original 0x00030001 port 0x00000001 (32 frames differ)',
-  ].join('\n'),
-})
+// Track logic differences not traced yet, by scenario name.
+const KNOWN_TRACK_DIVERGENCES: Readonly<Record<string, string>> = Object.freeze({})
 
 const getIsGamePresent = (): boolean =>
   getIsOriginalJamPresent() && getIsOriginalExecutablePresent() && getIsOriginalTraceAvailable()
