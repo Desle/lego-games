@@ -5,6 +5,9 @@ import type { SceneMaterial, SceneTexture } from '../../types/scene.types.ts'
 export type SceneFileSource = {
   readonly archive: JamArchive
   readonly directory: string
+  // Directories searched for a bitmap the world's own directory lacks (a hypothesis for the menus' cinemas, whose figure
+  // textures the original finds elsewhere); empty for a race.
+  readonly fallbackDirectories?: readonly string[]
 }
 
 export type LinkedTextures = {

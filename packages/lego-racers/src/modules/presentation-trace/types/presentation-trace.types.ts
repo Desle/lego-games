@@ -32,6 +32,8 @@ export type FrontEndScenario = {
   readonly frames: readonly PresentationFrameInput[]
   readonly recordFrames: readonly number[] | null
   readonly isRenderRecorded: boolean
+  // Screens put on the screen stack in a frame (a screen the keys cannot reach: the awards, the introductions).
+  readonly pushScreens?: readonly { readonly frame: number; readonly screenId: number }[]
 }
 
 // DDPIXELFORMAT masks of a texture surface (red, green, blue, alpha) and its raw rows.

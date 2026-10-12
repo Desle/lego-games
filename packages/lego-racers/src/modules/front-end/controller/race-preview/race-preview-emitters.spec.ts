@@ -7,6 +7,7 @@ import {
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
 import { loadFrontEndResources } from '../../services/load-front-end-resources/load-front-end-resources.ts'
+import { RACE_PREVIEW_SOURCE } from './race-preview.ts'
 import { advanceRacePreviewEmitters } from './race-preview-emitters.ts'
 
 const FRAME_MILLISECONDS = 33
@@ -15,7 +16,9 @@ describe.skipIf(!(getIsOriginalJamPresent() && getIsOriginalExecutablePresent())
   'advanceRacePreviewEmitters',
   () => {
     const getFiles = () => ({
-      resources: loadFrontEndResources(openJamArchive(readOriginalJam())).getRacePreview(),
+      resources: loadFrontEndResources(openJamArchive(readOriginalJam())).getCinemaFiles(
+        RACE_PREVIEW_SOURCE
+      ),
       randomTable: loadRandomTable(readOriginalExecutable()),
     })
 

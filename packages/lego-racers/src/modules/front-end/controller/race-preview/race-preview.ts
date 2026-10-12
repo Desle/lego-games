@@ -1,4 +1,11 @@
+import type { CinemaSource } from '../../types/front-end.types.ts'
 import type { RacePreviewClock } from '../../types/race-preview.types.ts'
+
+// The cinema of the race selects (0x0047a2b0, 0x00488010).
+export const RACE_PREVIEW_SOURCE: CinemaSource = Object.freeze({
+  directory: 'SINGRACE',
+  fileName: 'PST',
+})
 
 // 0x0047a2b0 sets the race timer to 2,000 ms whenever it shows a race.
 const RACE_CYCLE_MILLISECONDS = 2000

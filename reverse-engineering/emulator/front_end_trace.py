@@ -2,7 +2,8 @@
 
 Usage: front_end_trace.py <scenario.json>   (or the scenario on stdin)
 
-The scenario is {"frames": [{"dt": milliseconds, "keys": [scan codes pressed this frame]}, ...], "recordFrames": [...], "isRenderRecorded": bool}.
+The scenario is {"frames": [{"dt": milliseconds, "keys": [scan codes pressed this frame]}, ...], "recordFrames": [...], "isRenderRecorded": bool,
+"pushScreens": [{"frame": index, "screenId": id}, ...]}; a pushed screen id goes on the screen stack in that frame, as if the top screen had pushed it.
 A key in "keys" is pressed for that frame only (a tap): the menus act on key-down events. Output lines are those of presentation_trace.py.
 """
 
@@ -20,6 +21,8 @@ from presentation_trace import emit  # noqa: E402
 from render_trace import RenderRecorder  # noqa: E402
 
 SCREEN_STACK_PUSH = 0x0047FA70
+# 0x0042d5f4 of the loop 0x0042d510: just before it reads the stack's top again to see whether the screen changed (EDI is the stack).
+SCREEN_TOP_RECHECK = 0x0042D5F4
 SCREEN_STACK_POP = 0x0047FAA0
 APPLICATION_BASE = 0x004C4A38 + 4
 LAST_TIME_OFFSET = 0x820
@@ -30,6 +33,7 @@ class FrontEndRun:
         self.machine = machine
         self.frames = scenario["frames"]
         self.record_frames = scenario.get("recordFrames")
+        self.pushes = [dict(entry) for entry in scenario.get("pushScreens", [])]
         self.recorders = recorders
         self.pump_count = 0
         self.screen_events = []
@@ -39,6 +43,20 @@ class FrontEndRun:
 
         esp = self.machine.uc.reg_read(UC_X86_REG_ESP)
         emit({"type": "screen", "frame": self.pump_count - 1, "kind": "push", "id": self.machine.read_u32(esp + 4) & 0xFFFF})
+
+    def on_top_recheck(self) -> None:
+        from unicorn.x86_const import UC_X86_REG_EDI
+
+        frame = self.pump_count - 1
+        for entry in self.pushes:
+            if entry["frame"] != frame or entry.get("done"):
+                continue
+            entry["done"] = True
+            stack = self.machine.uc.reg_read(UC_X86_REG_EDI)
+            array = self.machine.read_u32(stack)
+            count = self.machine.read_u32(stack + 8)
+            self.machine.uc.mem_write(array + count * 2, int(entry["screenId"]).to_bytes(2, "little"))
+            self.machine.write_u32(stack + 8, count + 1)
 
     def on_screen_pop(self) -> None:
         emit({"type": "screen", "frame": self.pump_count - 1, "kind": "pop", "id": 0})
@@ -80,6 +98,7 @@ def run_scenario(scenario: dict) -> None:
     machine.add_address_hook(race_session.PUMP_MESSAGES, run.on_pump)
     machine.add_address_hook(SCREEN_STACK_PUSH, run.on_screen_push)
     machine.add_address_hook(SCREEN_STACK_POP, run.on_screen_pop)
+    machine.add_address_hook(SCREEN_TOP_RECHECK, run.on_top_recheck)
     reason = machine.resume()
     emit({"type": "done", "reason": reason, "frames": run.pump_count})
     sys.stdout.flush()

@@ -108,7 +108,7 @@ const resources: FrontEndResources = {
     throw new RangeError('The test has no driver database')
   },
   getMenuFigureAnimation: () => MENU_FIGURE_ANIMATION,
-  getRacePreview: () => ({
+  getCinemaFiles: () => ({
     cinemas: { worldNames: [], cinemas: [], readByteCount: 0 },
     events: { poolNames: [], emitterEvents: [], vertexEffects: [], reactionLists: [] },
     pools: [],
