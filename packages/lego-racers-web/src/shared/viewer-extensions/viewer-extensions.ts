@@ -88,9 +88,22 @@ export const getEffectModelDrawing = (request: EffectModelDrawingRequest): Objec
   return null
 }
 
+// An extension that throws while making a drawing counts as having none: the original's car is drawn instead.
+const getGuardedCarDrawing = (
+  extension: ViewerExtension,
+  request: CarDrawingRequest
+): CarDrawing | null => {
+  try {
+    return extension.getCarDrawing(request)
+  } catch (error: unknown) {
+    console.warn('A car drawing could not be made; the original car is drawn', error)
+    return null
+  }
+}
+
 export const getCarDrawing = (request: CarDrawingRequest): CarDrawing | null => {
   for (const extension of registeredExtensions) {
-    const drawing = extension.getCarDrawing(request)
+    const drawing = getGuardedCarDrawing(extension, request)
     if (drawing !== null) return drawing
   }
   return null

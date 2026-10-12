@@ -131,6 +131,7 @@ export type CarDrawing = {
   readonly object: Object3D
   readonly applyPose: (pose: CarDrawingPose) => void
   readonly dispose: () => void
+  readonly onFailed: (listener: () => void) => void
 }
 
 // What a layer draws in place of a driver. `animate` advances the figure's own clock by whole milliseconds when the viewer does not

@@ -12,6 +12,14 @@ import {
   applyHighDefinitionTexture,
   getHighDefinitionVariant,
 } from '../high-definition-texture/high-definition-texture.ts'
+import {
+  getLookLabels,
+  getLookPreset,
+  getLookPresetFromLabel,
+  LOOK_APPEARANCES,
+  LOOK_PARAMETER,
+  setActiveLookPreset,
+} from '../ldraw-car/ldraw-look.ts'
 import { createLDrawPickupDrawing } from '../ldraw-pickup/ldraw-pickup-drawing.ts'
 import { loadLDrawModelIndex, getLDrawModelIndex } from '../ldraw-models/ldraw-model-client.ts'
 import { createLDrawRacerCar } from '../ldraw-racer-model/ldraw-racer-car.ts'
@@ -53,6 +61,7 @@ const getIsLDrawRequested = (search: string): boolean =>
 // `audio=<variant>` the audio pack.
 export const registerRemastered = async (search: string) => {
   await loadLDrawModelIndex()
+  setActiveLookPreset(getLookPreset(search))
   const settings = {
     search,
     isChassisFallbackUsed: getIsChassisFallbackRequested(search),
@@ -85,6 +94,7 @@ export const registerRemastered = async (search: string) => {
       `bricks=${getIsLDrawRequested(search) ? LDRAW_BRICKS : CLASSIC_BRICKS}`,
       `chassis=${getIsChassisFallbackRequested(search) ? GAME_CHASSIS : 'recipe'}`,
       `shadows=${getShadowMode(search)}`,
+      `look=${getLookPreset(search)}`,
     ],
     getSoundReplacement: (context, archivePath) =>
       audioVariant === null
@@ -118,6 +128,14 @@ const selectChassis = (chassis: string | null) => {
   const url = new URL(globalThis.location.href)
   if (chassis === null) url.searchParams.delete(CHASSIS_PARAMETER)
   else url.searchParams.set(CHASSIS_PARAMETER, GAME_CHASSIS)
+  if (!url.searchParams.has('hd')) url.searchParams.set('hd', '')
+  globalThis.location.assign(url.toString())
+}
+
+// Switching the look reloads the page too: the plastic is made with each car.
+const selectLook = (label: string | null) => {
+  const url = new URL(globalThis.location.href)
+  url.searchParams.set(LOOK_PARAMETER, getLookPresetFromLabel(label))
   if (!url.searchParams.has('hd')) url.searchParams.set('hd', '')
   globalThis.location.assign(url.toString())
 }
@@ -173,6 +191,14 @@ export const getRemasteredSelectors = async (
       options: [REAL_SHADOWS_LABEL, SCENERY_SHADOWS_LABEL],
       selected: getIsRemasteredRequested(search) ? getShadowModeLabel(getShadowMode(search)) : null,
       onSelected: selectShadows,
+    },
+    {
+      label: 'Look (reloads): Manual / Studio / Photo / LEGO Movie',
+      options: getLookLabels(),
+      selected: getIsRemasteredRequested(search)
+        ? LOOK_APPEARANCES[getLookPreset(search)].label
+        : null,
+      onSelected: selectLook,
     },
     getModelSelector(),
   ]
