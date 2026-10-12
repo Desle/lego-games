@@ -31,9 +31,18 @@ Verification: every saved design (`DEFAULT.LRS`, `QBUILD.LRS`: 28 cars) was draw
 - The exact list, with the closest part and its error, is `UNMAPPED_BRICK_REASONS`.
 - Approximate matches (`heightError` above 0.1 plates) are plain bricks standing in for a printed or decorated one (the game's brick carries a texture the library's part has no pattern for), or a part that is close but not the same (e.g. `S00016` the bracket 99207, `s00019` the Technic brick 80431).
 
-Wheels: the game's own wheels keep their animation; LDraw wheels were not mapped (the chassis is the game's, and the wheels sit on its axles).
+`s243200` (the windscreen frame, the most used unmapped brick, 19 uses on 13 of the 28 saved cars) is now the 1 x 2 x 2 brick `3245c`: the bounding box is exact, the handle and the leaning front are not (`heightError` 0.6, approximate). `S243201` is a thin angled pane; the windscreen 21 is a solid block, so it stays unmapped.
 
-Not done: the garage and Racer Select showcase, and the build-a-car screen's preview, still show the original's mesh (the extension point is only asked by the race); champion cars are the game's model files (`*cm` GDB models), not brick lists, so they are not touched.
+Wheels: the game's own wheels keep their animation; LDraw wheels were not mapped (the chassis is the game's, and the wheels sit on its axles; the wheels are separate GDB models, not bricks). **Not done.**
+
+Where the LDraw car is drawn: the race, the build-a-car screen (as bricks are placed; the placeholder is the game's mesh in the same plastic until the parts arrive), and the Racer Select showcase, all through `showBuiltCarDrawing` (`track-viewer/services/built-car-drawing`), which asks `getBuiltCarDrawing` and does nothing without an extension. Computer racers and champions are the game's model files (`*cm` GDB models from `CHAMPS.CCB`), not brick lists, so they are not touched: only the cars built from bricks (the player's own and the `DEFAULT.LRS` racers) have designs.
+
+## The look
+
+- Plastic (`ldraw-plastic.ts`, numbers in `ldraw-plastic.constants.ts`): `MeshPhysicalMaterial` with a clear coat, a small studio cube map (generated in code, no file) as environment, subtle edge lines (conditional lines too, dimmed and darkened). Smooth normals come from the loader. The lights (key, fill, rim, hemisphere) live in the car's frame and aim at its origin, so a car looks the same wherever it is. The track keeps its own lighting.
+- Studs carry the LEGO logo: `stud.dat` and `stud2.dat` are swapped for the library's `stud-logo<n>.dat` through the loader's file map (`setStudLogoLevel`: 0 plain, 1 thin lines, 2 outlined, 3 sharp 3D, 4 rounded 3D (default), 5 flattened 3D).
+- Colours of the game's own faces (bricks with no part): a face is drawn with the brick colour only where the original paints it with the colour's material; the faces with a fixed material (`black` under a chassis, `ltgray`, ...) take that material's colour (`getGameBrickMaterials`; 0x0049a450). This fixed a blue underside on cars whose chassis the original draws black.
+- The renderer stays the original's (no colour management, linear output), so the lights were tuned by eye on the gallery for that.
 
 ## The gallery
 
