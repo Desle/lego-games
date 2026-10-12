@@ -23,6 +23,22 @@ describe('the library parts of the catalogue', () => {
     expect([sizes, LDRAW_HATS[0]?.hats]).toEqual([[36, 30, 29, 20], []])
   })
 
+  it('puts a visor on every helmet of the game that has one', () => {
+    // Arrange
+    const helmetNames = ['helmtrr', 'helmt01', 'helmt02', 'helmt03', 'helmtvvs', 'nh_hats']
+
+    // Act
+    const visorCounts = helmetNames.map(
+      (name) =>
+        LDRAW_HATS.find((entry) => entry.catalogName === name)?.hats.filter(
+          (hat) => hat.part === '2447'
+        ).length
+    )
+
+    // Assert
+    expect(visorCounts).toEqual([1, 1, 1, 1, 1, 1])
+  })
+
   it('says why each entry stands for its part', () => {
     // Arrange / Act
     const entries = [...LDRAW_HATS, ...LDRAW_FACES, ...LDRAW_TORSOS, ...LDRAW_LEGS]

@@ -19,12 +19,20 @@ const WHITE = 15
 const TAN = 19
 const LIGHT_BLUISH_GRAY = 71
 const DARK_BLUISH_GRAY = 72
+const TRANSPARENT_BLACK = 40
 
 const { EXACT, CLOSE, GUESS } = MinifigPartConfidence
 const PLAIN_LEFT_LEG = '3817b'
 const PLAIN_RIGHT_LEG = '3816b'
 
 const getHat = (part: string, colorCode: number): LDrawHat => Object.freeze({ part, colorCode })
+
+// The visor is its own part, clipped on at the helmet's own origin.
+const VISOR = '2447'
+const getRacingHelmet = (colorCode: number): readonly [LDrawHat, LDrawHat] => [
+  getHat('3842a', colorCode),
+  getHat(VISOR, TRANSPARENT_BLACK),
+]
 
 const getHatMatch = (
   catalogName: string,
@@ -91,7 +99,7 @@ const getPlainLegsMatch = (
 // it. A champion's hat is the one of the official figure; the library has no part for some (the cobra helmet, the tribal headdress).
 export const LDRAW_HATS: readonly LDrawHatMatch[] = Object.freeze([
   getHatMatch('nohat', EXACT, 'bare head'),
-  getHatMatch('helmtrr', CLOSE, 'classic racing helmet, Racers', getHat('3842a', BLACK)),
+  getHatMatch('helmtrr', CLOSE, 'classic racing helmet, Racers', ...getRacingHelmet(BLACK)),
   getHatMatch('helmet2s', CLOSE, 'castle helmet with chin guard, Castle', getHat('3896', BLACK)),
   getHatMatch('bb_hats', EXACT, 'fig-000648 Bat Lord, Fright Knights', getHat('30105', BLACK)),
   getHatMatch(
@@ -130,7 +138,13 @@ export const LDRAW_HATS: readonly LDrawHatMatch[] = Object.freeze([
   ),
   getHatMatch('cc_hats', CLOSE, 'diving helmet, Aquazone', getHat('30090b', WHITE)),
   getHatMatch('ch_hats', CLOSE, 'cowboy hat, Western', getHat('3629', WHITE)),
-  getHatMatch('nh_hats', GUESS, 'space helmet, visor not drawn', getHat('71016', BLACK)),
+  getHatMatch(
+    'nh_hats',
+    GUESS,
+    'space helmet with its visor',
+    getHat('30124b', BLACK),
+    getHat(VISOR, TRANSPARENT_BLACK)
+  ),
   getHatMatch('gh_hai1s', CLOSE, 'spiked hair', getHat('2631', LIGHT_GRAY)),
   getHatMatch('gh_hai2s', CLOSE, 'spiked hair', getHat('2631', BROWN)),
   getHatMatch('gh_hairs', CLOSE, 'spiked hair', getHat('2631', BLACK)),
@@ -149,14 +163,14 @@ export const LDRAW_HATS: readonly LDrawHatMatch[] = Object.freeze([
     getHat('30168b', YELLOW)
   ),
   getHatMatch('bj_hats', CLOSE, 'tricorne, Pirates', getHat('2544', BLACK)),
-  getHatMatch('helmt03', CLOSE, 'classic racing helmet, Racers', getHat('3842a', BLUE)),
-  getHatMatch('helmt02', CLOSE, 'classic racing helmet, Racers', getHat('3842a', RED)),
-  getHatMatch('helmt01', CLOSE, 'classic racing helmet, Racers', getHat('3842a', WHITE)),
+  getHatMatch('helmt03', CLOSE, 'classic racing helmet, Racers', ...getRacingHelmet(BLUE)),
+  getHatMatch('helmt02', CLOSE, 'classic racing helmet, Racers', ...getRacingHelmet(RED)),
+  getHatMatch('helmt01', CLOSE, 'classic racing helmet, Racers', ...getRacingHelmet(WHITE)),
   getHatMatch('ad_hats', GUESS, 'beanie, robot top not in the library', getHat('90541', GREEN)),
   getHatMatch('mm_hats', CLOSE, 'cap, Racers', getHat('86035', BLUE)),
   getHatMatch('mj_hats', CLOSE, 'wizard hat', getHat('6131', BLUE)),
   getHatMatch('rh_hats', CLOSE, 'forestman cap with plume, Castle', getHat('4506c01', GREEN)),
-  getHatMatch('helmtvvs', CLOSE, 'classic racing helmet, Racers', getHat('3842a', LIGHT_GRAY)),
+  getHatMatch('helmtvvs', CLOSE, 'classic racing helmet, Racers', ...getRacingHelmet(LIGHT_GRAY)),
 ])
 
 // The faces of `BODYPART.PCB` by catalogue index (the heads list), each a printed head of the library: the game's face card says
