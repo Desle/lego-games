@@ -1,8 +1,12 @@
 import { SceneInstanceKind } from '@lego-games/lego-racers/scene'
 import { BoxGeometry, Group, Line, Mesh, MeshBasicMaterial, Scene } from 'three'
 import { RACER_SHADOW_DECAL_NAME } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
-import { hideBlobShadows, hideNonCasters, showAgain } from './shadow-casters.ts'
-import { ShadowMode } from './shadow-mode.types.ts'
+import {
+  hideBlobShadows,
+  hideNonCasters,
+  showAgain,
+  showStaticSceneryOnly,
+} from './shadow-casters.ts'
 
 const createSolid = () => new Mesh(new BoxGeometry(), new MeshBasicMaterial())
 const createGlass = () => new Mesh(new BoxGeometry(), new MeshBasicMaterial({ transparent: true }))
@@ -35,26 +39,37 @@ describe('hideNonCasters', () => {
     const { scene, trackGroup, surface, scenery, hazard, car, blob } = createRace()
 
     // Act
-    const hidden = hideNonCasters(scene, trackGroup, ShadowMode.REAL)
+    const hidden = hideNonCasters(scene, trackGroup)
 
     // Assert
     expect([surface.visible, scenery.visible, hazard.visible]).toEqual([false, false, true])
     expect(car.children.map((child) => child.visible)).toEqual([true, false, false])
     expect(hidden).toContain(blob)
+    showAgain(hidden)
+    expect([surface.visible, car.children.every((child) => child.visible)]).toEqual([true, true])
   })
+})
 
-  it('lets the scenery cast when asked, and shows everything again afterwards', () => {
+describe('showStaticSceneryOnly', () => {
+  it('shows the scenery and nothing else, then puts every visibility back', () => {
     // Arrange
-    const { scene, trackGroup, scenery, car } = createRace()
+    const { scene, trackGroup, surface, scenery, hazard, car } = createRace()
+    surface.visible = false
+    const farLevel = createInstance(SceneInstanceKind.MESH)
+    trackGroup.add(farLevel)
+    scenery.name = 'wall'
+    farLevel.name = 'wall'
 
     // Act
-    const hidden = hideNonCasters(scene, trackGroup, ShadowMode.SCENERY)
-    const isSceneryCasting = scenery.visible
-    showAgain(hidden)
+    const view = showStaticSceneryOnly(scene, trackGroup)
+    const during = [surface, scenery, farLevel, hazard, car].map((object) => object.visible)
+    view.restore()
+    const after = [surface, scenery, farLevel, hazard, car].map((object) => object.visible)
 
     // Assert
-    expect(isSceneryCasting).toBe(true)
-    expect(car.children.every((child) => child.visible)).toBe(true)
+    expect(during).toEqual([true, true, false, false, false])
+    expect(after).toEqual([false, true, true, true, true])
+    expect(view.shown).toEqual([surface, scenery])
   })
 })
 
