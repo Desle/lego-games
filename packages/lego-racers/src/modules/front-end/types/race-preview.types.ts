@@ -10,6 +10,10 @@ export type RacePreviewClock = {
   // The races switched to since the screen opened (the race on show is this modulo the circuit's races).
   readonly cycleCount: number
   readonly cinemaMilliseconds: number
+  // The time trial screen's best time (screen +0x2e08 and +0x2e10): the milliseconds until 0x00488150 swaps the lap time for the
+  // race time and back, and whether the lap time is on show.
+  readonly bestTimeRemainingMilliseconds: number
+  readonly isBestLapShown: boolean
 }
 
 // The files of the race preview (`MENUDATA\SINGRACE`): the cinemas, their events and the emitter pool of each emitter file the

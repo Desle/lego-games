@@ -2,6 +2,8 @@ export type TraceScenarioRequest = {
   readonly name: string
   readonly raceFolder: string
   readonly isMirrored?: boolean
+  // Game mode 2: the race has the champion's ghost car.
+  readonly isTimeTrial?: boolean
   // The steering sweep of the golden trace (about 475 frames) instead of idling through the countdown.
   readonly isSteering?: boolean
   // Full throttle and two power slides (the tire smoke runs and the wheels leave marks).

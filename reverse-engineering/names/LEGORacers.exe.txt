@@ -963,3 +963,8 @@
 00454b20 Wand_StepJitter
 00454b90 Wand_FillJitter
 00454bb0 Wand_BuildBeam
+0040d550 Figure_Bind
+0040da30 Figure_SetLevel
+0042f240 Profile_GetGhostBeatenFlags
+00488010 RaceSelectScreen_ShowRace
+00487b50 RaceSelectScreen_CreateWidgets

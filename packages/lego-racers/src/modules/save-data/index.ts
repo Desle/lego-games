@@ -7,6 +7,7 @@ export {
   getBestTimeTrackIndex,
   getCircuitUnlockFlags,
   getHasCircuitTrophy,
+  getIsGhostBeaten,
   getIsCircuitUnlocked,
   getIsPartUnlocked,
   getUnlockedCircuitRunLength,

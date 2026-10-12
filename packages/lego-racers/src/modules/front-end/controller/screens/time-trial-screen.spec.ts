@@ -3,7 +3,12 @@ import {
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
-import { BestTimeKind, createDefaultProfile, recordBestTime } from '../../../save-data/index.ts'
+import {
+  BestTimeKind,
+  createDefaultProfile,
+  markGhostBeaten,
+  recordBestTime,
+} from '../../../save-data/index.ts'
 import type { SaveFile } from '../../../save-data/index.ts'
 import { loadFrontEndResources } from '../../services/load-front-end-resources/load-front-end-resources.ts'
 import type { FrontEndResources } from '../../types/front-end.types.ts'
@@ -38,7 +43,11 @@ describe.skipIf(!isPresent)('the best times of the time trial screen', () => {
       settings: { saveFile, isVersus: false },
       selection: { circuitIndex: 0, raceIndex: 0, focusIndex: 0 },
       screenMilliseconds,
-      racePreview: { cycleCount: 0, cinemaMilliseconds: 0 },
+      racePreview: {
+        cycleCount: 0,
+        cinemaMilliseconds: 0,
+        isBestLapShown: screenMilliseconds < 2500,
+      },
       racePreviewEmitters: null,
       racePreviewEffects: null,
     }) as unknown as ScreenRuntime
@@ -97,5 +106,20 @@ describe.skipIf(!isPresent)('the best times of the time trial screen', () => {
     // Assert
     expect(texts['bestname']).toBe(resources.getMenuText(0x48))
     expect(texts['besttime']).toBe('')
+  })
+
+  it("shows TIME TRIAL WON while the race's champion ghost is beaten (0x004881a0)", () => {
+    // Arrange
+    const beaten = markGhostBeaten(createDefaultProfile(0), raceIndex).profile
+    const shown = getRuntime({ profile: beaten, racers: [] }, 0)
+    const hidden = getRuntime({ profile: createDefaultProfile(0), racers: [] }, 0)
+
+    // Act
+    const shownTexts = getTexts(TIME_TRIAL_SCREEN.getWidgets(shown))
+    const hiddenTexts = getTexts(TIME_TRIAL_SCREEN.getWidgets(hidden))
+
+    // Assert
+    expect(shownTexts['timestat']).toBe('TIME TRIAL WON')
+    expect(hiddenTexts['timestat']).toBeUndefined()
   })
 })

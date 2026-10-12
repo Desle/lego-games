@@ -31,6 +31,10 @@ export type GhostCar = {
   readonly driverPosition: Vector3
   // The integer FUN_00422960 stores as the wheels' animation rate (+0xb8).
   readonly speed: number
+  // The animation state of the wheels and of the driver (Ghost_Initialize 0x00422420, 0x00422eb0), advanced with every
+  // sub-step by the recorder; null when the car's animation was not loaded.
+  readonly wheelAnimation: SkeletonAnimationState | null
+  readonly driverAnimation: SkeletonAnimationState | null
 }
 
 export type GhostCarsStep = {

@@ -24,7 +24,7 @@ Source: `LEGORacers.exe`. Port: `packages/lego-racers/src/modules/racer-setup`, 
 | `+0x7c`, `+0x80` | driver `+0x22` (1..4, else 0), `+0x23`              | 0, 0                                                                                       | racer `+0xcd0`, `+0xcd4` preferred power-up and level              |
 | `+0x84..+0x86`   | chassis `+0x100`, `+0x101`, `+0x102`                | same                                                                                       | steering, throttle, top speed ratings                              |
 
-The slot's start position index is `racer set +0x26c + 4·i` = `i`; with two or more local players (and no ghost) racer 0 takes slot **2**; a ghost race takes `1 + (ghost +0x3b4 & 8 ? 1 : 0)`. `(**frame +0x08)` puts start position `slot` on the car model's frame and `(**frame +0x40)` its two axes.
+The slot's start position index is `racer set +0x26c + 4·i` = `i`; with two or more local players (and no ghost) racer 0 takes slot **2**; a ghost race takes `1 + (ghost +0x3b4 & 8 ? 1 : 0)` for every racer (ported: `getStartSlot`'s ghost rule; checked by the pixel case `RACEC0R0, time trial ghost`). `(**frame +0x08)` puts start position `slot` on the car model's frame and `(**frame +0x40)` its two axes.
 
 **Resolved: `0x00429210` (`CarBody_Attach`) adds no offset.** It stores owner pointers (`+0x6f0..+0x6fc`), calls `CarRigidBody_Attach` (`0x00444d90`, which copies the frame's rotation and position into the rigid body), reads the frame position and rotation into `+0x700` and `+0x70c`, and clears `+0x738`. The car starts exactly at its slot. The earlier hypothesis is false.
 
@@ -60,4 +60,4 @@ So **the chassis type** fixes the wheels, hull, base mass 2,500 and base ratings
 
 ## Not ported
 
-The figure builder (the driver of a built car), the display name, the vehicle set-up beyond its figures (see [car-builder.md](car-builder.md)), the ghost grid slots, the checkpoint object in the collision list and its contact filter `0x0042a830`.
+The figure builder (the driver of a built car), the display name, the vehicle set-up beyond its figures (see [car-builder.md](car-builder.md)), the checkpoint object in the collision list and its contact filter `0x0042a830`.
