@@ -25,6 +25,10 @@ export {
   startSkeletonInstanceClip,
 } from './controller/skeleton-instance/skeleton-instance.ts'
 export {
+  getSkeletonInstanceBoneTranslation,
+  getSkeletonInstanceChainPosition,
+} from './controller/skeleton-instance-bones/skeleton-instance-bones.ts'
+export {
   advanceWorldAnimation,
   createWorldAnimation,
   EMPTY_WORLD_ANIMATION,

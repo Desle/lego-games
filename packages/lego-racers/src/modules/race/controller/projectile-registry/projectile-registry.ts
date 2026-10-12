@@ -1,5 +1,6 @@
 import { EffectState, PowerUpEffectKind } from '../../../power-ups/index.ts'
 import type { PowerUpEffect } from '../../../power-ups/index.ts'
+import { getHazardRegisteredSphere } from '../../../hazard/index.ts'
 import { BallisticFlightState, ExplosionState } from '../../../projectiles/index.ts'
 import type { ExplosionPool } from '../../../projectiles/index.ts'
 import { getBoundingInterval } from '../../../racer-collision/index.ts'
@@ -116,11 +117,17 @@ const getHazardSphere = (source: RegistrySource, effect: PowerUpEffect): Boundin
   return ORIGIN_SPHERE
 }
 
-// The sphere of a registered power-up object: the shape the original's entry points at.
+// The sphere of a registered power-up object or track hazard: the shape the original's entry points at.
 export const getProjectileRegistrySphere = (
   source: RegistrySource,
   object: RegistryObject
 ): BoundingSphere => {
+  if (object.type === 'hazard') {
+    const sphere = getHazardRegisteredSphere(source.trackLogic.hazards, object.index)
+    if (sphere === null) return ORIGIN_SPHERE
+    const [x, y, z] = sphere.centre
+    return getSphere(Object.freeze({ x, y, z }), sphere.radius)
+  }
   if (object.type === 'effect_flight' || object.type === 'effect_hazard') {
     const effect = getEffectOf(source, object.effectId)
     if (effect === undefined) return ORIGIN_SPHERE
@@ -195,10 +202,16 @@ const getRegisteredObjects = (source: RegistrySource): readonly RegistryObject[]
         : []),
     ]
   })
+  const hazards = source.trackLogic.hazards.instances.flatMap((_instance, index) =>
+    getHazardRegisteredSphere(source.trackLogic.hazards, index) === null
+      ? []
+      : [{ type: 'hazard', index } as const]
+  )
   return [
     ...fromEffects,
     ...getExplosionObjects(source.projectileWorld.explosions, false),
     ...getExplosionObjects(source.projectileWorld.spikedExplosions, true),
+    ...hazards,
   ]
 }
 
@@ -211,7 +224,7 @@ const getIsSameObject = (left: RegistryObject, right: RegistryObject): boolean =
       right.type === 'explosion' && right.isSpiked === left.isSpiked && right.index === left.index
     )
   }
-  return false
+  return left.type === 'hazard' && right.type === 'hazard' && right.index === left.index
 }
 
 const getEntryFor = (
@@ -245,7 +258,8 @@ export const getRacerSetWithProjectileRegistry = (
     object !== undefined &&
     (object.type === 'effect_flight' ||
       object.type === 'effect_hazard' ||
-      object.type === 'explosion')
+      object.type === 'explosion' ||
+      object.type === 'hazard')
   const liveIds = new Set(
     racerSet.registryEntries
       .filter((entry) => entry.isActive && isDynamic(racerSet.registryObjects[entry.id]))

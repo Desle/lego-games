@@ -85,7 +85,8 @@ const RACE_COLLISION_DEPENDENCIES: RacerPassDependencies = Object.freeze({
 const collideRegisteredRacers = createCollideRacers(RACE_COLLISION_DEPENDENCIES)
 
 // The registry's answer to the racers it found touching an object (0x004408e0's callbacks): a trigger fires its
-// events (0x00463c70, 0x00464f40), a brick is collected (0x00453af0).
+// events (0x00463c70, 0x00464f40), a track hazard acts on the racer (vtable +0x00 of its class), a brick is
+// collected (0x00453af0).
 const answerRegistryContacts = (context: RacerSetContext, racerSet: RaceRacerSet): RaceRacerSet =>
   racerSet.registryContacts.reduce((current, contact) => {
     const object = current.registryObjects[contact.id]
@@ -100,6 +101,13 @@ const answerRegistryContacts = (context: RacerSetContext, racerSet: RaceRacerSet
             triggerIndex: object.index,
             racer: isMain ? { index: contact.racer, currentLap: racer.currentLap } : null,
           })
+        )
+      )
+    }
+    if (object.type === 'hazard') {
+      return changeTrackLogic(context, current, (trackLogic, trackContext) =>
+        runTrackLogic(trackLogic, trackContext, (session) =>
+          session.touchHazard(object.index, contact.racer)
         )
       )
     }

@@ -1,3 +1,4 @@
+import type { HazardReaction } from '../../../hazard/index.ts'
 import type { PowerUpEvent } from '../../../power-ups/index.ts'
 import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
 import {
@@ -57,6 +58,12 @@ const VEHICLE_HIT_REACTION = 2
 const WARP_PENDING_FLAG = 0x200000
 const WARP_DISABLED_FLAG = 0x10
 const UP_AXIS: Vector3 = Object.freeze({ x: 0, y: 0, z: 1 })
+// 0x0048dcd0, 0x0048ce90 and 0x00490490 start the spin with slot 9 (1.0, 0.01, 0).
+const HAZARD_SPIN_FACTOR = 1
+const HAZARD_SPIN_RATE = getFloatFromBits(0x3c23d70a)
+const HAZARD_SPIN_TIME = 0
+// 0x0048e050 sets and 0x0048e230 clears this racer flag while the capture holds the racer.
+const RACER_HELD_FLAG = 0x20000000
 const WAND_THROW_POWER = 1 // 0x00455440 throws a struck racer like a blast at full power
 
 // 0x004374c0, the racer fields: flag 0x2 set and 0x1000..0x4000 cleared, no checkpoint, zone history 0, 2, 1, no lap.
@@ -557,5 +564,50 @@ export const getRacerAfterPowerUpEvent = (
       return Object.freeze({ ...racer, carBody: endCarBodyFlaggedState(racer.carBody) })
     default:
       return racer
+  }
+}
+
+const getRacerSpunByHazard = (arithmetic: FloatArithmetic, racer: Racer): Racer =>
+  Object.freeze({
+    ...racer,
+    carBody: startCarBodySpin(
+      arithmetic,
+      racer.carBody,
+      HAZARD_SPIN_FACTOR,
+      HAZARD_SPIN_RATE,
+      HAZARD_SPIN_TIME
+    ),
+  })
+
+// What a track hazard's touch does to the racer it found (lava 0x0048dcd0, crane 0x00490490, ghost 0x0048ce90,
+// capture 0x0048e050 and its release 0x0048e230). The vector is the ghost's impulse or the capture's pull, whose push
+// is car body slot 0x48 (cleared by slot 0x4c).
+export const getRacerAfterHazardReaction = (
+  arithmetic: FloatArithmetic,
+  racer: Racer,
+  reaction: HazardReaction,
+  vector: readonly [number, number, number] | null
+): Racer => {
+  const [x, y, z] = vector ?? [0, 0, 0]
+  switch (reaction) {
+    case 'spun':
+      return getRacerSpunByHazard(arithmetic, racer)
+    case 'flung':
+      return getRacerThrown(arithmetic, getRacerSpunByHazard(arithmetic, racer), { x, y, z })
+    case 'captured':
+      return Object.freeze({
+        ...racer,
+        flags: (racer.flags | RACER_HELD_FLAG) >>> 0,
+        carBody:
+          vector === null
+            ? racer.carBody
+            : setCarBodyPush(arithmetic, racer.carBody, 'extraForceB', { x, y, z }),
+      })
+    case 'released':
+      return Object.freeze({
+        ...racer,
+        flags: (racer.flags & ~RACER_HELD_FLAG) >>> 0,
+        carBody: setCarBodyPush(arithmetic, racer.carBody, 'extraForceB', undefined),
+      })
   }
 }

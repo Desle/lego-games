@@ -7,6 +7,8 @@ import { DEFAULT_HAZARD_SLOTS } from '../hazard-defaults/hazard-defaults.ts'
 import {
   findMeshReference,
   getInstanceDistances,
+  getMeshInstance,
+  getSphereWhileRegistered,
   getActiveAfterEndRequest,
   getWithData,
   setInstanceDistances,
@@ -24,6 +26,9 @@ const LEVEL_COUNT = 3
 const OFF_NAME = 'mmrocof'
 const ON_NAME = 'mmrocon'
 const COLLISION_OBJECT_NAME = 'mmrocc'
+// 0x004b4568: the radius of the shape, which stays where the "mmrocof" mesh instance is.
+const SHAPE_RADIUS = 350
+const ORIGIN = Object.freeze([0, 0, 0] as const)
 
 const getIsRockData = (data: HazardInstance['data']): data is RockData =>
   data.keyword === HazardKeyword.HAZARD_2E
@@ -63,8 +68,8 @@ const end = (instance: HazardInstance, session: HazardSession): HazardInstance =
   return Object.freeze({ ...instance, lifecycle: HazardLifecycle.IDLE })
 }
 
-// 0x0048e2a0 (constructor), 0x0048e3a0 (loader), 0x0048e660 (touch), 0x0048e530 (update): a rock with two forms. A
-// shielded racer that touches it asks for the swap; the next update turns it on when its "on" mesh is hidden.
+// 0x0048e2a0 (constructor), 0x0048e3a0 (loader), 0x0048e660 (touch), 0x0048e530 (update): a rock with two forms. Begin
+// registers its sphere (radius 350 at the "off" mesh). A shielded racer that touches it asks for the swap; the next update turns it on when its "on" mesh is hidden.
 export const ROCK: HazardBehavior = Object.freeze({
   ...DEFAULT_HAZARD_SLOTS,
   create: (definition, context) => {
@@ -77,6 +82,10 @@ export const ROCK: HazardBehavior = Object.freeze({
       savedDistances: Object.freeze([...(getInstanceDistances(session, offInstance) ?? [])]),
       collisionObjectName: COLLISION_OBJECT_NAME,
       flag: 1,
+      sphere: Object.freeze({
+        centre: getMeshInstance(session, offInstance)?.position ?? ORIGIN,
+        radius: SHAPE_RADIUS,
+      }),
     }
     turnOff(session, data)
     return Object.freeze({
@@ -88,6 +97,8 @@ export const ROCK: HazardBehavior = Object.freeze({
   },
   begin: (instance) => Object.freeze({ ...instance, lifecycle: HazardLifecycle.ACTIVE }),
   end,
+  getRegisteredSphere: (instance) =>
+    getIsRockData(instance.data) ? getSphereWhileRegistered(instance, instance.data.sphere) : null,
   touch: (instance, _session, racer) => {
     const { data } = instance
     if (!getIsRockData(data) || (racer.flags & SHIELDED_FLAG) === 0) return instance

@@ -5,6 +5,7 @@ import {
   createTestSession,
   createTestSkeletonInstance,
   createTestWorld,
+  TEST_SKELETON,
 } from '../hazard-fixtures/hazard-fixtures.ts'
 import { CAPTURE } from './capture.ts'
 
@@ -12,7 +13,7 @@ const definition = {
   keyword: 0x48 as const,
   integer: 5,
   name: 'trap',
-  vector: [0, 100, 200] as const,
+  vector: [30, 100, 200] as const,
 }
 
 const createBegun = (time: number) => {
@@ -40,9 +41,56 @@ describe('the capture hazard', () => {
       phaseMilliseconds: 1000,
     })
     expect(other).toBe(held)
+    expect(test.effects).toHaveLength(1)
+    expect(test.effects[0]).toMatchObject({ reaction: 'captured', racerIndex: 2 })
+  })
+
+  it('pulls the held racer horizontally towards the bone it is on, with the strength of the file', () => {
+    // Arrange
+    const test = createTestSession({
+      track: createTestWorld([
+        getSkeletonInstanceWithTime(
+          createTestSkeletonInstance('trap', { skeleton: TEST_SKELETON, position: [0, 0, 0] }),
+          10
+        ),
+      ]),
+    })
+    const begun = CAPTURE.begin(
+      CAPTURE.create(definition, { isMirrored: false, session: test.session }),
+      test.session,
+      null
+    )
+
+    // Act
+    CAPTURE.touch(begun, test.session, createTestRacer(2, 0, { position: [3, 0, 99] }))
+
+    // Assert
     expect(test.effects).toEqual([
-      { type: 'hazard.racer_affected', keyword: 0x48, racerIndex: 2, reaction: 'captured' },
+      {
+        type: 'hazard.racer_affected',
+        keyword: 0x48,
+        racerIndex: 2,
+        reaction: 'captured',
+        vector: [0, 30, 0],
+      },
     ])
+  })
+
+  it('registers a sphere of radius 45 on its first bone while it is active', () => {
+    // Arrange
+    const test = createTestSession({
+      track: createTestWorld([
+        createTestSkeletonInstance('trap', { skeleton: TEST_SKELETON, position: [0, 0, 0] }),
+      ]),
+    })
+    const loaded = CAPTURE.create(definition, { isMirrored: false, session: test.session })
+
+    // Act
+    const updated = CAPTURE.update(CAPTURE.begin(loaded, test.session, null), test.session, 33)
+
+    // Assert
+    expect(CAPTURE.getRegisteredSphere(loaded)).toBeNull()
+    expect(CAPTURE.getRegisteredSphere(updated)).toEqual({ centre: [3, 4, 5], radius: 45 })
   })
 
   it('does not hold a shielded racer or anyone while its clip is in the release window', () => {

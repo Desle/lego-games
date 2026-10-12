@@ -897,3 +897,10 @@
 0048e600 Hazard2E_TurnOff
 004881a0 TimeTrialScreen_ShowBestTime
 00488150 TimeTrialScreen_Update
+0048ce90 HazardGhost_OnRacerTouch
+00490490 HazardCrane_OnRacerTouch
+0048e660 Hazard2E_OnRacerTouch
+0048e1c0 HazardCapture_GetBonePosition
+0048e230 HazardCapture_ReleaseRacer
+0043aa40 CollisionManager_RegisterBody
+0043d1b0 CollisionManager_Register
