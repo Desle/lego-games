@@ -83,14 +83,12 @@ export const createPresentationScenario = (
     request.isDecalRecorded ?? false,
     request.powerUp === undefined
       ? []
-      : [
-          {
-            frame: request.powerUp.grantFrame,
-            racer: 0,
-            kind: request.powerUp.kind,
-            level: request.powerUp.level,
-          },
-        ],
+      : (request.powerUp.grantedRacers ?? [0]).map((racer) => ({
+          frame: request.powerUp?.grantFrame ?? 0,
+          racer,
+          kind: request.powerUp?.kind ?? 0,
+          level: request.powerUp?.level ?? 0,
+        })),
     request.isTimeTrial ?? false
   )
 }

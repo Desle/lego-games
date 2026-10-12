@@ -67,6 +67,12 @@ export type RocketMotion = {
 export type HazardMotion = {
   readonly kind: 'hazard'
   readonly position: Vector3
+  // The normal of the track triangle under the placement (0x00456360's plane, +0x24), null on a miss.
+  readonly groundNormal: Vector3 | null
+  // The plane normal of the owner's route node (racer +0xcc4), or +x without one: the curse's figures face along it (0x00452ae0).
+  readonly routeNormal: Vector3
+  // The milliseconds of the update that placed it: the curse's figures (0x00452a00) advanced by them in that update too.
+  readonly landingMilliseconds: number
 }
 
 export type EffectMotion =

@@ -308,6 +308,14 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
           )
     const cameraView = warpView === null ? allCameraView : warpView.cameraView
     lastCameraView = cameraView
+    const { position, forward, up } = cameraView
+    camera.fov = warpView === null ? fieldOfViewDegrees : warpView.fieldOfViewDegrees
+    camera.updateProjectionMatrix()
+    camera.position.set(position.x, position.y, position.z)
+    // The engine's camera frames take a negated up vector (see the world's cameras).
+    camera.up.set(-up.x, -up.y, -up.z)
+    camera.lookAt(position.x + forward.x, position.y + forward.y, position.z + forward.z)
+    const frustum = getCameraFrustum(camera)
     lastSprites = warpView === null ? effectViews.sprites : []
     lastRibbons = warpView === null ? effectViews.ribbons : []
     effects.update(
@@ -315,6 +323,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
         ? effectViews
         : {
             ...effectViews,
+            curses: [],
             effects: [],
             bricks: [],
             explosions: [],
@@ -323,7 +332,8 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
             ribbons: [],
           },
       cameraView.position,
-      poses
+      poses,
+      frustum
     )
     for (const rig of racerRigs) {
       const isShown = warpView === null || rig === racerRigs[warpView.pose.racerIndex]
@@ -397,15 +407,8 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
       }
       rig.sync(GHOST_OPACITY)
     }
-    const { position, forward, up } = cameraView
-    camera.fov = warpView === null ? fieldOfViewDegrees : warpView.fieldOfViewDegrees
-    camera.updateProjectionMatrix()
-    camera.position.set(position.x, position.y, position.z)
-    // The engine's camera frames take a negated up vector (see the world's cameras).
-    camera.up.set(-up.x, -up.y, -up.z)
-    camera.lookAt(position.x + forward.x, position.y + forward.y, position.z + forward.z)
     shown.track.selectLevels(camera.position)
-    shown.track.selectVisibleLeaves(getCameraFrustum(camera))
+    shown.track.selectVisibleLeaves(frustum)
     const placement = shown.sky?.place(camera.position)
     if (shown.backdrop !== null) {
       const point = placement?.backdrop ?? camera.position

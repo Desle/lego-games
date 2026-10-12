@@ -27,7 +27,7 @@ import {
   getRacerWithColourShiftOverride,
   WAND_COLOUR_SHIFT,
   WAND_COLOUR_SHIFT_MILLISECONDS,
-  POWER_UP_EFFECT_FIGURE_DISTANCE,
+  DEFAULT_FIGURE_FRAME,
 } from '../../../racer/index.ts'
 import { getThrowImpulse } from '../../../projectiles/index.ts'
 import type { Racer } from '../../../racer/index.ts'
@@ -494,7 +494,7 @@ export const getRacerAfterPowerUpEvent = (
         arithmetic,
         racer,
         event.durationMilliseconds,
-        POWER_UP_EFFECT_FIGURE_DISTANCE
+        event.figureFrame ?? DEFAULT_FIGURE_FRAME
       )
     case 'power_ups.racer_warp_pending':
       return getRacerWithFlags(racer, racer.flags | 0x200000)

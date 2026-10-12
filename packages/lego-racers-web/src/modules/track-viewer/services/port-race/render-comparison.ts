@@ -29,13 +29,22 @@ import { createPresentationScenario } from './trace-scenarios.ts'
 import type { TraceScenarioRequest } from './trace-scenarios.types.ts'
 
 const getEffectScenes = (assets: RaceAssets): readonly Scene[] => {
-  const { powerUpBricks, rocket, barrel, magnet, spikedExplosion, enhancementBrick, warpTunnel } =
-    assets.effectModels
+  const {
+    powerUpBricks,
+    rocket,
+    barrel,
+    magnet,
+    curse,
+    spikedExplosion,
+    enhancementBrick,
+    warpTunnel,
+  } = assets.effectModels
   return [
     ...[
       rocket,
       barrel,
       magnet,
+      ...curse.map((figure) => figure.model),
       spikedExplosion,
       enhancementBrick,
       ...Object.values(powerUpBricks),

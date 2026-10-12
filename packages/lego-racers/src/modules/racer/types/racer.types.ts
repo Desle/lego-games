@@ -1,3 +1,4 @@
+import type { CurseOrbit } from './curse-orbit/curse-orbit.types.ts'
 import type { Checkpoint } from '../../checkpoint/index.ts'
 import type { CollisionObject } from '../../collision/index.ts'
 import type { ComputerRacerRoute } from '../../computer-racer-route/index.ts'
@@ -317,6 +318,8 @@ export type Vehicle = {
   // A 0x00440160 call that happens after the frame's vehicle update (a stolen warp's reset runs in the racers' power-up
   // pass, 0x0043917e), applied when the frame ends.
   readonly pendingPartsMarkScale: number | null
+  // +0x378, +0x37c and the figure at +0x284 (racer +0x29c): the curse figure circling the car while the racer is cursed.
+  readonly curseOrbit: CurseOrbit
 }
 
 export type VehicleBoundsCaches = {
@@ -413,9 +416,6 @@ export type Racer = {
   // Vehicle_Update when the milliseconds are used up. While it is set the models keep the shift 0x00440100 gave
   // them, and 0x004400a0 and 0x004400e0 touch only the stored one.
   readonly isColourShiftOverridden: boolean
-  // Racer +0x29c + 0x84: the level distance bits of the figure the timed effect copies onto the racer. 0x00439900 hands
-  // them on as the override's milliseconds, and stores 0 in every copy.
-  readonly timedEffectFigureDistance: number
   // Vehicle +0x3c8: uint32 milliseconds the override has left.
   readonly colourShiftOverrideMilliseconds: number
   // The shift 0x00440100 put on the models (it is not stored in the vehicle); null before the first override.

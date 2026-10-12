@@ -24,6 +24,12 @@ const POWER_UP_CASES: readonly TraceScenarioRequest[] = POWER_UP_KIND_NAMES.flat
       powerUp: { kind: kindIndex + 1, level, grantFrame: 300, useFrame: 305, frameCount: 390 },
     }))
 )
+// The pictures a case must find in the port wherever the original draws them (a `missing_in_port` group named after one of
+// them, or after its pixel hash while the port has no such texture, fails the case). The curse shows `curse1` on the track
+// and round every cursed racer.
+const CASE_DRAWN_PICTURES: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  'Royal Knights, curse hit': ['curse1', 'unmatched ee51a0cde6ae2c1d'],
+})
 const RENDER_CASES: readonly TraceScenarioRequest[] = [
   { name: 'Royal Knights', raceFolder: 'RACEC0R0', recordFrames: RECORD_FRAMES },
   {
@@ -68,6 +74,21 @@ const RENDER_CASES: readonly TraceScenarioRequest[] = [
     raceFolder: 'RACEC0R0',
     recordFrames: [492, 496, 502, 510, 520],
     powerUp: { kind: 3, level: 3, grantFrame: 300, useFrame: 305, frameCount: 530 },
+  },
+  // The computers use a curse (4/3) at frame 164 and the player, accelerating from frame 175, drives into one at 191.
+  // Frames 195 and 200 are left out: racer 4's curse figure there is drawn with fewer triangles by the original (power-up-visuals.md).
+  {
+    name: 'Royal Knights, curse hit',
+    raceFolder: 'RACEC0R0',
+    recordFrames: [186, 190, 192, 215, 230, 245, 260, 275, 290],
+    powerUp: {
+      kind: 4,
+      level: 3,
+      grantFrame: 162,
+      useFrame: 1000,
+      frameCount: 320,
+      grantedRacers: [1, 2, 3, 4, 5],
+    },
   },
   ...POWER_UP_CASES,
 ]
@@ -126,5 +147,15 @@ describe.skipIf(!isGamePresent())('render trace', () => {
     )
     expect(result.totals.length).toBe(recordFrames?.length)
     expect(lowest).toBeGreaterThan(MINIMUM_MATCHED_SHARE)
+    const drawnPictures = CASE_DRAWN_PICTURES[renderCase.name] ?? []
+    expect(
+      result.groups
+        .filter(
+          (group) =>
+            group.kind === 'missing_in_port' &&
+            drawnPictures.some((picture) => group.source.startsWith(picture))
+        )
+        .map((group) => `${group.source} x${String(group.count)}`)
+    ).toEqual([])
   })
 })

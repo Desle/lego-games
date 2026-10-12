@@ -16,7 +16,7 @@ import {
   POWER_UP_BRICK_MODEL_NAME,
 } from '../../../../shared/viewer-extensions/effect-model-names.ts'
 import type { EffectModelDrawingRequest } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
-import type { Vector3Like } from '../race-viewport/race-viewport.types.ts'
+import type { FrustumView, Vector3Like } from '../race-viewport/race-viewport.types.ts'
 import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
 import { getEffectFigureState } from '@lego-games/lego-racers/race-presentation'
 import { setAlphaOverride } from '../scene-object/alpha-override.ts'
@@ -125,7 +125,12 @@ const getExplosionFigureScale = (progress: number): number =>
 const getExplosionFigureAlpha = (progress: number): number =>
   Math.trunc(Math.max(Math.fround((1 - progress) * EXPLOSION_ALPHA_MAXIMUM), 0))
 
-const MILLISECONDS_PER_SECOND = 1000
+// Skeleton update (GolDP.dll 0x10027f40) adds `milliseconds * rate` to a 16-bit offset (+0x60, +0x62) every update, so a
+// texture's scroll is an integer number of 1/65536 per millisecond: the instance's keyword 0x3f rate per second, as
+// truncated units of 65.536 (a rate of 1 turns 0.8 percent slower than a second). **Hypothesis:** the conversion truncates
+// toward zero; measured against the curse's rings (rates 1 and -1; the offset drifted 0.00027 a frame of 33 ms).
+const SCROLL_UNITS_PER_RATE = 65.536
+const SCROLL_UNITS_PER_TURN = 65536
 // Hypothesis, measured against the render trace (turbo levels 0 to 2): once the turbo is active its figures have advanced one
 // frame more than the effect's timer shows, and their texture scroll runs about two frames behind it.
 const TURBO_ANIMATION_LEAD_MILLISECONDS = 33
@@ -140,13 +145,18 @@ const setTextureScroll = (
     if (object.type !== 'Mesh') return
     const { map } = (object as Mesh).material as MeshBasicMaterial
     map?.offset.set(
-      getWrappedFraction((scrollU * elapsedMilliseconds) / MILLISECONDS_PER_SECOND),
-      getWrappedFraction((scrollV * elapsedMilliseconds) / MILLISECONDS_PER_SECOND)
+      getScrollOffset(scrollU, elapsedMilliseconds),
+      getScrollOffset(scrollV, elapsedMilliseconds)
     )
   })
 }
-// The scroll the original adds stays below 1 (it wraps).
+// The offset stays below 1 (it wraps).
 const getWrappedFraction = (value: number): number => value - Math.floor(value)
+const getScrollOffset = (rate: number, elapsedMilliseconds: number): number =>
+  getWrappedFraction(
+    (Math.trunc(rate * SCROLL_UNITS_PER_RATE) * Math.trunc(elapsedMilliseconds)) /
+      SCROLL_UNITS_PER_TURN
+  )
 
 // 0x0045cf90 sets the figures' orientation (slot 0x40, 0x00410900) from the display figure's second row and third row: the
 // first row of the turbo's frame is the car's side, the second its backwards axis.
@@ -154,6 +164,19 @@ const getTurboRotation = (pose: RacerPose): Matrix3 => {
   const [forwardX, forwardY, forwardZ, sideX, sideY, sideZ, upX, upY, upZ] = pose.rotation
   return [sideX, sideY, sideZ, -forwardX, -forwardY, -forwardZ, upX, upY, upZ]
 }
+
+// **Hypothesis**, measured against the render trace: a curse figure is left out beyond 100 units of the eye (a level distance of
+// 10000 squared, the bricks' is 160000) or when its bounding sphere (about 3: the clip's `boundsRadius`, 306.7 model units, is about 2.6) lies outside a plane of the
+// camera's frustum.
+const CURSE_LEVEL_DISTANCE = 10000
+const CURSE_BOUNDING_RADIUS = 3
+const getIsCurseDrawn = (centre: Vector3Like, eye: Vector3Like, frustum: FrustumView): boolean =>
+  getIsWithinLevelDistance(centre, eye, CURSE_LEVEL_DISTANCE) &&
+  frustum.planes.every(
+    ([normalX, normalY, normalZ, offset]) =>
+      normalX * centre.x + normalY * centre.y + normalZ * centre.z + offset >=
+      -CURSE_BOUNDING_RADIUS
+  )
 
 // A growing pool of one model: `use` shows the next free copy, `reset` hides them all. A viewer extension may draw the copies of
 // a model it names (`drawingRequest`) in place of the original's.
@@ -214,19 +237,26 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
     }),
   }
   const portalPool = createPool(scene, models.warpPortal)
+  const cursePools = models.curse.map(({ model }) => createPool(scene, model))
   const shieldPools = models.shields.map((model) => createPool(scene, model))
   const shieldBackPools = models.shields.map((model) => createPool(scene, getReversedModel(model)))
   const turboPools = models.turbos.map((figures) =>
     figures.map(({ model }) => createPool(scene, model))
   )
   return Object.freeze({
-    update: (views: EffectViews, eye: Vector3Like, poses: readonly RacerPose[]) => {
+    update: (
+      views: EffectViews,
+      eye: Vector3Like,
+      poses: readonly RacerPose[],
+      frustum: FrustumView
+    ) => {
       for (const pool of [
         ...Object.values(pools),
         ...brickPools.values(),
         ...shieldPools,
         ...shieldBackPools,
         ...turboPools.flat(),
+        ...cursePools,
         portalPool,
       ])
         pool.reset()
@@ -333,6 +363,52 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
           }
         })
       }
+      for (const curse of views.curses) {
+        if (!getIsCurseDrawn(curse.floatingPosition, eye, frustum)) continue
+        // 0x00452a40 and 0x00452a80: the floating figure is drawn first, then the two rings on the ground point.
+        cursePools.forEach((pool, figureIndex) => {
+          const figure = models.curse[figureIndex]
+          if (figure === undefined) return
+          const copy = pool.use()
+          copy.group.matrix
+            .copy(
+              getFrameMatrix(
+                curse.rotation,
+                figureIndex === 0 ? curse.floatingPosition : curse.groundPosition
+              )
+            )
+            .multiply(new Matrix4().makeScale(curse.scale, curse.scale, curse.scale))
+          setTextureScroll(copy, figure.scroll, curse.elapsedMilliseconds)
+          copy.object.setAnimationState(
+            getEffectFigureState(figure.animations, {
+              animationId: 0,
+              isLooping: true,
+              elapsedMilliseconds: curse.elapsedMilliseconds,
+            })
+          )
+        })
+      }
+      for (const pose of poses) {
+        // 0x0043f530: a cursed racer wears the `curse` figure, circling it.
+        const { curseFigure } = pose
+        const figure = models.curse[0]
+        const pool = cursePools[0]
+        if (curseFigure === null || figure === undefined || pool === undefined) continue
+        if (!getIsCurseDrawn(curseFigure.position, eye, frustum)) continue
+        const copy = pool.use()
+        copy.group.matrix
+          .copy(getFrameMatrix(curseFigure.rotation, curseFigure.position))
+          .multiply(
+            new Matrix4().makeScale(curseFigure.scale, curseFigure.scale, curseFigure.scale)
+          )
+        copy.object.setAnimationState(
+          getEffectFigureState(figure.animations, {
+            animationId: 0,
+            isLooping: true,
+            elapsedMilliseconds: curseFigure.animationMilliseconds,
+          })
+        )
+      }
       for (const explosion of views.explosions) {
         // 0x00421ae0: only a growing explosion draws its figure; a fading one leaves its scar (a decal).
         if (explosion.isFading) continue
@@ -351,6 +427,7 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
         ...shieldPools,
         ...shieldBackPools,
         ...turboPools.flat(),
+        ...cursePools,
         portalPool,
       ])
         pool.dispose()
