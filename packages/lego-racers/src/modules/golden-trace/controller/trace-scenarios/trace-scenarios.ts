@@ -42,6 +42,7 @@ export const createTraceScenario = (request: ScenarioRequest): GoldenTraceScenar
     precision: request.precision ?? 'auto',
     frames: request.frames,
     powerUpGrants: request.powerUpGrants ?? [],
+    controller: request.controller ?? 'keyboard',
   })
 
 export const getIdleFrames = (count: number): readonly TraceFrameInput[] => holdBindings(count, [])

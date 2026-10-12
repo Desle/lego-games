@@ -124,6 +124,49 @@ INTERFACES["Surface2"] = INTERFACES["Surface3"][:-1]
 from com_display import DisplayMethods
 
 
+# The gamepad the original's input manager finds: a DirectInput joystick of sub type 4 (gamepad), which makes the defaults
+# bind the steering axes and the buttons (Controls_SetDefaults 0x0042e960).
+JOYSTICK_INSTANCE_GUID_FIRST_WORD = 0x4C45474F
+DIDEVTYPE_JOYSTICK = 4
+DIEDFL_FORCEFEEDBACK = 0x100
+JOYSTICK_DEVICE_TYPE = 0x0404
+DEVICE_INSTANCE_SIZE = 0x244
+OBJECT_INSTANCE_SIZE = 0x128
+DIDFT_AXIS = 3
+DIDFT_ABSAXIS = 2
+DIDFT_BUTTON = 0xC
+DIDFT_PSHBUTTON = 4
+JOYSTICK_BUTTON_COUNT = 16
+JOYSTATE_SIZE = 0x110
+JOYSTATE_POINT_OF_VIEW_OFFSET = 0x20
+JOYSTATE_BUTTONS_OFFSET = 0x30
+# GUID_XAxis and GUID_YAxis, as the original compares them (0x004b5980, 0x004b5990).
+JOYSTICK_AXIS_GUIDS = (
+    bytes.fromhex("e0026da3f3c9cf11bfc7444553540000"),
+    bytes.fromhex("e1026da3f3c9cf11bfc7444553540000"),
+)
+BUTTON_GUID = bytes.fromhex("f0026da3f3c9cf11bfc7444553540000")
+
+
+def neutral_joystick_state() -> bytes:
+    """A DIJOYSTATE2 with the axes centred, the hats released and no button down."""
+    data = bytearray(JOYSTATE_SIZE)
+    for index in range(4):
+        struct.pack_into("<I", data, JOYSTATE_POINT_OF_VIEW_OFFSET + 4 * index, 0xFFFFFFFF)
+    return bytes(data)
+
+
+def joystick_state_of(axes: list, buttons: list) -> bytes:
+    """A DIJOYSTATE2 whose first axes are `axes` (integers in -1000..1000) and whose listed buttons are down."""
+    data = bytearray(neutral_joystick_state())
+    for index, value in enumerate(axes[: len(JOYSTICK_AXIS_GUIDS)]):
+        struct.pack_into("<i", data, 4 * index, value)
+    for index in buttons:
+        if 0 <= index < JOYSTICK_BUTTON_COUNT:
+            data[JOYSTATE_BUTTONS_OFFSET + index] = 0x80
+    return bytes(data)
+
+
 class ComWorld(DisplayMethods):
     def __init__(self, machine):
         self.machine = machine
@@ -132,6 +175,7 @@ class ComWorld(DisplayMethods):
         self.hooks = {}
         self.log = []
         self.input_queues = {}
+        self.joystick_state = neutral_joystick_state()
 
     def vtable_for(self, kind: str) -> int:
         if kind not in self.vtables:
@@ -258,17 +302,62 @@ class ComWorld(DisplayMethods):
 
     def DirectInput_CreateDevice(self, this, record, argument):
         first_word = self.machine.read_u32(argument(1))
-        device_type = {0x6F1D2B61: "keyboard", 0x6F1D2B60: "mouse"}.get(first_word)
+        device_type = {0x6F1D2B61: "keyboard", 0x6F1D2B60: "mouse", JOYSTICK_INSTANCE_GUID_FIRST_WORD: "joystick"}.get(first_word)
         if device_type is None:
             raise RuntimeError(f"DirectInput device {first_word:08x}")
         self.machine.write_u32(argument(2), self.create("DirectInputDevice", device_type=device_type))
         return S_OK
 
     def DirectInput_EnumDevices(self, this, record, argument):
+        """One attached gamepad answers a joystick enumeration (device type 4); a force feedback enumeration (0x100) finds none."""
+        if argument(1) == DIDEVTYPE_JOYSTICK and not argument(4) & DIEDFL_FORCEFEEDBACK:
+            instance = self.machine.allocate_heap(DEVICE_INSTANCE_SIZE, 16)
+            data = bytearray(DEVICE_INSTANCE_SIZE)
+            struct.pack_into("<I", data, 0, DEVICE_INSTANCE_SIZE)
+            struct.pack_into("<IHH8B", data, 4, JOYSTICK_INSTANCE_GUID_FIRST_WORD, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)
+            struct.pack_into("<I", data, 0x24, JOYSTICK_DEVICE_TYPE)
+            data[0x28:0x28 + 8] = b"Gamepad\0"
+            self.machine.write_bytes(instance, bytes(data))
+            yield argument(2), [instance, argument(3)]
+        return S_OK
+
+    def DirectInputDevice_GetDeviceInfo(self, this, record, argument):
+        data = bytearray(DEVICE_INSTANCE_SIZE)
+        struct.pack_into("<I", data, 0, DEVICE_INSTANCE_SIZE)
+        struct.pack_into("<I", data, 0x24, JOYSTICK_DEVICE_TYPE)
+        self.machine.write_bytes(argument(1), bytes(data))
+        return S_OK
+
+    def DirectInputDevice_GetCapabilities(self, this, record, argument):
+        data = bytearray(0x2C)
+        struct.pack_into("<IIIIII", data, 0, 0x2C, 1, JOYSTICK_DEVICE_TYPE, len(JOYSTICK_AXIS_GUIDS), JOYSTICK_BUTTON_COUNT, 0)
+        self.machine.write_bytes(argument(1), bytes(data))
+        return S_OK
+
+    def DirectInputDevice_EnumObjects(self, this, record, argument):
+        """The gamepad's objects: the axes (flag 3) and the buttons (flag 0xc), in the DIJOYSTATE2 layout."""
+        flags = argument(3)
+        objects = []
+        if record.get("device_type") != "joystick":
+            return S_OK
+        if flags & DIDFT_AXIS:
+            objects += [(guid, 4 * index, DIDFT_ABSAXIS) for index, guid in enumerate(JOYSTICK_AXIS_GUIDS)]
+        if flags & DIDFT_BUTTON:
+            objects += [(BUTTON_GUID, JOYSTATE_BUTTONS_OFFSET + index, DIDFT_PSHBUTTON) for index in range(JOYSTICK_BUTTON_COUNT)]
+        for guid, offset, kind in objects:
+            instance = self.machine.allocate_heap(OBJECT_INSTANCE_SIZE, 16)
+            data = bytearray(OBJECT_INSTANCE_SIZE)
+            struct.pack_into("<I", data, 0, OBJECT_INSTANCE_SIZE)
+            data[4:20] = guid
+            struct.pack_into("<III", data, 0x14, offset, kind, 0)
+            data[0x20:0x20 + 7] = b"Object\0"
+            self.machine.write_bytes(instance, bytes(data))
+            yield argument(1), [instance, argument(2)]
         return S_OK
 
     def DirectInputDevice_GetDeviceState(self, this, record, argument):
-        self.machine.write_bytes(argument(2), bytes(argument(1)))
+        state = self.joystick_state if record.get("device_type") == "joystick" else b""
+        self.machine.write_bytes(argument(2), state.ljust(argument(1), b"\0")[: argument(1)])
         return S_OK
 
     def DirectInputDevice_GetDeviceData(self, this, record, argument):

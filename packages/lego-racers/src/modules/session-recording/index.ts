@@ -10,6 +10,7 @@ export {
 } from './controller/replay-header/replay-header.ts'
 export { createReplayRecorder } from './controller/replay-recorder/replay-recorder.ts'
 export type {
+  ReplayControllerKind,
   ReplayFrame,
   ReplayGrant,
   ReplayHeader,

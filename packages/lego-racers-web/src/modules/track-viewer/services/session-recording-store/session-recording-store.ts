@@ -72,6 +72,14 @@ export const createSessionRecordingStore = (
         return last
       }
     },
+    readAll: async () => {
+      try {
+        const stored = await Promise.all((await backend.getKeys()).map(backend.get))
+        return stored.flatMap((recording) => (recording === null ? [] : [recording]))
+      } catch {
+        return []
+      }
+    },
   })
 }
 

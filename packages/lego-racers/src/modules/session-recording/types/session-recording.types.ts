@@ -28,6 +28,10 @@ export type ReplayHeader = {
   readonly isCountdownSkipped: boolean
   readonly playerCars: readonly BuiltCar[]
   readonly playerRacers: readonly ReplayPlayerRacer[]
+  // Present (true) when the remastered layer was on: it changes drawing and sound only, so the replay ignores it and the
+  // report shows it. `remasteredSelections` (texture, audio, bricks) is for information.
+  readonly isRemastered?: boolean
+  readonly remasteredSelections?: readonly string[]
 }
 
 // A power-up the developer keys handed racer 0 before the frame.
@@ -56,9 +60,17 @@ export type ReplayRecorder = {
   readonly finish: () => SessionRecording
 }
 
-// The frames the original can be fed (keyboard only, no menu keys, no developer grants) and where they end.
+// What the first local player's controller is in the original: the keyboard layout or a gamepad (the recording uses the
+// gamepad when it ever moves the steering axis or presses one of the buttons the race binds).
+export type ReplayControllerKind = 'keyboard' | 'joystick'
+
+// The frames the original can be fed (developer grants and a keyboard driving a gamepad session excepted) and where they end.
 export type ReplayScenarioSplit = {
   readonly supportedFrameCount: number
   // Why frame `supportedFrameCount` is not fed to the original; null when every frame is.
   readonly stopReason: string | null
+  readonly controller: ReplayControllerKind
+  // Among the fed frames: how many carry a pause-menu key and how many a gamepad that is in use.
+  readonly menuKeyFrameCount: number
+  readonly gamepadFrameCount: number
 }

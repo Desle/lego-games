@@ -40,6 +40,11 @@ export const registerRemastered = (search: string) => {
     getMenuSurfaceScale: getNativeMenuSurfaceScale,
     getBuiltCarDrawing: (request) =>
       getIsLDrawRequested(search) ? createLDrawCarDrawing(request).object : null,
+    getSelections: () => [
+      `textures=${getHighDefinitionVariant(search)}`,
+      `audio=${audioVariant ?? 'none'}`,
+      `bricks=${getIsLDrawRequested(search) ? LDRAW_BRICKS : CLASSIC_BRICKS}`,
+    ],
     getSoundReplacement: (context, archivePath) =>
       audioVariant === null
         ? Promise.resolve(null)

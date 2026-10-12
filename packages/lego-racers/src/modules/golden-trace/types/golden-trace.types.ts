@@ -1,10 +1,19 @@
 import type { RaceState } from '../../race/index.ts'
 import type { FpuPrecisionValue } from '../../simulation-math/index.ts'
 
-// One frame of a scenario: the frame time the clock hands the game and the DirectInput scan codes held during it.
+// The DirectInput joystick state of a frame: the first axes in the game's range (-1000..1000) and the buttons down.
+export type TraceJoystickInput = {
+  readonly axes: readonly number[]
+  readonly buttonIndices: readonly number[]
+}
+
+// One frame of a scenario: the frame time the clock hands the game and the DirectInput scan codes held during it, the
+// scan codes tapped (down and up in the same frame: the race menu's keys) and the joystick state.
 export type TraceFrameInput = {
   readonly milliseconds: number
   readonly scanCodes: readonly number[]
+  readonly tappedScanCodes?: readonly number[]
+  readonly joystick?: TraceJoystickInput | null
 }
 
 // A racer is handed a power-up brick of this kind (1 to 4: projectile, shield, turbo, hazard) at this enhancement level
@@ -15,6 +24,8 @@ export type PowerUpGrant = {
   readonly kind: number
   readonly level: number
 }
+
+export type TraceController = 'keyboard' | 'joystick'
 
 export type GoldenTraceScenario = {
   readonly name: string
@@ -31,6 +42,8 @@ export type GoldenTraceScenario = {
   readonly precision: FpuPrecisionValue | 'auto'
   readonly frames: readonly TraceFrameInput[]
   readonly powerUpGrants: readonly PowerUpGrant[]
+  // What the first local player's controller is: the keyboard layout (the default) or a gamepad.
+  readonly controller?: TraceController
 }
 
 // The 32-bit words of every observed field, by name: floats as their IEEE bits.
@@ -86,4 +99,5 @@ export type ScenarioRequest = {
   readonly isMirrored?: boolean
   readonly racerCount?: number
   readonly powerUpGrants?: readonly PowerUpGrant[]
+  readonly controller?: TraceController
 }

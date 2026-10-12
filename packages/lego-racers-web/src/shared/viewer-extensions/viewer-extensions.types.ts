@@ -76,4 +76,6 @@ export type ViewerExtension = {
   readonly getRaceDisplay: (window: WindowMetrics) => RaceDisplay | null
   // Something to draw in place of the mesh the original builds for a car built from bricks, in that mesh's frame; null keeps the original's.
   readonly getBuiltCarDrawing: (request: BuiltCarDrawingRequest) => Object3D | null
+  // The selections the layer runs with (texture pack, audio pack, bricks), for the notes of a recording.
+  readonly getSelections: () => readonly string[]
 }

@@ -10,6 +10,7 @@ import {
   developmentHighDefinitionAudioPlugin,
   developmentHighDefinitionPlugin,
 } from './src/modules/remastered/services/development-texture-server/development-texture-server.ts'
+import { developmentReplayInboxPlugin } from './src/modules/track-viewer/services/replay-inbox-server/replay-inbox-server.ts'
 import {
   DEVELOPMENT_GAME_FILE_ROUTE,
   DEVELOPMENT_JAM_ROUTE,
@@ -69,6 +70,10 @@ export default defineConfig({
     tailwindcss(),
     developmentJamPlugin(),
     developmentGameFilesPlugin(),
+    developmentReplayInboxPlugin(
+      process.env['LEGO_REPLAY_INBOX'] ??
+        resolve(import.meta.dirname, '../../reverse-engineering/replays/inbox')
+    ),
     developmentHighDefinitionPlugin(
       process.env['LEGO_HD_TEXTURES_ROOT'] ?? join(homedir(), 'textures', 'lego-racers')
     ),

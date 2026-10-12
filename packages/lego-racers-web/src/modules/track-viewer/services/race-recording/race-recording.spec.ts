@@ -1,5 +1,8 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { createServer } from 'vite'
+import { developmentReplayInboxPlugin } from '../replay-inbox-server/replay-inbox-server.ts'
 import { loadSavedCars, DEFAULT_SAVE_PATH } from '@lego-games/lego-racers/car-builder'
 import {
   createGameSession,
@@ -123,20 +126,85 @@ describe('the session recording', () => {
     120_000
   )
 
-  it('records nothing while an extension is registered', () => {
-    // Arrange
-    const store = createSessionRecordingStore(createMemoryBackend())
-    registerViewerExtension(NEUTRAL_EXTENSION)
+  it.skipIf(!getIsOriginalGamePresent())(
+    'posts a finished race to the dev server inbox, which writes the file the recorder named',
+    async () => {
+      // Arrange
+      const inbox = join(mkdtempSync(join(tmpdir(), 'inbox-')), 'inbox')
+      const server = await createServer({
+        configFile: false,
+        logLevel: 'silent',
+        plugins: [developmentReplayInboxPlugin(inbox)],
+        server: { port: 0, host: '127.0.0.1' },
+      })
+      await server.listen()
+      const address = server.httpServer?.address()
+      const port = typeof address === 'object' && address !== null ? address.port : 0
+      const postedNames: string[] = []
+      const postToServer = async (fileName: string, text: string) => {
+        postedNames.push(fileName)
+        await fetch(
+          `http://127.0.0.1:${String(port)}/__development/replay-inbox?name=${encodeURIComponent(fileName)}`,
+          { method: 'POST', body: text }
+        )
+      }
+      const store = createSessionRecordingStore(createMemoryBackend())
+      const recording = createRaceRecording(
+        getRoyalKnightsStart(readOriginalJam(), readOriginalExecutable()),
+        store,
+        postToServer
+      )
 
-    // Act
-    const recording = createRaceRecording(
-      // Never read: the extension check comes first.
-      Object.freeze({}) as RaceStart,
-      store
-    )
-    clearViewerExtensions()
+      // Act
+      for (let frame = 0; frame < IDLE_FRAME_COUNT; frame += 1) {
+        recording?.addFrame({
+          milliseconds: FRAME_MILLISECONDS,
+          input: { pressedKeyCodes: new Set(), gamepad: null },
+          menu: NO_MENU_INPUT,
+          grant: null,
+        })
+      }
+      await recording?.finish()
+      await server.close()
 
-    // Assert
-    expect(recording).toBeNull()
-  })
+      // Assert
+      expect(readdirSync(inbox)).toEqual(postedNames)
+      expect(readFileSync(join(inbox, postedNames[0] ?? ''), 'utf8')).toBe(
+        (await store.readLast())?.text
+      )
+    },
+    120_000
+  )
+
+  it.skipIf(!getIsOriginalGamePresent())(
+    'records while an extension is registered and marks the header',
+    async () => {
+      // Arrange
+      const store = createSessionRecordingStore(createMemoryBackend())
+      registerViewerExtension({ ...NEUTRAL_EXTENSION, getSelections: () => ['textures=default'] })
+      const recording = createRaceRecording(
+        getRoyalKnightsStart(readOriginalJam(), readOriginalExecutable()),
+        store,
+        () => Promise.resolve()
+      )
+
+      // Act
+      recording?.addFrame({
+        milliseconds: FRAME_MILLISECONDS,
+        input: { pressedKeyCodes: new Set(), gamepad: null },
+        menu: NO_MENU_INPUT,
+        grant: null,
+      })
+      await recording?.finish()
+      clearViewerExtensions()
+      const header = parseRecording((await store.readLast())?.text ?? '').header
+
+      // Assert
+      expect(header).toMatchObject({
+        isRemastered: true,
+        remasteredSelections: ['textures=default'],
+      })
+    },
+    120_000
+  )
 })
