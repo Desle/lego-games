@@ -226,7 +226,7 @@ const getVertexKey = (vertex: CarVertex): string =>
   ].join(',')
 
 // The triangles of a face (0x00497690): a quad (v0, v1, v2, v3) is the triangles (v0, v1, v2) and (v2, v1, v3).
-const getTriangles = (face: CarFace): readonly (readonly CarVertex[])[] => {
+export const getTriangles = (face: CarFace): readonly (readonly CarVertex[])[] => {
   const [first, second, third, fourth] = face.vertices
   if (first === undefined || second === undefined || third === undefined) return []
   return fourth === undefined

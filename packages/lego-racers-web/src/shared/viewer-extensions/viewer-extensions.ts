@@ -1,7 +1,13 @@
 import type { Object3D } from 'three'
 import type {
   BuiltCarDrawingRequest,
+  CarBodyDrawingRequest,
+  EffectModelDrawingRequest,
   PictureCreatedEvent,
+  RaceRenderPass,
+  RaceRenderRequest,
+  RacerPartDrawing,
+  RacerPartDrawingRequest,
   TextureCreatedEvent,
   ViewerExtension,
 } from './viewer-extensions.types.ts'
@@ -14,8 +20,15 @@ export const NEUTRAL_EXTENSION: ViewerExtension = Object.freeze({
   getMenuSurfaceScale: () => null,
   getSoundReplacement: () => Promise.resolve(null),
   getBuiltCarDrawing: () => null,
+  getRaceRenderPass: () => null,
+  getCarBodyDrawing: () => null,
+  getEffectModelDrawing: () => null,
+  getRacerPartDrawing: () => null,
   getSelections: () => [],
 })
+
+// The name of the mesh of a racer's blob shadow (the decal the original projects under each car), so a layer can find it.
+export const RACER_SHADOW_DECAL_NAME = 'racer-shadow-decal'
 
 let registeredExtensions: readonly ViewerExtension[] = Object.freeze([])
 
@@ -65,6 +78,35 @@ export const getSoundReplacement = async (
 export const getBuiltCarDrawing = (request: BuiltCarDrawingRequest): Object3D | null => {
   for (const extension of registeredExtensions) {
     const drawing = extension.getBuiltCarDrawing(request)
+    if (drawing !== null) return drawing
+  }
+  return null
+}
+
+export const getRaceRenderPasses = (request: RaceRenderRequest): readonly RaceRenderPass[] =>
+  registeredExtensions.flatMap((extension) => {
+    const pass = extension.getRaceRenderPass(request)
+    return pass === null ? [] : [pass]
+  })
+export const getCarBodyDrawing = (request: CarBodyDrawingRequest): Object3D | null => {
+  for (const extension of registeredExtensions) {
+    const drawing = extension.getCarBodyDrawing(request)
+    if (drawing !== null) return drawing
+  }
+  return null
+}
+
+export const getEffectModelDrawing = (request: EffectModelDrawingRequest): Object3D | null => {
+  for (const extension of registeredExtensions) {
+    const drawing = extension.getEffectModelDrawing(request)
+    if (drawing !== null) return drawing
+  }
+  return null
+}
+
+export const getRacerPartDrawing = (request: RacerPartDrawingRequest): RacerPartDrawing | null => {
+  for (const extension of registeredExtensions) {
+    const drawing = extension.getRacerPartDrawing(request)
     if (drawing !== null) return drawing
   }
   return null

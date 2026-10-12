@@ -73,7 +73,7 @@ const getMaterialBitmaps = (archive: JamArchive): readonly (SceneBitmap | null)[
 }
 
 // The surface the engine hands Direct3D holds the picture's last row first, so a model's v = 0 is the picture's bottom edge.
-const getTextureFromBitmap = (bitmap: SceneBitmap): DataTexture => {
+export const getTextureFromBitmap = (bitmap: SceneBitmap): DataTexture => {
   const rowBytes = bitmap.width * 4
   const colors = new Uint8Array(bitmap.colors.length)
   for (let row = 0; row < bitmap.height; row += 1) {
