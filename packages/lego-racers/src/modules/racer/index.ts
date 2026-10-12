@@ -32,6 +32,7 @@ export {
 } from './controller/step-racer-set/step-racer-set.ts'
 export {
   applyRacerControls,
+  releaseAllBindings,
   createPlayerController,
   updatePlayerController,
 } from './controller/update-player-controller/update-player-controller.ts'

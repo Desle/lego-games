@@ -180,6 +180,10 @@ export const applyRacerControls = (
   }, input.state)
 }
 
+// 0x00430c20 (the pause menu releases the controls): every binding handler is called with 0, whether the binding was held or not.
+export const releaseAllBindings = (input: PlayerControllerInput): PlayerControllerState =>
+  BINDING_ORDER.reduce((state, flag) => releaseBinding({ ...input, state }, flag), input.state)
+
 // The target the steering moves towards at `rate` per second, and its limits (0x00430120).
 const getSteeringTarget = (
   input: PlayerControllerInput,

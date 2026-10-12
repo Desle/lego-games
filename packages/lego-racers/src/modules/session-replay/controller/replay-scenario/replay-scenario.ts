@@ -55,7 +55,7 @@ const getController = (recording: SessionRecording): ReplayControllerKind =>
   recording.frames.some(getIsGamepadInUse) ? 'joystick' : 'keyboard'
 
 const getHeaderStopReason = (header: ReplayHeader): string | null => {
-  if (header.localPlayerCount !== 1) return `${String(header.localPlayerCount)} local players`
+  if (header.localPlayerCount > 1) return `${String(header.localPlayerCount)} local players`
   if (header.raceModeFlags !== 0) return 'race mode flags'
   return null
 }
@@ -166,6 +166,7 @@ export const getReplayScenario = (
       raceFolder: header.raceFolder,
       racerCodes,
       racerCount: header.racerCount,
+      localPlayerCount: header.localPlayerCount,
       circuitName: header.circuitName,
       isMirrored: header.isMirrored,
       controller: split.controller,

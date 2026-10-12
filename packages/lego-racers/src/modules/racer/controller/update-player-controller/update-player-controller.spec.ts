@@ -8,6 +8,7 @@ import type {
 import {
   applyRacerControls,
   createPlayerController,
+  releaseAllBindings,
   updatePlayerController,
 } from './update-player-controller.ts'
 
@@ -194,5 +195,27 @@ describe('applyRacerControls', () => {
     // Assert
     expect(calls).toEqual(['startBoost:true'])
     expect(boosted.controller.startBoostMilliseconds).toBe(0)
+  })
+})
+
+describe('releaseAllBindings (0x00430c20)', () => {
+  it('zeroes the accelerate timer and looks behind no more even when nothing was held', () => {
+    // Arrange
+    const calls: string[] = []
+    const input = createInput(calls)
+    const timed = {
+      ...input,
+      state: {
+        ...input.state,
+        controller: { ...input.state.controller, accelerateMilliseconds: 1234 },
+      },
+    }
+
+    // Act
+    const released = releaseAllBindings(timed)
+
+    // Assert
+    expect(released.controller.accelerateMilliseconds).toBe(0)
+    expect(calls).toEqual(['lookBehind:false'])
   })
 })
