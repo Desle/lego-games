@@ -118,7 +118,10 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     })
     const group = new Group()
     group.matrixAutoUpdate = false
-    group.add(object.group)
+    const scaled = new Group()
+    scaled.scale.setScalar(assets.ghostScales[instanceName] ?? 1)
+    scaled.add(object.group)
+    group.add(scaled)
     return { group, object }
   }
   const playerModels = assets.racerModels[0]

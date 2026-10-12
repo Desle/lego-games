@@ -13,6 +13,7 @@ import {
   getGhostCars,
   getRacerPoses,
 } from '@lego-games/lego-racers/race-presentation'
+import { Box3, Vector3 } from 'three'
 import { loadRaceAssets } from '../race-assets/race-assets.ts'
 import { createRaceStage } from '../race-viewport/race-viewport.ts'
 import {
@@ -24,6 +25,8 @@ import {
 const STAGE_SIZE = { width: 640, height: 480 }
 const RACE_NAME = 'rkr'
 const GHOST_PART_COUNT = 3
+const MAXIMUM_SIZE_RATIO = 2
+const MODEL_SCALE = 1 / 64
 
 const getAssets = (isTimeTrial: boolean) => {
   const jam = readOriginalJam()
@@ -99,4 +102,40 @@ describe('the ghost cars of a time trial', () => {
     expect(names).toHaveLength(GHOST_PART_COUNT)
     expect([...names].sort()).toEqual(['ghost2', 'ghostb2', 'ghostdr'])
   })
+
+  it.skipIf(!getIsOriginalGamePresent())(
+    'scales the champion parts by their model scale and keeps the car about as large as a racer',
+    () => {
+      // Arrange
+      const assets = getAssets(true)
+      const raceState = createRace(assets.definition)
+      const stage = createRaceStage(assets, STAGE_SIZE)
+      const { presentation } = createRacePresentation(raceState, 0)
+      const { cars } = getGhostCars(raceState)
+
+      // Act
+      stage.update(
+        getRacerPoses(raceState),
+        getCameraView(presentation.camera),
+        getEffectViews(raceState),
+        null,
+        cars
+      )
+
+      // Assert
+      const champion = cars.find((car) => car.kind === 'champion')
+      const getExtent = (positionX: number | undefined): number =>
+        Math.max(
+          ...stage.trackScene.children
+            .filter((child) => child.visible && child.matrix.elements[12] === positionX)
+            .map((part) => new Box3().setFromObject(part).getSize(new Vector3()).length())
+        )
+      const ghostExtent = getExtent(champion?.position.x)
+      const racerExtent = getExtent(
+        raceState.racerSet.racers[0]?.carBody.rigidBody.displayFrame.position.x
+      )
+      expect(Object.values(assets.ghostScales)).toEqual([MODEL_SCALE, MODEL_SCALE, MODEL_SCALE])
+      expect(ghostExtent).toBeLessThan(racerExtent * MAXIMUM_SIZE_RATIO)
+    }
+  )
 })
