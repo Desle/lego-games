@@ -6,73 +6,73 @@ Every part of the game's figure builder (`BODYPART.PCB`: 36 hats, 30 faces, 29 t
 
 ## Champions (`DRIVERS.DDB`: hat, face, torso, legs)
 
-| Driver | Character (hypothesis) | Bytes       | Hat                             | Face     | Torso        | Legs     |
-| ------ | ---------------------- | ----------- | ------------------------------- | -------- | ------------ | -------- |
-| RR     | Rocket Racer           | 1 28 15 18  | 3842a black (0)                 | 3626cp40 | game picture | 3817b    |
-| VV     | Veronica Voltage       | 35 29 28 19 | 3842a light gray (7)            | 3626bp09 | 973p29       | 3817b    |
-| AD     | ?                      | 31 20 17 15 | 90541 green (2)                 | 3626bp64 | game picture | 3817b    |
-| IL     | ?                      | 19 13 18 17 | 44553 black (0)                 | 3626bp3j | 973p3j       | 3817cp3j |
-| WW     | ?                      | 18 12 20 0  | 6131 black (0)                  | 3626bp4f | 973p4k       | 3817b    |
-| GS     | ?                      | 9 27 19 11  | 30172 white (15)                | 3626bpao | game picture | 3817b    |
-| BK     | Black Knight?          | 25 17 25 1  | 4503 black (0)                  | 3626bp4m | 973pfb       | 3817b    |
-| RK     | a king (lion)?         | 23 15 6 11  | 18835 yellow (14)               | 3626bp4d | 973p4e       | 3817b    |
-| RH     | Robin Hood?            | 34 14 9 7   | 4506c01 green (2)               | 3626bp3e | 973pf8       | 3817b    |
-| AL     | ?                      | 24 16 8 9   | 13788 black (0)                 | 3626bp44 | 973p3f       | 3817b    |
-| CC     | ?                      | 12 10 11 2  | 30090b white (15)               | 3626bp61 | 973p62       | 3817b    |
-| PH     | Pharaoh Hotep          | 26 18 27 14 | 30168b yellow (14)              | 3626bpa2 | 973pa2       | 3817cpa2 |
-| GB     | a governor (Pirates)?  | 5 6 16 12   | 2528a white (15)                | 3626bp07 | game picture | 3817b    |
-| BH     | ?                      | 27 19 10 9  | 2544 black (0)                  | 3626bp39 | 973p39       | 3817b    |
-| SB     | ?                      | 8 7 14 0    | 3878 black (0)                  | 3626bpa9 | 973p22       | 3817b    |
-| TC     | a tribal chief?        | 10 8 13 13  | 30138 red (4)                   | 3626bpac | 973pac       | 3817cp3j |
-| NH     | ?                      | 14 11 7 6   | 71016 black (0)                 | 3626bp41 | 973p55       | 3817b    |
-| AP     | ?                      | 11 9 12 16  | 30171b black (0)                | 3626bpw4 | game picture | 3817b    |
-| KK     | King Kahuka            | 7 1 1 17    | 6030 red (4) + 87696 white (15) | 3626bp3k | 973p3h       | 3817cp3j |
-| CR     | Captain Redbeard       | 4 4 24 10   | 2528ap3d black (0)              | 3626bp47 | 973p36       | 3817b    |
-| BVB    | Baron Von Barron       | 9 21 4 9    | 30172 white (15)                | 3626bpa7 | 973pa7       | 3817b    |
-| JT     | Johnny Thunder         | 6 2 3 0     | 30167 brown (6)                 | 3626bpa3 | 973pa3       | 3817b    |
-| BB     | Basil the Batlord      | 3 5 2 5     | 30105 black (0)                 | 3626bp4c | 973p4i       | 3817b    |
-| GM     | Gypsy Moth             | 0 3 5 6     | none                            | 3626bp53 | 973p58       | 3817b    |
+| Driver | Character (hypothesis) | Bytes       | Hat                                     | Face     | Torso        | Legs     |
+| ------ | ---------------------- | ----------- | --------------------------------------- | -------- | ------------ | -------- |
+| RR     | Rocket Racer           | 1 28 15 18  | 3842a black (0) + 2447 trans-black      | 3626cp40 | game picture | 3817b    |
+| VV     | Veronica Voltage       | 35 29 28 19 | 3842a light gray (7) + 2447 trans-black | 3626bp09 | 973p29       | 3817b    |
+| AD     | ?                      | 31 20 17 15 | 90541 green (2)                         | 3626bp64 | game picture | 3817b    |
+| IL     | ?                      | 19 13 18 17 | 44553 black (0)                         | 3626bp3j | 973p3j       | 3817cp3j |
+| WW     | ?                      | 18 12 20 0  | 6131 black (0)                          | 3626bp4f | 973p4k       | 3817b    |
+| GS     | ?                      | 9 27 19 11  | 30172 white (15)                        | 3626bpao | game picture | 3817b    |
+| BK     | Black Knight?          | 25 17 25 1  | 4503 black (0)                          | 3626bp4m | 973pfb       | 3817b    |
+| RK     | a king (lion)?         | 23 15 6 11  | 18835 yellow (14)                       | 3626bp4d | 973p4e       | 3817b    |
+| RH     | Robin Hood?            | 34 14 9 7   | 4506c01 green (2)                       | 3626bp3e | 973pf8       | 3817b    |
+| AL     | ?                      | 24 16 8 9   | 13788 black (0)                         | 3626bp44 | 973p3f       | 3817b    |
+| CC     | ?                      | 12 10 11 2  | 30090b white (15)                       | 3626bp61 | 973p62       | 3817b    |
+| PH     | Pharaoh Hotep          | 26 18 27 14 | 30168b yellow (14)                      | 3626bpa2 | 973pa2       | 3817cpa2 |
+| GB     | a governor (Pirates)?  | 5 6 16 12   | 2528a white (15)                        | 3626bp07 | game picture | 3817b    |
+| BH     | ?                      | 27 19 10 9  | 2544 black (0)                          | 3626bp39 | 973p39       | 3817b    |
+| SB     | ?                      | 8 7 14 0    | 3878 black (0)                          | 3626bpa9 | 973p22       | 3817b    |
+| TC     | a tribal chief?        | 10 8 13 13  | 30138 red (4)                           | 3626bpac | 973pac       | 3817cp3j |
+| NH     | ?                      | 14 11 7 6   | 30124b black (0) + 2447 trans-black     | 3626bp41 | 973p55       | 3817b    |
+| AP     | ?                      | 11 9 12 16  | 30171b black (0)                        | 3626bpw4 | game picture | 3817b    |
+| KK     | King Kahuka            | 7 1 1 17    | 6030 red (4) + 87696 white (15)         | 3626bp3k | 973p3h       | 3817cp3j |
+| CR     | Captain Redbeard       | 4 4 24 10   | 2528ap3d black (0)                      | 3626bp47 | 973p36       | 3817b    |
+| BVB    | Baron Von Barron       | 9 21 4 9    | 30172 white (15)                        | 3626bpa7 | 973pa7       | 3817b    |
+| JT     | Johnny Thunder         | 6 2 3 0     | 30167 brown (6)                         | 3626bpa3 | 973pa3       | 3817b    |
+| BB     | Basil the Batlord      | 3 5 2 5     | 30105 black (0)                         | 3626bp4c | 973p4i       | 3817b    |
+| GM     | Gypsy Moth             | 0 3 5 6     | none                                    | 3626bp53 | 973p58       | 3817b    |
 
 ## Hats
 
-| #   | Game part | LDraw part and colour           | Confidence | Source                                                                                                 |
-| --- | --------- | ------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------ |
-| 0   | nohat     | none                            | exact      | bare head                                                                                              |
-| 1   | helmtrr   | 3842a black (0)                 | close      | classic racing helmet, Racers                                                                          |
-| 2   | helmet2s  | 3896 black (0)                  | close      | castle helmet with chin guard, Castle                                                                  |
-| 3   | bb_hats   | 30105 black (0)                 | exact      | fig-000648 Bat Lord, Fright Knights                                                                    |
-| 4   | cr_hats   | 2528ap3d black (0)              | exact      | fig-005505 Captain Redbeard (21322): bicorne with skull and bones                                      |
-| 5   | gb_hats   | 2528a white (15)                | guess      | Imperial governor bicorne, Pirates                                                                     |
-| 6   | jt_hats   | 30167 brown (6)                 | exact      | fig-000359 Johnny Thunder (5938 Oasis Ambush, 1998)                                                    |
-| 7   | kk_hats   | 6030 red (4) + 87696 white (15) | exact      | fig-001092 King Kahuka (6236, 1994): mask and plume                                                    |
-| 8   | sb_hats   | 3878 black (0)                  | close      | top hat                                                                                                |
-| 9   | vb_hats   | 30172 white (15)                | exact      | fig-000629 Baron Von Barron (5948 Desert Expedition, 1998): pith helmet                                |
-| 10  | tc_hats   | 30138 red (4)                   | guess      | feathered headdress, Western                                                                           |
-| 11  | ap_hats   | 30171b black (0)                | guess      | nearest helmet, no cobra helm in the library                                                           |
-| 12  | cc_hats   | 30090b white (15)               | close      | diving helmet, Aquazone                                                                                |
-| 13  | ch_hats   | 3629 white (15)                 | close      | cowboy hat, Western                                                                                    |
-| 14  | nh_hats   | 71016 black (0)                 | guess      | space helmet, visor not drawn                                                                          |
-| 15  | gh_hai1s  | 2631 light gray (7)             | close      | spiked hair                                                                                            |
-| 16  | gh_hai2s  | 2631 brown (6)                  | close      | spiked hair                                                                                            |
-| 17  | gh_hairs  | 2631 black (0)                  | close      | spiked hair                                                                                            |
-| 18  | ww_hats   | 6131 black (0)                  | close      | wizard hat                                                                                             |
-| 19  | il_hairs  | 44553 black (0)                 | guess      | tall flat hat                                                                                          |
-| 20  | mh_hairs  | 3901 black (0)                  | close      | male hair                                                                                              |
-| 21  | mh_hai1s  | 3901 light gray (7)             | close      | male hair                                                                                              |
-| 22  | mh_hai2s  | 3901 brown (6)                  | close      | male hair                                                                                              |
-| 23  | rk_hats   | 18835 yellow (14)               | guess      | long hair with a crown                                                                                 |
-| 24  | al_hats   | 13788 black (0)                 | guess      | wide brimmed hat                                                                                       |
-| 25  | bk_hats   | 4503 black (0)                  | close      | castle helmet with grille, Castle                                                                      |
-| 26  | pm_hats   | 30168b yellow (14)              | exact      | fig-000526 Pharaoh Hotep (5988, 1998): nemes headdress (the blue and gold print is not in the library) |
-| 27  | bj_hats   | 2544 black (0)                  | close      | tricorne, Pirates                                                                                      |
-| 28  | helmt03   | 3842a blue (1)                  | close      | classic racing helmet, Racers                                                                          |
-| 29  | helmt02   | 3842a red (4)                   | close      | classic racing helmet, Racers                                                                          |
-| 30  | helmt01   | 3842a white (15)                | close      | classic racing helmet, Racers                                                                          |
-| 31  | ad_hats   | 90541 green (2)                 | guess      | beanie, robot top not in the library                                                                   |
-| 32  | mm_hats   | 86035 blue (1)                  | close      | cap, Racers                                                                                            |
-| 33  | mj_hats   | 6131 blue (1)                   | close      | wizard hat                                                                                             |
-| 34  | rh_hats   | 4506c01 green (2)               | close      | forestman cap with plume, Castle                                                                       |
-| 35  | helmtvvs  | 3842a light gray (7)            | close      | classic racing helmet, Racers                                                                          |
+| #   | Game part | LDraw part and colour                   | Confidence | Source                                                                                                 |
+| --- | --------- | --------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------ |
+| 0   | nohat     | none                                    | exact      | bare head                                                                                              |
+| 1   | helmtrr   | 3842a black (0) + 2447 trans-black      | close      | classic racing helmet, Racers                                                                          |
+| 2   | helmet2s  | 3896 black (0)                          | close      | castle helmet with chin guard, Castle                                                                  |
+| 3   | bb_hats   | 30105 black (0)                         | exact      | fig-000648 Bat Lord, Fright Knights                                                                    |
+| 4   | cr_hats   | 2528ap3d black (0)                      | exact      | fig-005505 Captain Redbeard (21322): bicorne with skull and bones                                      |
+| 5   | gb_hats   | 2528a white (15)                        | guess      | Imperial governor bicorne, Pirates                                                                     |
+| 6   | jt_hats   | 30167 brown (6)                         | exact      | fig-000359 Johnny Thunder (5938 Oasis Ambush, 1998)                                                    |
+| 7   | kk_hats   | 6030 red (4) + 87696 white (15)         | exact      | fig-001092 King Kahuka (6236, 1994): mask and plume                                                    |
+| 8   | sb_hats   | 3878 black (0)                          | close      | top hat                                                                                                |
+| 9   | vb_hats   | 30172 white (15)                        | exact      | fig-000629 Baron Von Barron (5948 Desert Expedition, 1998): pith helmet                                |
+| 10  | tc_hats   | 30138 red (4)                           | guess      | feathered headdress, Western                                                                           |
+| 11  | ap_hats   | 30171b black (0)                        | guess      | nearest helmet, no cobra helm in the library                                                           |
+| 12  | cc_hats   | 30090b white (15)                       | close      | diving helmet, Aquazone                                                                                |
+| 13  | ch_hats   | 3629 white (15)                         | close      | cowboy hat, Western                                                                                    |
+| 14  | nh_hats   | 30124b black (0) + 2447 trans-black     | guess      | space helmet with its visor                                                                            |
+| 15  | gh_hai1s  | 2631 light gray (7)                     | close      | spiked hair                                                                                            |
+| 16  | gh_hai2s  | 2631 brown (6)                          | close      | spiked hair                                                                                            |
+| 17  | gh_hairs  | 2631 black (0)                          | close      | spiked hair                                                                                            |
+| 18  | ww_hats   | 6131 black (0)                          | close      | wizard hat                                                                                             |
+| 19  | il_hairs  | 44553 black (0)                         | guess      | tall flat hat                                                                                          |
+| 20  | mh_hairs  | 3901 black (0)                          | close      | male hair                                                                                              |
+| 21  | mh_hai1s  | 3901 light gray (7)                     | close      | male hair                                                                                              |
+| 22  | mh_hai2s  | 3901 brown (6)                          | close      | male hair                                                                                              |
+| 23  | rk_hats   | 18835 yellow (14)                       | guess      | long hair with a crown                                                                                 |
+| 24  | al_hats   | 13788 black (0)                         | guess      | wide brimmed hat                                                                                       |
+| 25  | bk_hats   | 4503 black (0)                          | close      | castle helmet with grille, Castle                                                                      |
+| 26  | pm_hats   | 30168b yellow (14)                      | exact      | fig-000526 Pharaoh Hotep (5988, 1998): nemes headdress (the blue and gold print is not in the library) |
+| 27  | bj_hats   | 2544 black (0)                          | close      | tricorne, Pirates                                                                                      |
+| 28  | helmt03   | 3842a blue (1) + 2447 trans-black       | close      | classic racing helmet, Racers                                                                          |
+| 29  | helmt02   | 3842a red (4) + 2447 trans-black        | close      | classic racing helmet, Racers                                                                          |
+| 30  | helmt01   | 3842a white (15) + 2447 trans-black     | close      | classic racing helmet, Racers                                                                          |
+| 31  | ad_hats   | 90541 green (2)                         | guess      | beanie, robot top not in the library                                                                   |
+| 32  | mm_hats   | 86035 blue (1)                          | close      | cap, Racers                                                                                            |
+| 33  | mj_hats   | 6131 blue (1)                           | close      | wizard hat                                                                                             |
+| 34  | rh_hats   | 4506c01 green (2)                       | close      | forestman cap with plume, Castle                                                                       |
+| 35  | helmtvvs  | 3842a light gray (7) + 2447 trans-black | close      | classic racing helmet, Racers                                                                          |
 
 ## Faces
 

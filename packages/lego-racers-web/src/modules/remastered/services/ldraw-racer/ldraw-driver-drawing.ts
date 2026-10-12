@@ -1,23 +1,24 @@
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
-import { Group, Matrix4, Mesh, MeshPhysicalMaterial, Quaternion, Vector3 } from 'three'
+import { Group, Matrix4 } from 'three'
 import type { RacerPartDrawingRequest } from './ldraw-racer-drawing.types.ts'
 import { applyPlasticLook } from '../ldraw-car/ldraw-plastic.ts'
 import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
+import { restoreDisplayColors } from './skin-colors.ts'
 import { disposeObject } from './dispose-object.ts'
 import type { LDrawRacerPartDrawing } from './ldraw-racer-drawing.types.ts'
 import { createFaceDecal, createTorsoDecal } from './minifig-decals.ts'
 import { createMinifigPartPlans } from './minifig-assembly.ts'
 import { MinifigPartKey, MinifigPosture } from './minifig-assembly.types.ts'
 import type { MinifigPartPlan } from './minifig-assembly.types.ts'
+import { getJointMatrices } from './minifig-joints.ts'
 import { getMinifigRig } from './minifig-rig.ts'
-import type { MinifigAttachment, MinifigRig } from './minifig-rig.types.ts'
+import type { MinifigRig } from './minifig-rig.types.ts'
 import { createMinifigSpec, getDriverPartBytes } from './minifig-spec.ts'
 import { createPoseControls, createSkeletonPoseSampler } from './skeleton-pose.ts'
 import type { SkeletonPoseSampler } from './skeleton-pose.types.ts'
 import { ensureStudioLights } from './studio-scene-lights.ts'
 
 const RAW_UNITS_PER_LDRAW_UNIT = 3.2
-const ARM_SPLAY = (9.78 * Math.PI) / 180
 const IDENTITY_ROTATION = '1 0 0 0 1 0 0 0 1'
 const HEAD_ORIGIN_Y = -48
 const TORSO_ORIGIN_Y = -24
@@ -43,58 +44,6 @@ const getFigureFrame = (rig: MinifigRig): Matrix4 =>
     0,
     1
   )
-
-const getBonePosition = (matrices: readonly Matrix4[], boneIndex: number): Vector3 => {
-  const matrix = matrices[boneIndex]
-  return matrix === undefined ? new Vector3() : new Vector3().setFromMatrixPosition(matrix)
-}
-
-// What carries a part now, as a change of the bind pose: a bone's matrix with the bind pose's undone, or the turn that takes the chord
-// between two bones from its bind direction to its present one, about the first bone's present place. An arm splays outward as it
-// hangs, the more the lower it hangs, as the library's own arms do.
-const getAttachmentMatrix = (
-  attachment: MinifigAttachment,
-  rest: readonly Matrix4[],
-  pose: readonly Matrix4[]
-): Matrix4 => {
-  if (attachment.kind === 'bone') {
-    const restMatrix = rest[attachment.boneIndex]
-    const poseMatrix = pose[attachment.boneIndex]
-    return restMatrix === undefined || poseMatrix === undefined
-      ? new Matrix4()
-      : poseMatrix.clone().multiply(restMatrix.clone().invert())
-  }
-  const { startIndex, endIndex, outwardSign } = attachment
-  const restStart = getBonePosition(rest, startIndex)
-  const poseStart = getBonePosition(pose, startIndex)
-  const bindDirection = getBonePosition(rest, endIndex).sub(restStart).normalize()
-  const direction = getBonePosition(pose, endIndex).sub(poseStart).normalize()
-  const hangingShare = Math.max(0, -direction.z)
-  direction.y += outwardSign * Math.tan(ARM_SPLAY) * hangingShare
-  const turn = new Matrix4().makeRotationFromQuaternion(
-    new Quaternion().setFromUnitVectors(bindDirection, direction.normalize())
-  )
-  return new Matrix4()
-    .makeTranslation(poseStart.x, poseStart.y, poseStart.z)
-    .multiply(turn)
-    .multiply(new Matrix4().makeTranslation(-restStart.x, -restStart.y, -restStart.z))
-}
-
-const PRINT_GLOW = 0.45
-
-// A printed face stays readable under a hat's shadow, as the game's picture decals did: the plastic glows a little in its own colour.
-const glowMaterial = (material: unknown) => {
-  if (material instanceof MeshPhysicalMaterial) {
-    material.emissive.copy(material.color).multiplyScalar(PRINT_GLOW)
-  }
-}
-
-const glowPrint = (model: Group) =>
-  model.traverse((child) => {
-    if (!(child instanceof Mesh)) return
-    const materials: unknown[] = Array.isArray(child.material) ? child.material : [child.material]
-    materials.forEach(glowMaterial)
-  })
 
 const getPartText = (plan: MinifigPartPlan): string =>
   `1 ${String(plan.color)} 0 0 0 ${IDENTITY_ROTATION} ${plan.part}.dat`
@@ -134,7 +83,7 @@ export const createLDrawDriverDrawing = (
       (model) => {
         if (isDisposed) return
         applyPlasticLook(model)
-        if (plan.part === spec.face?.part) glowPrint(model)
+        if (plan.isSkin) restoreDisplayColors(model)
         loadedGroups.push(model)
         const placed = new Group()
         placed.matrixAutoUpdate = false
@@ -168,10 +117,9 @@ export const createLDrawDriverDrawing = (
   }
   const pose = (state: SkeletonAnimationState | null) => {
     const posed = getRestOrPose(sampler, state)
+    const jointMatrices = getJointMatrices(rig, sampler.restMatrices, posed, figureFrame)
     for (const [key, holder] of holders) {
-      holder.matrix
-        .copy(getAttachmentMatrix(rig.attachments[key], sampler.restMatrices, posed))
-        .multiply(figureFrame)
+      holder.matrix.copy(jointMatrices.get(key) ?? figureFrame)
       holder.matrixWorldNeedsUpdate = true
     }
     ensureStudioLights(object, rig.posture === MinifigPosture.STANDING)
