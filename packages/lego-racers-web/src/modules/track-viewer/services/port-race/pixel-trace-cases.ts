@@ -105,6 +105,24 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
     watchedTextures: [],
   },
   {
+    // The final race's wall lights are the material flipbook of TEST.MAB: the animation rewrites two slots of the
+    // track model's material table (LEGORacers.exe 0x004104c0, 0x00410750) and the lights cycle through rrlite1 to rrlite8.
+    request: {
+      name: 'RACEC3R0, wall lights',
+      raceFolder: 'RACEC3R0',
+      recordFrames: [100, 170, 200, 230, 260],
+    },
+    // Before the flipbook the lights stayed on rrlite4 and rrlite8 and 9.2 percent of the pixels the original paints with
+    // rrlite1 to rrlite3 differed (1.4 percent now). The worst frame is the skid marks (pixel-trace.md).
+    maximumDifferingShare: 0.055,
+    watchedTextures: [
+      { label: 'rrlite1', maximumDifferingShare: 0.03 },
+      { label: 'rrlite2', maximumDifferingShare: 0.03 },
+      { label: 'rrlite3', maximumDifferingShare: 0.03 },
+      { label: 'rrlite4', maximumDifferingShare: 0.03 },
+    ],
+  },
+  {
     // The champion ghost drives from the start line (GHOST.GHB, drawn from GHOST.WDB); the player idles behind it.
     request: {
       name: 'RACEC0R0, time trial ghost',

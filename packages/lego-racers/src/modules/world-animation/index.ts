@@ -39,6 +39,7 @@ export {
   findMaterialAnimationIndex,
   findMeshInstanceIndex,
   findSkeletonInstanceIndex,
+  getMaterialSlotWrites,
 } from './controller/world-animation/world-animation.ts'
 export {
   getWorldWithMaterialPlayback,
@@ -49,6 +50,8 @@ export {
 export type {
   MaterialAnimationPlayback,
   MaterialAnimationRuntime,
+  MaterialAnimationTarget,
+  MaterialSlotWrite,
   MeshInstanceRuntime,
   RaceWorlds,
   SkeletonInstanceCameraView,

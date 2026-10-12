@@ -21,6 +21,7 @@ import {
   WebGLRenderer,
 } from 'three'
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
+import { getMaterialSlotWrites } from '@lego-games/lego-racers/world-animation'
 import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
 import { getCameraFrustum, ORIGINAL_FIELD_OF_VIEW_DEGREES } from './camera-frustum.ts'
 import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
@@ -416,6 +417,14 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   const showHazards = (trackWorld: WorldAnimation, pools: readonly (EmitterPool | null)[]) => {
     for (const instance of trackWorld.skeletonInstances) {
       if (instance.clip !== null) shown.track.setSkeletonState(instance.name, instance.clip)
+    }
+    for (const write of getMaterialSlotWrites(trackWorld)) {
+      shown.track.setMaterialSlot(
+        write.instanceName,
+        write.levelIndex,
+        write.slot,
+        write.materialName
+      )
     }
     if (lastCameraView !== null) particles.update(pools, lastCameraView, lastSprites, lastRibbons)
   }

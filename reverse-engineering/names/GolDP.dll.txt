@@ -116,3 +116,4 @@
 10026d10 SkeletonInstance_TransformDirection
 10002c90 Bone_TransformDirection
 10002a00 Bone_GetAxes
+10025da0 MaterialAnimationEntry_Start

@@ -968,3 +968,7 @@
 0042f240 Profile_GetGhostBeatenFlags
 00488010 RaceSelectScreen_ShowRace
 00487b50 RaceSelectScreen_CreateWidgets
+00410300 MaterialAnimation_AdvanceEntries
+00410430 MaterialAnimationEntry_Start
+00410750 MaterialTable_SetSlot
+00410770 MaterialAnimationRow_Link
