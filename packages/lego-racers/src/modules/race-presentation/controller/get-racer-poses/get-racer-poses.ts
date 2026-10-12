@@ -55,6 +55,7 @@ export const getRacerPoses = (raceState: RaceState): readonly RacerPose[] => {
           driver: parts.driver.centre,
         }),
         shadow: isOffTrack ? null : getRacerShadow(racer, parts.wheels.centre),
+        skids: racer.vehicle.skids,
         isOffTrack,
       })
     })

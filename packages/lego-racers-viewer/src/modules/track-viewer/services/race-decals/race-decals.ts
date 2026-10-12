@@ -8,15 +8,10 @@ import type { RacerPose } from '@lego-games/lego-racers/race-presentation'
 import { getFloatFromBits } from '@lego-games/lego-racers/simulation-math'
 import { SceneInstanceKind } from '@lego-games/lego-racers/scene'
 import type { Scene, SceneMesh } from '@lego-games/lego-racers/scene'
-import {
-  BufferAttribute,
-  BufferGeometry,
-  LessEqualDepth,
-  Mesh,
-  type Material,
-  type Scene as ThreeScene,
-} from 'three'
-import { createSceneMaterial } from '../scene-object/scene-material.ts'
+import type { BufferAttribute } from 'three'
+import { Mesh, type Material, type Scene as ThreeScene } from 'three'
+import { createRaceSkidTrails } from '../race-skid-trails/race-skid-trails.ts'
+import { createDecalMaterial, createDynamicGeometry } from '../dynamic-mesh/dynamic-mesh.ts'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import type { Vector3Like } from '../race-viewport/race-viewport.types.ts'
 import type { DecalSurface, RaceDecals } from './race-decals.types.ts'
@@ -79,19 +74,7 @@ export const getDecalSurface = (scene: Scene, isMirrored: boolean): DecalSurface
 }
 
 const createShadowMesh = (material: Material): Mesh => {
-  const geometry = new BufferGeometry()
-  geometry.setAttribute(
-    'position',
-    new BufferAttribute(new Float32Array(MAXIMUM_TRIANGLES * CORNERS_PER_TRIANGLE * 3), 3)
-  )
-  geometry.setAttribute(
-    'uv',
-    new BufferAttribute(new Float32Array(MAXIMUM_TRIANGLES * CORNERS_PER_TRIANGLE * 2), 2)
-  )
-  geometry.setAttribute(
-    'color',
-    new BufferAttribute(new Uint8Array(MAXIMUM_TRIANGLES * CORNERS_PER_TRIANGLE * 4), 4, true)
-  )
+  const geometry = createDynamicGeometry(MAXIMUM_TRIANGLES * CORNERS_PER_TRIANGLE)
   const mesh = new Mesh(geometry, material)
   mesh.position.set(0, 0, DECAL_LIFT)
   mesh.frustumCulled = false
@@ -129,19 +112,13 @@ export const createRaceDecals = (
   isMirrored: boolean
 ): RaceDecals => {
   const surface = getDecalSurface(assets.scene, isMirrored)
+  const skidTrails = createRaceSkidTrails(trackScene, assets, surface?.world ?? null)
   const shadows = assets.definition.racers.map((racer) => {
     const material = assets.scene.materials.find(
       (candidate) => candidate.name === racer.appearance.shadowImageName
     )
     if (surface === null || material === undefined) return null
-    // 0x0043fc20 draws the decal under an alpha of its own (device slot 0xb8): the material's colour key stays off.
-    const three = createSceneMaterial(
-      { ...material, renderState: { ...material.renderState, isAlphaTestEnabled: false } },
-      assets.scene.textures,
-      new Map()
-    )
-    three.depthWrite = true
-    three.depthFunc = LessEqualDepth
+    const three = createDecalMaterial(assets.scene, material)
     const mesh = createShadowMesh(three)
     trackScene.add(mesh)
     return { mesh }
@@ -172,7 +149,10 @@ export const createRaceDecals = (
         )
       }
     },
+    setPoses: skidTrails.setPoses,
+    step: skidTrails.step,
     dispose: () => {
+      skidTrails.dispose()
       for (const shadow of shadows) {
         if (shadow === null) continue
         trackScene.remove(shadow.mesh)

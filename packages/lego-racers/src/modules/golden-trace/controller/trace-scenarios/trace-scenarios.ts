@@ -55,6 +55,23 @@ export const getSteeringSweepFrames = (): readonly TraceFrameInput[] => [
   ...holdBindings(60, [RaceBinding.ACCELERATE]),
 ]
 
+// Full throttle, then a power slide to the right and one to the left: the tire smoke runs and the wheels leave marks.
+export const getPowerSlideFrames = (): readonly TraceFrameInput[] => [
+  ...getIdleFrames(FRAMES_BEFORE_THROTTLE),
+  ...holdBindings(60, [RaceBinding.ACCELERATE]),
+  ...holdBindings(100, [
+    RaceBinding.ACCELERATE,
+    RaceBinding.STEER_NEGATIVE,
+    RaceBinding.POWER_SLIDE,
+  ]),
+  ...holdBindings(100, [
+    RaceBinding.ACCELERATE,
+    RaceBinding.STEER_POSITIVE,
+    RaceBinding.POWER_SLIDE,
+  ]),
+  ...holdBindings(40, [RaceBinding.ACCELERATE]),
+]
+
 // Throttle with a weaving steering pattern, as long as the caller wants.
 export const getWeavingFrames = (count: number): readonly TraceFrameInput[] => {
   const weave = [

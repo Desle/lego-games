@@ -37,3 +37,14 @@ The shadow is drawn only when `0x0043fa50` projected it that frame (vehicle flag
 ## Not decals
 
 The `skid` source the comparison reports is a label: the sky texture and the shadow textures of the racers match `skid` best. The skid marks are not ribbons projected on the track: vehicle `+0x1e4..+0x1f0` are four trail objects (0x334 bytes, made by `0x004927c0` in the pool at race `+0x27d4`, four of them) that project a decal per stretch of the wheel's path with `0x00491fa0`. They exist only while the tire smoke runs (vehicle flag `0x8`). The oil slick and scorch marks use the decal object (callers `0x004573a0`, `0x00421850`, `0x00491e20`, `0x00490330`) and are not ported yet.
+
+## Skid trails (`0x00491c70`..`0x00492870`)
+
+Vehicle `+0x1e4..+0x1f0` hold the four wheels' trails, taken from the pool at race `+0x27d4` (four 0x334-byte trails for all racers, `0x00492680`, searched from the first by `0x004927c0`). Each is a decal (`+0x4`, 12 triangles, depth 15) and a ring of three copies of it (`+0x120`, 0x9c apart).
+
+- **Wheel flags** (vehicle `+0x1f4`, `0x0043f1e0`): bit 0x1 asks for a mark, 0x2 means the wheel stood on the ground, 0x4 a cooldown (`0x0043e102`, one second). Set by the tire smoke start `0x0043dc00` (every wheel when the car body spins, else the rear two) and cleared by `0x0043dcd0`, which also lets the trails go with a 1000 ms fade. While the tire smoke runs (vehicle flag 0x8): a wheel asking for marks that stands on the ground sets 0x2; one off the ground for more than 150 ms loses it. The flags then follow the car: spinning body, every other bit set; racer flag 0x40 (turbo), rear wheels on; otherwise the side the velocity direction leans to, by its dot product with the second row of the display frame.
+- **Trails**: a wheel with the bit and no trail takes one (1000 ms, or 250 ms with vehicle flag 0x100); a wheel without the bit lets its trail go at once. A trail whose duration is 1000 while the wheels spin is let go too; a short one never is (its duration is 248, the test compares with 250). The width is vehicle `+0x1a0` for the front wheels and `+0x1a4` for the rear.
+- **Stretches** (`0x00491fa0`): the wheel's point in the display frame; a move of 0.1 or more puts the decal between the last point and this one, 6 above their middle, as wide as the mark and as long as the move, projecting down. `0x00491e20` projects it, joins it to the last finished stretch (`0x00492470`), and after a quarter of the duration copies it into the ring (`0x00492220`).
+- **Image**: `skid`, or `trbskid` after a level 1 or higher turbo (`0x0043fd30`), back to `skid` by `0x0043fd70` and the reset; the alpha of a fade is the image's alpha byte (`0x7f`) scaled.
+
+Verified with `render-trace` on the new `Royal Knights, power slide` case (accelerate, then two power slides from frame 235): the marks match the original's triangles at frames 240, 260, 340 and 400.
