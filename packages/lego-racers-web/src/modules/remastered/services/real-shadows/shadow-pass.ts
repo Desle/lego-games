@@ -5,8 +5,8 @@ import {
   LinearFilter,
   Matrix4,
   MeshBasicMaterial,
-  OrthographicCamera,
   RedFormat,
+  Vector2,
   Vector3,
   WebGLRenderTarget,
 } from 'three'
@@ -22,13 +22,15 @@ import {
   SHADOW_RADIUS,
   SHADOW_STRENGTH,
 } from './shadow-pass.constants.ts'
+import { bakeSceneryShadow } from './baked-scenery-shadow.ts'
+import type { BakedSceneryShadow } from './baked-scenery-shadow.types.ts'
+import { createLightFrame } from './light-frame.ts'
 import { hideBlobShadows, hideNonCasters, showAgain } from './shadow-casters.ts'
 import { makeTrackReceivers } from './shadow-receiver.ts'
 import type { ShadowUniforms } from './shadow-receiver.types.ts'
-import type { ShadowMode } from './shadow-mode.types.ts'
+import { ShadowMode } from './shadow-mode.types.ts'
 
 const NEAR_PLANE = 0.1
-const VERTICAL_SUN = 0.99
 
 // Shadow maps for a race: the cars, wheels, drivers, power-up bricks, projectiles and hazards are drawn depth-only from the sun
 // into a map that follows the camera in whole texels (so it does not shimmer); the track's own materials then darken their
@@ -52,22 +54,13 @@ export const createShadowPass = (
     generateMipmaps: false,
   })
   const depthDistance = SHADOW_RADIUS * 3
-  const lightCamera = new OrthographicCamera(
-    -SHADOW_RADIUS,
-    SHADOW_RADIUS,
-    SHADOW_RADIUS,
-    -SHADOW_RADIUS,
-    NEAR_PLANE,
-    depthDistance * 2
-  )
-  lightCamera.up.set(0, 0, Math.abs(worldSun.z) > VERTICAL_SUN ? 0 : 1)
-  if (Math.abs(worldSun.z) > VERTICAL_SUN) lightCamera.up.set(1, 0, 0)
-  lightCamera.position.set(0, 0, 0)
-  lightCamera.lookAt(worldSun.clone().negate())
-  lightCamera.updateMatrixWorld(true)
-  const right = new Vector3().setFromMatrixColumn(lightCamera.matrixWorld, 0)
-  const up = new Vector3().setFromMatrixColumn(lightCamera.matrixWorld, 1)
-  const back = new Vector3().setFromMatrixColumn(lightCamera.matrixWorld, 2)
+  const { camera: lightCamera, axes } = createLightFrame(worldSun, NEAR_PLANE, depthDistance * 2)
+  lightCamera.left = -SHADOW_RADIUS
+  lightCamera.right = SHADOW_RADIUS
+  lightCamera.top = SHADOW_RADIUS
+  lightCamera.bottom = -SHADOW_RADIUS
+  lightCamera.updateProjectionMatrix()
+  const { right, up, back } = axes
   const texel = (2 * SHADOW_RADIUS) / SHADOW_MAP_SIZE
   const uniforms: ShadowUniforms = {
     shadowMatrix: { value: new Matrix4() },
@@ -78,6 +71,12 @@ export const createShadowPass = (
     shadowMapTexel: { value: 1 / SHADOW_MAP_SIZE },
     shadowDepthBias: { value: (texel * SHADOW_DEPTH_BIAS_TEXELS) / (depthDistance * 2) },
     shadowStrength: { value: SHADOW_STRENGTH },
+    isBakedShadowEnabled: { value: 0 },
+    bakedShadowMatrix: { value: new Matrix4() },
+    bakedShadowMap: { value: depthTexture },
+    bakedShadowTexel: { value: 1 },
+    bakedShadowMapTexel: { value: new Vector2(1, 1) },
+    bakedShadowDepthBias: { value: 0 },
   }
   makeTrackReceivers(trackGroup, uniforms)
   const depthMaterial = new MeshBasicMaterial({ colorWrite: false, side: DoubleSide })
@@ -101,11 +100,27 @@ export const createShadowPass = (
     )
   }
 
+  let baked: BakedSceneryShadow | null = null
+  const bakeOnce = () => {
+    baked = bakeSceneryShadow(renderer, trackScene, trackGroup, worldSun)
+    uniforms.isBakedShadowEnabled.value = 1
+    uniforms.bakedShadowMatrix.value.copy(baked.matrix)
+    uniforms.bakedShadowMap.value = baked.depthTexture
+    uniforms.bakedShadowTexel.value = baked.texel
+    uniforms.bakedShadowMapTexel.value.set(1 / baked.width, 1 / baked.height)
+    uniforms.bakedShadowDepthBias.value =
+      (baked.texel * SHADOW_DEPTH_BIAS_TEXELS) / baked.depthRange
+    console.info(
+      `scenery shadow baked: ${String(baked.width)} x ${String(baked.height)} texels of ${baked.texel.toFixed(2)} units in ${baked.bakeMilliseconds.toFixed(0)} ms`
+    )
+  }
+
   return {
     beforeRender: () => {
+      if (mode === ShadowMode.SCENERY && baked === null) bakeOnce()
       hideBlobShadows(trackScene)
       placeLightCamera()
-      const hidden = hideNonCasters(trackScene, trackGroup, mode)
+      const hidden = hideNonCasters(trackScene, trackGroup)
       const previousTarget = renderer.getRenderTarget()
       const previousOverride = trackScene.overrideMaterial
       trackScene.overrideMaterial = depthMaterial
@@ -120,6 +135,7 @@ export const createShadowPass = (
       target.dispose()
       depthTexture.dispose()
       depthMaterial.dispose()
+      baked?.dispose()
     },
   }
 }
