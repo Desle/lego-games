@@ -82,6 +82,7 @@ const RaceView = () => {
           <RaceHudOverlay
             commands={race.hudCommands}
             imageUrls={race.hudImageUrls}
+            imageScales={race.hudImageScales}
             fonts={race.hudFonts}
             width={stageSize.width}
             height={stageSize.height}

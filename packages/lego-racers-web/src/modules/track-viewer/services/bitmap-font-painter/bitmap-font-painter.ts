@@ -27,7 +27,7 @@ export const createBitmapFontPainter = (): BitmapFontPainter => {
   const tintedCanvases = new Map<string, HTMLCanvasElement | null>()
   return Object.freeze({
     drawGlyphs: (context, image, glyphs, color) => {
-      const key = `${image.name}:${String(color)}`
+      const key = `${image.name}:${String(image.width)}:${String(color)}`
       if (!tintedCanvases.has(key)) tintedCanvases.set(key, getTintedCanvas(image, color))
       const canvas = tintedCanvases.get(key)
       if (canvas === null || canvas === undefined) return
@@ -37,10 +37,10 @@ export const createBitmapFontPainter = (): BitmapFontPainter => {
         if (glyph.sourceWidth <= 0 || glyph.sourceHeight <= 0 || width <= 0 || height <= 0) continue
         context.drawImage(
           canvas,
-          glyph.sourceX,
-          glyph.sourceY,
-          glyph.sourceWidth,
-          glyph.sourceHeight,
+          glyph.sourceX * image.sourceScale,
+          glyph.sourceY * image.sourceScale,
+          glyph.sourceWidth * image.sourceScale,
+          glyph.sourceHeight * image.sourceScale,
           glyph.destination.left,
           glyph.destination.top,
           width,

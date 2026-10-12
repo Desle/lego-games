@@ -102,7 +102,7 @@ export const createMenuViewport = (archive: JamArchive): MenuViewport => {
       : getMenuCamera(command.camera)
   }
 
-  const draw: MenuViewport['draw'] = (context, command, deltaMilliseconds) => {
+  const draw: MenuViewport['draw'] = (context, command, deltaMilliseconds, resolutionScale) => {
     const { cinema } = command
     const paths =
       cinema === null
@@ -126,7 +126,11 @@ export const createMenuViewport = (archive: JamArchive): MenuViewport => {
     }
     const menuCamera =
       cinemaCamera === null ? getCamera(command, world) : getWorldMenuCamera(cinemaCamera)
-    renderer.setSize(width, height, false)
+    renderer.setSize(
+      Math.round(width * resolutionScale),
+      Math.round(height * resolutionScale),
+      false
+    )
     camera.fov = menuCamera.fieldOfViewDegrees
     camera.aspect = menuCamera.aspectRatio ?? width / height
     camera.near = menuCamera.nearPlane

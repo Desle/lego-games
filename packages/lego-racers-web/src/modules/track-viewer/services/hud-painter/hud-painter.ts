@@ -18,6 +18,7 @@ const getCssColor = (color: number) =>
 export const paintHud = (context: CanvasRenderingContext2D, input: HudPaintInput): void => {
   const { commands, fonts, loadedImages, painter, width, height } = input
   context.clearRect(0, 0, width, height)
+  context.imageSmoothingQuality = 'high'
   context.imageSmoothingEnabled = false
   for (const command of commands) {
     if (command.kind === 'fill') {
@@ -29,12 +30,14 @@ export const paintHud = (context: CanvasRenderingContext2D, input: HudPaintInput
       const image = loadedImages.get(command.imageName.toUpperCase())
       if (image === undefined || !image.complete) continue
       const [sourceLeft, sourceTop, sourceRight, sourceBottom] = command.source
+      const scale = input.imageScales.get(command.imageName.toUpperCase()) ?? 1
+      context.imageSmoothingEnabled = scale > 1
       context.drawImage(
         image,
-        sourceLeft,
-        sourceTop,
-        sourceRight - sourceLeft,
-        sourceBottom - sourceTop,
+        sourceLeft * scale,
+        sourceTop * scale,
+        (sourceRight - sourceLeft) * scale,
+        (sourceBottom - sourceTop) * scale,
         command.x,
         command.y,
         command.width,
@@ -73,6 +76,7 @@ export const paintHud = (context: CanvasRenderingContext2D, input: HudPaintInput
       alignment: 'left',
       arithmetic,
     })
+    context.imageSmoothingEnabled = hudFont.image.sourceScale > 1
     painter.drawGlyphs(context, hudFont.image, glyphs, command.color ?? WHITE)
   }
 }

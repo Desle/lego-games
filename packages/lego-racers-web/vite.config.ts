@@ -6,7 +6,10 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
 import { developmentLDrawPlugin } from './src/modules/remastered/services/development-ldraw-server/development-ldraw-server.ts'
-import { developmentHighDefinitionPlugin } from './src/modules/remastered/services/development-texture-server/development-texture-server.ts'
+import {
+  developmentHighDefinitionAudioPlugin,
+  developmentHighDefinitionPlugin,
+} from './src/modules/remastered/services/development-texture-server/development-texture-server.ts'
 import {
   DEVELOPMENT_GAME_FILE_ROUTE,
   DEVELOPMENT_JAM_ROUTE,
@@ -68,6 +71,9 @@ export default defineConfig({
     developmentGameFilesPlugin(),
     developmentHighDefinitionPlugin(
       process.env['LEGO_HD_TEXTURES_ROOT'] ?? join(homedir(), 'textures', 'lego-racers')
+    ),
+    developmentHighDefinitionAudioPlugin(
+      process.env['LEGO_HD_AUDIO_ROOT'] ?? join(homedir(), 'audio', 'lego-racers')
     ),
     developmentLDrawPlugin(process.env['LEGO_LDRAW_ROOT'] ?? join(homedir(), 'ldraw')),
   ],

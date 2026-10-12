@@ -1,4 +1,4 @@
-import { decodeMusic, decodeSoundEffect } from '@lego-games/lego-racers/audio'
+import { decodeSoundEffect } from '@lego-games/lego-racers/audio'
 import type { MusicCue, SoundRequest } from '@lego-games/lego-racers/race-audio'
 import type { RacerEngineLoops } from '@lego-games/lego-racers/race-presentation'
 import type { Vector3 } from '@lego-games/lego-racers/simulation-math'
@@ -7,11 +7,14 @@ import { COMMON_DIRECTORY } from '@lego-games/lego-racers/scene'
 import {
   createAudioBuffer,
   createAudioContext,
+  createMusicBuffer,
   SILENT_PLAYER,
 } from '../audio-buffer/audio-buffer.ts'
+import { createSoundReplacements } from '../sound-replacements/sound-replacements.ts'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import type { PlayingSound, RaceAudioPlayer } from './race-audio-player.types.ts'
 
+const MUSIC_DIRECTORY = 'MUSIC'
 const MINIMUM_HEARING_DISTANCE = 30
 const MAXIMUM_HEARING_DISTANCE = 300
 const MINIMUM_PLAYBACK_RATE = 0.05
@@ -23,7 +26,10 @@ export const createRaceAudioPlayer = (assets: RaceAssets): RaceAudioPlayer => {
   const context = createAudioContext()
   if (context === null) return SILENT_PLAYER
   const buffers = new Map<string, AudioBuffer | null>()
+  const replacements = createSoundReplacements(context)
   let music: AudioBufferSourceNode | null = null
+  // A tune that finishes loading after another was asked for must not start.
+  let musicRequest = 0
 
   const getSoundPath = (request: SoundRequest): string | null => {
     if (request.location.bank === SoundBankKind.GENERAL) {
@@ -38,6 +44,8 @@ export const createRaceAudioPlayer = (assets: RaceAssets): RaceAudioPlayer => {
   }
 
   const getSoundBuffer = (path: string): AudioBuffer | null => {
+    const replacement = replacements.getLoaded(path)
+    if (replacement !== null) return replacement
     if (buffers.has(path)) return buffers.get(path) ?? null
     try {
       const effect = decodeSoundEffect(assets.archive.readFile(path))
@@ -53,6 +61,18 @@ export const createRaceAudioPlayer = (assets: RaceAssets): RaceAudioPlayer => {
     }
   }
 
+  replacements.preload(
+    [...assets.generalSounds.soundPaths.keys()]
+      .map((index) =>
+        getSoundPath({ soundId: 0, location: { bank: SoundBankKind.GENERAL, index }, address: '' })
+      )
+      .concat(
+        [...assets.trackSounds.soundPaths.keys()].map((index) =>
+          getSoundPath({ soundId: 0, location: { bank: SoundBankKind.TRACK, index }, address: '' })
+        )
+      )
+      .flatMap((path) => (path === null ? [] : [path]))
+  )
   let isDisposed = false
   // Racer +0xd9c..+0xda8: every racer's loops, by racer and kind. The sound objects hear within 30 to 300 units
   // (0x004b0958, 0x004b095c): full volume inside the first, none beyond the second.
@@ -119,21 +139,24 @@ export const createRaceAudioPlayer = (assets: RaceAssets): RaceAudioPlayer => {
     },
     playMusic: (cue: MusicCue) => {
       if (isDisposed) return
+      musicRequest += 1
+      const request = musicRequest
       music?.stop()
       music = null
-      const tune = assets.tunes.get((assets.musicNames[cue.listIndex] ?? '').toLowerCase())
-      if (tune === undefined) return
-      const decoded = decodeMusic(tune)
-      // The volume the race passes (1.2) is DirectSound's; Web Audio gain above 1 would clip.
-      music = start(
-        createAudioBuffer(context, decoded.samples, decoded.channelCount, decoded.sampleRate),
-        cue.isLooping,
-        Math.min(RACE_MUSIC_VOLUME, 1)
-      ).source
+      const tuneName = (assets.musicNames[cue.listIndex] ?? '').toLowerCase()
+      const tune = assets.tunes.get(tuneName)
+      void replacements.load(`${MUSIC_DIRECTORY}\\${tuneName}.tun`).then((replacement) => {
+        if (isDisposed || request !== musicRequest) return
+        const buffer = replacement ?? (tune === undefined ? null : createMusicBuffer(context, tune))
+        if (buffer === null) return
+        // The volume the race passes (1.2) is DirectSound's; Web Audio gain above 1 would clip.
+        music = start(buffer, cue.isLooping, Math.min(RACE_MUSIC_VOLUME, 1)).source
+      })
     },
     setEngineLoops,
     dispose: () => {
       isDisposed = true
+      musicRequest += 1
       for (const key of [...loops.keys()]) stopLoop(key)
       music?.stop()
       void context.close()

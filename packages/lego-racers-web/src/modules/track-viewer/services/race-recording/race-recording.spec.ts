@@ -15,6 +15,7 @@ import { parseRecording } from '@lego-games/lego-racers/session-recording'
 import { replayOnPort } from '@lego-games/lego-racers/session-replay'
 import {
   clearViewerExtensions,
+  NEUTRAL_EXTENSION,
   registerViewerExtension,
 } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
 import { createRaceRecording } from './race-recording.ts'
@@ -125,7 +126,7 @@ describe('the session recording', () => {
   it('records nothing while an extension is registered', () => {
     // Arrange
     const store = createSessionRecordingStore(createMemoryBackend())
-    registerViewerExtension({ onTextureCreated: () => undefined, getRaceDisplay: () => null })
+    registerViewerExtension(NEUTRAL_EXTENSION)
 
     // Act
     const recording = createRaceRecording(
