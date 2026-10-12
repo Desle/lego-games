@@ -71,7 +71,10 @@ import {
 } from '../../services/game-folder/game-folder.ts'
 import { createIndexedDbSaveStorage } from '../../services/indexed-db-save-storage/indexed-db-save-storage.ts'
 import { createRaceMenuInputSource } from '../../services/race-menu-input-source/race-menu-input-source.ts'
-import { createRaceRecording } from '../../services/race-recording/race-recording.ts'
+import {
+  createRaceRecording,
+  getIsRaceRecordingRequested,
+} from '../../services/race-recording/race-recording.ts'
 import type { RaceRecording } from '../../services/race-recording/race-recording.types.ts'
 import { createRaceInputSource } from '../../services/race-input-source/race-input-source.ts'
 import { useRaceDisplayController } from '../race-display-controller/race-display-controller.ts'
@@ -296,7 +299,9 @@ export const useRaceController = (): RaceController => {
     (next: RaceStart) => {
       if (gameFiles === null) return
       sessionReference.current = next.session
-      recordingReference.current = createRaceRecording(next)
+      recordingReference.current = getIsRaceRecordingRequested(window.location.search)
+        ? createRaceRecording(next)
+        : null
       setScreen({ ...INITIAL_SCREEN, status: RaceStatus.LOADING })
       // Lets the loading state paint before the synchronous load.
       window.setTimeout(() => {

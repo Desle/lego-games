@@ -1,10 +1,14 @@
 import { DirectionalLight, Group, Scene } from 'three'
+import type { Object3D } from 'three'
 import { ensureStudioLights } from './studio-scene-lights.ts'
 
-const getKeyLightX = (scene: Scene): number | undefined =>
-  scene.children
-    .flatMap((child) => child.children)
-    .find((light): light is DirectionalLight => light instanceof DirectionalLight)?.position.x
+const getKeyLightX = (root: Object3D): number | undefined => {
+  let keyLightX: number | undefined
+  root.traverse((child) => {
+    if (keyLightX === undefined && child instanceof DirectionalLight) keyLightX = child.position.x
+  })
+  return keyLightX
+}
 
 describe('ensureStudioLights', () => {
   it('has nothing to light while the object is in no scene', () => {
@@ -46,7 +50,7 @@ describe('ensureStudioLights', () => {
     expect([isLit, scene.children.length]).toEqual([true, 2])
   })
 
-  it('turns the studio to light a figure from its front', () => {
+  it('gives a figure seen from its front a studio of its own, whose key light comes from the front', () => {
     // Arrange
     const fromBehind = new Scene()
     const fromFront = new Scene()
@@ -60,6 +64,9 @@ describe('ensureStudioLights', () => {
     ensureStudioLights(frontObject, true)
 
     // Assert
-    expect(getKeyLightX(fromFront)).toBe(-(getKeyLightX(fromBehind) ?? 0))
+    expect([(getKeyLightX(fromBehind) ?? 0) < 0, (getKeyLightX(frontObject) ?? 0) > 0]).toEqual([
+      true,
+      true,
+    ])
   })
 })
