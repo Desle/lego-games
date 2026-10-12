@@ -133,6 +133,27 @@ describe('createRace', () => {
     expect(getRacer(state.racerSet, 0).flags & 0x800000).toBe(0x800000)
   })
 
+  it('starts the black fade-out of the screen fader for 500 ms over the whole surface (0x00433525)', () => {
+    // Arrange
+    const definition = createFixtureDefinition()
+
+    // Act
+    const state = createRace(definition)
+
+    // Assert
+    expect(state.screenFader[0]).toMatchObject({
+      isActive: true,
+      isFadingOut: true,
+      red: 0,
+      green: 0,
+      blue: 0,
+      totalMilliseconds: 500,
+      remainingMilliseconds: 500,
+      playerIndex: null,
+    })
+    expect(state.screenFader[1]?.isActive).toBe(false)
+  })
+
   it('sets the rubber band bias to 0.05 on a mirrored track', () => {
     // Arrange
     const definition = { ...createFixtureDefinition(), isMirrored: true }

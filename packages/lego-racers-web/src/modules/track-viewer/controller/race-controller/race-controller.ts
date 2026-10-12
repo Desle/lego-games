@@ -70,6 +70,8 @@ import {
 } from '../../services/game-folder/game-folder.ts'
 import { createIndexedDbSaveStorage } from '../../services/indexed-db-save-storage/indexed-db-save-storage.ts'
 import { createRaceMenuInputSource } from '../../services/race-menu-input-source/race-menu-input-source.ts'
+import { createRaceRecording } from '../../services/race-recording/race-recording.ts'
+import type { RaceRecording } from '../../services/race-recording/race-recording.types.ts'
 import { createRaceInputSource } from '../../services/race-input-source/race-input-source.ts'
 import { createRaceViewport } from '../../services/race-viewport/race-viewport.ts'
 import { RaceStatus } from '../../types/race-status/race-status.ts'
@@ -178,6 +180,8 @@ export const useRaceController = (): RaceController => {
   )
   // The session the race that runs belongs to: a circuit's four races, or the one race of a single race.
   const sessionReference = useRef<GameSession | null>(null)
+  // The recording of the race that is loading or running (null when nothing is recorded).
+  const recordingReference = useRef<RaceRecording | null>(null)
   const advanceReference = useRef<(session: GameSession, racerCount: number) => void>(
     () => undefined
   )
@@ -285,6 +289,7 @@ export const useRaceController = (): RaceController => {
     (next: RaceStart) => {
       if (gameFiles === null) return
       sessionReference.current = next.session
+      recordingReference.current = createRaceRecording(next, globalThis.location.search)
       setScreen({ ...INITIAL_SCREEN, status: RaceStatus.LOADING })
       // Lets the loading state paint before the synchronous load.
       window.setTimeout(() => {
@@ -369,6 +374,7 @@ export const useRaceController = (): RaceController => {
   useEffect(() => {
     const container = containerReference.current
     if (assets === null || container === null) return undefined
+    const recording = recordingReference.current
     const viewport = createRaceViewport(container, assets, RACE_STAGE_SIZE)
     const input = createRaceInputSource()
     const menuInput = createRaceMenuInputSource()
@@ -398,15 +404,23 @@ export const useRaceController = (): RaceController => {
       const advance = advanceFrameClock(clock, time)
       clock = advance.clock
       if (advance.frameMilliseconds !== null && raceState.isRunning) {
-        const controls = getRacerControls(input.read())
+        const inputSnapshot = input.read()
+        const controls = getRacerControls(inputSnapshot)
         const powerUpRequest = developmentPowerUps?.take() ?? null
+        const menuKeys = menuInput.read()
+        recording?.addFrame({
+          milliseconds: advance.frameMilliseconds,
+          input: inputSnapshot,
+          menu: menuKeys,
+          grant: powerUpRequest,
+        })
         const step = stepRace(
           powerUpRequest === null
             ? raceState
             : getRaceStateWithGrants(raceState, [
                 { racer: 0, kind: powerUpRequest.kind, level: powerUpRequest.level },
               ]),
-          { controls: [controls], contacts: NO_RACE_CONTACTS, menu: menuInput.read() },
+          { controls: [controls], contacts: NO_RACE_CONTACTS, menu: menuKeys },
           advance.frameMilliseconds
         )
         const ghostStep = getGhostCars(step.raceState)
@@ -453,6 +467,7 @@ export const useRaceController = (): RaceController => {
           // anything else finishes the race and PlayCircuit continues.
           const session = sessionReference.current
           sessionReference.current = null
+          void recording?.finish()
           cancelAnimationFrame(animationFrame)
           if (raceState.exit === RaceExit.RESTART) {
             restartReference.current(session, raceState)
@@ -470,6 +485,7 @@ export const useRaceController = (): RaceController => {
     }
     animationFrame = requestAnimationFrame(onFrame)
     return () => {
+      void recording?.finish()
       cancelAnimationFrame(animationFrame)
       window.removeEventListener('keydown', resumeAudio)
       input.dispose()

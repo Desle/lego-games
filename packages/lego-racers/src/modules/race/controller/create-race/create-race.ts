@@ -53,8 +53,13 @@ import { placeCarBodyOnRoute } from '../../types/scripted-car-body/scripted-car-
 import { createSurfaceMaterials } from '../../types/surface-materials/surface-materials.ts'
 import { createRegistryObjects, getRegistryEntries } from '../registry-objects/registry-objects.ts'
 import { createCameraFovEffect } from '../camera-fov-effect/camera-fov-effect.ts'
-import { createScreenFader } from '../../types/screen-fader/screen-fader.ts'
+import { createScreenFader, startScreenFade } from '../../types/screen-fader/screen-fader.ts'
 import type { RacerSetup } from './create-race.types.ts'
+
+// Race_LoadTrackContent 0x00433480 starts the fader's first entry with 0x00494eb0 (0x00433525: 500 ms, the flag set so the black
+// fades away, no camera; the entry's colour is the reset black of 0x00490530).
+const RACE_START_FADE_MILLISECONDS = 500 // 0x0043351e
+const RACE_START_FADE_COLOUR = Object.freeze({ red: 0, green: 0, blue: 0 })
 
 // The laps of a race with one local player (0x004327f0).
 const SINGLE_PLAYER_LAP_COUNT = 3
@@ -360,7 +365,11 @@ export const createRace = (definition: RaceDefinition): RaceState => {
       )
     ),
     cameraFovEffects: Object.freeze(playerRacerIndices.map(() => createCameraFovEffect())),
-    screenFader: createScreenFader(),
+    screenFader: startScreenFade(
+      createScreenFader(),
+      { milliseconds: RACE_START_FADE_MILLISECONDS, isFadingOut: true, playerIndex: null },
+      RACE_START_FADE_COLOUR
+    ),
     powerUpStep,
     powerUpSetups: Object.freeze(setups.map((made) => made.setup)),
     getGroundPoint: getGroundPoint,

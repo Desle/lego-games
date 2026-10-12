@@ -146,6 +146,7 @@ class RenderRecorder:
                     "bitsPerPixel": pixel_format[3],
                     "masks": list(pixel_format[4:8]),
                     "pixels": encode(pixels),
+                    "colorKey": list(surface["color_key"]) if surface.get("color_key") else None,
                 }
             )
         return digest

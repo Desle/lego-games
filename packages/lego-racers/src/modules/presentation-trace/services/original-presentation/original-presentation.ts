@@ -106,6 +106,7 @@ const getTexture = (line: TextureLine): OriginalTexture =>
     bitsPerPixel: line.bitsPerPixel,
     masks: line.masks,
     pixels: getBytes(line.pixels),
+    colorKey: line.colorKey ?? null,
   })
 
 const getViewport = (line: ViewportLine): OriginalViewport =>

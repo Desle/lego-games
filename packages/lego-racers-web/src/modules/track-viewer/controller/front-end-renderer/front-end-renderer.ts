@@ -6,7 +6,7 @@ import type {
 } from '@lego-games/lego-racers/front-end'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import { createMenuViewport } from '../../services/menu-viewport/menu-viewport.ts'
-import { createBitmapFontPainter } from '../bitmap-font-painter/bitmap-font-painter.ts'
+import { createBitmapFontPainter } from '../../services/bitmap-font-painter/bitmap-font-painter.ts'
 import type { FrontEndRenderer } from './front-end-renderer.types.ts'
 
 const getCssColor = (color: number): string =>
@@ -85,11 +85,12 @@ export const createFrontEndRenderer = (
     return tintedCanvases.get(key) ?? null
   }
   return Object.freeze({
-    draw: (commands: readonly FrontEndDrawCommand[]) => {
+    draw: (commands: readonly FrontEndDrawCommand[], scriptedMilliseconds?: number) => {
       const context = canvas.getContext('2d')
       if (context === null) return
       const now = performance.now()
-      const deltaMilliseconds = lastTime === null ? 0 : Math.min(100, Math.floor(now - lastTime))
+      const deltaMilliseconds =
+        scriptedMilliseconds ?? (lastTime === null ? 0 : Math.min(100, Math.floor(now - lastTime)))
       lastTime = now
       context.clearRect(0, 0, canvas.width, canvas.height)
       context.imageSmoothingEnabled = false

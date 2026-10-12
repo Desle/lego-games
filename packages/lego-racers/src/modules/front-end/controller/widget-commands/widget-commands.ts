@@ -24,12 +24,19 @@ export const MENU_SURFACE = Object.freeze({ width: 640, height: 480 })
 const BUTTON_IMAGE_GAP = 0
 const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
 
-// The states of a button in the order of its style's six images, fonts and colours (hypothesis for the roles; the
-// focused colour is the bright one the menus show).
+// The states of a button in the order of its style's six images and fonts (hypothesis for the roles).
 const BUTTON_STATE_INDEX: Readonly<Record<ButtonState, number>> = Object.freeze({
   normal: 0,
   disabled: 1,
   focused: 5,
+})
+
+// The text colour of each state, among the style's six: the pixel trace of the main menu shows the original's buttons
+// in the third colour (dark yellow) and the focused one in the fifth (yellow); the disabled ones are grey (pixel-trace.md).
+const BUTTON_COLOR_INDEX: Readonly<Record<ButtonState, number>> = Object.freeze({
+  normal: 2,
+  disabled: 1,
+  focused: 4, // @check-allow traced-constants: the state index is measured from the pixel trace (hypothesis), not read from the drawing code
 })
 
 export const getCodeUnits = (text: string): readonly number[] =>
@@ -139,7 +146,7 @@ const getButtonCommands = (
   const imageName = getStringValue(getPropertyValues(style, 0x28)?.[index])
   const fontName = getStringValue(getPropertyValues(style, 0x29)?.[index])
   const colors = getPropertyValues(style, 0x2a) ?? []
-  const color = getColor(colors, 7 + index)
+  const color = getColor(colors, 7 + BUTTON_COLOR_INDEX[widget.state])
   const image = context.resources.getImage(imageName)
   const imageWidth = image?.width ?? 0
   const imageHeight = image?.height ?? 0

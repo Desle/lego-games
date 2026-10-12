@@ -200,13 +200,27 @@ const sampleTexture = (
   }
 }
 
-// The colour of one fragment into `scratch.source` (0..1): the texture operation, then nothing else.
+// Whether the texel nearest to (u, v) is the surface's colour key (the original's hardware does not draw it).
+const getIsKeyedTexel = (
+  texture: DecodedTexture,
+  state: DrawState,
+  u: number,
+  v: number
+): boolean => {
+  if (!state.isColorKeyEnabled || texture.keyedTexels === null) return false
+  const column = getTexelIndex(Math.floor(u * texture.width), texture.width, state.addressing)
+  const row = getTexelIndex(Math.floor(v * texture.height), texture.height, state.addressing)
+  return texture.keyedTexels[row * texture.width + column] === 1
+}
+
+// The colour of one fragment into `scratch.source` (0..1): the texture operation, then nothing else. False when the
+// fragment is a colour-keyed texel, which is not drawn.
 const shadeFragment = (
   context: DrawContext,
   scratch: Scratch,
   weights: readonly [number, number, number],
   corners: readonly [Corner, Corner, Corner]
-) => {
+): boolean => {
   const [first, second, third] = corners
   const [weightFirst, weightSecond, weightThird] = weights
   scratch.diffuse[0] = weightFirst * first.red + weightSecond * second.red + weightThird * third.red
@@ -226,7 +240,7 @@ const shadeFragment = (
     for (let channel = 0; channel < CHANNEL_COUNT; channel++) {
       scratch.source[channel] = (scratch.diffuse[channel] ?? 0) / CHANNEL_MAXIMUM
     }
-    return
+    return true
   }
   const u =
     (perspectiveFirst * first.u + perspectiveSecond * second.u + perspectiveThird * third.u) /
@@ -234,6 +248,7 @@ const shadeFragment = (
   const v =
     (perspectiveFirst * first.v + perspectiveSecond * second.v + perspectiveThird * third.v) /
     perspectiveTotal
+  if (getIsKeyedTexel(texture, context.state, u, v)) return false
   sampleTexture(texture, context.state, u, v, scratch.texel)
   for (let channel = 0; channel < CHANNEL_COUNT; channel++) {
     const texel = (scratch.texel[channel] ?? 0) / CHANNEL_MAXIMUM
@@ -242,6 +257,7 @@ const shadeFragment = (
         ? (texel * (scratch.diffuse[channel] ?? 0)) / CHANNEL_MAXIMUM
         : texel
   }
+  return true
 }
 
 // Alpha test, then blend into the colour buffer; returns whether the fragment wrote its colour.
@@ -326,7 +342,7 @@ const rasteriseTriangle = (
       if (context.state.isDepthTestEnabled && (depth < 0 || depth > (target.depths[offset] ?? 1))) {
         continue
       }
-      shadeFragment(context, scratch, weights, corners)
+      if (!shadeFragment(context, scratch, weights, corners)) continue
       if (!writeFragment(target, offset, context, scratch)) continue
       if (context.state.isDepthWriteEnabled) target.depths[offset] = depth
       target.textureIndices[offset] = context.textureIndex

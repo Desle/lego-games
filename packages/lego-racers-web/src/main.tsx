@@ -1,6 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { installPixelTraceHarness, RaceView } from './modules/track-viewer/index.ts'
+import {
+  installFrontEndPixelHarness,
+  installPixelTraceHarness,
+  RaceView,
+} from './modules/track-viewer/index.ts'
 import './styles.css'
 
 const rootElement = document.getElementById('root')
@@ -10,6 +14,7 @@ if (rootElement === null) throw new Error('index.html has no #root element')
 const isPixelTracePage = import.meta.env.DEV && window.location.search === '?pixel-trace'
 if (isPixelTracePage) {
   installPixelTraceHarness()
+  installFrontEndPixelHarness()
 } else {
   createRoot(rootElement).render(
     <StrictMode>
