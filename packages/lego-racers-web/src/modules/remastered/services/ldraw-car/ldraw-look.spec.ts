@@ -7,7 +7,7 @@ import {
 import { LookPreset } from './ldraw-look.types.ts'
 
 describe('getLookPreset', () => {
-  it('reads the look from the address and defaults to the photo look', () => {
+  it('reads the look from the address, defaults to the manual look and no longer offers the movie look', () => {
     // Arrange / Act
     const presets = [
       '?hd',
@@ -19,11 +19,11 @@ describe('getLookPreset', () => {
 
     // Assert
     expect(presets).toEqual([
-      LookPreset.PHOTO,
+      LookPreset.MANUAL,
       LookPreset.MANUAL,
       LookPreset.STUDIO,
-      LookPreset.MOVIE,
-      LookPreset.PHOTO,
+      LookPreset.MANUAL,
+      LookPreset.MANUAL,
     ])
   })
 })
@@ -34,8 +34,12 @@ describe('look labels', () => {
     const labels = getLookLabels()
 
     // Assert
-    expect(labels).toEqual(['Manual', 'Studio', 'Photo', 'LEGO Movie'])
-    expect(labels.map(getLookPresetFromLabel)).toEqual(Object.values(LookPreset))
+    expect(labels).toEqual(['Manual', 'Studio', 'Photo'])
+    expect(labels.map(getLookPresetFromLabel)).toEqual([
+      LookPreset.MANUAL,
+      LookPreset.STUDIO,
+      LookPreset.PHOTO,
+    ])
   })
 })
 

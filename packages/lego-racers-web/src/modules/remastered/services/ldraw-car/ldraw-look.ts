@@ -3,7 +3,8 @@ import { LookPreset } from './ldraw-look.types.ts'
 import type { LookAppearance } from './ldraw-look.types.ts'
 
 export const LOOK_PARAMETER = 'look'
-const DEFAULT_LOOK = LookPreset.PHOTO
+// The user prefers the manual look; it stays the default.
+const DEFAULT_LOOK = LookPreset.MANUAL
 
 const MANUAL_LOOK: LookAppearance = Object.freeze({
   label: 'Manual',
@@ -82,7 +83,10 @@ export const LOOK_APPEARANCES: Readonly<Record<LookPreset, LookAppearance>> = Ob
   [LookPreset.MOVIE]: MOVIE_LOOK,
 })
 
-const PRESETS: readonly LookPreset[] = Object.values(LookPreset)
+// The movie look is not offered until it is reworked (the user found it looked bad).
+const PRESETS: readonly LookPreset[] = Object.values(LookPreset).filter(
+  (preset) => preset !== LookPreset.MOVIE
+)
 
 // `?look=manual|studio|photo|movie`; the default is the photo look.
 export const getLookPreset = (search: string): LookPreset => {
