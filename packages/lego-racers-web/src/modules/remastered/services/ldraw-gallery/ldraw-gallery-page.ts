@@ -7,6 +7,7 @@ import {
 import type { BrickDatabase, CarDesign, PlacedBrick } from '@lego-games/lego-racers/car-builder'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
+import type { Object3D } from 'three'
 import {
   Box3,
   Color,
@@ -22,6 +23,7 @@ import {
 import { DEVELOPMENT_JAM_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
 import { createModelObject, loadEffectModel } from '../../../track-viewer/index.ts'
 import { createGameBrickMeshes } from '../ldraw-car/game-brick-meshes.ts'
+import { createLDrawPickupDrawing } from '../ldraw-pickup/ldraw-pickup-drawing.ts'
 import { createLDrawCarDrawing } from '../ldraw-car/ldraw-car-drawing.ts'
 import { GalleryMode, GalleryView } from './ldraw-gallery-page.types.ts'
 import type { GalleryResult, GalleryScene, PieceSheetResult } from './ldraw-gallery-page.types.ts'
@@ -51,6 +53,13 @@ const getArchive = (): Promise<JamArchive> => {
     .then((response) => response.arrayBuffer())
     .then((buffer) => openJamArchive(new Uint8Array(buffer)))
   return archivePromise
+}
+
+const prepareSheet = (width: number, height: number) => {
+  renderer.setSize(width, height, false)
+  renderer.setScissorTest(true)
+  renderer.setClearColor(new Color(BACKGROUND_COLOR))
+  renderer.clear()
 }
 
 const frameCamera = (object: Scene, view: GalleryView, aspect: number): PerspectiveCamera => {
@@ -140,10 +149,7 @@ const renderPieceSheet = async (
   const rows = Math.ceil(names.length / columns)
   const width = columns * cellSize * 2
   const height = rows * cellSize
-  renderer.setSize(width, height, false)
-  renderer.setScissorTest(true)
-  renderer.setClearColor(new Color(BACKGROUND_COLOR))
-  renderer.clear()
+  prepareSheet(width, height)
   const missing: string[] = []
   for (const [position, name] of names.entries()) {
     const piece = database.pieces.find((candidate) => candidate.name === name)
@@ -165,7 +171,16 @@ const renderPieceSheet = async (
   return { width, height, missing }
 }
 
-// Every named effect model (a POWERUP.WDB model such as PUBRICKY) alone, the game's drawing on the left of each pair.
+const getHasMesh = (scene: Scene): boolean => {
+  const meshes: Object3D[] = []
+  scene.traverse((child) => {
+    if (child instanceof Mesh) meshes.push(child)
+  })
+  return meshes.length > 0
+}
+
+// Every named effect model (`PUBRICKY:shield`: a POWERUP.WDB model and its look) alone, the game's drawing on the left of each pair and
+// the LDraw one on the right.
 const renderEffectSheet = async (
   names: readonly string[],
   columns: number,
@@ -176,28 +191,26 @@ const renderEffectSheet = async (
   const rows = Math.ceil(names.length / columns)
   const width = columns * cellSize * 2
   const height = rows * cellSize
-  renderer.setSize(width, height, false)
-  renderer.setScissorTest(true)
-  renderer.setClearColor(new Color(BACKGROUND_COLOR))
-  renderer.clear()
-  for (const [position, name] of names.entries()) {
-    const column = position % columns
-    const row = Math.floor(position / columns)
-    const scene = new Scene()
-    const modelObject = createModelObject(loadEffectModel(archive, name, name !== 'BARREL'))
-    scene.add(modelObject.group)
-    scene.updateMatrixWorld(true)
-    console.error(
-      'SIZE',
-      name,
-      JSON.stringify(new Box3().setFromObject(scene).min),
-      JSON.stringify(new Box3().setFromObject(scene).max)
-    )
-    const left = column * 2 * cellSize
-    const bottom = height - (row + 1) * cellSize
-    renderer.setViewport(left, bottom, cellSize, cellSize)
-    renderer.setScissor(left, bottom, cellSize, cellSize)
-    renderer.render(scene, frameCamera(scene, view, 1))
+  prepareSheet(width, height)
+  for (const [position, spec] of names.entries()) {
+    const [modelName = '', variant = null] = spec.split(':')
+    const gameScene = new Scene()
+    const isSkeletal = modelName !== 'BARREL'
+    gameScene.add(createModelObject(loadEffectModel(archive, modelName, isSkeletal)).group)
+    const drawing = createLDrawPickupDrawing({ modelName, variant })
+    const drawingScene = new Scene()
+    if (drawing !== null) drawingScene.add(drawing)
+    for (let attempt = 0; attempt < 50 && !getHasMesh(drawingScene); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+    const camera = frameCamera(gameScene, view, 1)
+    for (const [side, scene] of [gameScene, drawingScene].entries()) {
+      const left = ((position % columns) * 2 + side) * cellSize
+      const bottom = height - (Math.floor(position / columns) + 1) * cellSize
+      renderer.setViewport(left, bottom, cellSize, cellSize)
+      renderer.setScissor(left, bottom, cellSize, cellSize)
+      renderer.render(scene, camera)
+    }
   }
   return { width, height, missing: [] }
 }

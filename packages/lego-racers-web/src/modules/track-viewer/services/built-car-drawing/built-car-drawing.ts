@@ -19,15 +19,8 @@ export const disposeDrawing = (drawing: Object3D) => {
   for (const material of materials) material.dispose()
 }
 
-// A car built from bricks, in place of the mesh the original builds when a viewer extension has a drawing for it (the
-// original's mesh is hidden and the drawing, in the mesh's own frame, is shown with it); the model itself otherwise.
-export const showBuiltCarDrawing = (
-  model: ModelObject,
-  archive: JamArchive,
-  design: CarDesign
-): ModelObject => {
-  const drawing = getBuiltCarDrawing({ archive, design })
-  if (drawing === null) return model
+// A model with a drawing shown in its place: the model's own drawing is hidden and the drawing, in the model's frame, is shown.
+export const showDrawingInPlaceOfModel = (model: ModelObject, drawing: Object3D): ModelObject => {
   const { group, object } = model
   object.group.visible = false
   group.add(drawing)
@@ -41,4 +34,15 @@ export const showBuiltCarDrawing = (
       },
     },
   }
+}
+
+// A car built from bricks, in place of the mesh the original builds when a viewer extension has a drawing for it; the model itself
+// otherwise.
+export const showBuiltCarDrawing = (
+  model: ModelObject,
+  archive: JamArchive,
+  design: CarDesign
+): ModelObject => {
+  const drawing = getBuiltCarDrawing({ archive, design })
+  return drawing === null ? model : showDrawingInPlaceOfModel(model, drawing)
 }
