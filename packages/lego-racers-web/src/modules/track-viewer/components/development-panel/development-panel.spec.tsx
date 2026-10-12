@@ -8,6 +8,9 @@ const getProps = (overrides: Partial<DevelopmentPanelProps> = {}): DevelopmentPa
   onRaceStopped: vi.fn(),
   onRecordingDownloaded: vi.fn(),
   onEverythingUnlocked: vi.fn(),
+  textureVariants: ['ultrasharp'],
+  selectedTextureVariant: null,
+  onTextureVariantSelected: vi.fn(),
   onOverlayClosed: vi.fn(),
   ...overrides,
 })

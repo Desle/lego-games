@@ -3,6 +3,10 @@ import type { StageSize, TexturePixels, WindowMetrics } from './high-definition-
 
 const DEFAULT_VARIANT = 'ultrasharp'
 
+// The page's query string, or none when the viewport runs outside a page (the Node trace harnesses).
+export const getPageSearch = (): string =>
+  'location' in globalThis ? globalThis.location.search : ''
+
 export const getIsHighDefinitionEnabled = (search: string): boolean =>
   import.meta.env.DEV && new URLSearchParams(search).has('hd')
 
@@ -51,7 +55,7 @@ export const loadHighDefinitionPixels = async (
   bitmapPath: string,
   original: TexturePixels
 ): Promise<TexturePixels | null> => {
-  const variant = getHighDefinitionVariant(globalThis.location.search)
+  const variant = getHighDefinitionVariant(getPageSearch())
   const pack = await readPixels(getHighDefinitionUrl(bitmapPath, variant)).catch(() => null)
   if (pack === null) return null
   return { colors: getMaskedColors(pack, original), width: pack.width, height: pack.height }
