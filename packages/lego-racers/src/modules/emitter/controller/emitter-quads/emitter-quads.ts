@@ -7,7 +7,6 @@ import type {
   BillboardCamera,
   EmitterQuad,
   EmitterQuadCorner,
-  EmitterQuadView,
 } from '../../types/emitter-quad.types.ts'
 
 const HALF = getFloatFromBits(0x3f000000)
@@ -137,39 +136,3 @@ export const getEmitterQuads = (
     )
   )
 }
-
-// The smallest quad the engine submits, in pixels squared of the 640 x 480 surface: measured in the original's draws of the
-// snow of a race preview (a quad of 1.36 pixels across is never drawn, one of 1.44 is; the cut is below the emitter's own
-// code, which only drops a size that is not above zero, so the exact place is not found).
-export const MINIMUM_QUAD_PIXEL_AREA = 2
-
-const getEdge = (from: EmitterQuadCorner, to: EmitterQuadCorner): Vector3 =>
-  Object.freeze({ x: to.x - from.x, y: to.y - from.y, z: to.z - from.z })
-
-// The area the billboard covers in pixels squared at this distance in front of the camera: its area in the world times
-// the square of the pixels one unit spans there (`focalLengthPixels` over the depth along the camera's forward vector).
-export const getEmitterQuadPixelArea = (
-  quad: EmitterQuad,
-  camera: EmitterQuadView,
-  focalLengthPixels: number
-): number => {
-  const [first, second, , fourth] = quad.corners
-  const along = getEdge(first, second)
-  const down = getEdge(first, fourth)
-  const area = Math.hypot(
-    along.y * down.z - along.z * down.y,
-    along.z * down.x - along.x * down.z,
-    along.x * down.y - along.y * down.x
-  )
-  const depth =
-    (first.x - camera.position.x) * camera.forward.x +
-    (first.y - camera.position.y) * camera.forward.y +
-    (first.z - camera.position.z) * camera.forward.z
-  return depth <= 0 ? 0 : (area * focalLengthPixels * focalLengthPixels) / (depth * depth)
-}
-
-export const getIsEmitterQuadDrawn = (
-  quad: EmitterQuad,
-  camera: EmitterQuadView,
-  focalLengthPixels: number
-): boolean => getEmitterQuadPixelArea(quad, camera, focalLengthPixels) >= MINIMUM_QUAD_PIXEL_AREA

@@ -18,11 +18,10 @@ export type CinemaVertexEffect = {
   readonly instanceName: string
 }
 
-// What a vertex effect does to an instance while it is on.
-export type CinemaColourShift = {
-  readonly instanceName: string
-  readonly shifts: readonly number[]
-  readonly biases: readonly number[]
+// A vertex effect a dummy on the timeline has started.
+export type ActiveCinemaVertexEffect = {
+  readonly dummyIndex: number
+  readonly effect: CinemaVertexEffect
 }
 
 // The keywords of a list of reactions (`0x50`..`0x57`): an entry of the timeline's section (`0x56`/`0x57`: a dummy) that
