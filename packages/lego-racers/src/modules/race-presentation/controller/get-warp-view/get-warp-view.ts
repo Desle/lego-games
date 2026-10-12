@@ -67,6 +67,8 @@ export const getWarpView = (
     driverAnimation: getFigureAnimationState(racer.vehicle.driverFigure),
     colourShift: getDisplayedColourShift(racer),
     partCentres: null,
+    shadow: null,
+    isOffTrack: false,
   })
   const racerView = Object.freeze({
     ...getCameraRacerView(racer, turboLevel),
