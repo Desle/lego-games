@@ -166,3 +166,9 @@ Not mechanically decidable; reviewers and agents uphold these.
 - **Rule**: Names match the business terms in `.docs/CONTEXT.md` and the specs exactly.
 - **Why**: Code that speaks the domain language needs no translation layer in anyone’s head.
 - **Enforced by**: code review (not mechanically decidable)
+
+### A visual change is done when its pixel-trace case passes
+
+- **Rule**: A change to what the viewer draws (geometry, textures, materials, decals, draw order, effects) is done only when `pnpm run pixel-trace` passes a case that shows it on the screen. Add the case to `pixel-trace-cases.ts` first, watch it fail, then fix.
+- **Why**: The render and decal traces compare the engine's data with the original's, not the pixels the viewer produces: an oil slick whose triangles matched still drew its picture upside down.
+- **Enforced by**: code review; `pnpm run pixel-trace` (needs the original files and Chrome, skips without them; not part of `ci`). See `.docs/reverse-engineering/pixel-trace.md`.

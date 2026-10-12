@@ -1,21 +1,14 @@
+import { getChannel } from '../pixel-trace/decode-texture.ts'
 import type { OriginalTexture } from '../../types/presentation-trace.types.ts'
 import type { PortTexture, Rgb, TextureDifference } from './render-trace.types.ts'
 import type { TextureMatch } from './texture-matching.types.ts'
 
 const GRID_SIZE = 16
-const CHANNEL_MAXIMUM = 255
 const BYTES_PER_COLOR = 4
 // Colours reach the surface in 5 or 6 bits per channel, so identical pictures differ by up to this much.
 const QUANTISATION_LEVELS = 6
 // A picture further than this from every port texture has no counterpart.
 const MAXIMUM_DIFFERENCE = 32
-
-const getChannel = (value: number, mask: number): number => {
-  if (mask === 0) return CHANNEL_MAXIMUM
-  const shift = Math.clz32(mask & -mask) ^ 31
-  const maximum = mask >>> shift
-  return Math.round((((value & mask) >>> shift) * CHANNEL_MAXIMUM) / maximum)
-}
 
 const getOriginalColor = (texture: OriginalTexture, x: number, y: number): Rgb => {
   const bytesPerPixel = texture.bitsPerPixel / 8

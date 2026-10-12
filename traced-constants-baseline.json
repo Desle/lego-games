@@ -6692,18 +6692,6 @@
     },
     {
       "path": "packages/lego-racers/src/modules/presentation-trace/controller/render-trace/texture-matching.ts",
-      "scope": "CHANNEL_MAXIMUM",
-      "literal": "255",
-      "count": 1
-    },
-    {
-      "path": "packages/lego-racers/src/modules/presentation-trace/controller/render-trace/texture-matching.ts",
-      "scope": "getChannel.shift",
-      "literal": "31",
-      "count": 1
-    },
-    {
-      "path": "packages/lego-racers/src/modules/presentation-trace/controller/render-trace/texture-matching.ts",
       "scope": "getDifference",
       "literal": "3",
       "count": 1

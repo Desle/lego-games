@@ -90,7 +90,8 @@ const getTexture = (
   textures: readonly SceneTexture[],
   textureIndex: number | null,
   material: SceneMaterial,
-  cache: TextureCache
+  cache: TextureCache,
+  isRowOrderKept: boolean
 ): DataTexture | null => {
   const bitmap = textureIndex === null ? null : (textures[textureIndex]?.bitmap ?? null)
   if (textureIndex === null || bitmap === null) return null
@@ -98,7 +99,7 @@ const getTexture = (
   const cached = cache.get(key)
   if (cached !== undefined) return cached
   const texture = new DataTexture(
-    getRowsReversed(bitmap.colors, bitmap.width, bitmap.height),
+    isRowOrderKept ? bitmap.colors : getRowsReversed(bitmap.colors, bitmap.width, bitmap.height),
     bitmap.width,
     bitmap.height,
     RGBAFormat
@@ -148,10 +149,11 @@ const getBlendingParameters = (sceneMaterial: SceneMaterial): BlendingParameters
 export const createSceneMaterial = (
   sceneMaterial: SceneMaterial,
   textures: readonly SceneTexture[],
-  cache: TextureCache
+  cache: TextureCache,
+  isRowOrderKept = false
 ): Material => {
   const parameters = {
-    map: getTexture(textures, sceneMaterial.textureIndex, sceneMaterial, cache),
+    map: getTexture(textures, sceneMaterial.textureIndex, sceneMaterial, cache, isRowOrderKept),
     vertexColors: true,
     // 0x1000ebd0 culls in screen space: it draws a face only when its corners turn counter-clockwise on
     // screen, which is three.js's front face for the same world, so only front faces are drawn.
