@@ -1,6 +1,6 @@
 import { DuplicateNameError } from '../../../../shared/errors/gol-file-errors.ts'
 import { drawRandomLowByte, drawRandomRemainder } from '../../../random-table/index.ts'
-import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
+import type { FloatArithmetic, Matrix3, Vector3 } from '../../../simulation-math/index.ts'
 import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import type {
   BirthProgress,
@@ -283,11 +283,21 @@ const setInstance = (
     : getPoolWithInstance(pool, instanceIndex, change(instance))
 }
 
+// 0x004af670.
+const MILLISECONDS_PER_SECOND = 1000
+
 export const setEmitterPosition = (
   pool: EmitterPool,
   handleIndex: number,
   position: Vector3
 ): EmitterPool => setInstance(pool, handleIndex, (instance) => ({ ...instance, position }))
+
+// 0x0043e3fb and the like: the emitter's basis takes a frame's rotation as it is (frame slot +0x44).
+export const setEmitterBasis = (
+  pool: EmitterPool,
+  handleIndex: number,
+  basis: Matrix3
+): EmitterPool => setInstance(pool, handleIndex, (instance) => ({ ...instance, basis }))
 
 export const setEmitterOrientation = (
   arithmetic: FloatArithmetic,
@@ -301,11 +311,21 @@ export const setEmitterOrientation = (
     basis: getEmitterBasis(arithmetic, facing, up),
   }))
 
+// 0x00489690: the vector, in units per millisecond, becomes the offset every particle's velocity (per second) gets.
 export const setEmitterVelocityOffset = (
+  arithmetic: FloatArithmetic,
   pool: EmitterPool,
   handleIndex: number,
-  velocityOffset: Vector3
-): EmitterPool => setInstance(pool, handleIndex, (instance) => ({ ...instance, velocityOffset }))
+  velocity: Vector3
+): EmitterPool =>
+  setInstance(pool, handleIndex, (instance) => ({
+    ...instance,
+    velocityOffset: Object.freeze({
+      x: arithmetic.storeFloat(arithmetic.multiply(velocity.x, MILLISECONDS_PER_SECOND)),
+      y: arithmetic.storeFloat(arithmetic.multiply(velocity.y, MILLISECONDS_PER_SECOND)),
+      z: arithmetic.storeFloat(arithmetic.multiply(velocity.z, MILLISECONDS_PER_SECOND)),
+    }),
+  }))
 
 // 0x004897e0 when the period has run out: the first draw's low byte must reach the chance, the second picks the
 // definition point; the point becomes the velocity of a new particle.

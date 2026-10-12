@@ -44,6 +44,8 @@ export const createTestSkeletonInstance = (
   name,
   animation: TEST_ANIMATION,
   skeleton: null,
+  rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+  scale: 1,
   clip: createSkeletonAnimationState(TEST_ANIMATION, 0),
   isAnimated: true,
   otherFlags: 0,

@@ -13,6 +13,7 @@ import { getRouteDrivingFrames } from '../route-driving/route-driving.ts'
 import {
   createTraceScenario,
   getIdleFrames,
+  getPowerSlideFrames,
   getSteeringSweepFrames,
   getWeavingFrames,
   holdBindings,
@@ -73,6 +74,7 @@ const getCases = (): readonly ScenarioCase[] => {
   return [
     { scenario: royalKnights('royal-knights-idle', getIdleFrames(300)), expected: null },
     { scenario: royalKnights('royal-knights-steering', getSteeringSweepFrames()), expected: null },
+    { scenario: royalKnights('royal-knights-power-slide', getPowerSlideFrames()), expected: null },
     {
       scenario: royalKnights('royal-knights-weaving', getWeavingFrames(1200)),
       expected: { frame: 1208, field: 'powerUps.registry' },
