@@ -1,10 +1,12 @@
 import type { SceneMesh } from '@lego-games/lego-racers/scene'
-import type { Group } from 'three'
 import { Group as ThreeGroup, Matrix4, Vector3 } from 'three'
 import type { RacerPartDrawingRequest } from './ldraw-racer-drawing.types.ts'
-import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
-import { applyPlasticLook } from '../ldraw-car/ldraw-plastic.ts'
-import { disposeObject } from './dispose-object.ts'
+import { LDrawDetail } from '../ldraw-library/ldraw-library-loader.types.ts'
+import {
+  createMaterialSet,
+  getPreparedModel,
+  instantiateModel,
+} from '../ldraw-car/detailed-model.ts'
 import { getBatchSurfaces } from './model-surface.ts'
 import { createPoseControls, createSkeletonPoseSampler } from './skeleton-pose.ts'
 import { getWheelSet } from './ldraw-wheel-sets.ts'
@@ -18,7 +20,7 @@ import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-an
 const LDRAW_UNITS_PER_STUD = 20
 const RAW_UNITS_PER_STUD = 64
 const LDRAW_UNITS_PER_RAW_UNIT = LDRAW_UNITS_PER_STUD / RAW_UNITS_PER_STUD
-const TYRE_COLOR_CODE = 0
+const TYRE_COLOR_CODE = 256
 const DEFAULT_RIM_COLOR_CODE = 72
 const DIRECT_COLOR_PREFIX = '0x2'
 const MAXIMUM_WIDTH_SCALE = 4
@@ -98,21 +100,19 @@ export const createLDrawWheelsDrawing = (
       .multiply(new Matrix4().makeScale(scale, scale, scale))
     return { wheel, holder, set, local, widthScale }
   })
-  const loadedGroups: Group[] = []
+  const materials = createMaterialSet()
   let isDisposed = false
   const loads = [...new Set(placements.map((placement) => placement.set))].map((set) => {
     const text = [
       ...(set.tyrePart === null ? [] : [getPartLine(TYRE_COLOR_CODE, set.tyrePart)]),
       getPartLine(set.rimColorCode ?? hubColorCode, set.rimPart),
     ].join('\n')
-    return parseLDrawModel(text).then(
-      (model) => {
+    return getPreparedModel(text, LDrawDetail.HIGH, true).then(
+      (prepared) => {
         if (isDisposed) return
-        applyPlasticLook(model)
-        loadedGroups.push(model)
         for (const placement of placements.filter((candidate) => candidate.set === set)) {
           // A drum is one tyre stretched along its axle to the drum's width, not tyres side by side (eight wheels on a car).
-          const clone = model.clone()
+          const clone = instantiateModel(prepared, materials)
           clone.scale.z = placement.widthScale
           placement.holder.add(clone)
         }
@@ -137,7 +137,7 @@ export const createLDrawWheelsDrawing = (
     ...controls,
     dispose: () => {
       isDisposed = true
-      for (const group of loadedGroups) disposeObject(group)
+      materials.dispose()
     },
   })
 }

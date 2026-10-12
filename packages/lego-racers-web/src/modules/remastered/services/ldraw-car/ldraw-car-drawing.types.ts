@@ -7,7 +7,9 @@ export type LDrawCarDrawing = {
   readonly object: Group
   readonly document: LDrawCarDocument
   readonly origin: CarOrigin
-  // Resolves when the library has delivered the parts (or the fallback has been drawn in their place).
+  // Resolves when the car's parts are drawn in the low resolution (or the fallback has been drawn in their place).
+  readonly shown: Promise<void>
+  // Resolves when the high resolution is there too, the one drawn up close.
   readonly settled: Promise<void>
 }
 

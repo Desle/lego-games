@@ -20,7 +20,17 @@ import {
   LOOK_PARAMETER,
   setActiveLookPreset,
 } from '../ldraw-car/ldraw-look.ts'
+import {
+  createPerformancePass,
+  getIsPerformanceRequested,
+} from '../performance-monitor/performance-monitor.ts'
+import { setShaderPrecompiler } from '../ldraw-car/shader-precompiler.ts'
 import { createLDrawPickupDrawing } from '../ldraw-pickup/ldraw-pickup-drawing.ts'
+import {
+  getIsStudLogoRequested,
+  setIsStudLogoShown,
+  STUD_LOGOS_PARAMETER,
+} from '../ldraw-library/stud-logos.ts'
 import { loadLDrawModelIndex, getLDrawModelIndex } from '../ldraw-models/ldraw-model-client.ts'
 import { createLDrawRacerCar } from '../ldraw-racer-model/ldraw-racer-car.ts'
 import { createLDrawRacerDriver } from '../ldraw-racer-model/ldraw-racer-driver.ts'
@@ -62,6 +72,7 @@ const getIsLDrawRequested = (search: string): boolean =>
 export const registerRemastered = async (search: string) => {
   await loadLDrawModelIndex()
   setActiveLookPreset(getLookPreset(search))
+  setIsStudLogoShown(getIsStudLogoRequested(search))
   const settings = {
     search,
     isChassisFallbackUsed: getIsChassisFallbackRequested(search),
@@ -79,12 +90,32 @@ export const registerRemastered = async (search: string) => {
       getIsLDrawRequested(search) ? createLDrawRacerDriver(request, search) : null,
     getRaceRenderPass: (request) => {
       const mode = getShadowMode(search)
-      if (mode === ShadowMode.CLASSIC) return null
-      return createShadowPass(
-        request,
-        mode,
-        getTrackSun(search, request.trackKey, request.trackGroup)
+      const shadowPass =
+        mode === ShadowMode.CLASSIC
+          ? null
+          : createShadowPass(
+              request,
+              mode,
+              getTrackSun(search, request.trackKey, request.trackGroup)
+            )
+      const pass = getIsPerformanceRequested(search)
+        ? createPerformancePass(request, shadowPass)
+        : shadowPass
+      // Programs depend on the scene's lights: with none yet (no car has posed), compiling now would be wasted.
+      setShaderPrecompiler((object) =>
+        request.trackScene.getObjectByProperty('isDirectionalLight', true) === undefined
+          ? Promise.resolve()
+          : request.renderer
+              .compileAsync(object, request.camera, request.trackScene)
+              .then(() => undefined)
       )
+      return {
+        beforeRender: () => pass?.beforeRender(),
+        dispose: () => {
+          setShaderPrecompiler(null)
+          pass?.dispose()
+        },
+      }
     },
     getEffectModelDrawing: (request) =>
       getIsLDrawRequested(search) ? createLDrawPickupDrawing(request) : null,
@@ -95,6 +126,7 @@ export const registerRemastered = async (search: string) => {
       `chassis=${getIsChassisFallbackRequested(search) ? GAME_CHASSIS : 'recipe'}`,
       `shadows=${getShadowMode(search)}`,
       `look=${getLookPreset(search)}`,
+      `studlogos=${getIsStudLogoRequested(search) ? 'on' : 'off'}`,
     ],
     getSoundReplacement: (context, archivePath) =>
       audioVariant === null
@@ -136,6 +168,17 @@ const selectChassis = (chassis: string | null) => {
 const selectLook = (label: string | null) => {
   const url = new URL(globalThis.location.href)
   url.searchParams.set(LOOK_PARAMETER, getLookPresetFromLabel(label))
+  if (!url.searchParams.has('hd')) url.searchParams.set('hd', '')
+  globalThis.location.assign(url.toString())
+}
+
+const STUD_LOGOS_LABEL = 'On'
+
+// Switching the stud logos reloads the page too: the models are built with their studs. Off draws plain studs everywhere.
+const selectStudLogos = (label: string | null) => {
+  const url = new URL(globalThis.location.href)
+  if (label === null) url.searchParams.set(STUD_LOGOS_PARAMETER, '0')
+  else url.searchParams.delete(STUD_LOGOS_PARAMETER)
   if (!url.searchParams.has('hd')) url.searchParams.set('hd', '')
   globalThis.location.assign(url.toString())
 }
@@ -193,12 +236,21 @@ export const getRemasteredSelectors = async (
       onSelected: selectShadows,
     },
     {
-      label: 'Look (reloads): Manual / Studio / Photo / LEGO Movie',
+      label: 'Look (reloads): Manual / Photo / Instructions / Toon / Game / Retro 1999',
       options: getLookLabels(),
       selected: getIsRemasteredRequested(search)
         ? LOOK_APPEARANCES[getLookPreset(search)].label
         : null,
       onSelected: selectLook,
+    },
+    {
+      label: 'Stud logos (reloads)',
+      options: [STUD_LOGOS_LABEL],
+      selected:
+        getIsRemasteredRequested(search) && getIsStudLogoRequested(search)
+          ? STUD_LOGOS_LABEL
+          : null,
+      onSelected: selectStudLogos,
     },
     getModelSelector(),
   ]

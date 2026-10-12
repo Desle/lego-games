@@ -968,6 +968,13 @@
 0042f240 Profile_GetGhostBeatenFlags
 00488010 RaceSelectScreen_ShowRace
 00487b50 RaceSelectScreen_CreateWidgets
+00410300 MaterialAnimation_AdvanceEntries
+00410430 MaterialAnimationEntry_Start
+00410750 MaterialTable_SetSlot
+00410770 MaterialAnimationRow_Link
+00416040 World_Draw
+00435a00 Race_DrawEntities
+004357b0 Race_DrawView
 0043f530 Vehicle_UpdateCurseFigure
 0045aeb0 PowerUps_StartCurse
 00452970 Curse_Finish

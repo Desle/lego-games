@@ -45,6 +45,7 @@ const SCENE: Scene = {
   skeletons: [],
   animations: [],
   instances: [],
+  sprites: [],
   cameras: [],
   ambientLights: [],
   directionalLights: [],
