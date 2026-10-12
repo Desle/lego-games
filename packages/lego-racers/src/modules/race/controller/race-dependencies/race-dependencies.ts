@@ -1,3 +1,4 @@
+import { getRacerSetWithCollisionBodies } from '../collision-bodies/collision-bodies.ts'
 import {
   activatePowerUp,
   advanceComputerPowerUpUse,
@@ -160,7 +161,7 @@ const deliverContacts: RacerSetBoundary = (context, racerSet, stepMilliseconds) 
     )
   )
   const refreshed: RaceRacerSet = Object.freeze({
-    ...bricked,
+    ...getRacerSetWithCollisionBodies(bricked),
     pendingContacts: NO_RACE_CONTACTS,
     registryEntries: getRegistryEntries(context.arithmetic, bricked, bricked.registryEntries),
   })

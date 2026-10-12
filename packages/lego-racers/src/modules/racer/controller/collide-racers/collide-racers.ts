@@ -14,6 +14,7 @@ import type {
 import { getFigureBounds } from '../../types/figure/figure.ts'
 import { getRacer, setRacer } from '../../types/racer-state/racer-state.ts'
 import type {
+  CollisionBodyNode,
   Racer,
   RacerCollisionDependencies,
   RacerPassDependencies,
@@ -21,7 +22,11 @@ import type {
   RacerSetBoundary,
   RacerSetContext,
 } from '../../types/racer.types.ts'
-import { endRacerKick, respondToRacerContact } from '../racer-contact/racer-contact.ts'
+import {
+  endRacerKick,
+  respondToBodyContact,
+  respondToRacerContact,
+} from '../racer-contact/racer-contact.ts'
 import { endTimedEffect, transferTimedEffect } from '../timed-effect/timed-effect.ts'
 
 const CONTACT_TIMER_PERIOD_MILLISECONDS = 750 // 0x2ee, 0x00438e60
@@ -54,6 +59,33 @@ const getBox = (racer: Racer): OrientedBox => {
   })
 }
 
+const getIsRacerNode = (racerSet: RacerSet, nodeNumber: number): boolean =>
+  nodeNumber < racerSet.racers.length
+
+const getBodyNode = (racerSet: RacerSet, nodeNumber: number): CollisionBodyNode | undefined =>
+  racerSet.collisionBodies[nodeNumber - racerSet.racers.length]
+
+// The shape a node holds, whichever it is: a racer's display figure, or a registered body's figure (rigid body +4).
+const getNodeSphere = (
+  context: RacerSetContext,
+  racerSet: RacerSet,
+  nodeNumber: number
+): BoundingSphere =>
+  getIsRacerNode(racerSet, nodeNumber)
+    ? getRacerSphere(context, getRacer(racerSet, nodeNumber))
+    : (getBodyNode(racerSet, nodeNumber)?.body.sphere ?? { centre: ZERO_VECTOR3, radius: 0 })
+
+const getNodeInterval = (
+  context: RacerSetContext,
+  racerSet: RacerSet,
+  nodeNumber: number
+): BoundingInterval =>
+  getBoundingInterval(context.arithmetic, getNodeSphere(context, racerSet, nodeNumber))
+
+// The node's `+0x24`: a racer's node always is active; a body's ends with its hazard.
+const getIsNodeActive = (racerSet: RacerSet, nodeNumber: number): boolean =>
+  getIsRacerNode(racerSet, nodeNumber) || getBodyNode(racerSet, nodeNumber)?.isActive === true
+
 // 0x0042fc10: every timer counts the step; one that reaches its period fires its event and ends.
 const stepContactTimers = (
   context: RacerSetContext,
@@ -78,14 +110,14 @@ const stepContactTimers = (
 // than the largest so far is moved back past every element larger than it (equal keys stay in order).
 const sortByIntervalMinimum = (context: RacerSetContext, racerSet: RacerSet): readonly number[] => {
   const { getIsBelow, getIsBelowOrEqual } = context.arithmetic
-  const getKey = (racerIndex: number): number =>
-    getInterval(context, getRacer(racerSet, racerIndex)).minimum
+  const getKey = (nodeNumber: number): number =>
+    getNodeInterval(context, racerSet, nodeNumber).minimum
   const order = [...racerSet.collisionOrder]
   for (let position = 1; position < order.length; position += 1) {
-    const racerIndex = order[position]
+    const nodeNumber = order[position]
     const previous = order[position - 1]
-    if (racerIndex === undefined || previous === undefined) continue
-    const key = getKey(racerIndex)
+    if (nodeNumber === undefined || previous === undefined) continue
+    const key = getKey(nodeNumber)
     if (!getIsBelow(key, getKey(previous))) continue
     order.splice(position, 1)
     let target = 0
@@ -96,42 +128,75 @@ const sortByIntervalMinimum = (context: RacerSetContext, racerSet: RacerSet): re
         break
       }
     }
-    order.splice(target, 0, racerIndex)
+    order.splice(target, 0, nodeNumber)
   }
   return Object.freeze(order)
 }
 
-// 0x0043ab90 with 0x0043ab10: for each racer in list order, the racers after it whose sphere starts no
+// 0x0043ab10: the box test of two shapes that met, and the answer of the racer's listener (0x00438560). A pair of two
+// racers is answered by the first (node flags 0x5: no reciprocal call); a racer and a registered body (node flags
+// 0x1) by the racer whichever comes first, because the body's own listener (0x004513d0) does nothing and the
+// reciprocal call gives the racer the pair with itself first. Two bodies do nothing.
+const answerOverlap = (
+  context: RacerSetContext,
+  racerSet: RacerSet,
+  firstNode: number,
+  secondNode: number,
+  dependencies: RacerCollisionDependencies
+): RacerSet => {
+  const { getIsEqual } = context.arithmetic
+  const isFirstRacer = getIsRacerNode(racerSet, firstNode)
+  const isSecondRacer = getIsRacerNode(racerSet, secondNode)
+  if (isFirstRacer && isSecondRacer) {
+    const contact = getBoxContact(
+      context.arithmetic,
+      getBox(getRacer(racerSet, firstNode)),
+      getBox(getRacer(racerSet, secondNode))
+    )
+    if (contact === undefined || getIsEqual(contact.depth, 0)) return racerSet
+    return respondToRacerContact(context, racerSet, firstNode, secondNode, contact, dependencies)
+  }
+  if (!isFirstRacer && !isSecondRacer) return racerSet
+  const racerIndex = isFirstRacer ? firstNode : secondNode
+  const bodyNode = getBodyNode(racerSet, isFirstRacer ? secondNode : firstNode)
+  if (bodyNode === undefined) return racerSet
+  const contact = getBoxContact(
+    context.arithmetic,
+    getBox(getRacer(racerSet, racerIndex)),
+    bodyNode.body.box
+  )
+  if (contact === undefined || getIsEqual(contact.depth, 0)) return racerSet
+  return respondToBodyContact(context, racerSet, racerIndex, bodyNode.body, contact, dependencies)
+}
+
+// 0x0043ab90 with 0x0043ab10: for each node in list order, the nodes after it whose sphere starts no
 // further than the end of its own are tested; spheres that overlap go on to the box test, and a
-// contact with a depth that is not 0 is answered by the first racer's listener (node flags 0x5: no
-// reciprocal call). The first racer's sphere is read again for every candidate because the answer moves it.
+// contact with a depth that is not 0 is answered. The first node's sphere is read again for every
+// candidate because the answer moves it.
 const sweepRacerPairs = (
   context: RacerSetContext,
   racerSet: RacerSet,
   dependencies: RacerCollisionDependencies
 ): RacerSet => {
-  const { getIsEqual, getIsBelowOrEqual } = context.arithmetic
+  const { getIsBelowOrEqual } = context.arithmetic
   const order = racerSet.collisionOrder
   let current = racerSet
-  for (const [position, firstIndex] of order.entries()) {
-    for (const secondIndex of order.slice(position + 1)) {
-      const first = getRacer(current, firstIndex)
-      const second = getRacer(current, secondIndex)
-      const firstSphere = getRacerSphere(context, first)
+  for (const [position, firstNode] of order.entries()) {
+    if (!getIsNodeActive(current, firstNode)) continue
+    for (const secondNode of order.slice(position + 1)) {
+      const firstSphere = getNodeSphere(context, current, firstNode)
       const firstMaximum = getBoundingInterval(context.arithmetic, firstSphere).maximum
-      if (!getIsBelowOrEqual(getInterval(context, second).minimum, firstMaximum)) break
-      if (!getSpheresOverlap(context.arithmetic, firstSphere, getRacerSphere(context, second)))
-        continue
-      const contact = getBoxContact(context.arithmetic, getBox(first), getBox(second))
-      if (contact === undefined || getIsEqual(contact.depth, 0)) continue
-      current = respondToRacerContact(
-        context,
-        current,
-        firstIndex,
-        secondIndex,
-        contact,
-        dependencies
+      const secondSphere = getNodeSphere(context, current, secondNode)
+      if (
+        !getIsBelowOrEqual(
+          getBoundingInterval(context.arithmetic, secondSphere).minimum,
+          firstMaximum
+        )
       )
+        break
+      if (!getIsNodeActive(current, secondNode)) continue
+      if (!getSpheresOverlap(context.arithmetic, firstSphere, secondSphere)) continue
+      current = answerOverlap(context, current, firstNode, secondNode, dependencies)
     }
   }
   return current
@@ -147,22 +212,24 @@ const touchRegistryEntries = (
   racerSet: RacerSet,
   dependencies: RacerPassDependencies
 ): RacerSet => {
-  const racers = racerSet.collisionOrder.map((racerIndex) => {
-    const racer = getRacer(racerSet, racerIndex)
-    // 0x0043aaf0: the registry walk reads the racer's composite volume (racer +0x1c) and its cached x extents, as
-    // the touch test does; the sort and the racer pairs read the figure's sphere.
-    const interval =
-      racer.vehicle.volume === null
-        ? getInterval(context, racer)
-        : getBoundingInterval(context.arithmetic, racer.vehicle.volume)
-    return {
-      racer: racerIndex,
-      isComputer: racer.controllerKind === COMPUTER_CONTROLLER,
-      isActive: true,
-      minimumExtent: interval.minimum,
-      maximumExtent: interval.maximum,
-    }
-  })
+  const racers = racerSet.collisionOrder
+    .filter((nodeNumber) => getIsRacerNode(racerSet, nodeNumber))
+    .map((racerIndex) => {
+      const racer = getRacer(racerSet, racerIndex)
+      // 0x0043aaf0: the registry walk reads the racer's composite volume (racer +0x1c) and its cached x extents, as
+      // the touch test does; the sort and the racer pairs read the figure's sphere.
+      const interval =
+        racer.vehicle.volume === null
+          ? getInterval(context, racer)
+          : getBoundingInterval(context.arithmetic, racer.vehicle.volume)
+      return {
+        racer: racerIndex,
+        isComputer: racer.controllerKind === COMPUTER_CONTROLLER,
+        isActive: true,
+        minimumExtent: interval.minimum,
+        maximumExtent: interval.maximum,
+      }
+    })
   const result = getRegistryContacts(
     getSortedRegistryEntries(racerSet.registryEntries),
     racers,

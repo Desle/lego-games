@@ -7,21 +7,21 @@ import type { DrivingPose } from './route-driving.types.ts'
 import type { TraceFrameInput } from '../../types/golden-trace.types.ts'
 import { holdBindings } from '../trace-scenarios/trace-scenarios.ts'
 
-const FRAME_MILLISECONDS = 33
+export const FRAME_MILLISECONDS = 33
 // How far ahead on the computer racer's path the player aims, in path points (one per frame).
 const LOOKAHEAD_POINTS = 14
 // The player aims at the first path point at least this far away.
 const LOOKAHEAD_DISTANCE = 45
 // The sideways component of the aim, relative to the distance, below which the player drives straight.
 const STEERING_DEAD_ZONE = 0.12
-const FRAMES_BEFORE_THROTTLE = 175
-const GUIDE_RACER_INDEX = 1
+export const FRAMES_BEFORE_THROTTLE = 175
+export const GUIDE_RACER_INDEX = 1
 // A player slower than this for this many frames reverses for a while.
 const STUCK_SPEED = 0.015
 const STUCK_FRAMES = 45
 const REVERSE_FRAMES = 40
 
-const getPlayerPose = (raceState: RaceState): DrivingPose => {
+export const getPlayerPose = (raceState: RaceState): DrivingPose => {
   const racer = raceState.racerSet.racers[0]
   if (racer === undefined) throw new RangeError('The race has no player')
   const { frame } = racer.carBody.rigidBody
@@ -31,13 +31,13 @@ const getPlayerPose = (raceState: RaceState): DrivingPose => {
   }
 }
 
-const getGuidePosition = (raceState: RaceState): Vector3 => {
+export const getGuidePosition = (raceState: RaceState): Vector3 => {
   const guide = raceState.racerSet.racers[GUIDE_RACER_INDEX]
   if (guide === undefined) throw new RangeError('The race has no guide racer')
   return guide.carBody.rigidBody.frame.position
 }
 
-const getDistance = (left: Vector3, right: Vector3): number =>
+export const getDistance = (left: Vector3, right: Vector3): number =>
   Math.hypot(left.x - right.x, left.y - right.y)
 
 // Which way to steer to reach `target` from `pose`: the sign of the heading's cross product with the aim. In the

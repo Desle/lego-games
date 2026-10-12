@@ -1,3 +1,4 @@
+import type { CollisionBody } from '../../../racer-collision/index.ts'
 import type { HazardBehavior } from '../../types/hazard-behavior.types.ts'
 import { HazardLifecycle } from '../../types/hazard-lifecycle/hazard-lifecycle.ts'
 import type {
@@ -130,6 +131,15 @@ export const getHazardRegisteredSphere = (
 ): HazardSphere | null => {
   const instance = runtime.instances[hazardIndex]
   return instance === undefined ? null : getBehavior(instance).getRegisteredSphere(instance)
+}
+
+// The rigid body of the hazard at an index in the racers' collision list (its Begin registers it, its End ends it), or null.
+export const getHazardCollisionBody = (
+  runtime: HazardRuntime,
+  hazardIndex: number
+): CollisionBody | null => {
+  const instance = runtime.instances[hazardIndex]
+  return instance === undefined ? null : getBehavior(instance).getCollisionBody(instance)
 }
 
 // Hazards_Update 0x0048add0.
