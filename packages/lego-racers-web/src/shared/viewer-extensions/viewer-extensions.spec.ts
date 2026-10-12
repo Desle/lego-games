@@ -6,6 +6,7 @@ import {
   emitTextureCreated,
   getBuiltCarDrawing,
   getMenuSurfaceScale,
+  getRaceRenderPasses,
   getSoundReplacement,
   getIsClassic,
   NEUTRAL_EXTENSION,
@@ -85,5 +86,20 @@ describe('viewer extensions', () => {
 
     // Assert
     expect([isOriginalKept, getBuiltCarDrawing(request)]).toEqual([true, drawing])
+  })
+
+  it('adds no render pass to a race with no extension, and takes the ones extensions have', () => {
+    // Arrange
+    const request = {} as Parameters<typeof getRaceRenderPasses>[0]
+    const pass = { beforeRender: () => undefined, dispose: () => undefined }
+    const classicPasses = getRaceRenderPasses(request)
+    registerViewerExtension(NEUTRAL_EXTENSION)
+    registerViewerExtension({ ...NEUTRAL_EXTENSION, getRaceRenderPass: () => pass })
+
+    // Act
+    const passes = getRaceRenderPasses(request)
+
+    // Assert
+    expect([classicPasses, passes]).toEqual([[], [pass]])
   })
 })

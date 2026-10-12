@@ -95,6 +95,7 @@ export const createBatchMesh = (
 export const createInstanceGroup = (instance: SceneInstance, isBackground: boolean): Group => {
   const group = new Group()
   group.name = instance.name
+  group.userData['instanceKind'] = instance.kind
   group.matrixAutoUpdate = false
   group.matrix.copy(getInstanceMatrix(instance, isBackground))
   return group

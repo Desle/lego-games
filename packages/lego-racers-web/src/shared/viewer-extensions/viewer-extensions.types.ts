@@ -1,7 +1,7 @@
 import type { CarDesign } from '@lego-games/lego-racers/car-builder'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { HudCommand } from '@lego-games/lego-racers/race-hud'
-import type { DataTexture, Object3D } from 'three'
+import type { DataTexture, Group, Object3D, PerspectiveCamera, Scene, WebGLRenderer } from 'three'
 
 export type TexturePixels = {
   readonly colors: Uint8Array
@@ -54,6 +54,23 @@ export type BuiltCarDrawingRequest = {
   readonly design: CarDesign
 }
 
+// The race's drawing as a layer may add to it before each frame is rendered.
+export type RaceRenderRequest = {
+  readonly renderer: WebGLRenderer
+  readonly camera: PerspectiveCamera
+  readonly trackScene: Scene
+  // The objects of the track's world (its instances, one group each, tagged with `userData.instanceKind`), in the track's own frame.
+  readonly trackGroup: Group
+  // The world path of the track's BSP tree: what tells one track from another.
+  readonly trackKey: string
+}
+
+// Work a layer does just before the race's scenes are rendered (after the poses are set).
+export type RaceRenderPass = {
+  readonly beforeRender: () => void
+  readonly dispose: () => void
+}
+
 // A choice the developer panel offers for a layer above the original port.
 export type DevelopmentSelector = {
   readonly label: string
@@ -76,6 +93,8 @@ export type ViewerExtension = {
   readonly getRaceDisplay: (window: WindowMetrics) => RaceDisplay | null
   // Something to draw in place of the mesh the original builds for a car built from bricks, in that mesh's frame; null keeps the original's.
   readonly getBuiltCarDrawing: (request: BuiltCarDrawingRequest) => Object3D | null
+  // Something to run before each frame of this race is rendered; null adds nothing.
+  readonly getRaceRenderPass: (request: RaceRenderRequest) => RaceRenderPass | null
   // The selections the layer runs with (texture pack, audio pack, bricks), for the notes of a recording.
   readonly getSelections: () => readonly string[]
 }

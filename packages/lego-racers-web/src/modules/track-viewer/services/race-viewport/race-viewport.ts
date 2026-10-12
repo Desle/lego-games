@@ -8,6 +8,7 @@ import type {
 } from '@lego-games/lego-racers/race-presentation'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type { RibbonView } from '@lego-games/lego-racers/ribbon'
+import { SceneInstanceKind } from '@lego-games/lego-racers/scene'
 import type { Scene } from '@lego-games/lego-racers/scene'
 import type { Mesh, MeshBasicMaterial } from 'three'
 import {
@@ -31,7 +32,10 @@ import { createScreenFadeOverlay } from '../screen-fade-overlay/screen-fade-over
 import { setAlphaOverride } from '../scene-object/alpha-override.ts'
 import { createSceneObject } from '../scene-object/scene-object.ts'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
-import { getBuiltCarDrawing } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
+import {
+  getBuiltCarDrawing,
+  getRaceRenderPasses,
+} from '../../../../shared/viewer-extensions/viewer-extensions.ts'
 import { createModelObject } from '../model-object/model-object.ts'
 import { GHOST_WORLD_PATH, WARP_WORLD_PATH } from '../race-assets/race-assets.ts'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
@@ -72,6 +76,9 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     FAR_PLANE
   )
   const shown: ShownScene = showSceneObjects(assets.scene, assets.background)
+  const trackKey =
+    assets.scene.instances.find((instance) => instance.kind === SceneInstanceKind.BSP_TREE)
+      ?.worldPath ?? ''
   // A mirrored race (Race_LoadTrackContent's flag) negates y in every loader; the world's instances sit where the
   // simulation puts them, so the track is drawn as its mirror image. three.js flips the faces of a mirrored object.
   if (assets.definition.isMirrored) shown.track.group.scale.set(1, -1, 1)
@@ -325,6 +332,8 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
 
   return Object.freeze({
     trackScene,
+    trackGroup: shown.track.group,
+    trackKey,
     backgroundScene,
     screenFadeOverlay,
     camera,
@@ -368,6 +377,13 @@ export const createRaceViewport = (
   renderer.setSize(size.width, size.height)
   container.appendChild(renderer.domElement)
   const stage = createRaceStage(assets, size)
+  const renderPasses = getRaceRenderPasses({
+    renderer,
+    camera: stage.camera,
+    trackScene: stage.trackScene,
+    trackGroup: stage.trackGroup,
+    trackKey: stage.trackKey,
+  })
   return Object.freeze({
     update: stage.update,
     showHazards: stage.showHazards,
@@ -378,12 +394,14 @@ export const createRaceViewport = (
       stage.camera.updateProjectionMatrix()
     },
     render: () => {
+      for (const pass of renderPasses) pass.beforeRender()
       renderer.clear()
       renderer.render(stage.backgroundScene, stage.camera)
       renderer.render(stage.trackScene, stage.camera)
       renderer.render(stage.screenFadeOverlay.scene, stage.screenFadeOverlay.camera)
     },
     dispose: () => {
+      for (const pass of renderPasses) pass.dispose()
       stage.dispose()
       renderer.dispose()
       renderer.forceContextLoss()

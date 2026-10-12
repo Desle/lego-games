@@ -13,6 +13,17 @@ import {
   getHighDefinitionVariant,
 } from '../high-definition-texture/high-definition-texture.ts'
 import { createLDrawCarDrawing } from '../ldraw-car/ldraw-car-drawing.ts'
+import {
+  getShadowMode,
+  getShadowModeFromLabel,
+  getShadowModeLabel,
+  REAL_SHADOWS_LABEL,
+  SCENERY_SHADOWS_LABEL,
+  SHADOWS_PARAMETER,
+} from '../real-shadows/shadow-mode.ts'
+import { ShadowMode } from '../real-shadows/shadow-mode.types.ts'
+import { createShadowPass } from '../real-shadows/shadow-pass.ts'
+import { getTrackSun } from '../real-shadows/sun-selection.ts'
 import { getAudioVariants, getTextureVariants } from '../texture-variants/texture-variants.ts'
 import { getNativeMenuSurfaceScale } from '../widescreen-display/menu-surface.ts'
 import { getWidescreenDisplay } from '../widescreen-display/widescreen-display.ts'
@@ -40,10 +51,20 @@ export const registerRemastered = (search: string) => {
     getMenuSurfaceScale: getNativeMenuSurfaceScale,
     getBuiltCarDrawing: (request) =>
       getIsLDrawRequested(search) ? createLDrawCarDrawing(request).object : null,
+    getRaceRenderPass: (request) => {
+      const mode = getShadowMode(search)
+      if (mode === ShadowMode.CLASSIC) return null
+      return createShadowPass(
+        request,
+        mode,
+        getTrackSun(search, request.trackKey, request.trackGroup)
+      )
+    },
     getSelections: () => [
       `textures=${getHighDefinitionVariant(search)}`,
       `audio=${audioVariant ?? 'none'}`,
       `bricks=${getIsLDrawRequested(search) ? LDRAW_BRICKS : CLASSIC_BRICKS}`,
+      `shadows=${getShadowMode(search)}`,
     ],
     getSoundReplacement: (context, archivePath) =>
       audioVariant === null
@@ -68,6 +89,14 @@ const selectBricks = (bricks: string | null) => {
   const url = new URL(globalThis.location.href)
   if (bricks === null) url.searchParams.set(BRICKS_PARAMETER, CLASSIC_BRICKS)
   else url.searchParams.delete(BRICKS_PARAMETER)
+  if (!url.searchParams.has('hd')) url.searchParams.set('hd', '')
+  globalThis.location.assign(url.toString())
+}
+
+// Switching shadows reloads the page: the shadow pass is made with the race.
+const selectShadows = (label: string | null) => {
+  const url = new URL(globalThis.location.href)
+  url.searchParams.set(SHADOWS_PARAMETER, getShadowModeFromLabel(label))
   if (!url.searchParams.has('hd')) url.searchParams.set('hd', '')
   globalThis.location.assign(url.toString())
 }
@@ -99,6 +128,12 @@ export const getRemasteredSelectors = async (
       selected:
         getIsRemasteredRequested(search) && getIsLDrawRequested(search) ? LDRAW_BRICKS : null,
       onSelected: selectBricks,
+    },
+    {
+      label: 'Shadows (reloads): Classic blobs / Real / Real + scenery',
+      options: [REAL_SHADOWS_LABEL, SCENERY_SHADOWS_LABEL],
+      selected: getIsRemasteredRequested(search) ? getShadowModeLabel(getShadowMode(search)) : null,
+      onSelected: selectShadows,
     },
   ]
 }
