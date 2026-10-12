@@ -1,14 +1,16 @@
+import type { SceneMesh } from '@lego-games/lego-racers/scene'
 import type { Group } from 'three'
 import { Group as ThreeGroup, Matrix4, Vector3 } from 'three'
 import type { RacerPartDrawingRequest } from './ldraw-racer-drawing.types.ts'
 import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
 import { applyPlasticLook } from '../ldraw-car/ldraw-plastic.ts'
 import { disposeObject } from './dispose-object.ts'
-import { getBatchSurfaces, getDominantBrightColor } from './model-surface.ts'
+import { getBatchSurfaces } from './model-surface.ts'
 import { createPoseControls, createSkeletonPoseSampler } from './skeleton-pose.ts'
 import { getWheelSet } from './ldraw-wheel-sets.ts'
 import { ensureStudioLights } from './studio-scene-lights.ts'
 import { findWheels } from './wheel-analysis.ts'
+import { getHubColor, getWheelKind } from './wheel-kind.ts'
 import type { WheelShape } from './wheel-analysis.types.ts'
 import type { LDrawRacerPartDrawing } from './ldraw-racer-drawing.types.ts'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
@@ -17,8 +19,7 @@ const LDRAW_UNITS_PER_STUD = 20
 const RAW_UNITS_PER_STUD = 64
 const LDRAW_UNITS_PER_RAW_UNIT = LDRAW_UNITS_PER_STUD / RAW_UNITS_PER_STUD
 const TYRE_COLOR_CODE = 0
-const DEFAULT_RIM_COLOR_CODE = 15
-const MINIMUM_RIM_BRIGHTNESS = 90
+const DEFAULT_RIM_COLOR_CODE = 72
 const DIRECT_COLOR_PREFIX = '0x2'
 const MAXIMUM_COPY_COUNT = 4
 const IDENTITY_ROTATION = '1 0 0 0 1 0 0 0 1'
@@ -26,13 +27,17 @@ const IDENTITY_ROTATION = '1 0 0 0 1 0 0 0 1'
 const getPartLine = (colorCode: number | string, part: string): string =>
   `1 ${String(colorCode)} 0 0 0 ${IDENTITY_ROTATION} ${part}.dat`
 
-// The rim is drawn in the colour the original paints its wheel's hub: the most common colour of the texture's pixels that are not dark.
-const getRimColorCode = (request: RacerPartDrawingRequest): number | string => {
+// The rim is drawn in the colour the original paints its wheel's hub: the picture's most common bright colour under the hub's faces.
+const getRimColorCode = (
+  request: RacerPartDrawingRequest,
+  mesh: SceneMesh,
+  wheel: WheelShape
+): number | string => {
   const [surface] = getBatchSurfaces(request.model)
   const color =
     surface?.bitmap === null || surface === undefined
       ? null
-      : getDominantBrightColor(surface.bitmap, MINIMUM_RIM_BRIGHTNESS)
+      : getHubColor(mesh, surface.bitmap, wheel)
   return color === null
     ? DEFAULT_RIM_COLOR_CODE
     : `${DIRECT_COLOR_PREFIX}${color.toString(16).padStart(6, '0').toUpperCase()}`
@@ -72,14 +77,16 @@ export const createLDrawWheelsDrawing = (
     request.model.scene.meshes[request.model.scene.instances[0]?.levels[0]?.meshIndex ?? -1]
   if (sampler === null || mesh === undefined) return null
   const wheels = findWheels(mesh)
-  if (wheels.length === 0) return null
+  const [firstWheel] = wheels
+  if (firstWheel === undefined) return null
   const object = new ThreeGroup()
-  const rimColorCode = getRimColorCode(request)
+  const kind = getWheelKind(getBatchSurfaces(request.model)[0]?.materialName ?? '')
+  const hubColorCode = getRimColorCode(request, mesh, firstWheel)
   const placements = wheels.map((wheel) => {
     const holder = new ThreeGroup()
     holder.matrixAutoUpdate = false
     object.add(holder)
-    const set = getWheelSet(wheel.radius * 2 * LDRAW_UNITS_PER_RAW_UNIT)
+    const set = getWheelSet(kind, wheel.radius * 2 * LDRAW_UNITS_PER_RAW_UNIT)
     const scale = (wheel.radius * 2) / set.diameter
     const copyCount = Math.min(
       Math.max(Math.round(wheel.width / (set.width * scale)), 1),
@@ -95,8 +102,8 @@ export const createLDrawWheelsDrawing = (
   let isDisposed = false
   const loads = [...new Set(placements.map((placement) => placement.set))].map((set) => {
     const text = [
-      getPartLine(TYRE_COLOR_CODE, set.tyrePart),
-      getPartLine(rimColorCode, set.rimPart),
+      ...(set.tyrePart === null ? [] : [getPartLine(TYRE_COLOR_CODE, set.tyrePart)]),
+      getPartLine(set.rimColorCode ?? hubColorCode, set.rimPart),
     ].join('\n')
     return parseLDrawModel(text).then(
       (model) => {
