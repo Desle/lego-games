@@ -1,5 +1,11 @@
-import type { EffectViews, RacerPose, WarpView } from '@lego-games/lego-racers/race-presentation'
+import type {
+  EffectViews,
+  GhostCar,
+  RacerPose,
+  WarpView,
+} from '@lego-games/lego-racers/race-presentation'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
+import type { Scene } from '@lego-games/lego-racers/scene'
 import type { Matrix3 } from '@lego-games/lego-racers/simulation-math'
 import type { Mesh, MeshBasicMaterial } from 'three'
 import {
@@ -21,7 +27,7 @@ import { createRaceEffects } from '../race-effects/race-effects.ts'
 import { createSceneObject } from '../scene-object/scene-object.ts'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import { createModelObject } from '../model-object/model-object.ts'
-import { WARP_WORLD_PATH } from '../race-assets/race-assets.ts'
+import { GHOST_WORLD_PATH, WARP_WORLD_PATH } from '../race-assets/race-assets.ts'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import { showSceneObjects } from '../scene-viewport/scene-viewport.ts'
 import type { ShownScene } from '../scene-viewport/scene-viewport.types.ts'
@@ -64,6 +70,13 @@ const getFrameMatrix = (rotation: Matrix3, position: Vector3Like): Matrix4 => {
   )
 }
 
+const createGhostRig = (parts: Pick<RacerRig, 'wheels' | 'body' | 'driver'>): RacerRig => {
+  const { wheels, body, driver } = parts
+  const present = [wheels, body, driver].filter((part): part is ModelObject => part !== null)
+  for (const part of present) part.group.visible = false
+  return { wheels, body, driver, objects: present.map((part) => part.object) }
+}
+
 // The race's three.js scene graphs and camera, without a renderer: the sky and the backdrop first without the depth
 // test, then the track and the cars, from the player's chase camera. The render trace reads this directly.
 export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceStage => {
@@ -95,6 +108,46 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     }
     return { wheels, body, driver, objects: parts.map((part) => part.object) }
   })
+
+  // The ghost cars of a time trial: the champion's from GHOST.WDB, the session's best run with the player's own car models.
+  const getGhostPart = (ghostScene: Scene, instanceName: string): ModelObject => {
+    const object = createSceneObject(ghostScene, {
+      includeInstance: (instance) =>
+        instance.worldPath === GHOST_WORLD_PATH && instance.name === instanceName,
+      isBackground: false,
+    })
+    const group = new Group()
+    group.matrixAutoUpdate = false
+    const scaled = new Group()
+    scaled.scale.setScalar(assets.ghostScales[instanceName] ?? 1)
+    scaled.add(object.group)
+    group.add(scaled)
+    return { group, object }
+  }
+  const playerModels = assets.racerModels[0]
+  const ghostRigs: Readonly<Record<GhostCar['kind'], RacerRig | null>> = {
+    champion:
+      assets.ghostScene === null
+        ? null
+        : createGhostRig({
+            wheels: getGhostPart(assets.ghostScene, 'ghost2'),
+            body: getGhostPart(assets.ghostScene, 'ghostb2'),
+            driver: getGhostPart(assets.ghostScene, 'ghostdr'),
+          }),
+    best:
+      assets.ghostScene === null || playerModels === undefined
+        ? null
+        : createGhostRig({
+            wheels: createModelObject(playerModels.wheels),
+            body: playerModels.body === null ? null : createModelObject(playerModels.body),
+            driver: playerModels.driver === null ? null : createModelObject(playerModels.driver),
+          }),
+  }
+  for (const rig of Object.values(ghostRigs)) {
+    if (rig === null) continue
+    for (const part of [rig.wheels, rig.body, rig.driver])
+      if (part !== null) trackScene.add(part.group)
+  }
 
   // The wheels sit in the display frame; the car model at its position with the leaned rotation of the model frame
   // (vehicle +0x3c); the driver at the seat carried by that frame (LEGORacers.exe 0x0043e740).
@@ -147,7 +200,8 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     allPoses: readonly RacerPose[],
     allCameraView: CameraView,
     effectViews: EffectViews,
-    warpView: WarpView | null = null
+    warpView: WarpView | null = null,
+    ghostCars: readonly GhostCar[] = []
   ) => {
     setWarpTunnel(warpView)
     shown.track.group.visible = warpView === null
@@ -206,6 +260,25 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
         racerRig.driver.object.setAnimationState(pose.driverAnimation)
       }
     }
+    for (const kind of ['champion', 'best'] as const) {
+      const rig = ghostRigs[kind]
+      if (rig === null) continue
+      const car = ghostCars.find((candidate) => candidate.kind === kind)
+      const isShown = car !== undefined && warpView === null
+      for (const part of [rig.wheels, rig.body, rig.driver])
+        if (part !== null) part.group.visible = isShown
+      if (car === undefined) continue
+      rig.wheels.group.matrix.copy(getFrameMatrix(car.rotation, car.position))
+      rig.wheels.group.matrixWorldNeedsUpdate = true
+      if (rig.body !== null) {
+        rig.body.group.matrix.copy(getFrameMatrix(car.rotation, car.position))
+        rig.body.group.matrixWorldNeedsUpdate = true
+      }
+      if (rig.driver !== null) {
+        rig.driver.group.matrix.copy(getFrameMatrix(car.rotation, car.driverPosition))
+        rig.driver.group.matrixWorldNeedsUpdate = true
+      }
+    }
     const { position, forward, up } = cameraView
     camera.position.set(position.x, position.y, position.z)
     // The engine's camera frames take a negated up vector (see the world's cameras).
@@ -247,6 +320,9 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
       shown.sky?.dispose()
       effects.dispose()
       for (const { objects } of racerRigs) for (const object of objects) object.dispose()
+      for (const rig of Object.values(ghostRigs)) {
+        if (rig !== null) for (const object of rig.objects) object.dispose()
+      }
     },
   })
 }

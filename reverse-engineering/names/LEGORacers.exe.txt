@@ -895,3 +895,5 @@
 0048f030 Hazard34_Update
 0048e5a0 Hazard2E_TurnOn
 0048e600 Hazard2E_TurnOff
+004881a0 TimeTrialScreen_ShowBestTime
+00488150 TimeTrialScreen_Update
