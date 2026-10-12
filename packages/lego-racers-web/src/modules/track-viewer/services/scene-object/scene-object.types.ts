@@ -31,7 +31,11 @@ export type SceneObject = {
   readonly setInstanceColourShift: (name: string, shift: ColourShiftLike | null) => void
   // Shows, for every instance with several levels, the level the squared distance to this camera position selects
   // (GolDP.dll 0x10027cc0), and none past the last.
-  readonly selectLevels: (camera: Vector3Like) => void
+  // An instance the race moves (hazards, clips) shows the level its own distances and sphere select, and none when its
+  // sphere is outside the frustum (GolDP.dll 0x100240b0).
+  readonly selectLevels: (camera: Vector3Like, view?: FrustumView) => void
+  // The distances and the sphere the simulation holds for the instances with this name (every world's, by name).
+  readonly setInstanceRuntime: (name: string, runtime: InstanceRuntime) => unknown
   // Shows, for every BSP tree instance, only the leaves the camera's visibility list names and the frustum does not
   // reject (GolDP.dll 0x100092a0).
   readonly selectVisibleLeaves: (view: FrustumView) => void
@@ -55,6 +59,15 @@ export type SceneObject = {
   // Poses every skeleton instance from this animation state (a racer's figure, whose clock the race keeps).
   readonly setAnimationState: (state: SkeletonAnimationState) => void
   readonly dispose: () => void
+}
+
+// What the race simulation holds of an instance that decides whether it is drawn: the squared distances of its levels
+// (a hazard sets them to hide it) and, for an animated skeleton instance, the sphere it is culled by (0x10023ef0).
+export type InstanceRuntime = {
+  // Where the simulation holds the instance (a mirrored race negates y, as the camera's world does).
+  readonly position: Vector3Like
+  readonly levelSquaredDistances: readonly number[]
+  readonly sphere: { readonly centre: Vector3Like; readonly radius: number } | null
 }
 
 export type SceneObjectOptions = {

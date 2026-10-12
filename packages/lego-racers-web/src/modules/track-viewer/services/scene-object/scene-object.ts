@@ -15,9 +15,11 @@ import { applyVertexLighting } from './vertex-lighting.ts'
 import type { SceneLights } from './vertex-lighting.types.ts'
 import { createSkeletonInstanceObject } from './skeleton-instance-object.ts'
 import { createStaticInstanceObject } from './static-instance-object.ts'
+import { getIsSphereInFrustum } from './sphere-visibility.ts'
 import type {
   InstanceLevelMesh,
   InstanceObject,
+  InstanceRuntime,
   SceneObject,
   SceneObjectContext,
   SceneObjectOptions,
@@ -75,7 +77,8 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
   const group = new Group()
   const animators: ((deltaMilliseconds: number) => void)[] = []
   const stateSetters = new Map<string, NonNullable<InstanceObject['setState']>>()
-  const levelSelectors: ((camera: Vector3Like) => void)[] = []
+  const levelSelectors: ((camera: Vector3Like, view: FrustumView | undefined) => void)[] = []
+  const runtimes = new Map<string, InstanceRuntime>()
   const leafSelectors: ((view: FrustumView, worldToLocal: Matrix4) => void)[] = []
   const instancesByName = new Map<string, SceneInstance>()
   for (const instance of scene.instances.filter(options.includeInstance)) {
@@ -113,14 +116,29 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
         showVisibleLeaves(bspTree, bspLevels, getLocalVisibilityQuery(view, worldToLocal))
       )
     }
-    if (levelObjects.length > 1 && !options.isBackground) {
-      const distances = instance.levels.map((level) => level.squaredDistance)
-      levelSelectors.push((camera) => {
+    if (levelObjects.length > 0 && !options.isBackground) {
+      const fileDistances = instance.levels.map((level) => level.squaredDistance)
+      levelSelectors.push((camera, view) => {
+        const runtime = runtimes.get(instance.name)
+        const distances = runtime?.levelSquaredDistances ?? fileDistances
+        const sphere = runtime?.sphere ?? null
+        // An instance the simulation neither hides nor culls by a sphere keeps its level 0 unless it has several levels.
+        const isTracked =
+          levelObjects.length > 1 ||
+          sphere !== null ||
+          distances.some((distance, index) => distance !== (fileDistances[index] ?? distance))
+        const centre = sphere?.centre ?? runtime?.position ?? instance.position
         const squaredDistance =
-          (camera.x - instance.position.x) ** 2 +
-          (camera.y - instance.position.y) ** 2 +
-          (camera.z - instance.position.z) ** 2
-        const selected = getLevelIndex(distances, squaredDistance)
+          (camera.x - centre.x) ** 2 + (camera.y - centre.y) ** 2 + (camera.z - centre.z) ** 2
+        const distanceLevel = getLevelIndex(distances, squaredDistance)
+        const selected = !isTracked
+          ? 0
+          : distanceLevel !== null &&
+              sphere !== null &&
+              view !== undefined &&
+              !getIsSphereInFrustum(view, sphere.centre, sphere.radius)
+            ? null
+            : distanceLevel
         for (const { levelIndex, instanceObject } of levelObjects) {
           instanceObject.group.visible = levelIndex === selected
         }
@@ -152,9 +170,10 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
     setColourShift: (shift: ColourShiftLike | null) => {
       for (const geometry of getMeshGeometries(group)) applyColourShift(geometry, shift)
     },
-    selectLevels: (camera: Vector3Like) => {
-      for (const select of levelSelectors) select(camera)
+    selectLevels: (camera: Vector3Like, view?: FrustumView) => {
+      for (const select of levelSelectors) select(camera, view)
     },
+    setInstanceRuntime: (name: string, runtime: InstanceRuntime) => runtimes.set(name, runtime),
     selectVisibleLeaves: (view: FrustumView) => {
       if (leafSelectors.length === 0) return
       group.updateWorldMatrix(true, false)

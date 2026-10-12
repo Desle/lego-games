@@ -86,7 +86,7 @@ export const runPixelTrace = async (request: PixelTraceRequest): Promise<PixelTr
         presentation.screenFades,
         presentation.fieldOfViewDegrees
       )
-      viewport.showHazards(raceState.trackLogic.worlds.track, [
+      viewport.showHazards(raceState.trackLogic.worlds, [
         raceState.racerSet.emitters.common,
         raceState.racerSet.emitters.track,
       ])

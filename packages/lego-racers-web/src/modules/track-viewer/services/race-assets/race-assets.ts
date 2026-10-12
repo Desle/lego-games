@@ -32,6 +32,8 @@ import {
   loadSceneOnto,
 } from '@lego-games/lego-racers/scene'
 import { parseSky } from '@lego-games/lego-racers/sky'
+import { parseAnimation } from '@lego-games/lego-racers/animation'
+import { getSkeletalAnimation } from '@lego-games/lego-racers/skeletal-animation'
 import { parseModel } from '@lego-games/lego-racers/model'
 import { readWorld } from '@lego-games/lego-racers/world'
 import { getString, parseStringTable } from '@lego-games/lego-racers/string-table'
@@ -165,6 +167,14 @@ const TURBO_MODEL_NAMES = [
   ],
 ]
 
+// POWERUP.WDB lists a curse's instances curse, cgreen and cgreen2 (the files CURSE, CGREEN and GREEN); 0x0045aeb0 looks
+// them up by those names.
+const CURSE_MODEL_NAMES = [
+  ['CURSE', 'curse'],
+  ['CGREEN', 'cgreen'],
+  ['GREEN', 'cgreen2'],
+] as const
+
 // POWERUP.WDB lists the four shields (instances shield0..3) on one skeleton and animation, the one of SHEOUT0.
 const SHIELD_MODEL_NAMES = ['SHEOUT0', 'SHEOUT1', 'SHEOUT2', 'SHEOUT3']
 
@@ -176,6 +186,15 @@ const BRICK_MATERIALS: Readonly<Record<string, string>> = Object.freeze({
   shield: 'pbrickS',
   turbo: 'pbrickT',
   hazard: 'pbrickM',
+})
+
+// 0x00458a80 also looks up ptrailP, ptrailS, ptrailT and ptrailM for the trail instance (genblen, the mesh putraily) of each
+// brick kind (0x0045bae0); the model names ptrailM.
+const TRAIL_MATERIALS: Readonly<Record<string, string>> = Object.freeze({
+  projectile: 'ptrailP',
+  shield: 'ptrailS',
+  turbo: 'ptrailT',
+  hazard: 'ptrailM',
 })
 
 const getBrickInMaterial = (model: ModelScene, materialName: string): ModelScene => {
@@ -255,8 +274,31 @@ const getGhostModels = (
   return { ghostScene, ghostScales: Object.freeze(Object.fromEntries(scales)) }
 }
 
-const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
-  Object.freeze({
+// 0x10023ef0: the sphere the first clip of a model's animation gives, in the model's scale (before the brick's own scale).
+const getModelClipSphere = (
+  archive: JamArchive,
+  name: string,
+  model: ModelScene
+): readonly [number, number, number, number] => {
+  const clip = getSkeletalAnimation(parseAnimation(archive.readFile(getRacerFilePath(name, 'ADB'))))
+    .clips[0]
+  const scale = model.meshScales[0] ?? 1
+  const [x, y, z, radius] = clip?.boundingSphere ?? [0, 0, 0, 0]
+  return [x * scale, y * scale, z * scale, radius * scale]
+}
+
+const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels => {
+  const enhancementBrick = loadEffectModel(archive, 'ENHABRIK', true)
+  const enhancementTrail = loadEffectModel(archive, 'ENHANER', true)
+  const powerUpBrick = loadEffectModel(archive, 'PUBRICKY', true)
+  const powerUpTrail = loadEffectModel(archive, 'PUTRAILY', true)
+  return Object.freeze({
+    brickSpheres: Object.freeze({
+      powerUpBrick: getModelClipSphere(archive, 'PUBRICKY', powerUpBrick),
+      powerUpTrail: getModelClipSphere(archive, 'PUTRAILY', powerUpTrail),
+      enhancementBrick: getModelClipSphere(archive, 'ENHABRIK', enhancementBrick),
+      enhancementTrail: getModelClipSphere(archive, 'ENHANER', enhancementTrail),
+    }),
     materials: getEffectMaterials(archive),
     rocket: loadEffectModel(archive, 'DMISSILE', true),
     rocketAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('DMISSILE', 'ADB'))),
@@ -274,20 +316,47 @@ const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
         scroll: getInstanceTextureScroll(archive, instanceName ?? ''),
       }))
     ),
+    curse: CURSE_MODEL_NAMES.map(([name, instanceName]) => ({
+      model: loadEffectModel(archive, name, true),
+      animations: getFigureAnimations(archive.readFile(getRacerFilePath(name, 'ADB'))),
+      scroll: getInstanceTextureScroll(archive, instanceName),
+    })),
     shields: SHIELD_MODEL_NAMES.map((name) => loadEffectModel(archive, name, true, 'SHEOUT0')),
     shieldAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('SHEOUT0', 'ADB'))),
     powerUpBricks: Object.freeze(
       Object.fromEntries(
         Object.entries(BRICK_MATERIALS).map(([kind, materialName]) => [
           kind,
-          getBrickInMaterial(loadEffectModel(archive, 'PUBRICKY', true), materialName),
+          getBrickInMaterial(powerUpBrick, materialName),
         ])
       )
     ),
-    enhancementBrick: loadEffectModel(archive, 'ENHABRIK', true),
+    enhancementBrick,
+    powerUpBrickAnimations: getFigureAnimations(
+      archive.readFile(getRacerFilePath('PUBRICKY', 'ADB'))
+    ),
+    enhancementBrickAnimations: getFigureAnimations(
+      archive.readFile(getRacerFilePath('ENHABRIK', 'ADB'))
+    ),
+    powerUpTrails: Object.freeze(
+      Object.fromEntries(
+        Object.entries(TRAIL_MATERIALS).map(([kind, materialName]) => [
+          kind,
+          getBrickInMaterial(powerUpTrail, materialName),
+        ])
+      )
+    ),
+    enhancementTrail,
+    enhancementTrailAnimations: getFigureAnimations(
+      archive.readFile(getRacerFilePath('ENHANER', 'ADB'))
+    ),
+    powerUpTrailAnimations: getFigureAnimations(
+      archive.readFile(getRacerFilePath('PUTRAILY', 'ADB'))
+    ),
     warpTunnel: getWarpTunnel(archive, raceScene),
     warpTextureScroll: getWarpTextureScroll(archive),
   })
+}
 
 const getHudImage = (archive: JamArchive, definition: ImageDefinition): HudImage | null => {
   const path = `${COMMON_DIRECTORY}${SEPARATOR}${definition.name.toUpperCase()}.BMP`

@@ -14,7 +14,8 @@ import type {
   HudState,
 } from '../../race-hud/index.ts'
 import type { SkeletonAnimationState } from '../../skeletal-animation/index.ts'
-import type { VehicleSkids } from '../../racer/index.ts'
+import type { CurseFigure, VehicleSkids } from '../../racer/index.ts'
+import type { CurseTrackFrame } from '../../projectiles/index.ts'
 import type { DecalLimits, DecalPlacement } from '../../decal/index.ts'
 import type { ColourShift } from '../../racer/index.ts'
 import type { Matrix3, Vector3 } from '../../simulation-math/index.ts'
@@ -163,6 +164,8 @@ export type RacerPose = {
   readonly skids: VehicleSkids
   // The racer is off the track (racer flag 0x10): its parts are not drawn there either.
   readonly isOffTrack: boolean
+  // The curse figure circling the racer (racer +0x29c, 0x0043f530), or null without the curse.
+  readonly curseFigure: CurseFigure | null
   // The scale of the three parts' frames (+0x58): 1, except in the last 250 ms of the warp's portal, which shrinks the car
   // with the portal's fade (0x0045dbe0 calls 0x00440160).
   readonly partScale: number
@@ -254,13 +257,28 @@ export type SpriteView = {
   readonly height: number
 }
 
+// A curse lying on the track (0x00452ae0): three figures share one frame orientation, `curse` floating 13 above the
+// ground point along its normal and the two scrolling `cgreen` rings on the ground point itself.
+export type CurseView = CurseTrackFrame & {
+  // Active (state 3) or ending (state 4, shrinking with the timer).
+  readonly state: AttachmentState
+  readonly timerMilliseconds: number
+  // The milliseconds the figures' animation and texture scroll have run.
+  readonly elapsedMilliseconds: number
+  // The frame scale (+0x58) of the figures: 1, then timer / 1000 while the curse ends (0x00452a40).
+  readonly scale: number
+}
+
 export type EffectViews = {
+  readonly curses: readonly CurseView[]
   readonly sprites: readonly SpriteView[]
   // The strips the effects lay out in the world (the grapple's rope, the wand's beam).
   readonly ribbons: readonly RibbonView[]
   readonly attachments: readonly AttachmentView[]
   readonly bricks: readonly BrickView[]
   readonly spinAngle: number
+  // The clock of the bricks' trail clips (the world of 0x00416090 at power-up system +0x60), in milliseconds.
+  readonly brickClockMilliseconds: number
   readonly effects: readonly EffectView[]
   readonly explosions: readonly ExplosionView[]
   readonly decals: readonly DecalView[]
