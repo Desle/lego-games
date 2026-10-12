@@ -57,6 +57,19 @@ export type MeshInstanceRuntime = {
 
 // One 0x18-byte entry of a material animation, as the race plays it (exe 0x004104c0; GolDP.dll 0x10025da0 starts the
 // ones an instance refers to, looping).
+export type MaterialAnimationTarget = {
+  // The instance whose level's material table the entry writes (GolDP.dll 0x1002e640 hands 0x10025da0 the level's
+  // material assignment, else the level's model's material table, and the reference's value as the slot).
+  readonly instanceName: string
+  readonly levelIndex: number
+  readonly slot: number
+}
+
+// A row of an animation's table written into a slot of a material table (LEGORacers.exe 0x004104c0 and 0x00410750).
+export type MaterialSlotWrite = MaterialAnimationTarget & {
+  readonly materialName: string
+}
+
 export type MaterialAnimationPlayback = {
   // Flag 2 of +0x14: the entry advances; flag 4: it loops.
   readonly isPlaying: boolean
@@ -66,6 +79,8 @@ export type MaterialAnimationPlayback = {
   // The row of the animation's table the time selects (0x00410750 writes its value into the material); null before
   // the first advance.
   readonly tableIndex: number | null
+  // Entry +0 and +4: where the row's material goes; null for an entry nobody linked (a sprite's entry, an emitter's).
+  readonly target: MaterialAnimationTarget | null
 }
 
 export type MaterialAnimationRuntime = {

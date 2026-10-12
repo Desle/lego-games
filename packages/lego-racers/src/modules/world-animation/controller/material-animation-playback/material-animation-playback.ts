@@ -15,6 +15,7 @@ export const IDLE_MATERIAL_PLAYBACK: MaterialAnimationPlayback = Object.freeze({
   isLooping: false,
   time: 0,
   tableIndex: null,
+  target: null,
 })
 
 // 0x00410430 and GolDP.dll 0x10025da0: the entry plays, looping or not, from where its time is.
