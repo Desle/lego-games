@@ -9,8 +9,8 @@ import {
 } from '../../../race/index.ts'
 import type { RaceDefinition } from '../../../race/index.ts'
 import { getRacerControls } from '../../../race-input/index.ts'
-import type { SessionRecording } from '../../types/session-replay.types.ts'
-import { getReplayLoadOptions } from '../replay-header/replay-header.ts'
+import type { SessionRecording } from '../../../session-recording/index.ts'
+import { getReplayLoadOptions } from '../../../session-recording/index.ts'
 import type { PortReplay } from './replay-port.types.ts'
 
 // The race the recording started, loaded the way the session loaded it.

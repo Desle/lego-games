@@ -8,7 +8,7 @@ import { getRaceLoadOptions } from '../../../game-session/index.ts'
 import type { RaceStart } from '../../../game-session/index.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import type { LoadRaceOptions } from '../../../race/index.ts'
-import type { ReplayHeader, ReplayPlayerRacer } from '../../types/session-replay.types.ts'
+import type { ReplayHeader, ReplayPlayerRacer } from '../../types/session-recording.types.ts'
 import { REPLAY_FORMAT, REPLAY_VERSION } from '../replay-format/replay-format.ts'
 
 const getPlayerRacer = (saved: SavedCar): ReplayPlayerRacer =>

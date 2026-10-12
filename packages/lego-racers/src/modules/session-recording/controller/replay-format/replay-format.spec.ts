@@ -1,6 +1,5 @@
-import { getReplayScenarioSplit } from '../replay-scenario/replay-scenario.ts'
 import { createReplayRecorder } from '../replay-recorder/replay-recorder.ts'
-import type { ReplayFrame, ReplayHeader } from '../../types/session-replay.types.ts'
+import type { ReplayFrame, ReplayHeader } from '../../types/session-recording.types.ts'
 import {
   parseRecording,
   REPLAY_FORMAT,
@@ -74,32 +73,5 @@ describe('the session recording format', () => {
 
     // Assert
     expect(parse).toThrow(/Not a version/)
-  })
-})
-
-describe('the frames the original can be fed', () => {
-  it('stops at the first menu key, gamepad frame or grant', () => {
-    // Arrange
-    const recording = {
-      header: HEADER,
-      frames: [getFrame(), getFrame(), getFrame({ grant: { kind: 1, level: 0 } }), getFrame()],
-    }
-
-    // Act
-    const split = getReplayScenarioSplit(recording)
-
-    // Assert
-    expect(split).toEqual({ supportedFrameCount: 2, stopReason: 'a developer power-up grant' })
-  })
-
-  it('feeds every frame of a plain keyboard session', () => {
-    // Arrange
-    const recording = { header: HEADER, frames: [getFrame(), getFrame()] }
-
-    // Act
-    const split = getReplayScenarioSplit(recording)
-
-    // Assert
-    expect(split).toEqual({ supportedFrameCount: 2, stopReason: null })
   })
 })

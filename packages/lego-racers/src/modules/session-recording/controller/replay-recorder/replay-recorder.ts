@@ -3,7 +3,7 @@ import type {
   ReplayHeader,
   ReplayRecorder,
   SessionRecording,
-} from '../../types/session-replay.types.ts'
+} from '../../types/session-recording.types.ts'
 
 // The frames are appended as they arrive: a race is minutes long and copying the list per frame would not scale.
 export const createReplayRecorder = (header: ReplayHeader): ReplayRecorder => {

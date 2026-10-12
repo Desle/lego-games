@@ -11,7 +11,8 @@ import type { RaceStart } from '@lego-games/lego-racers/game-session'
 import { getTraceFields } from '@lego-games/lego-racers/golden-trace'
 import { createRace, NO_MENU_INPUT, NO_RACE_CONTACTS, stepRace } from '@lego-games/lego-racers/race'
 import { getRacerControls } from '@lego-games/lego-racers/race-input'
-import { parseRecording, replayOnPort } from '@lego-games/lego-racers/session-replay'
+import { parseRecording } from '@lego-games/lego-racers/session-recording'
+import { replayOnPort } from '@lego-games/lego-racers/session-replay'
 import { createRaceRecording } from './race-recording.ts'
 import {
   getIsOriginalGamePresent,

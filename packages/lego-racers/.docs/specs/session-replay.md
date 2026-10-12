@@ -9,7 +9,7 @@ Turns the player's own play sessions into regression tests. The viewer records, 
 - **Record**: play a race in the classic view; the recording is kept in the browser's IndexedDB (the last 20). Press F9 or use the developer panel's button (backquote) to download the last one as `<race>-<time>.replay.jsonl`.
 - **Replay**: `pnpm run replay <file>` prints the frames, the port's final phase and random cursor, and either "no divergence" or the first divergence (frame, field, both values). `--write-expectation` writes the `.expected.json` beside the file.
 - **Make it permanent**: commit the recording and its `.expected.json` in `reverse-engineering/replays/`; `pnpm run golden-trace` replays every file there and checks its expected first divergence.
-- **Build one in code**: `createReplayHeader`, `createReplayRecorder`, `serializeRecording`, `parseRecording`, `replayOnPort`, `getReplayScenario`, `runReplay`.
+- **Replay in code**: `replayOnPort`, `getReplayScenario`, `runReplay`; recordings are written and read with the `session-recording` module.
 
 ## Invariants
 

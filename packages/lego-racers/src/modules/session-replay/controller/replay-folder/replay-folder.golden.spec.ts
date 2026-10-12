@@ -5,7 +5,7 @@ import {
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
 import { getIsOriginalTraceAvailable } from '../../../golden-trace/index.ts'
-import { parseRecording } from '../replay-format/replay-format.ts'
+import { parseRecording } from '../../../session-recording/index.ts'
 import { runReplay } from '../run-replay/run-replay.ts'
 import { getExpectationOfReport, readStoredReplays } from './replay-folder.ts'
 
