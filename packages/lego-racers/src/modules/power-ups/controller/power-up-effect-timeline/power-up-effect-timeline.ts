@@ -375,7 +375,12 @@ export const updatePowerUpEffect = (
   if (effect.state === EffectState.FINISHED || effect.kind === PowerUpEffectKind.ROCKET) return step
   const counted = countDown(step, context, effectId, stepMilliseconds)
   if (effect.kind === PowerUpEffectKind.WAND) {
-    return updateWand(counted, effectId, stepMilliseconds, duringWandBeam)
+    // 0x00454d70: when the countdown ends the rest of the step goes on to the jitter, the hold and the sparks.
+    const restMilliseconds =
+      stepMilliseconds < effect.timerMilliseconds
+        ? stepMilliseconds
+        : stepMilliseconds - effect.timerMilliseconds
+    return updateWand(counted, effectId, restMilliseconds, duringWandBeam)
   }
   // 0x004572a0: two draws per frame while the bubble emitter exists.
   if (

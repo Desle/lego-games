@@ -27,6 +27,7 @@ import {
   setCarBodyPush,
   setRacer,
   startCarBodyFlip,
+  startVehicleTireSmoke,
   startVehicleTurboEffects,
   stopVehicleEffectsForWarp,
   stopVehicleTireSmoke,
@@ -190,6 +191,14 @@ const getRacerSetAfterVehicleEffects = (
     return getRaceRacerSetOf(stopVehicleEffectsForWarp(racerSet, racerIndex))
   }
   if (event.type === 'power_ups.racer_turbo_ended') {
+    return getRaceRacerSetOf(stopVehicleTireSmoke(racerSet, racerIndex))
+  }
+  // 0x0043a130 and 0x0043a1a0: a human's vehicle smokes while the magnet holds it.
+  const isHuman = getRacer(racerSet, racerIndex).controllerKind !== COMPUTER_CONTROLLER
+  if (event.type === 'power_ups.racer_magnetized' && isHuman) {
+    return getRaceRacerSetOf(startVehicleTireSmoke(context, racerSet, racerIndex))
+  }
+  if (event.type === 'power_ups.racer_released_by_magnet' && isHuman) {
     return getRaceRacerSetOf(stopVehicleTireSmoke(racerSet, racerIndex))
   }
   return racerSet
