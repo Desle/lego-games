@@ -1,8 +1,6 @@
-export type DevelopmentPanelProps = {
+import type { DevelopmentToolActions } from '../../types/development-tools/development-tools.types.ts'
+
+export type DevelopmentPanelProps = DevelopmentToolActions & {
   readonly isRaceRunning: boolean
-  readonly onTrackViewerOpened: () => void
   readonly onRaceStopped: () => void
-  readonly onRecordingDownloaded: () => void
-  readonly onEverythingUnlocked: () => void
-  readonly onOverlayClosed: () => void
 }

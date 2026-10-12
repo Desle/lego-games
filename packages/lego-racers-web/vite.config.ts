@@ -88,6 +88,17 @@ const developmentHighDefinitionPlugin = (): Plugin => ({
       return pathsByKey
     }
     server.middlewares.use(DEVELOPMENT_HIGH_DEFINITION_ROUTE, (request, response) => {
+      if ((request.url ?? '/') === '/') {
+        const names = existsSync(root)
+          ? readdirSync(root, { withFileTypes: true })
+              .filter((entry) => entry.isDirectory())
+              .map((entry) => entry.name)
+              .sort()
+          : []
+        response.setHeader('Content-Type', 'application/json')
+        response.end(JSON.stringify(names))
+        return
+      }
       const [variant = '', ...rest] = decodeURIComponent(
         (request.url ?? '').replace(/^\//, '').split('?')[0] ?? ''
       ).split('/')
