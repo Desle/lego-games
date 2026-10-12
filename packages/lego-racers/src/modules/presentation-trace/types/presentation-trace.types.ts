@@ -105,6 +105,8 @@ export type OriginalDecal = {
   // For an explosion's scar: the explosion's state (2 growing, 3 fading) and its alpha, +0x04 and +0x23c of the owner.
   readonly ownerState: number
   readonly ownerAlpha: number
+  // The point the last projection was placed at (decal +0xe8).
+  readonly position: readonly number[]
 }
 
 export type OriginalDecalFrame = {

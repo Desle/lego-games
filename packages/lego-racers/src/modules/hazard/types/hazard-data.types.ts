@@ -212,6 +212,8 @@ export type CraneData = {
   readonly instance: InstanceReference | null
   // +0x178 bit 1: armed to announce its signal.
   readonly flags: number
+  // +0x14..+0x1c (the frame at +0x10): the world point of the fourth bone, as the last update left it; the origin until then.
+  readonly bone: Vector3
 }
 
 // A class that is registered but whose behaviour is not ported yet.

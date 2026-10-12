@@ -4,6 +4,7 @@ import { HazardKeyword } from '../../types/hazard-keyword/hazard-keyword.ts'
 import { HazardLifecycle } from '../../types/hazard-lifecycle/hazard-lifecycle.ts'
 import type { HazardInstance, HazardSession } from '../../types/hazard-runtime.types.ts'
 import { DEFAULT_HAZARD_SLOTS } from '../hazard-defaults/hazard-defaults.ts'
+import { getSkeletonInstanceBonePosition } from '../../../world-animation/index.ts'
 import {
   findSkeletonReference,
   getIsInsideAWindow,
@@ -16,6 +17,8 @@ import {
 export const CRANE_IDENTIFIER = 1
 // The signal the crane announces when its arm swings through the window (0x00490190).
 export const CRANE_SIGNAL = 0x14
+// 0x00490190 moves the crane's frame to the pose of the fourth bone of its skeleton, and 0x00490330 puts the shadow there.
+export const CRANE_BONE_INDEX = 3
 // Byte +0x178: bit 1 means armed; Begin sets 2.
 const ARMED_FLAG = 2
 // Clip times (in frames) inside which an armed crane announces its signal (0x004b4714..0x004b4720: 150..180 and
@@ -38,8 +41,8 @@ const end = (instance: HazardInstance): HazardInstance =>
 
 // 0x0048fe30 (constructor), 0x0048ff50 (loader), 0x00490070 (Begin), 0x00490140 (End), 0x00490190 (update): the
 // crane. Its clip time decides: armed and inside a signal window, it announces signal 0x14 and disarms; disarmed and
-// inside an arming window it arms. Not ported: the signal\'s position (the pose of the crane\'s fourth bone), its
-// shadow (class 0x00414850), the registry entry and the dust when a camera is near (0x00490330).
+// inside an arming window it arms. Not ported: the signal\'s position, the registry entry and the dust when a camera is
+// near; the shadow (0x00490330) is read by `getCraneShadows`.
 export const CRANE: HazardBehavior = Object.freeze({
   ...DEFAULT_HAZARD_SLOTS,
   create: (definition, context) =>
@@ -51,6 +54,7 @@ export const CRANE: HazardBehavior = Object.freeze({
         keyword: HazardKeyword.HAZARD_32,
         instance: findSkeletonReference(context.session, 'track', INSTANCE_NAME),
         flags: 0,
+        bone: Object.freeze([0, 0, 0] as const),
       } satisfies CraneData),
     }),
   begin: (instance) => {
@@ -70,14 +74,16 @@ export const CRANE: HazardBehavior = Object.freeze({
     if (!getIsCraneData(data)) return checked
     const skeleton = getSkeletonInstance(session, data.instance)
     if (skeleton === null) return checked
+    const bone =
+      getSkeletonInstanceBonePosition(session.arithmetic, skeleton, CRANE_BONE_INDEX) ?? data.bone
     const time = skeleton.clip?.clip.timeInFrames ?? 0
     const isArmed = (data.flags & ARMED_FLAG) !== 0
     if (isArmed && getIsInsideAWindow(time, SIGNAL_WINDOWS)) {
       session.startStopSignal(CRANE_SIGNAL, CRANE_SIGNAL, null)
-      return getWithData(checked, { ...data, flags: data.flags & ~(ARMED_FLAG | 1) })
+      return getWithData(checked, { ...data, bone, flags: data.flags & ~(ARMED_FLAG | 1) })
     }
     const flags =
       !isArmed && getIsInsideAWindow(time, ARMING_WINDOWS) ? data.flags | ARMED_FLAG : data.flags
-    return getWithData(checked, { ...data, flags: flags & ~1 })
+    return getWithData(checked, { ...data, bone, flags: flags & ~1 })
   },
 })

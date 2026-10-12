@@ -1,5 +1,7 @@
 export {
+  CRANE_SHADOW_DECAL_LIMITS,
   EXPLOSION_SCAR_DECAL_LIMITS,
+  getCraneShadowPlacement,
   getExplosionScarPlacement,
   getOilSlickPlacement,
   OIL_SLICK_DECAL_LIMITS,

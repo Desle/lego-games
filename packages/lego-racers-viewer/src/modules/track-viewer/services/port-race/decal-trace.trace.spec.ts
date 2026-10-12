@@ -28,6 +28,13 @@ const DECAL_CASES: readonly DecalCase[] = [
     recordFrames: getFrames(386, 574, 3),
     expectedCount: 3,
   },
+  {
+    name: 'crane shadow',
+    raceFolder: 'RACEC0R1',
+    isSteering: true,
+    recordFrames: getFrames(386, 430, 2),
+    expectedCount: 1,
+  },
 ]
 
 describe.skipIf(!isGamePresent())('decal trace', () => {

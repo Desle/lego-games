@@ -1,4 +1,8 @@
-import { getExplosionScarPlacement, getOilSlickPlacement } from './decal-placements.ts'
+import {
+  getCraneShadowPlacement,
+  getExplosionScarPlacement,
+  getOilSlickPlacement,
+} from './decal-placements.ts'
 
 describe('decal placements', () => {
   it('places an oil slick 5 above its ground point, facing down, 15 across', () => {
@@ -40,5 +44,24 @@ describe('decal placements', () => {
 
     // Assert
     expect(placement.position.z).toBe(Math.fround(Math.fround(0.1) + 5))
+  })
+
+  it('places a crane shadow on the bone itself, 13 across, with the frame row as the up hint', () => {
+    // Arrange
+    const bone = { x: -576.5, y: -512.5, z: -67.5 }
+    const upHint = { x: 0.5, y: 0.25, z: 0 }
+
+    // Act
+    const placement = getCraneShadowPlacement(bone, upHint)
+
+    // Assert
+    expect(placement).toEqual({
+      position: bone,
+      normal: { x: 0, y: 0, z: -1 },
+      upHint,
+      width: 13,
+      height: 13,
+      depth: 15,
+    })
   })
 })

@@ -9,6 +9,7 @@ export {
 export {
   advanceSkeletonInstance,
   getIsSkeletonInstanceFinished,
+  getSkeletonInstanceBonePosition,
   getSkeletonInstanceClipIndex,
   getSkeletonInstanceWithTime,
   getSkeletonInstanceFlags,

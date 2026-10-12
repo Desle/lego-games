@@ -52,6 +52,7 @@ export type DecalFrameLine = {
     readonly triangles: readonly (readonly (readonly number[])[])[]
     readonly ownerState: number
     readonly ownerAlpha: number
+    readonly position: readonly number[]
   }[]
 }
 

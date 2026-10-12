@@ -1,10 +1,13 @@
 import {
+  CRANE_SHADOW_DECAL_LIMITS,
   EXPLOSION_SCAR_DECAL_LIMITS,
+  getCraneShadowPlacement,
   getExplosionScarPlacement,
   getOilSlickPlacement,
   OIL_SLICK_DECAL_LIMITS,
 } from '../../../decal/index.ts'
 
+import { getCraneShadows } from '../../../hazard/index.ts'
 import { BrickState, EffectState, PowerUpEffectKind } from '../../../power-ups/index.ts'
 import type { PowerUpEffect } from '../../../power-ups/index.ts'
 import { BallisticFlightState, ExplosionState } from '../../../projectiles/index.ts'
@@ -94,6 +97,7 @@ const { add, subtract, multiply, storeFloat } = createFloatArithmetic(RACE_FPU_P
 
 const OIL_SLICK_IMAGE_NAME = 'oilslck'
 const EXPLOSION_SCAR_IMAGE_NAME = 'exscar'
+const CRANE_SHADOW_IMAGE_NAME = 'crneshd'
 // 0x004b0140: the scar starts at this side; 0x004b015c: and is drawn with this alpha while the burst grows.
 const SMALLEST_SCAR_SIZE = Math.fround(0.1)
 const GROWING_SCAR_ALPHA = 180
@@ -118,10 +122,21 @@ const getOilSlickDecalViews = (raceState: RaceState): readonly DecalView[] => {
         placement: getOilSlickPlacement(motion.position),
         limits: OIL_SLICK_DECAL_LIMITS,
         alpha: null,
+        maximumSquaredDistance: null,
       },
     ]
   })
 }
+
+// 0x00490330: a crane that is not idle lays its shadow under the pose of its fourth bone, within the instance's draw distance.
+const getCraneShadowDecalViews = (raceState: RaceState): readonly DecalView[] =>
+  getCraneShadows(raceState.trackLogic.hazards, raceState.trackLogic.worlds).map((shadow) => ({
+    imageName: CRANE_SHADOW_IMAGE_NAME,
+    placement: getCraneShadowPlacement(shadow.bone, shadow.upHint),
+    limits: CRANE_SHADOW_DECAL_LIMITS,
+    alpha: null,
+    maximumSquaredDistance: shadow.maximumSquaredDistance,
+  }))
 
 // 0x00421850: a ground burst's scar grows with the burst (side (width - 0.1) x progress + 0.1, drawn at 180), then keeps
 // its full width and fades.
@@ -143,6 +158,7 @@ const getScarDecalViews = (pool: ExplosionPool): readonly DecalView[] =>
           placement: getExplosionScarPlacement(explosion.position, size),
           limits: EXPLOSION_SCAR_DECAL_LIMITS,
           alpha: GROWING_SCAR_ALPHA,
+          maximumSquaredDistance: null,
         },
       ]
     }
@@ -153,6 +169,7 @@ const getScarDecalViews = (pool: ExplosionPool): readonly DecalView[] =>
         placement: getExplosionScarPlacement(explosion.position, scarWidth),
         limits: EXPLOSION_SCAR_DECAL_LIMITS,
         alpha: Math.trunc(explosion.scarAlpha),
+        maximumSquaredDistance: null,
       },
     ]
   })
@@ -304,6 +321,7 @@ export const getEffectViews = (raceState: RaceState): EffectViews => {
     ]),
     decals: Object.freeze([
       ...getOilSlickDecalViews(raceState),
+      ...getCraneShadowDecalViews(raceState),
       ...getScarDecalViews(raceState.projectileWorld.explosions),
       ...getScarDecalViews(raceState.projectileWorld.spikedExplosions),
     ]),

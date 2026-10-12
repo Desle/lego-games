@@ -193,13 +193,15 @@ export type BrickView = {
 // What the drawing of a brick reads of either brick class.
 export type DrawnBrick = BrickBase & { readonly kind?: string }
 
-// A decal the effects lay on the track (oil slick, explosion scar): the picture's material, where it is placed, how many
-// triangles it may hold and the alpha it is drawn with (null: opaque).
+// A decal the effects lay on the track (oil slick, explosion scar, crane shadow): the picture's material, where it is
+// placed, how many triangles it may hold, the alpha it is drawn with (null: opaque) and the squared camera distance below
+// which it is projected and drawn (null: always).
 export type DecalView = {
   readonly imageName: string
   readonly placement: DecalPlacement
   readonly limits: DecalLimits
   readonly alpha: number | null
+  readonly maximumSquaredDistance: number | null
 }
 
 // A shield or turbo effect hanging on a racer: its kind and level, the racer, its state (2, 3 or 4) with the milliseconds

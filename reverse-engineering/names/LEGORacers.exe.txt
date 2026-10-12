@@ -917,3 +917,6 @@
 0048e600 Hazard2E_TurnOff
 004881a0 TimeTrialScreen_ShowBestTime
 00488150 TimeTrialScreen_Update
+00490190 HazardCrane_Update
+00490330 HazardCrane_ProjectShadow
+00490460 HazardCrane_DrawShadow

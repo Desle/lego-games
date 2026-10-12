@@ -60,4 +60,34 @@ describe('the crane', () => {
     expect(test.calls).toEqual([])
     expect(updated.data).toMatchObject({ flags: 2 })
   })
+
+  it('keeps the world point of its fourth bone for the shadow', () => {
+    // Arrange
+    const skeleton = {
+      bones: [0, 1, 2, 3].map((index) => ({
+        name: `bone${String(index)}`,
+        position: index === 3 ? ([1, 2, 3] as const) : null,
+        quaternion: null,
+        parentIndex: null,
+      })),
+      readByteCount: 0,
+    }
+    const test = createTestSession({
+      track: createTestWorld([
+        {
+          ...getSkeletonInstanceWithTime(createTestSkeletonInstance('crane'), 40),
+          skeleton,
+          position: [100, 200, 300],
+        },
+      ]),
+    })
+    const loaded = CRANE.create({ keyword: 0x32 }, { isMirrored: false, session: test.session })
+    const begun = CRANE.begin(loaded, test.session, null)
+
+    // Act
+    const updated = CRANE.update(begun, test.session, 33)
+
+    // Assert
+    expect(updated.data).toMatchObject({ bone: [101, 202, 303] })
+  })
 })

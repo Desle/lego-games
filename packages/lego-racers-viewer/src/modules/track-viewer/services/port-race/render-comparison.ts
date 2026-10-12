@@ -10,10 +10,7 @@ import {
 } from '@lego-games/lego-racers/presentation-trace'
 import { getEffectViews, getRacerPoses } from '@lego-games/lego-racers/race-presentation'
 import { layoutText } from '@lego-games/lego-racers/font-rendering'
-import {
-  createFloatArithmetic,
-  RACE_FPU_PRECISION,
-} from '@lego-games/lego-racers/simulation-math'
+import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-racers/simulation-math'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import type { PortTexture, QuadPlacement } from '@lego-games/lego-racers/presentation-trace'
 import type { Scene } from '@lego-games/lego-racers/scene'
