@@ -12,7 +12,8 @@ permissions:
 
 jobs:
   update:
-    runs-on: ubuntu-latest
+    # The user's own machines (GitHub-hosted minutes are not available).
+    runs-on: [self-hosted, lego-games]
     steps:
       - uses: actions/checkout@v7
         with:
