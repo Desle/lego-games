@@ -235,6 +235,18 @@ export type FrontEndViewportCommand = {
   readonly driver: DriverPreview | null
   // The racer showcase of the race select; null for any other viewport.
   readonly showcase: RacerShowcaseView | null
+  // The race cinema of the single race and circuit race screens; null for any other viewport.
+  readonly cinema: RaceCinemaView | null
+}
+
+// The race preview a race select shows (`MENUDATA\SINGRACE\PST.CDB`): the cinema of the race (the catalogue's second name)
+// and the milliseconds since the screen opened (hypothesis: the cinema's clock starts with the screen).
+export type RaceCinemaView = {
+  readonly cinemaName: string
+  readonly milliseconds: number
+  // The five part bytes of the race's champion (the race's third name, looked up in the menus' driver database,
+  // 0x00488b40): the figure that takes the place of the cinema's `guy1`; null when the database has no such driver.
+  readonly partBytes: readonly number[] | null
 }
 
 // The racer of the save the showcase shows: his car, turning on the turntable, and his driver standing on the platform.

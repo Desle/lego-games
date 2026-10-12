@@ -48,6 +48,8 @@ On the first frames of seven races 90 to 99 percent of the original's triangles 
 
 The bug reports checked: "some races misaligned versus the rendered map" is finding 1 (the viewer's track was never mirrored); "power-up colours wrong" is finding 2; "driver figure textures misplaced" is partly finding 3 (shadowing by name) and finding 8; **"faces upside down" and the bat helmet** are not reproduced: the six champion figures of every traced race match in UVs and textures, and a built driver (the helmet parts) is not reachable in the emulator, whose front end does not run the car and figure builders. Trace gap: drive the builder screens to compare built figures.
 
+- Race cinemas (single race and circuit race screens): the champion's figure on `guy1` matches the port's bones within 3 cm over time; see menu-backdrops.md.
+
 ## Adding a scenario
 
 Add a `TraceScenarioRequest` to `RENDER_CASES` in `render-trace.trace.spec.ts` (the frames to record go in `recordFrames`; the race idles through the introduction and the countdown unless `isSteering`). A front-end case is a list of tapped scan codes in `front-end-render-trace.trace.spec.ts`.
