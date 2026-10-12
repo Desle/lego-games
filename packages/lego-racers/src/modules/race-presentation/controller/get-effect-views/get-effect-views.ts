@@ -115,7 +115,9 @@ export const getEffectViews = (raceState: RaceState): EffectViews => {
   const attachments = activeEffectIds.flatMap((effectId) => {
     const effect = effects[effectId]
     const view =
-      effect === undefined || !DRAWN_STATES.includes(effect.state) ? null : getAttachmentView(effect)
+      effect === undefined || !DRAWN_STATES.includes(effect.state)
+        ? null
+        : getAttachmentView(effect)
     return view === null ? [] : [view]
   })
   return Object.freeze({

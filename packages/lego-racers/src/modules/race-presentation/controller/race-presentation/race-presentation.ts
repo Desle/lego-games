@@ -79,6 +79,7 @@ export const createRacePresentation = (
       isCameraSwitchEnabled: false,
       previousPhase: raceState.phase,
       isChangeCameraHeld: false,
+      isWarpDrawn: false,
       isPlayerPowerSliding: false,
       engineSounds: Object.freeze(raceState.racerSet.racers.map(() => INITIAL_ENGINE_SOUND_STATE)),
     }),
@@ -294,7 +295,11 @@ export const stepRacePresentation = (
     previousPhase: raceState.phase,
     isChangeCameraHeld: controls.isChangeCameraPressed,
   }
-  const lookingBehind = setCameraLookingBehind(switchedCamera, controls.isLookBehindPressed)
+  // 0x0045dc90 state 3 and every warp draw (0x0045d940) call 0x0043a3e0: the camera snaps behind the racer on its next update.
+  const snappedCamera = presentation.isWarpDrawn
+    ? requestCameraSnap(switchedCamera)
+    : switchedCamera
+  const lookingBehind = setCameraLookingBehind(snappedCamera, controls.isLookBehindPressed)
   const cameraUpdate = getUpdatedCamera(
     lookingBehind,
     raceState,
@@ -319,21 +324,23 @@ export const stepRacePresentation = (
   const powerSlideSounds: readonly SoundRequest[] =
     isPowerSliding === presentation.isPlayerPowerSliding ? [] : [getPowerSlideSound(isPowerSliding)]
   const hudSounds = (hudFrame?.soundIds ?? []).map((soundId) => getCountdownSound(soundId))
+  const warpView = getWarpView(
+    raceState,
+    cameraUpdate.camera,
+    presentation.playerRacerIndex,
+    turboLevel
+  )
   return Object.freeze({
     presentation: Object.freeze({
       ...nextPresentation,
+      isWarpDrawn: warpView !== null,
       camera: cameraUpdate.camera,
       hud: hudFrame?.state ?? edits.hud,
       isPlayerPowerSliding: isPowerSliding,
       engineSounds: engine.states,
     }),
     cameraView: cameraUpdate.view,
-    warpView: getWarpView(
-      raceState,
-      cameraUpdate.camera,
-      presentation.playerRacerIndex,
-      turboLevel
-    ),
+    warpView,
     hudFrame,
     sounds: Object.freeze([
       ...step.events.flatMap((event) => getRaceEventSounds(event)),

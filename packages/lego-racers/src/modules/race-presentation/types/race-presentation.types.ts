@@ -36,6 +36,8 @@ export type RacePresentation = {
   readonly isCameraSwitchEnabled: boolean
   readonly previousPhase: RacePhaseValue
   readonly isChangeCameraHeld: boolean
+  // The last frame drew the warp (0x0045d940 sets the camera's snap flag, 0x0043a3e0, on every such draw).
+  readonly isWarpDrawn: boolean
   readonly isPlayerPowerSliding: boolean
   // Racer +0xd24..+0xd30 and the loops' playing flags (0x00437d40), one per racer.
   readonly engineSounds: readonly EngineSoundState[]
