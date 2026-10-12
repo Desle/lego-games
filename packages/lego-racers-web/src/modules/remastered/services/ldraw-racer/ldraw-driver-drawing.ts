@@ -10,6 +10,7 @@ import { createFaceDecal, createTorsoDecal } from './minifig-decals.ts'
 import { createMinifigPartPlans } from './minifig-assembly.ts'
 import { MinifigPartKey, MinifigPosture } from './minifig-assembly.types.ts'
 import type { MinifigPartPlan } from './minifig-assembly.types.ts'
+import { MINIFIG_GEOMETRY } from './minifig-geometry.ts'
 import { getJointMatrices } from './minifig-joints.ts'
 import { getMinifigRig } from './minifig-rig.ts'
 import type { MinifigRig } from './minifig-rig.types.ts'
@@ -20,8 +21,6 @@ import { ensureStudioLights } from './studio-scene-lights.ts'
 
 const RAW_UNITS_PER_LDRAW_UNIT = 3.2
 const IDENTITY_ROTATION = '1 0 0 0 1 0 0 0 1'
-const HEAD_ORIGIN_Y = -48
-const TORSO_ORIGIN_Y = -24
 
 // The figure's frame in the model's: LDraw's (x to the viewer's right, y down, front toward -z) into the model's (x forward, y to the
 // figure's left, z up), at the scale of the car's bricks, with the figure's hips at the height the skeleton's bind pose puts them.
@@ -65,7 +64,7 @@ export const createLDrawDriverDrawing = (
     (request.modelName === null ? null : getDriverPartBytes(request.archive, request.modelName))
   if (sampler === null || rig === null || partBytes === null) return null
   const spec = createMinifigSpec(request.archive, partBytes)
-  const plans = createMinifigPartPlans(spec, rig.posture)
+  const plans = createMinifigPartPlans(spec)
   const figureFrame = getFigureFrame(rig)
   const object = new Group()
   const holders = new Map<MinifigPartKey, Group>(
@@ -100,19 +99,19 @@ export const createLDrawDriverDrawing = (
       : {
           decal: createFaceDecal(spec.surfaces.face, search),
           key: MinifigPartKey.HEAD,
-          y: HEAD_ORIGIN_Y,
+          origin: MINIFIG_GEOMETRY.head,
         },
     spec.torso !== null || spec.surfaces.torso === null
       ? null
       : {
           decal: createTorsoDecal(spec.surfaces.torso, search),
           key: MinifigPartKey.TORSO,
-          y: TORSO_ORIGIN_Y,
+          origin: MINIFIG_GEOMETRY.torso,
         },
   ]
   for (const entry of decals) {
     if (entry?.decal == null) continue
-    entry.decal.mesh.position.set(0, entry.y, 0)
+    entry.decal.mesh.position.setFromMatrixPosition(entry.origin)
     holders.get(entry.key)?.add(entry.decal.mesh)
   }
   const pose = (state: SkeletonAnimationState | null) => {
