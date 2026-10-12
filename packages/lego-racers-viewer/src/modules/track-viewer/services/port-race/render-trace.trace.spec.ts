@@ -17,14 +17,12 @@ const POWER_UP_LEVELS = [0, 1, 2, 3] as const
 const POWER_UP_RECORD_FRAMES = [307, 312, 320, 335, 355, 385]
 const POWER_UP_CASES: readonly TraceScenarioRequest[] = POWER_UP_KIND_NAMES.flatMap(
   (kindName, kindIndex) =>
-    POWER_UP_LEVELS.map(
-      (level): TraceScenarioRequest => ({
-        name: `Royal Knights, power-up ${kindName} ${String(kindIndex + 1)}/${String(level)}`,
-        raceFolder: 'RACEC0R0',
-        recordFrames: POWER_UP_RECORD_FRAMES,
-        powerUp: { kind: kindIndex + 1, level, grantFrame: 300, useFrame: 305, frameCount: 390 },
-      })
-    )
+    POWER_UP_LEVELS.map((level): TraceScenarioRequest => ({
+      name: `Royal Knights, power-up ${kindName} ${String(kindIndex + 1)}/${String(level)}`,
+      raceFolder: 'RACEC0R0',
+      recordFrames: POWER_UP_RECORD_FRAMES,
+      powerUp: { kind: kindIndex + 1, level, grantFrame: 300, useFrame: 305, frameCount: 390 },
+    }))
 )
 const RENDER_CASES: readonly TraceScenarioRequest[] = [
   { name: 'Royal Knights', raceFolder: 'RACEC0R0', recordFrames: RECORD_FRAMES },
