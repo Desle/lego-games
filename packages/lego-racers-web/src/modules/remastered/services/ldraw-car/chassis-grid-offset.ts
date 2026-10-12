@@ -1,5 +1,5 @@
 import type { BrickFootprint } from '@lego-games/lego-racers/car-builder'
-import type { BaseBounds, GridOffset } from './chassis-grid-offset.types.ts'
+import type { BaseBounds, GridOffset, StudSpan } from './chassis-grid-offset.types.ts'
 
 const LDRAW_UNITS_PER_STUD = 20
 const LDRAW_UNITS_PER_PLATE = 8
@@ -26,6 +26,45 @@ export const getDominantDeckHeight = (footprint: BrickFootprint): number => {
     }
   }
   return dominantHeight * LDRAW_UNITS_PER_PLATE
+}
+
+const STUD_TOP_TOLERANCE = 1
+const COORDINATES_PER_POINT = 3
+
+const getMinimum = (values: readonly number[]): number =>
+  values.reduce((minimum, value) => Math.min(minimum, value), Infinity)
+const getMaximum = (values: readonly number[]): number =>
+  values.reduce((maximum, value) => Math.max(maximum, value), -Infinity)
+
+// The edges of a row of whole studs whose tops reach from `first` to `last`: centred between them (a stud's top is round), as many
+// studs as fit (a top is narrower than a stud).
+const getStudSpan = (first: number, last: number): StudSpan => {
+  const centre = (first + last) / 2
+  const halfWidth =
+    ((Math.floor((last - first) / LDRAW_UNITS_PER_STUD) + 1) * LDRAW_UNITS_PER_STUD) / 2
+  return Object.freeze({ minimum: centre - halfWidth, maximum: centre + halfWidth })
+}
+
+// The base's studded area from its points (x, y, z in turn, recipe axes): the highest points are the studs' tops. Wheel holders, pins
+// and edges that reach past the studs do not count, so the grid's cells land on the studs.
+export const getStudAreaBounds = (positions: readonly number[]): BaseBounds | null => {
+  const ys = positions.filter((_, index) => index % COORDINATES_PER_POINT === 1)
+  if (ys.length === 0) return null
+  const top = getMinimum(ys)
+  const studTopIndices = ys.flatMap((y, point) =>
+    y <= top + STUD_TOP_TOLERANCE ? [point * COORDINATES_PER_POINT] : []
+  )
+  const xs = studTopIndices.map((index) => positions[index] ?? 0)
+  const zs = studTopIndices.map((index) => positions[index + 2] ?? 0)
+  const spanX = getStudSpan(getMinimum(xs), getMaximum(xs))
+  const spanZ = getStudSpan(getMinimum(zs), getMaximum(zs))
+  return Object.freeze({
+    minimumX: spanX.minimum,
+    maximumX: spanX.maximum,
+    minimumY: top,
+    minimumZ: spanZ.minimum,
+    maximumZ: spanZ.maximum,
+  })
 }
 
 // The shift that makes the base's edge fall on a cell boundary of the shifted grid while centring the grid on the base.
