@@ -968,3 +968,6 @@
 0042f240 Profile_GetGhostBeatenFlags
 00488010 RaceSelectScreen_ShowRace
 00487b50 RaceSelectScreen_CreateWidgets
+00416040 World_Draw
+00435a00 Race_DrawEntities
+004357b0 Race_DrawView

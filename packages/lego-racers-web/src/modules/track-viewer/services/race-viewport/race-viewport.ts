@@ -21,6 +21,8 @@ import {
   WebGLRenderer,
 } from 'three'
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
+import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-racers/simulation-math'
+import { getWorldSpriteQuads } from '@lego-games/lego-racers/world-sprite'
 import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
 import { getCameraFrustum, ORIGINAL_FIELD_OF_VIEW_DEGREES } from './camera-frustum.ts'
 import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
@@ -53,6 +55,7 @@ import type {
   RacerRig,
 } from './race-viewport.types.ts'
 
+const spriteArithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
 const BACKGROUND_COLOR = 0x101820
 const MILLISECONDS_PER_SECOND = 1000
 // The scroll the original adds stays below 1 (it wraps).
@@ -283,6 +286,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     tunnelMilliseconds = warpView.tunnelMilliseconds
     warpGroup.visible = true
   }
+  const materialNames = assets.scene.materials.map((material) => material.name)
   let lastCameraView: CameraView | null = null
   let lastSprites: readonly SpriteView[] = []
   let lastRibbons: readonly RibbonView[] = []
@@ -417,7 +421,16 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     for (const instance of trackWorld.skeletonInstances) {
       if (instance.clip !== null) shown.track.setSkeletonState(instance.name, instance.clip)
     }
-    if (lastCameraView !== null) particles.update(pools, lastCameraView, lastSprites, lastRibbons)
+    if (lastCameraView !== null) {
+      const worldSpriteQuads = getWorldSpriteQuads(
+        spriteArithmetic,
+        assets.scene.sprites,
+        materialNames,
+        lastCameraView,
+        assets.definition.isMirrored
+      )
+      particles.update(pools, lastCameraView, lastSprites, lastRibbons, worldSpriteQuads)
+    }
   }
 
   return Object.freeze({
