@@ -12,6 +12,7 @@ import {
   Color,
   Group,
   LinearSRGBColorSpace,
+  Matrix4,
   PerspectiveCamera,
   Scene as ThreeScene,
   WebGLRenderer,
@@ -222,15 +223,22 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
         racerRig.driver.group.visible =
           isRigShown && getIsWithinLevelDistance(centres?.driver ?? null, eye)
       }
-      racerRig.wheels.group.matrix.copy(getFrameMatrix(pose.rotation, pose.position))
+      const partScale = new Matrix4().makeScale(pose.partScale, pose.partScale, pose.partScale)
+      racerRig.wheels.group.matrix
+        .copy(getFrameMatrix(pose.rotation, pose.position))
+        .multiply(partScale)
       racerRig.wheels.group.matrixWorldNeedsUpdate = true
       racerRig.wheels.object.setAnimationState(pose.wheelAnimation)
       if (racerRig.body !== null) {
-        racerRig.body.group.matrix.copy(getFrameMatrix(pose.bodyRotation, pose.position))
+        racerRig.body.group.matrix
+          .copy(getFrameMatrix(pose.bodyRotation, pose.position))
+          .multiply(partScale)
         racerRig.body.group.matrixWorldNeedsUpdate = true
       }
       if (racerRig.driver !== null) {
-        racerRig.driver.group.matrix.copy(getFrameMatrix(pose.bodyRotation, pose.driverPosition))
+        racerRig.driver.group.matrix
+          .copy(getFrameMatrix(pose.bodyRotation, pose.driverPosition))
+          .multiply(partScale)
         racerRig.driver.group.matrixWorldNeedsUpdate = true
         racerRig.driver.object.setAnimationState(pose.driverAnimation)
       }

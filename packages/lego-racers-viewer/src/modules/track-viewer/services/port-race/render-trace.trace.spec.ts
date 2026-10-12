@@ -35,7 +35,7 @@ const RENDER_CASES: readonly TraceScenarioRequest[] = [
   {
     name: 'Royal Knights, warp',
     raceFolder: 'RACEC0R0',
-    recordFrames: [310, 320, 330, 345, 360, 375],
+    recordFrames: [310, 314, 316, 318, 320, 330, 345, 360, 375],
     powerUp: { kind: 3, level: 3, grantFrame: 300, useFrame: 305, frameCount: 380 },
   },
   {

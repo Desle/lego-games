@@ -141,6 +141,9 @@ export type RacerPose = {
   readonly skids: VehicleSkids
   // The racer is off the track (racer flag 0x10): its parts are not drawn there either.
   readonly isOffTrack: boolean
+  // The scale of the three parts' frames (+0x58): 1, except in the last 250 ms of the warp's portal, which shrinks the car
+  // with the portal's fade (0x0045dbe0 calls 0x00440160).
+  readonly partScale: number
 }
 
 // What the frame's race events change in the presentation.
