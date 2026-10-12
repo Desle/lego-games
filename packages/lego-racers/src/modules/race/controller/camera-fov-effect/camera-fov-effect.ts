@@ -8,7 +8,9 @@ import type {
 } from '../../types/camera-fov-effect/camera-fov-effect.types.ts'
 
 // The camera's field of view at the start (the camera frame's +8, 65).
-const INITIAL_FOV = 65
+export const INITIAL_FOV = 65
+// 0x0045d560 gives the camera this many degrees more than the effect's base while the warp starts (0x004b1a6c).
+const WARP_STARTING_FOV_BOOST = 30
 // 0x004b0314 and 0x004b0318: the swing keeps the view between these.
 const UPPER_FOV = 80
 const LOWER_FOV = 40
@@ -93,4 +95,18 @@ export const stepCameraFovEffect = (
     effect: Object.freeze({ ...effect, swing, swingStartFov, timerMilliseconds: timer, fov }),
     position: nextPosition,
   })
+}
+
+// The warp's writes to the camera (+0x134 and the frame's +8): 0x0045d560 raises the base the view eases to while the
+// warp starts (the effect's base, the initial field of view, plus 30), 0x0045dc90 (the end of the start) and the end of
+// every draw 0x0045d940 put the view and the base back to the effect's base.
+export const getCameraFovEffectWithWarp = (
+  effect: CameraFovEffect,
+  isWarpStarting: boolean,
+  isWarpCarrying: boolean
+): CameraFovEffect => {
+  if (isWarpStarting)
+    return Object.freeze({ ...effect, baseFov: INITIAL_FOV + WARP_STARTING_FOV_BOOST })
+  if (isWarpCarrying) return Object.freeze({ ...effect, baseFov: INITIAL_FOV, fov: INITIAL_FOV })
+  return effect
 }

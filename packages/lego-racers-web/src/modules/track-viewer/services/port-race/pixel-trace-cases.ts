@@ -46,15 +46,21 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
     watchedTextures: [],
   },
   {
-    // Open: the warp tunnel is drawn with other colours and another shape (every frame mostly differs).
+    // Frame 310 is the portal, 320 the fade to blue, 330 to 360 the tunnel, 375 the landing. Before the screen fade,
+    // the warp's field of view and the blend's alpha were ported the worst frame (320) differed 99.6 percent. The rest of
+    // the worst frame (375) is the skid marks, the fence and the water seen after landing (see pixel-trace.md).
     request: {
       name: 'Royal Knights, warp',
       raceFolder: 'RACEC0R0',
       recordFrames: [310, 320, 330, 345, 360, 375],
       powerUp: { kind: 3, level: 3, grantFrame: 300, useFrame: 305, frameCount: 380 },
     },
-    maximumDifferingShare: 1,
-    watchedTextures: [],
+    maximumDifferingShare: 0.05,
+    watchedTextures: [
+      { label: 'titwat2', maximumDifferingShare: 0.02 },
+      // The warp portal's picture (`warphole`), which the matcher names by its hash.
+      { label: '69645e3c29b12070', maximumDifferingShare: 0.05 },
+    ],
   },
   {
     request: {

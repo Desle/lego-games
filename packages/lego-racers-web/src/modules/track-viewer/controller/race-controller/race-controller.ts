@@ -431,7 +431,9 @@ export const useRaceController = (): RaceController => {
           frame.cameraView,
           getEffectViews(raceState),
           frame.warpView,
-          ghostStep.cars
+          ghostStep.cars,
+          frame.screenFades,
+          frame.fieldOfViewDegrees
         )
         viewport.showHazards(raceState.trackLogic.worlds.track, [
           raceState.racerSet.emitters.common,

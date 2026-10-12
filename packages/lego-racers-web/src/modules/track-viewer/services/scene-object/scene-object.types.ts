@@ -86,7 +86,7 @@ export type InstanceLevelMesh = {
 // three.js's own parameter names, so the boolean keeps its library name.
 export type BlendingParameters = Pick<
   MaterialParameters,
-  'blending' | 'blendSrc' | 'blendDst' | 'transparent'
+  'blending' | 'blendSrc' | 'blendDst' | 'blendSrcAlpha' | 'blendDstAlpha' | 'transparent'
 >
 
 // The three.js material of a batch, with the scene material it came from.

@@ -1,5 +1,6 @@
 import { getIntroductionCameraView } from '../get-introduction-camera-view/get-introduction-camera-view.ts'
 import { getWarpView } from '../get-warp-view/get-warp-view.ts'
+import { getScreenFadeViews } from '../get-screen-fade-views/get-screen-fade-views.ts'
 import { getPhysicsSubSteps, getRaceTimeStep } from '../../../racer-physics/index.ts'
 import {
   attachCamera,
@@ -32,7 +33,7 @@ import {
   startHudCountdown,
 } from '../../../race-hud/index.ts'
 import type { HudFrame, HudMinimap, HudRacerView } from '../../../race-hud/index.ts'
-import { RacePhase } from '../../../race/index.ts'
+import { INITIAL_FIELD_OF_VIEW_DEGREES, RacePhase } from '../../../race/index.ts'
 import type { RaceState, RaceStepResult } from '../../../race/index.ts'
 import { getRacer } from '../../../racer/index.ts'
 import type { Racer, RacerControls } from '../../../racer/index.ts'
@@ -344,6 +345,15 @@ export const stepRacePresentation = (
     }),
     cameraView: cameraUpdate.view,
     warpView,
+    fieldOfViewDegrees:
+      raceState.cameraFovEffects[
+        raceState.playerRacerIndices.indexOf(presentation.playerRacerIndex)
+      ]?.fov ?? INITIAL_FIELD_OF_VIEW_DEGREES,
+    screenFades: getScreenFadeViews(
+      raceState,
+      raceState.playerRacerIndices.indexOf(presentation.playerRacerIndex),
+      warpView
+    ),
     hudFrame,
     sounds: Object.freeze([
       ...step.events.flatMap((event) => getRaceEventSounds(event)),

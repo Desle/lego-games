@@ -26,8 +26,12 @@ import {
   NO_RACE_CONTACTS,
   updateTaggedPositions,
 } from '../race-world/race-world.ts'
-import { stepCameraFovEffect } from '../camera-fov-effect/camera-fov-effect.ts'
+import {
+  getCameraFovEffectWithWarp,
+  stepCameraFovEffect,
+} from '../camera-fov-effect/camera-fov-effect.ts'
 import { getStateWithWarpsDrawn } from '../warp-draw/warp-draw.ts'
+import { getScreenFaderAfterUpdate, getWarpStates } from '../warp-fade/warp-fade.ts'
 import type { PlayerControllerProgress, PlayerControllerRun } from './update-race.types.ts'
 
 // Race settings +0x20 bit 0x100 scales the time by 1.75.
@@ -237,11 +241,12 @@ export const updateRace = (
           const effect = cameraFovEffects[playerIndex]
           const racer = current.racers[racerIndex]
           if (effect === undefined || racer === undefined) return current
+          const warpStates = getWarpStates(racerSet.powerUpStep, racerIndex)
           const step = stepCameraFovEffect(
             arithmetic,
             counted.context.tables.randomTable,
             current.randomPosition,
-            effect,
+            getCameraFovEffectWithWarp(effect, warpStates.isStarting, warpStates.isCarrying),
             racer.flags,
             Math.trunc(subStepMilliseconds)
           )
@@ -278,6 +283,7 @@ export const updateRace = (
     }),
     ghost,
     cameraFovEffects,
+    screenFader: getScreenFaderAfterUpdate(counted, stepMilliseconds),
   })
   return getStateWithWarpsDrawn(getStateWithSkyUpdated(progressed, stepMilliseconds))
 }

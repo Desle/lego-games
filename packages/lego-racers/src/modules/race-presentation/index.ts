@@ -32,6 +32,7 @@ export type {
   RacerPartCentres,
   RacerPose,
   RacerShadow,
+  ScreenFadeView,
   SpriteView,
   WarpView,
 } from './types/race-presentation.types.ts'

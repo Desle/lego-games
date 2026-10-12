@@ -3,12 +3,14 @@ import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
 import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
+import type { ScreenFadeOverlay } from '../screen-fade-overlay/screen-fade-overlay.types.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
 import type { PerspectiveCamera, Scene as ThreeScene } from 'three'
 import type {
   EffectViews,
   GhostCar,
   RacerPose,
+  ScreenFadeView,
   WarpView,
 } from '@lego-games/lego-racers/race-presentation'
 
@@ -20,7 +22,9 @@ export type RaceViewport = {
     cameraView: CameraView,
     effects: EffectViews,
     warpView?: WarpView | null,
-    ghostCars?: readonly GhostCar[]
+    ghostCars?: readonly GhostCar[],
+    screenFades?: readonly ScreenFadeView[],
+    fieldOfViewDegrees?: number
   ) => void
   // Shows the simulation's hazards and emitters: the track world's skeleton instances take the clip states the
   // simulation advanced, and the emitter pools' particles are drawn as points.
@@ -69,6 +73,7 @@ export type RacerRig = {
 export type RaceStage = Pick<RaceViewport, 'update' | 'showHazards' | 'animate' | 'dispose'> & {
   readonly backgroundScene: ThreeScene
   readonly trackScene: ThreeScene
+  readonly screenFadeOverlay: ScreenFadeOverlay
   readonly camera: PerspectiveCamera
   readonly racerRigs: readonly RacerRig[]
 }

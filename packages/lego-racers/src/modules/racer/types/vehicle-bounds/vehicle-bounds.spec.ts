@@ -17,6 +17,7 @@ import {
   getRacerAfterWarpDraw,
   getRacerWithPartsMarked,
   getWarpFadeScale,
+  getWarpTunnelSwing,
 } from './vehicle-bounds.ts'
 
 const FIGURE_CHILD = { centre: { x: 0, y: 0, z: 1 }, radius: 2, radiusScale: 1 }
@@ -128,5 +129,18 @@ describe('getWarpFadeScale', () => {
 
     // Assert
     expect(scale).toBe(870)
+  })
+})
+
+describe('getWarpTunnelSwing', () => {
+  it('follows the table with the index the effect timer gives', () => {
+    // Arrange: the test table holds n at index n, and a timer of 100 ms is the index (34 - 0x100) & 0x3ff = 802
+    const tables = IDENTITY_TABLES
+
+    // Act
+    const swing = getWarpTunnelSwing(SINGLE_ARITHMETIC, tables, 100)
+
+    // Assert
+    expect(swing).toBe(802)
   })
 })
