@@ -31,15 +31,11 @@ export const createDynamicGeometry = (cornerCount: number): BufferGeometry => {
   return geometry
 }
 
-// The material of a decal: drawn under an alpha of its own (the device's override), so the colour key stays off, and
-// with the depth written.
+// The material of a decal: drawn under an alpha of its own (the device's override) and with the depth written. The colour
+// key (render state 41, recorded on for the decals) stays: the keyed texels of a decal without a blend (the oil slick) are
+// not drawn, so the material's alpha test stands in for it as for every material.
 export const createDecalMaterial = (scene: Scene, material: SceneMaterial): Material => {
-  const three = createSceneMaterial(
-    { ...material, renderState: { ...material.renderState, isAlphaTestEnabled: false } },
-    scene.textures,
-    new Map(),
-    true
-  )
+  const three = createSceneMaterial(material, scene.textures, new Map(), true)
   three.depthWrite = true
   three.depthFunc = LessEqualDepth
   return three
