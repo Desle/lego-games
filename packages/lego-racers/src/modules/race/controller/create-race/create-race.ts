@@ -204,7 +204,8 @@ const getTrackGroundQuery = (definition: RaceDefinition): GroundQuery | null => 
   if (definition.getGroundPoint !== null) return definition.getGroundPoint
   const known = groundQueries.get(definition)
   if (known !== undefined) return known
-  const track = definition.collisionObjects[0]
+  // The track is the first object of the cars' list, not always the first instance (RACEC0R1 starts with startfin).
+  const track = definition.collisionObjects[definition.carCollisionObjectIndices[0] ?? 0]
   const query =
     track === undefined
       ? null

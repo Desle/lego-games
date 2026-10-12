@@ -697,7 +697,7 @@ export const changeTrackLogic = (
     random: { table: racerSet.trackLogic.random.table, position: racerSet.randomPosition },
     emitters: racerSet.emitters,
   }
-  const track = context.collisionObjects[0]
+  const track = context.collisionObjects[racerSet.racers[0]?.collisionObjectIndices[0] ?? 0]
   const step = run(synced, {
     arithmetic: context.arithmetic,
     world: STATIC_TRACK_WORLD,
