@@ -4,6 +4,7 @@ import { drawRandomRemainder } from '../../../random-table/index.ts'
 import type { RandomTable } from '../../../random-table/index.ts'
 import {
   advanceSkeletonAnimation,
+  blendToSkeletonClip,
   getIsSkeletonClipEnded,
   getShownClipIndex,
   playSkeletonClipOnce,
@@ -11,8 +12,10 @@ import {
 import {
   RACER_SHOWCASE_DRIVER_FORWARD,
   RACER_SHOWCASE_DRIVER_POSITION,
+  RACER_SHOWCASE_REACTION_BLEND_MILLISECONDS,
 } from '../../types/racer-showcase/racer-showcase.ts'
 import type { RacerShowcaseView } from '../../types/front-end.types.ts'
+import type { ScreenNavigation } from '../../types/front-end-screen.types.ts'
 import type {
   IdleClipDraw,
   RacerShowcase,
@@ -59,6 +62,7 @@ const getPlayedShowcase = (
       car,
       driverAnimation: playSkeletonClipOnce(showcase.animation, next.clipIndex),
       turntableMilliseconds,
+      pendingNavigation: null,
     }),
     randomPosition: next.randomPosition,
   }
@@ -112,7 +116,9 @@ export const stepRacerShowcase = (
   randomPosition: number,
   elapsedMilliseconds: number
 ): RacerShowcaseStep => {
-  const isEnded = getIsSkeletonClipEnded(showcase.animation, current.driverAnimation)
+  const isEnded =
+    current.pendingNavigation === null &&
+    getIsSkeletonClipEnded(showcase.animation, current.driverAnimation)
   const played = isEnded
     ? getPlayedShowcase(
         current.racerIndex,
@@ -137,3 +143,38 @@ export const stepRacerShowcase = (
     randomPosition: played.randomPosition,
   }
 }
+
+// 0x00486890 (the button handler 0x00484f40 calls it when a racer is picked): a random reaction clip (`random table[++cursor]
+// % 3`: `jump`, `yes!` or `spin`) blends in over 200 ms and plays once; the screen leaves by `navigation` when it has ended.
+export const startRacerShowcaseReaction = (
+  current: RacerShowcase,
+  showcase: RacerShowcaseAnimation,
+  randomTable: RandomTable,
+  randomPosition: number,
+  navigation: ScreenNavigation
+): RacerShowcaseStep => {
+  const draw = drawRandomRemainder(randomTable, randomPosition, showcase.reactionClipIndices.length)
+  const clipIndex = showcase.reactionClipIndices[draw.value] ?? -1
+  return {
+    showcase: Object.freeze({
+      ...current,
+      driverAnimation: blendToSkeletonClip(showcase.animation, current.driverAnimation, {
+        clipIndex,
+        durationMilliseconds: RACER_SHOWCASE_REACTION_BLEND_MILLISECONDS,
+        isFirstAdvancing: false,
+        isSecondAdvancing: false,
+        isTargetLooping: false,
+      }),
+      pendingNavigation: navigation,
+    }),
+    randomPosition: draw.position,
+  }
+}
+
+// 0x004869b0: the screen may leave once the figure's clip has ended (a blend in progress has not).
+export const getIsRacerShowcaseReactionDone = (
+  current: RacerShowcase,
+  showcase: RacerShowcaseAnimation
+): boolean =>
+  !current.driverAnimation.isBlending &&
+  getIsSkeletonClipEnded(showcase.animation, current.driverAnimation)

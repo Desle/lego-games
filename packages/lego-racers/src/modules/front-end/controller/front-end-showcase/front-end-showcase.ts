@@ -6,7 +6,13 @@ import type {
 } from '../../types/front-end.types.ts'
 import { getBaseCar } from '../driver-base/driver-base.ts'
 import { getSavedCarOfRacer } from '../profile/profile.ts'
-import { createRacerShowcase, stepRacerShowcase } from '../racer-showcase/racer-showcase.ts'
+import type { ScreenNavigation } from '../../types/front-end-screen.types.ts'
+import {
+  createRacerShowcase,
+  getIsRacerShowcaseReactionDone,
+  startRacerShowcaseReaction,
+  stepRacerShowcase,
+} from '../racer-showcase/racer-showcase.ts'
 
 // The screens with a racer showcase (FUN_00488ed0 builds the racer widgets of the pick screens).
 const SHOWCASE_SCREEN_IDS: ReadonlySet<number> = new Set([
@@ -81,4 +87,40 @@ export const getStateWithShowcaseOpened = (
     showcase: step.showcase,
     settings: { ...after.settings, randomPosition: step.randomPosition },
   }
+}
+
+// 0x00484f40: a racer picked on the race select (the screen goes on to the next player or the race) first starts his
+// reaction clip; the navigation waits for the clip. Null for any other answer.
+export const getStateWithShowcaseReaction = (
+  state: FrontEndState,
+  navigation: ScreenNavigation,
+  resources: FrontEndResources,
+  environment: FrontEndEnvironment
+): FrontEndState | null => {
+  if (!getIsShowcaseScreen(state) || state.showcase === null) return null
+  if (navigation.kind !== 'push' && navigation.kind !== 'race') return null
+  const step = startRacerShowcaseReaction(
+    state.showcase,
+    resources.getRacerShowcaseAnimation(),
+    environment.randomTable,
+    state.settings.randomPosition,
+    navigation
+  )
+  return {
+    ...state,
+    showcase: step.showcase,
+    settings: { ...state.settings, randomPosition: step.randomPosition },
+  }
+}
+
+// 0x004869b0: the navigation a pressed button asked for, once the reaction clip has ended.
+export const getPendingShowcaseNavigation = (
+  state: FrontEndState,
+  resources: FrontEndResources
+): ScreenNavigation | null => {
+  const pending = state.showcase?.pendingNavigation ?? null
+  if (pending === null || state.showcase === null || state.outcome !== 'running') return null
+  return getIsRacerShowcaseReactionDone(state.showcase, resources.getRacerShowcaseAnimation())
+    ? pending
+    : null
 }
