@@ -19,15 +19,19 @@ const press = (state: RaceState, menu: Partial<RaceMenuInput>) => {
   return stepRace(state, inputs, FRAME_MILLISECONDS)
 }
 
+// A tap: the confirm key goes down (the waiting flag clears) and up (the menu is answered) on separate calls.
+const confirm = (state: RaceState): ReturnType<typeof press> =>
+  press(press(state, { isConfirmPressed: true }).raceState, { isConfirmReleased: true })
+
 const choose = (state: RaceState, selection: number): ReturnType<typeof press> => {
   const moved = press(state, { selectionChange: selection === 0 ? 0 : 1 })
   const selected = selection <= 1 ? moved : press(moved.raceState, { selectionChange: 1 })
-  return press(selected.raceState, { isConfirmPressed: true })
+  return confirm(selected.raceState)
 }
 
 // The confirmation selects "no" first; one step up selects "yes".
 const chooseYes = (state: RaceState): ReturnType<typeof press> =>
-  press(press(state, { selectionChange: -1 }).raceState, { isConfirmPressed: true })
+  confirm(press(state, { selectionChange: -1 }).raceState)
 
 describe('the pause menu', () => {
   it('opens on the pause key and stops the state timer (0x00435c00, 0x00436010)', () => {
@@ -79,7 +83,7 @@ describe('the pause menu', () => {
     const paused = press(createFixtureRace(), { isPausePressed: true }).raceState
 
     // Act
-    const resumed = press(paused, { isConfirmPressed: true })
+    const resumed = confirm(paused)
     const later = press(resumed.raceState, {})
 
     // Assert
@@ -133,7 +137,7 @@ describe('the pause menu', () => {
     const asked = choose(press(createFixtureRace(), { isPausePressed: true }).raceState, 2)
 
     // Act
-    const declined = press(asked.raceState, { isConfirmPressed: true })
+    const declined = confirm(asked.raceState)
 
     // Assert
     expect(declined.raceState.isRunning).toBe(true)
@@ -170,5 +174,33 @@ describe('the pause menu', () => {
     expect(ended.raceState.isRunning).toBe(false)
     expect(ended.raceState.exit).toBe(RaceExit.DEMONSTRATION_INTERRUPTED)
     expect(ended.events).toEqual([{ type: 'race.ended', exit: RaceExit.DEMONSTRATION_INTERRUPTED }])
+  })
+
+  it('answers only when the confirm key goes up, after it went down (0x00427810, 0x004278c0)', () => {
+    // Arrange
+    const paused = press(createFixtureRace(), { isPausePressed: true }).raceState
+
+    // Act
+    const held = press(paused, { isConfirmPressed: true })
+    const heldLonger = press(held.raceState, {})
+    const released = press(heldLonger.raceState, { isConfirmReleased: true })
+
+    // Assert
+    expect(heldLonger.raceState.pauseMenu.mode).toBe(PauseMenuMode.PAUSED)
+    expect(released.raceState.pauseMenu.mode).toBe(PauseMenuMode.NONE)
+  })
+
+  it('ignores a confirm key that goes up while the menu still waits, and the selection keys after the key went down', () => {
+    // Arrange
+    const paused = press(createFixtureRace(), { isPausePressed: true }).raceState
+
+    // Act
+    const earlyRelease = press(paused, { isConfirmReleased: true })
+    const down = press(earlyRelease.raceState, { isConfirmPressed: true })
+    const moved = press(down.raceState, { selectionChange: 1 })
+
+    // Assert
+    expect(earlyRelease.raceState.pauseMenu.mode).toBe(PauseMenuMode.PAUSED)
+    expect(moved.raceState.pauseMenu.selection).toBe(0)
   })
 })

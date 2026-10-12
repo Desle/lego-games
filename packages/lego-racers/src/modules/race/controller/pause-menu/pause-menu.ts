@@ -18,6 +18,7 @@ export const NO_MENU_INPUT: RaceMenuInput = Object.freeze({
   isPausePressed: false,
   selectionChange: 0,
   isConfirmPressed: false,
+  isConfirmReleased: false,
   isAnyInputPressed: false,
 })
 
@@ -32,6 +33,7 @@ const getOpenedMenu = (mode: PauseMenu['mode'], pendingAction: PauseMenu['pendin
     mode,
     selection: PAUSE_MENU_FIRST_SELECTIONS[mode],
     isAnswered: false,
+    isWaiting: true,
     pendingAction,
     blinkMilliseconds: 0,
   })
@@ -47,19 +49,26 @@ export const openPauseMenu = (
   return Object.freeze({ ...released, pauseMenu: getOpenedMenu(mode, pendingAction) })
 }
 
-// 0x00427810: while a menu waits for an answer the selection moves with wrap-around, and a confirm key answers it.
+// 0x00427810 (a key goes down) and 0x004278c0 (a key goes up): while the menu waits, the selection moves with wrap-around
+// and a confirm key clears the waiting flag; once it is clear, the confirm key going up answers the menu.
 const getMenuAfterKeys = (menu: PauseMenu, input: RaceMenuInput): PauseMenu => {
   if (menu.isAnswered) return menu
   const count = PAUSE_MENU_ITEM_COUNTS[menu.mode]
   const moved =
-    input.selectionChange > 0
-      ? menu.selection + 1 === count
-        ? 0
-        : menu.selection + 1
-      : input.selectionChange < 0
-        ? (menu.selection === 0 ? count : menu.selection) - 1
-        : menu.selection
-  return Object.freeze({ ...menu, selection: moved, isAnswered: input.isConfirmPressed })
+    !menu.isWaiting || input.selectionChange === 0
+      ? menu.selection
+      : input.selectionChange > 0
+        ? menu.selection + 1 === count
+          ? 0
+          : menu.selection + 1
+        : (menu.selection === 0 ? count : menu.selection) - 1
+  const isWaiting = menu.isWaiting && !input.isConfirmPressed
+  return Object.freeze({
+    ...menu,
+    selection: moved,
+    isWaiting,
+    isAnswered: !isWaiting && input.isConfirmReleased,
+  })
 }
 
 // Race_RunLoop 0x00432540 and 0x00435c00 (the race's key handler): in a demonstration any key ends the race; the
