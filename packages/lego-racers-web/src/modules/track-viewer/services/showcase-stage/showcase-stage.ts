@@ -24,6 +24,9 @@ import { getCarDesignKey } from '../car-design-key/car-design-key.ts'
 import { showBuiltCarDrawing } from '../built-car-drawing/built-car-drawing.ts'
 import { createModelObject } from '../model-object/model-object.ts'
 import { createModelSlot } from '../model-slot/model-slot.ts'
+import { showRacerPartDrawing } from '../racer-part-drawing/racer-part-drawing.ts'
+import { RacerPartKind } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
+import type { ModelObject } from '../model-object/model-object.types.ts'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import type { ShowcaseStage } from './showcase-stage.types.ts'
 
@@ -35,13 +38,17 @@ const TURNTABLE_CLIP_INDEX = 0
 
 // The wheels of the car's chassis (Chassis_CreateInstances 0x0041e360: a skeleton instance whose clip 0 is the wheels turning
 // forward) in the files the race reads, at rest.
-const loadWheelScene = (archive: JamArchive, chassisName: string): ModelScene => {
+const showWheels = (archive: JamArchive, chassisName: string): ModelObject => {
   const names = getBuiltRacerAppearance(
     readRacerDatabases(archive.readFile),
     chassisName,
     0
   ).wheelModel
-  return loadModelScene(archive, getRacerModelFiles(names))
+  const scene: ModelScene = loadModelScene(archive, getRacerModelFiles(names))
+  return showRacerPartDrawing(createModelObject(scene), scene, archive, RacerPartKind.WHEELS, {
+    modelName: names.modelName,
+    partBytes: null,
+  })
 }
 
 // The car's turn at a time: the instance's own heading plus the bone's turn, which both rotate about the vertical axis.
@@ -105,9 +112,7 @@ export const createShowcaseStage = (
           .copy(new Matrix4().makeRotationZ(turntable === null ? 0 : getCarYaw(scene, turntable)))
           .setPosition(x, y, z)
         car.group.matrixWorldNeedsUpdate = true
-        const wheels = wheelSlot.show(view.chassisName, () =>
-          createModelObject(loadWheelScene(archive, view.chassisName))
-        )
+        const wheels = wheelSlot.show(view.chassisName, () => showWheels(archive, view.chassisName))
         wheels.group.matrix.copy(car.group.matrix)
         wheels.group.matrixWorldNeedsUpdate = true
       }

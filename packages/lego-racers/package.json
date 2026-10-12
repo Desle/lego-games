@@ -23,6 +23,7 @@
     "./emitter": "./src/modules/emitter/index.ts",
     "./decal": "./src/modules/decal/index.ts",
     "./event": "./src/modules/event/index.ts",
+    "./figure-builder": "./src/modules/figure-builder/index.ts",
     "./font-database": "./src/modules/font-database/index.ts",
     "./font-rendering": "./src/modules/font-rendering/index.ts",
     "./front-end": "./src/modules/front-end/index.ts",
