@@ -880,3 +880,9 @@
 0047a3f0 RaceSelect_Update
 0047a2b0 RaceSelect_ShowRace
 00488cb0 RaceSelect_SetFrameTint
+004a2dc0 CinemaEvents_Update
+00466e40 Cinema_Draw
+004a3c90 CinemaEmitterEvent_Start
+004a3dd0 CinemaEmitterEvent_Reset
+004a1240 CinemaEvents_LoadEmitterPools
+004a3150 CinemaEvents_Reset

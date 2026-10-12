@@ -1,5 +1,8 @@
 import { decodeBitmap } from '../../../bitmap/index.ts'
 import { loadBuilderCatalog, loadSavedCars } from '../../../car-builder/index.ts'
+import { parseCinemaDatabase, parseCinemaEvents } from '../../../cinema/index.ts'
+import { parseEmitters } from '../../../emitter/index.ts'
+import { parseMaterialAnimation } from '../../../material-animation/index.ts'
 import type { BuilderCatalog, SavedCar } from '../../../car-builder/index.ts'
 import {
   RACER_SHOWCASE_IDLE_STRING_IDS,
@@ -31,6 +34,7 @@ import type {
   FrontEndResources,
   FrontEndScreenFiles,
 } from '../../types/front-end.types.ts'
+import type { RacePreviewResources } from '../../types/race-preview.types.ts'
 
 const MENU_DIRECTORY = 'MENUDATA'
 const DEFAULT_SAVE_PATH = 'MENUDATA\\DEFAULT.LRS'
@@ -38,6 +42,9 @@ const RACER_SHOWCASE_ANIMATION_PATH = 'MENUDATA\\RSANIM.ADB'
 const MENU_FIGURE_ANIMATION_PATH = 'MENUDATA\\LEGOMAN.ADB'
 const DRIVER_DATABASE_PATH = 'MENUDATA\\PARTDB\\DRIVERS.DDB'
 const BODY_PART_CATALOG_PATH = 'MENUDATA\\PARTDB\\BODYPART.PCB'
+const RACE_PREVIEW_DIRECTORY = 'MENUDATA\\SINGRACE'
+const RACE_PREVIEW_CINEMAS_PATH = 'MENUDATA\\SINGRACE\\PST.CDB'
+const RACE_PREVIEW_EVENTS_PATH = 'MENUDATA\\SINGRACE\\PST.CEB'
 const SEPARATOR = '\\'
 
 const getPath = (...segments: readonly string[]): string => segments.join(SEPARATOR)
@@ -200,8 +207,31 @@ export const loadFrontEndResources = (
     return racerShowcaseAnimation
   }
 
+  let racePreview: RacePreviewResources | null = null
+  const getRacePreview = (): RacePreviewResources => {
+    if (racePreview === null) {
+      const events = parseCinemaEvents(archive.readFile(RACE_PREVIEW_EVENTS_PATH))
+      racePreview = {
+        cinemas: parseCinemaDatabase(archive.readFile(RACE_PREVIEW_CINEMAS_PATH)),
+        events,
+        pools: events.poolNames.map((name) => ({
+          emitters: parseEmitters(
+            archive.readFile(getPath(RACE_PREVIEW_DIRECTORY, `${name.toUpperCase()}.EMB`))
+          ),
+          animation: paths.has(getPath(RACE_PREVIEW_DIRECTORY, `${name.toUpperCase()}.MAB`))
+            ? parseMaterialAnimation(
+                archive.readFile(getPath(RACE_PREVIEW_DIRECTORY, `${name.toUpperCase()}.MAB`))
+              )
+            : null,
+        })),
+      }
+    }
+    return racePreview
+  }
+
   return Object.freeze({
     getBuilderCatalog,
+    getRacePreview,
     getDriverDatabase,
     getMenuFigureAnimation,
     getRacerShowcaseAnimation,

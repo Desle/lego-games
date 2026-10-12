@@ -1,6 +1,7 @@
 export { parseCinemaDatabase } from './controller/parse-cinema-database/parse-cinema-database.ts'
 export {
   getActiveCinemaActions,
+  getActiveCinemaDummies,
   getCinemaFrame,
   getCinemaLoopMilliseconds,
 } from './controller/get-cinema-playback/get-cinema-playback.ts'
@@ -10,6 +11,14 @@ export type {
   VertexLight,
   VertexLightingInput,
 } from './types/vertex-lighting.types.ts'
+export { parseCinemaEvents } from './controller/parse-cinema-events/parse-cinema-events.ts'
+export type {
+  CinemaEmitterEvent,
+  CinemaEvents,
+  CinemaReaction,
+  CinemaReactionList,
+  CinemaVertexEffect,
+} from './types/cinema-events.types.ts'
 export { CinemaKeyword } from './types/cinema-keyword/cinema-keyword.ts'
 export type {
   Cinema,
