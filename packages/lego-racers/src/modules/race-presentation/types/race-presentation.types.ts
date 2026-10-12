@@ -9,6 +9,7 @@ import type {
   HudState,
 } from '../../race-hud/index.ts'
 import type { SkeletonAnimationState } from '../../skeletal-animation/index.ts'
+import type { DecalPlacement } from '../../decal/index.ts'
 import type { ColourShift } from '../../racer/index.ts'
 import type { Matrix3, Vector3 } from '../../simulation-math/index.ts'
 import type { RacePhaseValue } from '../../race/index.ts'
@@ -74,6 +75,11 @@ export type RacerPartCentres = {
   readonly driver: Vector3
 }
 
+// The car's blob shadow (0x0043fa50): a decal projected straight down onto the track's receiving faces.
+export type RacerShadow = {
+  readonly placement: DecalPlacement
+}
+
 // A racer on the track: where its display frame is, and what hangs on it. The wheels (a skeleton instance) sit in the
 // display frame; the car model sits at the same position with the leaned rotation of vehicle +0x3c (0x0043e740); the
 // driver sits at `driverPosition` with the car model's rotation (vehicle +0x48).
@@ -91,6 +97,11 @@ export type RacerPose = {
   readonly colourShift: ColourShift | null
   // Where the parts' spheres are, for the distance cut; null in the warp, where the camera stays beside the car.
   readonly partCentres: RacerPartCentres | null
+  // The shadow the car casts, drawn when the camera is within the figure's draw distance; null while the racer is off the
+  // track for a warp (0x0043dbb0 sets the parts' draw distance to -1 until the landing 0x0043db60) or in the warp's own draw.
+  readonly shadow: RacerShadow | null
+  // The racer is off the track (racer flag 0x10): its parts are not drawn there either.
+  readonly isOffTrack: boolean
 }
 
 // What the frame's race events change in the presentation.

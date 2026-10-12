@@ -20,6 +20,7 @@
     "./computer-racer-route": "./src/modules/computer-racer-route/index.ts",
     "./driver-database": "./src/modules/driver-database/index.ts",
     "./emitter": "./src/modules/emitter/index.ts",
+    "./decal": "./src/modules/decal/index.ts",
     "./event": "./src/modules/event/index.ts",
     "./font-database": "./src/modules/font-database/index.ts",
     "./font-rendering": "./src/modules/font-rendering/index.ts",
