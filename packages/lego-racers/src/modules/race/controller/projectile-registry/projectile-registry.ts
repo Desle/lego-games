@@ -154,8 +154,8 @@ const getIsFlightRegistered = (source: RegistrySource, effect: PowerUpEffect): b
     case PowerUpEffectKind.CANNON:
       return motion.kind === 'ballistic'
     case PowerUpEffectKind.BARREL:
-      // 0x00452ff0 lets the body go (0x00431530) as soon as its flight ends, whatever ended it.
-      return motion.kind === 'ballistic' && motion.flight.state === BallisticFlightState.FLYING
+      // 0x00452ff0 lets the body go (0x00431530) in the update that sees its flight end; a racer's touch only marks it.
+      return motion.kind === 'ballistic' && motion.flight.state !== BallisticFlightState.IDLE
     case PowerUpEffectKind.GRAPPLE:
       return motion.kind === 'grapple' && !motion.hook.isRetracting
     case PowerUpEffectKind.ROCKET:

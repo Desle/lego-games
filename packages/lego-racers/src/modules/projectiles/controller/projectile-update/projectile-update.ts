@@ -105,7 +105,7 @@ const updateBarrel: EffectUpdate = (step, world, context, before, stepMillisecon
   const flown =
     motion !== null &&
     motion.kind === 'ballistic' &&
-    motion.flight.state === BallisticFlightState.FLYING
+    motion.flight.state !== BallisticFlightState.IDLE
       ? advanceEffectFlight(context, world, before.id, stepMilliseconds)
       : null
   const afterFlight =
