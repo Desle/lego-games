@@ -18,6 +18,7 @@ const getPresentationScenario = (
   golden: GoldenTraceScenario,
   recordFrames: readonly number[] | null,
   isRenderRecorded: boolean,
+  isDecalRecorded: boolean,
   powerUpGrants: NonNullable<PresentationScenario['powerUpGrants']>
 ): PresentationScenario =>
   Object.freeze({
@@ -31,6 +32,7 @@ const getPresentationScenario = (
     frames: golden.frames,
     recordFrames,
     isRenderRecorded,
+    isDecalRecorded,
     powerUpGrants,
   })
 
@@ -74,6 +76,7 @@ export const createPresentationScenario = (
     golden,
     request.recordFrames ?? null,
     request.isRenderRecorded ?? false,
+    request.isDecalRecorded ?? false,
     request.powerUp === undefined
       ? []
       : [

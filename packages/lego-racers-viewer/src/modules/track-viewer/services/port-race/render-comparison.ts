@@ -10,17 +10,13 @@ import {
 } from '@lego-games/lego-racers/presentation-trace'
 import { getEffectViews, getRacerPoses } from '@lego-games/lego-racers/race-presentation'
 import { layoutText } from '@lego-games/lego-racers/font-rendering'
-import {
-  createFloatArithmetic,
-  FpuPrecision,
-  RACE_FPU_PRECISION,
-} from '@lego-games/lego-racers/simulation-math'
-import { loadRaceAssets } from '../race-assets/race-assets.ts'
+import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-racers/simulation-math'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import type { PortTexture, QuadPlacement } from '@lego-games/lego-racers/presentation-trace'
 import type { Scene } from '@lego-games/lego-racers/scene'
 import { createRaceStage } from '../race-viewport/race-viewport.ts'
-import { readOriginalExecutable, readOriginalJam } from './original-game-files.ts'
+import { readOriginalJam } from './original-game-files.ts'
+import { loadScenarioAssets } from './scenario-assets.ts'
 import { ORIGINAL_STAGE_SIZE, runPortRace } from './port-race.ts'
 import { getPortWorldTriangles } from './port-triangles.ts'
 import type {
@@ -83,21 +79,7 @@ export const runRenderComparison = async (
   const jam = readOriginalJam()
   const scenario = createPresentationScenario(jam, { ...request, isRenderRecorded: true })
   const original = await readOriginalPresentation(scenario)
-  const assets = loadRaceAssets(
-    jam,
-    { executable: readOriginalExecutable(), tunes: new Map() },
-    {
-      raceFolder: scenario.raceFolder,
-      racerCodes: scenario.racerCodes,
-      racerCount: scenario.racerCount,
-      localPlayerCount: scenario.localPlayerCount,
-      isMirrored: scenario.isMirrored,
-      fpuPrecision: FpuPrecision.SINGLE,
-      isPlayerChampionCar: true,
-      // The emulator has no sound device, so the original starts no music stream and spares the racing tune's draw.
-      musicTuneCount: 0,
-    }
-  )
+  const assets = loadScenarioAssets(jam, scenario)
   const stage = createRaceStage(assets, ORIGINAL_STAGE_SIZE)
   // Every texture the race has, used or not, so a surface the port draws with another texture still finds its own.
   const sceneTextures = getSceneTextures(assets)

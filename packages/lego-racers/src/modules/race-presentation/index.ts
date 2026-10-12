@@ -1,4 +1,5 @@
 export { getEffectViews } from './controller/get-effect-views/get-effect-views.ts'
+export { getIsDecalWithinDistance } from './controller/get-is-decal-within-distance/get-is-decal-within-distance.ts'
 export { getEffectFigureState } from './controller/get-effect-figure-state/get-effect-figure-state.ts'
 export type { EffectFigureRequest } from './controller/get-effect-figure-state/get-effect-figure-state.types.ts'
 export { getPauseMenuCommands } from './controller/get-pause-menu-commands/get-pause-menu-commands.ts'
@@ -19,6 +20,7 @@ export type {
   AttachmentView,
   BrickView,
   EffectView,
+  DecalView,
   EffectViews,
   ExplosionView,
   GhostCar,

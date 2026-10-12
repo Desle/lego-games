@@ -53,6 +53,9 @@ export type {
 export type {
   OriginalAudioEvent,
   OriginalAudioFrame,
+  OriginalDecal,
+  OriginalDecalFrame,
+  OriginalDecalTriangle,
   OriginalDraw,
   OriginalPresentation,
   OriginalRenderFrame,

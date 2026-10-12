@@ -17,4 +17,4 @@ Projects a picture straight onto the triangles of the world, as the engine's dec
 
 ## Out of scope
 
-The oil slick and scorch mark callers (`0x004573a0`, `0x00421850`, `0x00491e20`, `0x00490330`), and the skid marks, which are particle emitters (vehicle `+0x1e4`, `0x004927c0`), not decals.
+When and where the oil slick, scar and crane shadow (`0x004573a0`, `0x00421850`, `0x00490330`) are laid (their placements are `decal-placements`; the views are built by `race-presentation`), and the skid marks, which are particle emitters (vehicle `+0x1e4`, `0x004927c0`), not decals.

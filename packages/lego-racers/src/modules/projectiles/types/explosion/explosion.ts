@@ -23,11 +23,13 @@ export const NORMAL_EXPLOSION_PARAMETERS: ExplosionParameters = Object.freeze({
   growthMilliseconds: 1000,
   scarMilliseconds: 5000,
   finalScale: 5,
+  scarWidth: 15,
   blastKind: 2,
 })
 export const SPIKED_EXPLOSION_PARAMETERS: ExplosionParameters = Object.freeze({
   ...NORMAL_EXPLOSION_PARAMETERS,
   finalScale: 10,
+  scarWidth: 5,
 })
 // 0x0045b9...: the pool sizes (power-ups.md): six explosions and two spiked ones.
 export const NORMAL_EXPLOSION_COUNT = 6
@@ -40,6 +42,8 @@ const STARTING_PROGRESS = Math.fround(0.05)
 const SMALLEST_SCALE = Math.fround(0.1)
 // 0x004b0160: an explosion further than this from the origin on any axis is not shown or felt.
 const WORLD_LIMIT = 2048
+// 0x004b015c: the scar's alpha when it starts to fade.
+const SCAR_ALPHA = 180
 // 0x004b0150, 0x004b0154: the blast's push and lift.
 const BLAST_PUSH = 80
 const BLAST_LIFT = 200
@@ -56,6 +60,7 @@ const getIdleExplosion = (parameters: ExplosionParameters): Explosion =>
     startRate: 0,
     rateChange: 0,
     scale: 0,
+    scarAlpha: 0,
     parameters,
   })
 
@@ -122,6 +127,7 @@ const getStartedExplosion = (
     startRate,
     rateChange,
     scale: SMALLEST_SCALE,
+    scarAlpha: 0,
   })
 }
 
@@ -163,6 +169,7 @@ const getGrownExplosion = (
         ...explosion,
         state: ExplosionState.FADING,
         remainingMilliseconds: explosion.parameters.scarMilliseconds,
+        scarAlpha: SCAR_ALPHA,
       })
     }
     return Object.freeze({ ...explosion, state: ExplosionState.IDLE })
@@ -184,6 +191,21 @@ const getGrownExplosion = (
   })
 }
 
+// 0x004217d0 state 3: the scar's alpha falls by 180 over the scar's time (rate +0x244), and not below 0.
+const getFadedScarAlpha = (
+  arithmetic: FloatArithmetic,
+  explosion: Explosion,
+  stepMilliseconds: number
+): number => {
+  const { add, multiply, divide, storeFloat, getIsBelow } = arithmetic
+  const scarSeconds = multiply(explosion.parameters.scarMilliseconds, SECONDS_PER_MILLISECOND)
+  const rate = storeFloat(-divide(SCAR_ALPHA, scarSeconds))
+  const alpha = storeFloat(
+    add(multiply(multiply(stepMilliseconds, SECONDS_PER_MILLISECOND), rate), explosion.scarAlpha)
+  )
+  return getIsBelow(alpha, 0) ? 0 : alpha
+}
+
 // 0x004217d0 (thiscall: milliseconds): a growing explosion grows, and one that has started to fade fades in the
 // same call.
 export const getUpdatedExplosion = (
@@ -196,10 +218,12 @@ export const getUpdatedExplosion = (
       ? getGrownExplosion(arithmetic, explosion, stepMilliseconds)
       : explosion
   if (grown.state !== ExplosionState.FADING) return grown
+  const scarAlpha = getFadedScarAlpha(arithmetic, grown, stepMilliseconds)
   return grown.remainingMilliseconds <= stepMilliseconds
-    ? Object.freeze({ ...grown, remainingMilliseconds: 0, state: ExplosionState.IDLE })
+    ? Object.freeze({ ...grown, scarAlpha, remainingMilliseconds: 0, state: ExplosionState.IDLE })
     : Object.freeze({
         ...grown,
+        scarAlpha,
         remainingMilliseconds: grown.remainingMilliseconds - stepMilliseconds,
       })
 }

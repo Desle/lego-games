@@ -36,7 +36,7 @@ The shadow is drawn only when `0x0043fa50` projected it that frame (vehicle flag
 
 ## Not decals
 
-The `skid` source the comparison reports is a label: the sky texture and the shadow textures of the racers match `skid` best. The skid marks are not ribbons projected on the track: vehicle `+0x1e4..+0x1f0` are four trail objects (0x334 bytes, made by `0x004927c0` in the pool at race `+0x27d4`, four of them) that project a decal per stretch of the wheel's path with `0x00491fa0`. They exist only while the tire smoke runs (vehicle flag `0x8`). The oil slick and scorch marks use the decal object (callers `0x004573a0`, `0x00421850`, `0x00491e20`, `0x00490330`) and are not ported yet.
+The `skid` source the comparison reports is a label: the sky texture and the shadow textures of the racers match `skid` best. The skid marks are not ribbons projected on the track: vehicle `+0x1e4..+0x1f0` are four trail objects (0x334 bytes, made by `0x004927c0` in the pool at race `+0x27d4`, four of them) that project a decal per stretch of the wheel's path with `0x00491fa0`. They exist only while the tire smoke runs (vehicle flag `0x8`). The oil slick, the explosion scars and the crane shadow use the decal object too (see below).
 
 ## Skid trails (`0x00491c70`..`0x00492870`)
 
@@ -48,3 +48,23 @@ Vehicle `+0x1e4..+0x1f0` hold the four wheels' trails, taken from the pool at ra
 - **Image**: `skid`, or `trbskid` after a level 1 or higher turbo (`0x0043fd30`), back to `skid` by `0x0043fd70` and the reset; the alpha of a fade is the image's alpha byte (`0x7f`) scaled.
 
 Verified with `render-trace` on the new `Royal Knights, power slide` case (accelerate, then two power slides from frame 235): the marks match the original's triangles at frames 240, 260, 340 and 400.
+
+## Oil slick, explosion scar, crane shadow
+
+`getEffectViews` lists them as `DecalView`s (picture, placement, triangle limit, alpha, draw distance); the viewer's `race-effect-decals.ts` projects each every frame (the engine projects once, or per growth step; the triangles are the same) and `race-decals.ts` hands them the eye.
+
+| Decal        | Placement (call site)                                                                                                                                                                           | Picture   | Triangles         | Drawn                                                                                                                                                                        |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Oil slick    | `0x004573a0` (`0x004575a3`): centre (x, y, z + 5) of the ground point, projection (0, 0, -1), up hint (1, 0, 0), size 15 x 15, reach 15                                                         | `oilslck` | 16                | While the effect is active, opaque (alpha blend off, white vertices, depth write on); seen in the oil case at frames 305-307                                                 |
+| Scar         | `0x00421850`, `0x00421520` (`0x004218f5`, `0x004219c9`): ground bursts only (the barrel); centre (x, y, z + 5), size (s, s), reach 15, s = (width - 0.1) x progress + 0.1                       | `exscar`  | 10                | Re-projected each frame while growing, drawn at alpha 180; width 15 (plain pool) or 5 (spiked); then fades linearly 180 to 0 over 5000 ms at its full width                  |
+| Crane shadow | `0x00490330` (`0x00490441`): the crane's bone point (below), projection (0, 0, -1), up hint the first row of the crane instance's frame (`Frame_GetAxes`, `0x00403c90`), size 13 x 13, reach 15 | `crneshd` | 32 (`0x0048ff50`) | Each frame the crane is not idle (`+0xc` is not 1) and the camera is strictly within the instance's `+0x84` (360000), `0x00490460` draws it when it was projected that frame |
+
+The crane's update (`0x00490190`) puts the crane's frame (`+0x10`, position at `+0x14`) on the world point of bone 3 of its skeleton (the port keeps it as the centre of the crane's sphere, `getSkeletonInstanceChainPosition`) before its signal logic, so the shadow stands where the previous update left it; the frame is the origin until the first update (the shadow is projected there on the frame of the crane's Begin, where the track holds no triangles).
+
+### Verification
+
+`pnpm run render-trace` and the decal trace (`decal-trace.trace.spec.ts`, `reverse-engineering/emulator/decal_trace.py` records the triangles `0x00415810` adds):
+
+- Oil slick (Royal Knights, frames 305-415) and barrel scars (three bursts, every third frame from 386): the port's triangles equal the original's (tolerance 0.001).
+- Crane shadow (`RACEC0R1`, frames 386-430): the camera never nears the crane, so the recorder opens the instance's draw distance (`+0x84`) from the crane's update on. The original then poses the crane's skeleton only while it draws it, so the pose it projects at is a stale one that the port cannot reproduce; the comparison takes the original's projection point and compares everything else (up hint, size, reach, triangle limit, triangles, picture coordinates): equal. **Hypothesis**: with the camera near, the animated pose of bone 3 is the port's (same code as the signal position `getObjectBonePosition`); not compared. The distance gate itself (`+0x84` = 360000 for the crane, strict) is read from the original's log, not exercised.
+- The computer racers' oil slick lands about 34 frames earlier in the port than in the original (frame 436 against 470 in `RACEC0R1`): open, an AI timing difference, not a decal one.
