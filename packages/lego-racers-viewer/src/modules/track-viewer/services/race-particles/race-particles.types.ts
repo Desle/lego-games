@@ -4,13 +4,8 @@ import type { Group, Mesh } from 'three'
 
 export type RaceParticles = {
   readonly group: Group
-  // Builds the quads of the live particles of the pools for the camera; with the pixels one unit spans at depth 1 of the
-  // original's 640 x 480 surface it leaves out the quads the engine does not submit (too small), without it none.
-  readonly update: (
-    pools: readonly (EmitterPool | null)[],
-    cameraView: CameraView,
-    focalLengthPixels: number | null
-  ) => void
+  // Builds the quads of the live particles of the pools for the camera.
+  readonly update: (pools: readonly (EmitterPool | null)[], cameraView: CameraView) => void
   readonly dispose: () => void
 }
 

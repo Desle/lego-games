@@ -30,9 +30,3 @@ export type BillboardCamera = {
   readonly position: Vector3
   readonly axes: BillboardAxes
 }
-
-// Where the camera is and which way it looks (a unit vector).
-export type EmitterQuadView = {
-  readonly position: Vector3
-  readonly forward: Vector3
-}
