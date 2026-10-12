@@ -11,6 +11,19 @@ const isGamePresent = () => getIsOriginalGamePresent() && getIsOriginalPresentat
 // the wrong way round halves it.
 const MINIMUM_MATCHED_SHARE = 0.85
 const RECORD_FRAMES = [5, 100, 170, 250, 320]
+const POWER_UP_KIND_NAMES = ['cannon', 'shield', 'turbo', 'oil'] as const
+const POWER_UP_LEVELS = [0, 1, 2, 3] as const
+// Fired at frame 305: flight, hit, explosion and aftermath.
+const POWER_UP_RECORD_FRAMES = [307, 312, 320, 335, 355, 385]
+const POWER_UP_CASES: readonly TraceScenarioRequest[] = POWER_UP_KIND_NAMES.flatMap(
+  (kindName, kindIndex) =>
+    POWER_UP_LEVELS.map((level): TraceScenarioRequest => ({
+      name: `Royal Knights, power-up ${kindName} ${String(kindIndex + 1)}/${String(level)}`,
+      raceFolder: 'RACEC0R0',
+      recordFrames: POWER_UP_RECORD_FRAMES,
+      powerUp: { kind: kindIndex + 1, level, grantFrame: 300, useFrame: 305, frameCount: 390 },
+    }))
+)
 const RENDER_CASES: readonly TraceScenarioRequest[] = [
   { name: 'Royal Knights', raceFolder: 'RACEC0R0', recordFrames: RECORD_FRAMES },
   {
@@ -23,7 +36,7 @@ const RENDER_CASES: readonly TraceScenarioRequest[] = [
     name: 'Royal Knights, warp',
     raceFolder: 'RACEC0R0',
     recordFrames: [310, 320, 330, 345, 360, 375],
-    warp: { grantFrame: 300, useFrame: 305, frameCount: 380 },
+    powerUp: { kind: 3, level: 3, grantFrame: 300, useFrame: 305, frameCount: 380 },
   },
   {
     name: 'Royal Knights, power slide',
@@ -36,6 +49,7 @@ const RENDER_CASES: readonly TraceScenarioRequest[] = [
   { name: 'RACEC0R3', raceFolder: 'RACEC0R3', recordFrames: RECORD_FRAMES },
   { name: 'RACEC1R0', raceFolder: 'RACEC1R0', recordFrames: RECORD_FRAMES },
   { name: 'RACEC3R0', raceFolder: 'RACEC3R0', recordFrames: RECORD_FRAMES },
+  ...POWER_UP_CASES,
 ]
 
 describe.skipIf(!isGamePresent())('render trace', () => {
