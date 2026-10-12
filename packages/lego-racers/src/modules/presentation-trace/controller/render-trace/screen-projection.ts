@@ -61,7 +61,7 @@ export const getCandidateMatrices = (
   ]
 }
 
-const projectVertex = (vertex: WorldVertex, matrix: ScreenMatrix): ProjectedVertex => {
+export const projectVertex = (vertex: WorldVertex, matrix: ScreenMatrix): ProjectedVertex => {
   const at = (index: number): number => matrix[index] ?? 0
   const clipX = vertex.x * at(0) + vertex.y * at(4) + vertex.z * at(8) + at(12)
   const clipY = vertex.x * at(1) + vertex.y * at(5) + vertex.z * at(9) + at(13)

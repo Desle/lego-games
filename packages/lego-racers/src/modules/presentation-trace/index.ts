@@ -7,9 +7,11 @@ export {
 export { compareRenderFrameByRoot } from './controller/render-trace/compare-by-root.ts'
 export type {
   RootChoice,
+  RootComparison,
   RootComparisonInput,
 } from './controller/render-trace/compare-by-root.types.ts'
-export { compareRenderFrame } from './controller/render-trace/compare-render-frame.ts'
+export { getIsFragmentOfPolygon } from './controller/render-trace/clipped-polygon/clipped-polygon.ts'
+export { compareRenderFrame, getIsInside } from './controller/render-trace/compare-render-frame.ts'
 export { getOriginalTriangles } from './controller/render-trace/original-triangles.ts'
 export {
   getIsFrontFacing,
@@ -34,6 +36,7 @@ export type {
 } from './controller/audio-trace/audio-trace.types.ts'
 export { RenderMismatchKind } from './types/render-mismatch-kind/render-mismatch-kind.ts'
 export type {
+  ClippedPolygon,
   DrawnTriangle,
   DrawState,
   PortTexture,

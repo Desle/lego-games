@@ -9,6 +9,7 @@ export type CoverageRankedTexture = {
   readonly isNeverDrawnByPort: boolean
   readonly originalTriangles: number
   readonly missingTriangles: number
+  readonly clippedTriangles: number
   readonly missingPixels: number
   readonly frameCount: number
   readonly races: readonly string[]

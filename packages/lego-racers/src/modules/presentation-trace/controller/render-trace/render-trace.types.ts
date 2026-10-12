@@ -132,6 +132,14 @@ export type RenderFrameInput = {
 
 export type PixelPoint = { readonly x: number; readonly y: number }
 
+// What the port's triangle covers once the original's clipping has cut it: a convex polygon on the screen, wound as a
+// front-facing triangle.
+export type ClippedPolygon = {
+  readonly corners: readonly PixelPoint[]
+  readonly textureKey: string | null
+  readonly source: string
+}
+
 export type VertexPairing = {
   readonly permutation: readonly [number, number, number]
   readonly distance: number

@@ -1,7 +1,12 @@
 import { parseCircuitDatabase } from '@lego-games/lego-racers/circuit-database'
 import { decodeBitmap, getBitmapColors } from '@lego-games/lego-racers/bitmap'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
-import { matchTextures, readOriginalPresentation } from '@lego-games/lego-racers/presentation-trace'
+import {
+  getIsFragmentOfPolygon,
+  getIsInside,
+  matchTextures,
+  readOriginalPresentation,
+} from '@lego-games/lego-racers/presentation-trace'
 import type {
   DrawnTriangle,
   DrawState,
@@ -271,6 +276,7 @@ export const runRenderCoverage = async (
         stateLabel,
         originalTriangles: 0,
         missingTriangles: 0,
+        clippedTriangles: 0,
         missingPixels: 0,
         missingFrames: [],
         missingBounds: null,
@@ -278,6 +284,13 @@ export const runRenderCoverage = async (
       }))
       row.originalTriangles += 1
       if (matched.has(triangle)) continue
+      if (
+        !getIsInside(triangle.vertices, ORIGINAL_STAGE_SIZE) &&
+        getIsFragmentOfPolygon(triangle, comparison.clippedPolygons, textureMatches)
+      ) {
+        row.clippedTriangles += 1
+        continue
+      }
       row.missingTriangles += 1
       row.missingPixels += getScreenArea(triangle)
       if (row.missingFrames[row.missingFrames.length - 1] !== frame) row.missingFrames.push(frame)

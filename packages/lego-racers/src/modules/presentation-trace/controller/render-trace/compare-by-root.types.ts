@@ -1,4 +1,6 @@
 import type {
+  ClippedPolygon,
+  DrawnTriangle,
   RenderFrameComparison,
   RenderFrameInput,
   ScreenMatrix,
@@ -18,4 +20,10 @@ export type RootChoice = {
   readonly matchedCount: number
 }
 
-export type RootComparison = RenderFrameComparison & { readonly choices: readonly RootChoice[] }
+export type RootComparison = RenderFrameComparison & {
+  readonly choices: readonly RootChoice[]
+  // The port's front-facing triangles that reach past the viewport or the near plane, cut as the original's driver cuts them.
+  readonly clippedPolygons: readonly ClippedPolygon[]
+  // Every port triangle as the original would draw it under the chosen matrices.
+  readonly projectedPort: readonly DrawnTriangle[]
+}

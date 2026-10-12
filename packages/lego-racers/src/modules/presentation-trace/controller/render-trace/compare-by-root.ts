@@ -1,4 +1,5 @@
 import { compareRenderFrame } from './compare-render-frame.ts'
+import { getClippedPolygon } from './clipped-polygon/clipped-polygon.ts'
 import { projectWorldTriangle } from './screen-projection.ts'
 import type {
   DrawnTriangle,
@@ -67,8 +68,19 @@ export const compareRenderFrameByRoot = (input: RootComparisonInput): RootCompar
     const matrix = input.candidates[choice.candidateIndex]
     return matrix === undefined ? [] : getProjected(getTriangles(choice.root), matrix, choice.space)
   })
+  const clippedPolygons = choices.flatMap((choice) => {
+    const matrix = input.candidates[choice.candidateIndex]
+    return matrix === undefined
+      ? []
+      : getTriangles(choice.root).flatMap((triangle) => {
+          const polygon = getClippedPolygon(triangle, matrix, choice.space, input.viewport)
+          return polygon === null ? [] : [polygon]
+        })
+  })
   return Object.freeze({
     ...compareRenderFrame(getRootInput(input, input.original, port)),
     choices,
+    clippedPolygons,
+    projectedPort: port,
   })
 }
