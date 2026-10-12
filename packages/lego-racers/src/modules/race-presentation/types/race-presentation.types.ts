@@ -51,6 +51,8 @@ export type RacePresentation = {
   // The entries of the race's music list (`LEGOMSC`, seven in Royal Knights Raceway).
   readonly musicListCount: number
   readonly camera: CameraState
+  // The node pose the introduction camera's clip last gave (0x004047b0) until the clip ends; null otherwise.
+  readonly introductionView: CameraView | null
   readonly hud: HudState
   // Racer +0xd68 of the player's racer, from the last turbo start.
   readonly turboLevel: number

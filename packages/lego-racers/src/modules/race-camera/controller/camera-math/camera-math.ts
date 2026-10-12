@@ -62,3 +62,24 @@ export const getRow = (matrix: Matrix3, row: number): Vector3 =>
     y: matrix[row * 3 + 1] ?? 0,
     z: matrix[row * 3 + 2] ?? 0,
   })
+
+// The camera node's orientation slot (GolDP.dll 0x10002a30, vtable +0x24) keeps forward normalized and up made orthogonal
+// to it and normalized; its getter (0x100029d0, vtable +0x1c) hands both back. Race_UpdateState1 0x004349a0 reads them
+// when the introduction camera is released.
+export const getNodeOrientation = (
+  forward: Vector3,
+  up: Vector3
+): { readonly forward: Vector3; readonly up: Vector3 } => {
+  const { add, subtract, multiply, storeFloat } = arithmetic
+  const unitForward = getNormalizedVector3(arithmetic, forward)
+  const alongForward = add(
+    add(multiply(up.y, unitForward.y), multiply(unitForward.z, up.z)),
+    multiply(unitForward.x, up.x)
+  )
+  const unitUp = getNormalizedVector3(arithmetic, {
+    x: storeFloat(subtract(up.x, multiply(unitForward.x, alongForward))),
+    y: storeFloat(subtract(up.y, multiply(unitForward.y, alongForward))),
+    z: storeFloat(subtract(up.z, multiply(unitForward.z, alongForward))),
+  })
+  return Object.freeze({ forward: unitForward, up: unitUp })
+}

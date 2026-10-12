@@ -6,6 +6,8 @@ export {
 export {
   attachCamera,
   createCamera,
+  placeCameraAtIntroductionPoint,
+  placeCameraAtView,
   requestCameraSnap,
   setCameraLookingBehind,
   setCameraPreset,

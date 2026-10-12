@@ -9,12 +9,14 @@ import {
   getCameraRacerView,
   getCameraView,
   PLAYER_CAMERA_COUNT,
+  placeCameraAtIntroductionPoint,
+  placeCameraAtView,
   requestCameraSnap,
   setCameraLookingBehind,
   setCameraPreset,
   updateCamera,
 } from '../../../race-camera/index.ts'
-import type { CameraState } from '../../../race-camera/index.ts'
+import type { CameraState, CameraUpdate, CameraView } from '../../../race-camera/index.ts'
 import {
   getCountdownSound,
   getIntroductionMusic,
@@ -63,6 +65,18 @@ const HUD_PHASES: readonly string[] = [RacePhase.COUNTDOWN, RacePhase.RACING, Ra
 const getPlayerRacer = (raceState: RaceState, playerRacerIndex: number): Racer =>
   getRacer(raceState.racerSet, playerRacerIndex)
 
+// Race_LoadTrackContent 0x00433480 for the camera: it attaches, updates once by 1 ms (a snap to the chase target the
+// introduction mode later eases to) and then starts as the introduction at the race description's camera point.
+const getLoadedCamera = (raceState: RaceState, racer: Racer): CameraState => {
+  const racerView = getCameraRacerView(racer, 0)
+  const chased = updateCamera(attachCamera(createCamera(), racerView), racerView, 1).camera
+  return placeCameraAtIntroductionPoint(
+    chased,
+    raceState.introductionCameraPoint,
+    raceState.introductionCameraVectors
+  )
+}
+
 // Race_LoadTrackContent 0x00433480: the camera attaches to the player's racer and the introduction music starts.
 export const createRacePresentation = (
   raceState: RaceState,
@@ -74,7 +88,8 @@ export const createRacePresentation = (
     presentation: Object.freeze({
       playerRacerIndex,
       musicListCount,
-      camera: attachCamera(createCamera(), getCameraRacerView(racer, 0)),
+      camera: getLoadedCamera(raceState, racer),
+      introductionView: null,
       hud: createHudState(),
       turboLevel: 0,
       cameraNumber: 0,
@@ -196,19 +211,24 @@ const getUpdatedCamera = (
   raceState: RaceState,
   presentation: RacePresentation,
   frameMilliseconds: number
-) => {
+): CameraUpdate & { readonly introductionView: CameraView | null } => {
   const introductionView = getIntroductionCameraView(raceState)
-  if (introductionView !== null) return { camera, view: introductionView }
+  if (introductionView !== null) return { camera, view: introductionView, introductionView }
+  const released =
+    presentation.introductionView === null
+      ? camera
+      : placeCameraAtView(camera, presentation.introductionView)
   const racer = getPlayerRacer(raceState, presentation.playerRacerIndex)
   const timeStep = getRaceTimeStep(raceState.context.arithmetic, {
     isTimeScaled: (raceState.raceModeFlags & TIME_SCALE_FLAG) !== 0,
     frameDeltaMilliseconds: frameMilliseconds,
   })
   const racerView = getCameraRacerView(racer, presentation.turboLevel)
-  return getPhysicsSubSteps(timeStep).reduce(
-    (update, subStep) => updateCamera(update.camera, racerView, subStep),
-    { camera, view: getCameraView(camera) }
+  const update = getPhysicsSubSteps(timeStep).reduce(
+    (current, subStep) => updateCamera(current.camera, racerView, subStep),
+    { camera: released, view: getCameraView(released) }
   )
+  return { ...update, introductionView: null }
 }
 
 // 0x00437d40 for every racer after every physics sub-step (RacerSet_Step); only the state after the last sub-step is
@@ -339,6 +359,7 @@ export const stepRacePresentation = (
       ...nextPresentation,
       isWarpDrawn: warpView !== null,
       camera: cameraUpdate.camera,
+      introductionView: cameraUpdate.introductionView,
       hud: hudFrame?.state ?? edits.hud,
       isPlayerPowerSliding: isPowerSliding,
       engineSounds: engine.states,
