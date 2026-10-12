@@ -31,6 +31,8 @@ export type RacerModels = {
 export type EffectFigureModel = {
   readonly model: ModelScene
   readonly animations: readonly FigureAnimation[]
+  // The texture scroll per second (keyword 0x3f of its instance).
+  readonly scroll: readonly [number, number]
 }
 
 export type EffectModels = {
@@ -45,6 +47,7 @@ export type EffectModels = {
   readonly shields: readonly ModelScene[]
   // The animation set the four shields share (SHEOUT0.ADB), for the figure that plays it.
   readonly shieldAnimations: readonly FigureAnimation[]
+  readonly shieldScroll: readonly [number, number]
   // The three figures of a turbo by level (0 to 2): the burn behind the car and its two flames (0x0045c8f0).
   // The warp's portal (the instance warpprt of POWERUP.WDB: the mesh warphole).
   readonly warpPortal: ModelScene

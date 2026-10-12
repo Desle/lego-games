@@ -9,6 +9,7 @@ import type { FigureAnimation } from '@lego-games/lego-racers/racer'
 import type { Vector3Like } from '../race-viewport/race-viewport.types.ts'
 import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
 import { getEffectFigureState } from '@lego-games/lego-racers/race-presentation'
+import { getReversedModel } from '../model-object/reverse-faces.ts'
 import { getFrameMatrix, getUprightRotation } from '../frame-matrix/frame-matrix.ts'
 import { createModelObject } from '../model-object/model-object.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
@@ -75,6 +76,25 @@ const getTurboPosition = (pose: RacerPose): Vector3Like => {
 }
 
 const MILLISECONDS_PER_SECOND = 1000
+// Hypothesis, measured against the render trace (turbo levels 0 to 2): the turbo's figures have advanced one frame more
+// than the effect's timer shows, and their texture scroll runs about two frames behind it.
+const TURBO_ANIMATION_LEAD_MILLISECONDS = 33
+const TURBO_SCROLL_LAG_MILLISECONDS = 71
+const setTextureScroll = (
+  copy: ModelObject,
+  scroll: readonly [number, number],
+  elapsedMilliseconds: number
+) => {
+  const [scrollU, scrollV] = scroll
+  copy.group.traverse((object) => {
+    if (object.type !== 'Mesh') return
+    const { map } = (object as Mesh).material as MeshBasicMaterial
+    map?.offset.set(
+      getWrappedFraction((scrollU * elapsedMilliseconds) / MILLISECONDS_PER_SECOND),
+      getWrappedFraction((scrollV * elapsedMilliseconds) / MILLISECONDS_PER_SECOND)
+    )
+  })
+}
 // The scroll the original adds stays below 1 (it wraps).
 const getWrappedFraction = (value: number): number => value - Math.floor(value)
 
@@ -129,6 +149,7 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
   }
   const portalPool = createPool(scene, models.warpPortal)
   const shieldPools = models.shields.map((model) => createPool(scene, model))
+  const shieldBackPools = models.shields.map((model) => createPool(scene, getReversedModel(model)))
   const turboPools = models.turbos.map((figures) =>
     figures.map(({ model }) => createPool(scene, model))
   )
@@ -138,6 +159,7 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
         ...Object.values(pools),
         ...brickPools.values(),
         ...shieldPools,
+        ...shieldBackPools,
         ...turboPools.flat(),
         portalPool,
       ])
@@ -181,22 +203,26 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
       }
       for (const attachment of views.attachments) {
         const pose = poses.find((candidate) => candidate.racerIndex === attachment.racerIndex)
-        const pool = shieldPools[attachment.level]
-        if (pose === undefined || pool === undefined || attachment.kind !== 'shield') continue
-        const copy = pool.use()
-        copy.group.matrix.copy(
-          getFrameMatrix(
-            getUprightRotation({ x: pose.rotation[0], y: pose.rotation[1], z: pose.rotation[2] }),
-            { x: pose.position.x, y: pose.position.y, z: pose.position.z + SHIELD_HEIGHT }
+        if (pose === undefined || attachment.kind !== 'shield') continue
+        // The shield figure is double-sided: its back faces are drawn, then its front faces.
+        for (const pool of [shieldBackPools[attachment.level], shieldPools[attachment.level]]) {
+          if (pool === undefined) continue
+          const copy = pool.use()
+          copy.group.matrix.copy(
+            getFrameMatrix(
+              getUprightRotation({ x: pose.rotation[0], y: pose.rotation[1], z: pose.rotation[2] }),
+              { x: pose.position.x, y: pose.position.y, z: pose.position.z + SHIELD_HEIGHT }
+            )
           )
-        )
-        copy.object.setAnimationState(
-          getEffectFigureState(models.shieldAnimations, {
-            animationId: 0,
-            isLooping: true,
-            elapsedMilliseconds: attachment.elapsedMilliseconds,
-          })
-        )
+          setTextureScroll(copy, models.shieldScroll, attachment.elapsedMilliseconds)
+          copy.object.setAnimationState(
+            getEffectFigureState(models.shieldAnimations, {
+              animationId: 0,
+              isLooping: true,
+              elapsedMilliseconds: attachment.elapsedMilliseconds,
+            })
+          )
+        }
       }
       for (const attachment of views.attachments) {
         if (attachment.kind !== 'warp') continue
@@ -206,17 +232,7 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
         portal.group.matrix
           .copy(getFrameMatrix(pose.rotation, pose.position))
           .multiply(new Matrix4().makeScale(attachment.scale, attachment.scale, attachment.scale))
-        const [scrollU, scrollV] = models.warpPortalScroll
-        portal.group.traverse((object) => {
-          if (object.type !== 'Mesh') return
-          const { map } = (object as Mesh).material as MeshBasicMaterial
-          map?.offset.set(
-            getWrappedFraction(
-              (scrollU * attachment.elapsedMilliseconds) / MILLISECONDS_PER_SECOND
-            ),
-            getWrappedFraction((scrollV * attachment.elapsedMilliseconds) / MILLISECONDS_PER_SECOND)
-          )
-        })
+        setTextureScroll(portal, models.warpPortalScroll, attachment.elapsedMilliseconds)
       }
       for (const attachment of views.attachments) {
         const pose = poses.find((candidate) => candidate.racerIndex === attachment.racerIndex)
@@ -232,12 +248,20 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
           const copy = pool.use()
           copy.group.matrix.copy(getFrameMatrix(getTurboRotation(pose), getTurboPosition(pose)))
           const animations = figureModels[figureIndex]?.animations
-          if (animations !== undefined && attachment.state !== 'starting') {
+          setTextureScroll(
+            copy,
+            figureModels[figureIndex]?.scroll ?? [0, 0],
+            attachment.elapsedMilliseconds - TURBO_SCROLL_LAG_MILLISECONDS
+          )
+          if (animations !== undefined) {
+            const isStarting = attachment.state === 'starting'
             copy.object.setAnimationState(
               getEffectFigureState(animations, {
-                animationId: attachment.state === 'active' ? 1 : 2,
+                animationId: attachment.state === 'ending' ? 2 : isStarting ? 0 : 1,
                 isLooping: true,
-                elapsedMilliseconds: attachment.elapsedMilliseconds,
+                elapsedMilliseconds: isStarting
+                  ? 0
+                  : attachment.elapsedMilliseconds + TURBO_ANIMATION_LEAD_MILLISECONDS,
               })
             )
           }
@@ -256,6 +280,7 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
         ...Object.values(pools),
         ...brickPools.values(),
         ...shieldPools,
+        ...shieldBackPools,
         ...turboPools.flat(),
         portalPool,
       ])

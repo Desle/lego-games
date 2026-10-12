@@ -144,9 +144,21 @@ const loadEffectModel = (
 
 // POWERUP.WDB lists a turbo's instances TurboL0..2 (dt0burn, dt1burn, dt2cburn) and turb0f1, turb0f2 .. turb2f2.
 const TURBO_MODEL_NAMES = [
-  ['DT0BURN', 'DT0FLA1', 'DT0FLA2'],
-  ['DT1BURN', 'DT1FLA1', 'DT1FLA2'],
-  ['DT2CBURN', 'DT2CFLA1', 'DT2CFLA2'],
+  [
+    ['DT0BURN', 'TurboL0'],
+    ['DT0FLA1', 'turb0f1'],
+    ['DT0FLA2', 'turb0f2'],
+  ],
+  [
+    ['DT1BURN', 'TurboL1'],
+    ['DT1FLA1', 'turb1f1'],
+    ['DT1FLA2', 'turb1f2'],
+  ],
+  [
+    ['DT2CBURN', 'TurboL2'],
+    ['DT2CFLA1', 'turb2f1'],
+    ['DT2CFLA2', 'turb2f2'],
+  ],
 ]
 
 // POWERUP.WDB lists the four shields (instances shield0..3) on one skeleton and animation, the one of SHEOUT0.
@@ -196,10 +208,15 @@ const getWarpTextureScroll = (archive: JamArchive): readonly [number, number] =>
   return [values?.[0] ?? 0, values?.[1] ?? 0]
 }
 
-// The scroll per second of the portal's texture: keyword 0x3f of the instance warpprt in POWERUP.WDB.
-const getPortalTextureScroll = (archive: JamArchive): readonly [number, number] => {
-  const values = readWorld(archive.readFile(`${COMMON_DIRECTORY}\\POWERUP.WDB`)).meshInstances.find(
-    (instance) => instance.name === 'warpprt'
+// The scroll per second of an instance's texture: keyword 0x3f of the instance in POWERUP.WDB (warpprt, shield0,
+// turb0f1 ...), which the original adds to the texture coordinates while the figure lives.
+const getInstanceTextureScroll = (
+  archive: JamArchive,
+  instanceName: string
+): readonly [number, number] => {
+  const world = readWorld(archive.readFile(`${COMMON_DIRECTORY}\\POWERUP.WDB`))
+  const values = [...world.meshInstances, ...world.skeletonInstances].find(
+    (instance) => instance.name === instanceName
   )?.keyword3fValues
   return [values?.[0] ?? 0, values?.[1] ?? 0]
 }
@@ -223,11 +240,13 @@ const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
     magnet: loadEffectModel(archive, 'MAGNET04', true),
     spikedExplosion: loadEffectModel(archive, 'SPIKEXP', false),
     warpPortal: loadEffectModel(archive, 'WARPHOLE', false),
-    warpPortalScroll: getPortalTextureScroll(archive),
+    warpPortalScroll: getInstanceTextureScroll(archive, 'warpprt'),
+    shieldScroll: getInstanceTextureScroll(archive, 'shield0'),
     turbos: TURBO_MODEL_NAMES.map((names) =>
-      names.map((name) => ({
-        model: loadEffectModel(archive, name, true),
-        animations: getFigureAnimations(archive.readFile(getRacerFilePath(name, 'ADB'))),
+      names.map(([name, instanceName]) => ({
+        model: loadEffectModel(archive, name ?? '', true),
+        animations: getFigureAnimations(archive.readFile(getRacerFilePath(name ?? '', 'ADB'))),
+        scroll: getInstanceTextureScroll(archive, instanceName ?? ''),
       }))
     ),
     shields: SHIELD_MODEL_NAMES.map((name) => loadEffectModel(archive, name, true, 'SHEOUT0')),
