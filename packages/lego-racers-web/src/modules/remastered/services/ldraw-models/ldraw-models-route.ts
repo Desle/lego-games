@@ -4,3 +4,5 @@ export const DEVELOPMENT_LDRAW_MODELS_ROUTE = '/__development/ldraw-models'
 export const LDRAW_MODEL_INDEX_FILE = 'index.json'
 export const LDRAW_CHASSIS_FOLDER = 'chassis'
 export const LDRAW_MODEL_EXTENSIONS: readonly string[] = ['.ldr', '.mpd']
+// Every model file under the folder, subfolders included, for the browsing page only (the game never reads this list).
+export const LDRAW_MODEL_FILES_FILE = 'files.json'
