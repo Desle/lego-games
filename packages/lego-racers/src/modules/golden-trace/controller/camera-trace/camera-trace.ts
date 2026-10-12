@@ -7,6 +7,7 @@ import {
 import type { RaceDefinition, RaceState } from '../../../race/index.ts'
 import { CameraMode } from '../../../race-camera/index.ts'
 import type { CameraModeValue } from '../../../race-camera/index.ts'
+import type { Racer } from '../../../racer/index.ts'
 import { getHudLayout, HudFont } from '../../../race-hud/index.ts'
 import { createRacePresentation, stepRacePresentation } from '../../../race-presentation/index.ts'
 import type {
@@ -63,6 +64,8 @@ export const CAMERA_TRACE_FIELDS: readonly string[] = [
   'camera0.mode',
   'camera0.basis',
   'camera0.eye',
+  'camera0.racer',
+  'camera0.chase',
   'camera0.target',
   'camera0.preset',
   'camera0.node.position',
@@ -71,14 +74,42 @@ export const CAMERA_TRACE_FIELDS: readonly string[] = [
 ]
 
 // The names golden_trace.py `snapshot_camera_fields` writes for the first local player.
-export const getCameraTraceFields = (frame: RacePresentationFrame): TraceFields => {
+export const getCameraTraceFields = (
+  frame: RacePresentationFrame,
+  racer: Racer | undefined
+): TraceFields => {
   const { camera } = frame.presentation
+  const displayFrame = racer?.carBody.rigidBody.displayFrame
   const { position, forward, up } = frame.cameraView
   return {
     'camera0.mode': [MODE_NUMBERS[camera.mode], camera.isLookingBehind ? 1 : 0],
     'camera0.basis': getFloatWords(camera.basis),
     'camera0.eye': getVectorWords(camera.position),
-    'camera0.target': [...getFloatWords(camera.targetBasis), ...getVectorWords(camera.targetPosition)],
+    'camera0.racer':
+      racer === undefined || displayFrame === undefined
+        ? []
+        : [
+            ...getFloatWords(displayFrame.rotation),
+            ...getVectorWords(displayFrame.position),
+            ...getFloatWords([
+              racer.carBody.rigidBody.forwardSpeed,
+              racer.carBody.rigidBody.turnRadius,
+            ]),
+            racer.carBody.rigidBody.flags >>> 0,
+            racer.driver.flags >>> 0,
+            frame.presentation.turboLevel >>> 0,
+          ],
+    'camera0.chase': [
+      ...getVectorWords(camera.heading),
+      ...getVectorWords(camera.lookAtPoint),
+      ...getFloatWords([camera.steeringAngle]),
+      camera.isFullThrottle ? 1 : 0,
+      ...getFloatWords([camera.distanceFactor]),
+    ],
+    'camera0.target': [
+      ...getFloatWords(camera.targetBasis),
+      ...getVectorWords(camera.targetPosition),
+    ],
     'camera0.preset': getFloatWords([
       camera.heightSine,
       camera.pitchSine,
@@ -130,6 +161,13 @@ export const getPortCameraTrace = (
       CAMERA_TRACE_HUD_CONTEXT
     )
     presentation = presented.presentation
-    return { frame, milliseconds: input.milliseconds, fields: getCameraTraceFields(presented) }
+    return {
+      frame,
+      milliseconds: input.milliseconds,
+      fields: getCameraTraceFields(
+        presented,
+        raceState.racerSet.racers[presented.presentation.playerRacerIndex]
+      ),
+    }
   })
 }

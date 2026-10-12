@@ -29,6 +29,10 @@ export const getIntroductionCameraView = (raceState: RaceState): CameraView | nu
   const instance =
     world.skeletonInstances[findSkeletonInstanceIndex(world, introductionCameraObject)]
   if (camera === undefined || instance === undefined) return null
-  const view = getSkeletonInstanceCameraView(raceState.context.arithmetic, instance, camera.boneIndex)
+  const view = getSkeletonInstanceCameraView(
+    raceState.context.arithmetic,
+    instance,
+    camera.boneIndex
+  )
   return view === null || !raceState.isMirrored ? view : getMirroredView(view)
 }

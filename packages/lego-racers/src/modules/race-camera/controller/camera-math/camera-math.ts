@@ -34,8 +34,8 @@ export const getBasis = (forward: Vector3, up: Vector3): Matrix3 => {
   const { add, subtract, multiply, storeFloat } = arithmetic
   const row2 = getNormalizedVector3(arithmetic, forward)
   const alongForward = add(
-    add(multiply(row2.x, up.x), multiply(up.y, row2.y)),
-    multiply(up.z, row2.z)
+    add(multiply(up.z, row2.z), multiply(up.y, row2.y)),
+    multiply(row2.x, up.x)
   )
   const row1 = getNormalizedVector3(arithmetic, {
     x: storeFloat(subtract(up.x, storeFloat(multiply(row2.x, alongForward)))),

@@ -14,7 +14,6 @@ import {
   getIsOriginalTraceAvailable,
   readOriginalTrace,
 } from '../../services/original-trace/original-trace.ts'
-import { getFloatFromBits } from '../../../../shared/emulator/float-bits.ts'
 import type {
   FieldDivergence,
   GoldenTraceScenario,
@@ -168,10 +167,7 @@ describe('race cameras: the original and the port, frame for frame', () => {
               DUMP_FRAMES.map((frame) => ({
                 frame,
                 fields: Object.fromEntries(
-                  Object.entries(frames[frame]?.fields ?? {}).map(([name, words]) => [
-                    name,
-                    words.map((word) => getFloatFromBits(word)),
-                  ])
+                  Object.entries(frames[frame]?.fields ?? {}).map(([name, words]) => [name, words])
                 ),
               }))
             writeFileSync(

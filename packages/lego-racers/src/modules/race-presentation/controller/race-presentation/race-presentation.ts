@@ -51,6 +51,8 @@ import type {
 const TIME_SCALE_FLAG = 0x100
 // Racer flags (+0xd04): 0x10 warping, 0x80 power sliding, 0x4000 going the wrong way.
 const WARPING_FLAG = 0x10
+const WARP_PENDING_FLAG = 0x200000
+const PLACED_FLAG = 0x1000
 const POWER_SLIDING_FLAG = 0x80
 const WRONG_WAY_FLAG = 0x4000
 // Racer flags 0x400 (the engine sounds run) and 0x1000 (they are quieter), driver flag 0x1 (full throttle).
@@ -160,6 +162,20 @@ const getTurboLevel = (step: RaceStepResult, playerRacerIndex: number, current: 
       : level
   }, current)
 
+// Race_UpdateState3 0x00434c80 and Race_UpdateState4 0x00434eb0 select the finish row only for a racer that is neither warping
+// (0x10) nor about to warp (0x200000), and not in a race with the countdown skipped (race +0x335c).
+const getIsFinishCameraAllowed = (raceState: RaceState, playerRacerIndex: number): boolean =>
+  !raceState.isCountdownSkipped &&
+  (getPlayerRacer(raceState, playerRacerIndex).flags & (WARPING_FLAG | WARP_PENDING_FLAG)) === 0
+
+// Race_UpdateState4 selects the finish row again on every frame it runs for a placed racer (the racer's own camera number,
+// +0xdb8, never becomes 4), which makes the old preset equal the new one: the finish offsets stay zero. State 3 runs
+// State 4 at its end, so the frame that places the player already counts.
+const getIsFinishCameraRepeated = (raceState: RaceState, playerRacerIndex: number): boolean =>
+  raceState.phase === RacePhase.FINISHING &&
+  (getPlayerRacer(raceState, playerRacerIndex).flags & PLACED_FLAG) !== 0 &&
+  getIsFinishCameraAllowed(raceState, playerRacerIndex)
+
 // What the frame's race events change (Race_UpdateState1 0x004349a0 → 0x0043a360 and 0x00426360, Race_UpdateState2
 // 0x00434b00 for the music, Race_UpdateState3 0x00434c80 → 0x00426370, 0x004283f0 and the finish music).
 const getEditsForEvents = (
@@ -167,7 +183,7 @@ const getEditsForEvents = (
   step: RaceStepResult
 ): PresentationEdits => {
   const { raceState } = step
-  return step.events.reduce<PresentationEdits>(
+  const edited = step.events.reduce<PresentationEdits>(
     (edits, event) => {
       if (event.type === 'race.phase_changed' && event.to === RacePhase.COUNTDOWN) {
         return {
@@ -186,7 +202,9 @@ const getEditsForEvents = (
       ) {
         return {
           ...edits,
-          camera: setCameraPreset(edits.camera, FINISH_CAMERA_NUMBER, raceState.isMultiplayer),
+          camera: getIsFinishCameraAllowed(raceState, presentation.playerRacerIndex)
+            ? setCameraPreset(edits.camera, FINISH_CAMERA_NUMBER, raceState.isMultiplayer)
+            : edits.camera,
           hud: finishHud(edits.hud, event.place),
           isCameraSwitchEnabled: false,
         }
@@ -201,6 +219,12 @@ const getEditsForEvents = (
       music: null,
     }
   )
+  return getIsFinishCameraRepeated(raceState, presentation.playerRacerIndex)
+    ? {
+        ...edited,
+        camera: setCameraPreset(edited.camera, FINISH_CAMERA_NUMBER, raceState.isMultiplayer),
+      }
+    : edited
 }
 
 // Race_Update 0x00435220 updates each local player's camera after every physics sub-step; the sub-steps are the

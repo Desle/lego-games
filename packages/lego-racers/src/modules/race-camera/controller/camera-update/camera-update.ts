@@ -1,5 +1,6 @@
 import {
   getBlendedQuaternion,
+  getFloatFromBits,
   getMatrixFromQuaternion,
   getNormalizedVector2,
   getQuaternionFromMatrix,
@@ -28,10 +29,10 @@ const MAXIMUM_STEP_MILLISECONDS = 100
 const FINISH_MILLISECONDS = 2000
 const INTRODUCTION_MILLISECONDS = 2000
 const FINISH_FADE_RATE = Math.fround(0.0005)
-const FINISH_TURN_RATE = Math.fround(0.0015707963)
+const FINISH_TURN_RATE = getFloatFromBits(0x3acde32e)
 const STEERING_ANGLE_SCALE = 80
 const STEERING_ANGLE_LIMIT = Math.fround(0.3)
-const HEADING_DEADBAND = Math.fround(0.014016)
+const HEADING_DEADBAND = getFloatFromBits(0x3c656042)
 const DISTANCE_GROWTH_FROM_NEGATIVE = Math.fround(0.004)
 const DISTANCE_GROWTH_FROM_POSITIVE = Math.fround(0.002)
 const MINIMUM_EASING_DISTANCE = 12

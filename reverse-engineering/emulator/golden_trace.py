@@ -212,6 +212,17 @@ def snapshot_camera_fields(machine, race: int, local_players: int, orientations:
         fields[f"camera{index}.mode"] = [machine.read_bytes(camera + 2, 1)[0], machine.read_bytes(camera + 4, 1)[0]]
         fields[f"camera{index}.basis"] = read_words(machine, camera + 0x48, 9)
         fields[f"camera{index}.eye"] = read_words(machine, camera + 0x6C, 3)
+        # The camera's racer (the player's, racer slot 0 here): the display frame's rotation and position the camera reads.
+        racers = machine.read_u32(race + RACER_SET_OFFSET + 0x140)
+        display = machine.read_u32(racers + DISPLAY_FRAME_POINTER_OFFSET)
+        fields[f"camera{index}.racer"] = read_words(machine, display + 0x28, 9) + read_words(machine, display + 0x4C, 3)
+        # Forward speed, turn radius and flags of the car body, the driver's flags and the turbo level.
+        fields[f"camera{index}.racer"] += read_words(machine, racers + 0x3E8 + 0x618, 1) + read_words(machine, racers + 0x3E8 + 0x64C, 1) + read_words(machine, racers + 0x3E8 + 0x6C0, 1) + read_words(machine, racers + 0xC84, 1) + read_words(machine, racers + 0xD68, 1)
+        # The chase state: heading, look-at point, steering angle, the full-throttle flag and the distance factor.
+        fields[f"camera{index}.chase"] = read_words(machine, camera + 0xD8, 3) + read_words(machine, camera + 0xE4, 3) + read_words(machine, camera + 0xF4, 1) + read_words(machine, camera + 0x11C, 2)
+        fields[f"camera{index}.target"] = read_words(machine, camera + 0x08, 9) + read_words(machine, camera + 0x2C, 3)
+        # Height sine, pitch sine and cosine, follow distance, the finish offsets, the ease rates, the mode clock and the step.
+        fields[f"camera{index}.preset"] = read_words(machine, camera + 0x10C, 4) + read_words(machine, camera + 0x124, 4) + read_words(machine, camera + 0xF8, 2) + read_words(machine, camera + 0xC8, 2)
         fields[f"camera{index}.node.position"] = read_words(machine, node + 0x40, 3)
         fields[f"camera{index}.node.orientation"] = orientations.get(node, [0] * 6)
         fields[f"camera{index}.view"] = read_words(machine, frame + 8, 4)
