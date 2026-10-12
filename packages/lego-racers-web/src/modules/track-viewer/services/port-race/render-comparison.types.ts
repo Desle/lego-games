@@ -36,6 +36,8 @@ export type WatchedCount = {
   readonly frame: number
   readonly originalCount: number
   readonly portCount: number
+  // The mean of the port triangles' corners: it moves when the drawing turns.
+  readonly portCentre: readonly [number, number, number]
 }
 
 export type RenderScenarioResult = {
