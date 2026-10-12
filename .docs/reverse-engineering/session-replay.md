@@ -55,3 +55,11 @@ What the emulator is fed (`replay-scenario.ts`), and the limits:
 - The ground query (slicks, curses, magnets, brick drops) and the track logic's line probe now run over the track object of the cars' list, not the first collision instance: see [power-ups.md](power-ups.md). It was the first divergence `powerUps.registry[3]` of `RACEC0R1`, `RACEC0R3`, `RACEC1R0` and `RACEC2R0`.
 - The final race's teleporter: event `0x52` moves the door's collision object with the door and the pad's launcher warp is applied inside the racer's step: see [hazards-and-emitters.md](hazards-and-emitters.md).
 - **Open.** `racerN.body.flags[0]` of a computer racer in `RACEC0R1` (a crane spins it in the port only: the crane's sphere is the last drawn pose in the original, see hazards-and-emitters.md); `player0.controller.bindings[0]` after a pause menu closes (the open finding above: `RACEC3R0` frame 341, `RACEC0R1` frames 418, 430, 773); `powerUps.registry[0]` (`RACEC0R2` 2940, `RACEC0R3` 2255, `RACEC1R0` 4626: an entry that is `-1` in the port); `race.randomPosition` (`RACEC1R1` 3055); `track.triggers.environment[0]` (`RACEC0R1` 741); the pause state after a restart (`RACEC0R1` 1572); `race.phaseMilliseconds` at the last frame (`RACEC0R2`, `RACEC0R3`).
+
+## Known Classic input differences (deferred)
+
+Menu and input-timing differences that do not change a race by themselves; the replay comparison still stops at the first of them in a file, so read later divergences with the file's frames after it in mind (a resynchronising comparison is not built).
+
+- Held keys after a pause menu closes: the original ignores keys that were already down, the port reads them again (`player0.controller.bindings[0]`: `RACEC3R0` frame 341, `RACEC0R1` frames 418, 430, 773).
+- The pause state after a restart is asked for (`race.pauseState`, `RACEC0R1` frame 1572).
+- A confirm key held through a menu: answered on the key going up (fixed, see pause-menu.md); a gamepad button's release is the viewer's invention.
