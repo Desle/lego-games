@@ -47,7 +47,7 @@ const getEffectScenes = (assets: RaceAssets): readonly Scene[] => {
       magnet,
       spikedExplosion,
       enhancementBrick,
-        ...Object.values(powerUpBricks),
+      ...Object.values(powerUpBricks),
       ...Object.values(powerUpTrails),
     ].map((model) => model.scene),
     warpTunnel,

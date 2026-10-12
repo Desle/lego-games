@@ -397,11 +397,10 @@ export const createTrackLogic = (
       [TrackEventKind.KIND_53]: Object.freeze(hiddenObjects.events),
     }),
   })
-  const loadedHazards = createHazards(
-    { ...input, worlds: hiddenObjects.worlds },
-    arithmetic,
-    { table: random.table, position: events.random.position }
-  )
+  const loadedHazards = createHazards({ ...input, worlds: hiddenObjects.worlds }, arithmetic, {
+    table: random.table,
+    position: events.random.position,
+  })
   const timers = createTimers(timerList, random.table, loadedHazards.position)
   return Object.freeze({
     ...events,

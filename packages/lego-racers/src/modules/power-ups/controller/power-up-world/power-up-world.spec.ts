@@ -116,7 +116,7 @@ describe('updatePowerUps', () => {
     expect(wrapped.world.brickSpinAngle).toBeLessThan(Math.fround(2 * Math.PI))
   })
 
-  it('counts the milliseconds the bricks\' clips have been advanced (0x00416090 at +0x60 of 0x0045a490)', () => {
+  it("counts the milliseconds the bricks' clips have been advanced (0x00416090 at +0x60 of 0x0045a490)", () => {
     // Arrange
     const step = createStep()
 

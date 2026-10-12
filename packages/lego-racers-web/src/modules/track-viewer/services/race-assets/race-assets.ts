@@ -294,8 +294,12 @@ const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
       )
     ),
     enhancementBrick: loadEffectModel(archive, 'ENHABRIK', true),
-    powerUpBrickAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('PUBRICKY', 'ADB'))),
-    enhancementBrickAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('ENHABRIK', 'ADB'))),
+    powerUpBrickAnimations: getFigureAnimations(
+      archive.readFile(getRacerFilePath('PUBRICKY', 'ADB'))
+    ),
+    enhancementBrickAnimations: getFigureAnimations(
+      archive.readFile(getRacerFilePath('ENHABRIK', 'ADB'))
+    ),
     powerUpTrails: Object.freeze(
       Object.fromEntries(
         Object.entries(TRAIL_MATERIALS).map(([kind, materialName]) => [
@@ -304,7 +308,9 @@ const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
         ])
       )
     ),
-    powerUpTrailAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('PUTRAILY', 'ADB'))),
+    powerUpTrailAnimations: getFigureAnimations(
+      archive.readFile(getRacerFilePath('PUTRAILY', 'ADB'))
+    ),
     warpTunnel: getWarpTunnel(archive, raceScene),
     warpTextureScroll: getWarpTextureScroll(archive),
   })

@@ -1,11 +1,13 @@
-import { findMeshInstanceIndex, findSkeletonInstanceIndex } from '../world-animation/world-animation.ts'
+import {
+  findMeshInstanceIndex,
+  findSkeletonInstanceIndex,
+} from '../world-animation/world-animation.ts'
 import type {
   MaterialAnimationPlayback,
   MeshInstanceRuntime,
   SkeletonInstanceRuntime,
   WorldAnimation,
 } from '../../types/world-animation.types.ts'
-
 
 const getReplaced = <Item>(
   items: readonly Item[],

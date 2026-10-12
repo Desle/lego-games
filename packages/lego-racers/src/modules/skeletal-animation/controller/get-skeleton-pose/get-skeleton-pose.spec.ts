@@ -56,7 +56,8 @@ const animation: SkeletalAnimation = Object.freeze({
     {
       name: 'a',
       framesPerMillisecond: 1,
-      velocity: [0, 0, 0], boundingSphere: [0, 0, 0, 0],
+      velocity: [0, 0, 0],
+      boundingSphere: [0, 0, 0, 0],
       firstTrackIndex: 0,
       frameCount: 11,
       loopLength: 10,
@@ -64,7 +65,8 @@ const animation: SkeletalAnimation = Object.freeze({
     {
       name: 'b',
       framesPerMillisecond: 1,
-      velocity: [0, 0, 0], boundingSphere: [0, 0, 0, 0],
+      velocity: [0, 0, 0],
+      boundingSphere: [0, 0, 0, 0],
       firstTrackIndex: 2,
       frameCount: 11,
       loopLength: 10,
