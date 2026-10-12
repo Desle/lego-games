@@ -70,6 +70,11 @@ RACER_FIELDS = (
     ("racer.heldPowerUp", 0xCCC, 1),
     ("racer.powerUpThink", 0xCD8, 2),
     ("racer.turboLevel", 0xD68, 1),
+    # Vehicle +0x378 and +0x37c (the curse figure's clock and blend), then the figure at racer +0x29c: rotation, position, scale.
+    # Vehicle +0x3c4 and +0x3c8 (0x00440100's colour override and its milliseconds).
+    ("racer.override", 0x3DC, 2),
+    ("racer.curseOrbit", 0x390, 2),
+    ("racer.curseFigure", 0x2C4, 13),
 )
 # What a computer racer's route-driven body keeps (car body +0x6e8 + racer offset): the follower and the speed state.
 COMPUTER_FIELDS = (

@@ -47,8 +47,17 @@ const getFrames = (): readonly TraceFrameInput[] =>
     ],
   }))
 
+// POWER_UP_RACERS names the racers that get the brick (comma separated); otherwise only the player, or all of them with
+// POWER_UP_COMPUTERS=1.
+const grantedRacers = (process.env['POWER_UP_RACERS'] ?? '')
+  .split(',')
+  .filter((racer) => racer !== '')
+  .map(Number)
 const getGrants = (kind: number, level: number): readonly PowerUpGrant[] =>
-  Array.from({ length: isComputerGranted ? RACER_COUNT : 1 }, (_, racer) => ({
+  (grantedRacers.length > 0
+    ? grantedRacers
+    : Array.from({ length: isComputerGranted ? RACER_COUNT : 1 }, (_, racer) => racer)
+  ).map((racer) => ({
     frame: GRANT_FRAME,
     racer,
     kind,

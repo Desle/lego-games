@@ -13,16 +13,8 @@ export const WAND_COLOUR_SHIFT: ColourShift = {
 }
 export const WAND_COLOUR_SHIFT_MILLISECONDS = 100
 
-// 0x00439900 passes the giver figure's +0x84 as the milliseconds of 0x00440100. The figure it is given is either the
-// power-up effect's (0x00452da0 with 10000 ms; built by 0x00452550 from the player's figure, whose +0xa8 is the address
-// racer + 0x40 that 0x0043b785 stored there) or the holder's own copy (racer +0x29c). Both are built by
-// 0x0040d550 (this, model, material, +0xa8, +0x84), and 0x00439900 stores the giver's +0xa8 into the copy's +0x84 and 0
-// into its +0xa8. So the effect figure's +0x84 is that heap address (as an integer of milliseconds), and every copy's is 0.
-// Racers sit at 0x50xxxxxx in the original's heap (traced), so the address is about 1.3 billion milliseconds: the first
-// holder keeps the tint until the effect ends. A second hand-over passes 0 and its tint ends at the next update.
-export const POWER_UP_EFFECT_FIGURE_DISTANCE = 0x50000000
-export const COPIED_FIGURE_DISTANCE = 0
-
+// The timed effect (0x00439900) hands 0x00440100 its own milliseconds (the second argument, read back at 0x00439aa1), so the
+// tint lasts exactly as long as the curse; the golden trace of the original shows the two counting down together.
 // 0x00440100 (vehicle, shift, milliseconds): vehicle +0x3c4 = 1, +0x3c8 = the milliseconds, and the models take the
 // shift at once. The vehicle does not keep the shift (it is not copied to +0x3a0).
 export const getRacerWithColourShiftOverride = (
