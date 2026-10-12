@@ -91,7 +91,9 @@ const getRequestFrames = (
     }))
   }
   if (request.isPowerSliding === true) return getPowerSlideFrames()
-  return request.isSteering === true ? getSteeringSweepFrames() : getIdleFrames(AUDIO_FRAME_COUNT)
+  return request.isSteering === true
+    ? getSteeringSweepFrames()
+    : getIdleFrames(request.frameCount ?? AUDIO_FRAME_COUNT)
 }
 
 // The scenario of a race: the circuit's drivers, the player idle through the introduction and the countdown, then
@@ -101,7 +103,8 @@ export const createPresentationScenario = (
   request: TraceScenarioRequest
 ): PresentationScenario => {
   const archive = openJamArchive(jam)
-  const racerCodes = getCircuitRacerCodes(archive.readFile, request.raceFolder)
+  const racerCodes =
+    request.racerCodes ?? getCircuitRacerCodes(archive.readFile, request.raceFolder)
   const golden = createTraceScenario({
     name: request.name,
     raceFolder: request.raceFolder,
@@ -109,6 +112,10 @@ export const createPresentationScenario = (
     // FUN_00487f90: a time trial has no opponents.
     ...(request.isTimeTrial === true ? { racerCount: 1 } : {}),
     isMirrored: request.isMirrored ?? false,
+    ...(request.localPlayerCount === undefined
+      ? {}
+      : { localPlayerCount: request.localPlayerCount }),
+    ...(request.circuitName === undefined ? {} : { circuitName: request.circuitName }),
     frames: getRequestFrames(jam, request, racerCodes),
   })
   return getPresentationScenario(

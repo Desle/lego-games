@@ -110,7 +110,12 @@ describe('viewer extensions', () => {
     const part = { model: {} as ModelScene, modelName: 'rrjmw', partBytes: null }
     const carRequest = { archive: {} as JamArchive, carCode: 'RRCM', design: null, wheels: part }
     const driverRequest = { archive: {} as JamArchive, driver: part }
-    const carDrawing = { object: new Group(), applyPose: () => undefined, dispose: () => undefined }
+    const carDrawing = {
+      object: new Group(),
+      applyPose: () => undefined,
+      dispose: () => undefined,
+      onFailed: () => undefined,
+    }
     const driverDrawing = { ...carDrawing, animate: () => undefined }
     registerViewerExtension(NEUTRAL_EXTENSION)
     const originals = [getCarDrawing(carRequest), getDriverDrawing(driverRequest)]
@@ -128,5 +133,25 @@ describe('viewer extensions', () => {
       carDrawing,
       driverDrawing,
     ])
+  })
+
+  it('draws the original car when an extension throws while making a drawing', () => {
+    // Arrange
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const part = { model: {} as ModelScene, modelName: 'rrjmw', partBytes: null }
+    const request = { archive: {} as JamArchive, carCode: null, design: null, wheels: part }
+    registerViewerExtension({
+      ...NEUTRAL_EXTENSION,
+      getCarDrawing: () => {
+        throw new Error('model file missing')
+      },
+    })
+
+    // Act
+    const drawing = getCarDrawing(request)
+
+    // Assert
+    expect([drawing, warning.mock.calls.length]).toEqual([null, 1])
+    warning.mockRestore()
   })
 })

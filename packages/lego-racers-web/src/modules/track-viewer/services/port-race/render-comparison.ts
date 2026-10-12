@@ -25,6 +25,8 @@ import type {
   HudFrameResult,
   WatchedCount,
   RenderScenarioResult,
+  WorldFrameComparison,
+  WorldFrameInput,
 } from './render-comparison.types.ts'
 import { createPresentationScenario } from './trace-scenarios.ts'
 import type { TraceScenarioRequest } from './trace-scenarios.types.ts'
@@ -81,7 +83,50 @@ const CANDIDATE_COUNT = 24
 const HUD_TOLERANCE_PIXELS = 0.25
 // The HUD never wraps its text (the overlay's width, race-hud-overlay.tsx).
 const HUD_UNBOUNDED_WIDTH = 0x7fff
-const TOLERANCES = Object.freeze({ positionPixels: 0.25, textureCoordinate: 0.001, colorLevels: 2 })
+export const TOLERANCES = Object.freeze({
+  positionPixels: 0.25,
+  textureCoordinate: 0.001,
+  colorLevels: 2,
+})
+
+// Draws one port frame on the stage and compares its world triangles with the original's recorded frame; null when the
+// original recorded none.
+export const compareWorldFrame = (input: WorldFrameInput): WorldFrameComparison | null => {
+  const { stage, portFrame, original, sceneTextures, candidateCount } = input
+  const { raceState, presentation, milliseconds, frame } = portFrame
+  stage.update(
+    getRacerPoses(raceState),
+    presentation.cameraView,
+    getEffectViews(raceState),
+    presentation.warpView
+  )
+  stage.showHazards(raceState.trackLogic.worlds, [
+    raceState.racerSet.emitters.common,
+    raceState.racerSet.emitters.track,
+  ])
+  stage.animate(milliseconds)
+  const originalFrame = original.renderFrames.find((candidate) => candidate.frame === frame)
+  if (originalFrame === undefined) return null
+  const portTriangles = getPortWorldTriangles([
+    ...(stage.backgroundScene.visible ? stage.backgroundScene.children : []),
+    ...stage.trackScene.children,
+  ])
+  const originalTriangles = getOriginalTriangles(originalFrame)
+  // Every texture the race has, used or not, so a surface the port draws with another texture still finds its own.
+  const textureMatches = matchTextures(
+    original.textures,
+    new Map([...sceneTextures, ...portTriangles.textures])
+  )
+  const comparison = compareRenderFrameByRoot({
+    original: originalTriangles,
+    port: portTriangles.triangles,
+    candidates: getCandidateMatrices(originalFrame, candidateCount, ORIGINAL_STAGE_SIZE),
+    viewport: { width: ORIGINAL_STAGE_SIZE.width, height: ORIGINAL_STAGE_SIZE.height },
+    textureMatches,
+    tolerances: TOLERANCES,
+  })
+  return { originalFrame, originalTriangles, portTriangles, textureMatches, comparison }
+}
 
 // Runs the original and the port through a scenario and compares the recorded frames: the mismatches of every frame,
 // merged by kind and object.
@@ -95,8 +140,6 @@ export const runRenderComparison = async (
   const stage = createRaceStage(assets, ORIGINAL_STAGE_SIZE)
   // Every texture the race has, used or not, so a surface the port draws with another texture still finds its own.
   const sceneTextures = getSceneTextures(assets)
-  const allTextures = (used: ReadonlyMap<string, PortTexture>): ReadonlyMap<string, PortTexture> =>
-    new Map([...sceneTextures, ...used])
   const hudTextures = new Map(
     [
       ...assets.hudImages,
@@ -115,26 +158,16 @@ export const runRenderComparison = async (
     assets,
     scenario.frames,
     (portFrame) => {
-      const { raceState, presentation, milliseconds, frame } = portFrame
-      stage.update(
-        getRacerPoses(raceState),
-        presentation.cameraView,
-        getEffectViews(raceState),
-        presentation.warpView
-      )
-      stage.showHazards(raceState.trackLogic.worlds, [
-        raceState.racerSet.emitters.common,
-        raceState.racerSet.emitters.track,
-      ])
-      stage.animate(milliseconds)
-      const originalFrame = original.renderFrames.find((candidate) => candidate.frame === frame)
-      if (originalFrame === undefined) return
-      const portTriangles = getPortWorldTriangles([
-        ...(stage.backgroundScene.visible ? stage.backgroundScene.children : []),
-        ...stage.trackScene.children,
-      ])
-      const originalTriangles = getOriginalTriangles(originalFrame)
-      const textureMatches = matchTextures(original.textures, allTextures(portTriangles.textures))
+      const { presentation, frame } = portFrame
+      const world = compareWorldFrame({
+        stage,
+        portFrame,
+        original,
+        sceneTextures,
+        candidateCount: CANDIDATE_COUNT,
+      })
+      if (world === null) return
+      const { originalFrame, originalTriangles, portTriangles, textureMatches, comparison } = world
       for (const watched of request.watched ?? []) {
         const originalPattern = new RegExp(watched.originalTexture, 'i')
         const portPattern = new RegExp(watched.portSource, 'i')
@@ -148,14 +181,6 @@ export const runRenderComparison = async (
             .length,
         })
       }
-      const comparison = compareRenderFrameByRoot({
-        original: originalTriangles,
-        port: portTriangles.triangles,
-        candidates: getCandidateMatrices(originalFrame, CANDIDATE_COUNT, ORIGINAL_STAGE_SIZE),
-        viewport: { width: ORIGINAL_STAGE_SIZE.width, height: ORIGINAL_STAGE_SIZE.height },
-        textureMatches,
-        tolerances: TOLERANCES,
-      })
       if (presentation.hudFrame !== null) {
         const hud = compareQuadPlacements({
           original: getOriginalQuads(originalFrame, true),
