@@ -8,6 +8,8 @@ Parses an `.EMB` emitter file (`COMMON\EMITTER.EMB` and each race's `RACECxRy.EM
 
 - **Parse emitters**: the race passes the file's bytes to `parseEmitters` and gets the emitters in file order and `readByteCount`.
 
+- **Draw the particles**: `getEmitterQuads` gives the billboard quads of a system for a camera, with the material each takes (`getBillboardAxes` makes the camera's right and down vectors from its forward and up).
+
 - **Run the emitters**: `createEmitterPool`, `spawnEmitter`, `releaseEmitter`, the setters and `updateEmitterPool` (Emitters_Update, with its random table draws) keep a pool of emitters and their particles.
 
 ## Invariants
@@ -18,4 +20,4 @@ Parses an `.EMB` emitter file (`COMMON\EMITTER.EMB` and each race's `RACECxRy.EM
 
 ## Out of scope
 
-Drawing the particles (their sprite materials) and the vehicles' and power-ups' own spawns.
+The vehicles' and power-ups' own spawns, and finding the material in the world (the viewer does that).
