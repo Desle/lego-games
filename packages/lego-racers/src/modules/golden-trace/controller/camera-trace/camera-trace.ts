@@ -24,11 +24,15 @@ import { getFrameControls } from '../port-trace/port-trace.ts'
 import { getFloatWords, getVectorWords } from '../trace-words/trace-words.ts'
 
 // The Gol camera frame's aspect ratio, near plane and far plane (frame +0xc, +0x10, +0x14) as the 640 by 480 window gives them.
+// @check-allow traced-constants: read from the Gol camera frame in the trace (frame +0xc, +0x10, +0x14), not behaviour
 const FRAME_ASPECT_RATIO = 4 / 3
+// @check-allow traced-constants: read from the Gol camera frame in the trace
 const FRAME_NEAR_PLANE = 5
+// @check-allow traced-constants: read from the Gol camera frame in the trace
 const FRAME_FAR_PLANE = 800
 
 // Camera +0x02.
+// @check-allow traced-constants: the mode byte values 0 to 3 (camera-mode.ts)
 const MODE_NUMBERS: Readonly<Record<CameraModeValue, number>> = {
   [CameraMode.INTRODUCTION]: 0,
   [CameraMode.CHASE]: 1,
@@ -37,12 +41,15 @@ const MODE_NUMBERS: Readonly<Record<CameraModeValue, number>> = {
 }
 
 const measureText = (font: string, text: string) => ({
+  // @check-allow traced-constants: test-only HUD text sizes
   width: text.length * (font === HudFont.DIGITS ? 30 : 10),
+  // @check-allow traced-constants: test-only HUD text sizes
   height: 16,
 })
 const getString = (stringId: number) => `string ${String(stringId)}`
 
 // The camera does not read the HUD; this is the smallest context the presentation accepts.
+// @check-allow traced-constants: test-only HUD layout sizes
 const CAMERA_TRACE_HUD_CONTEXT: HudContext = {
   layout: getHudLayout({
     screenWidth: 640,

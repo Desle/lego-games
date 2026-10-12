@@ -27,12 +27,12 @@ import type { ChaseHeading, ChaseLook, DistanceEasing } from './camera-update.ty
 // Float constants of Camera_Update 0x00428540 (.rdata at 0x004b03f0..0x004b0428).
 const MAXIMUM_STEP_MILLISECONDS = 100
 const FINISH_MILLISECONDS = 2000
-const INTRODUCTION_MILLISECONDS = 2000
+const INTRODUCTION_MILLISECONDS = 2000 // float 2000.0 at 0x004af66c
 const FINISH_FADE_RATE = Math.fround(0.0005)
-const FINISH_TURN_RATE = getFloatFromBits(0x3acde32e)
+const FINISH_TURN_RATE = getFloatFromBits(0x3acde32e) // 0x004b03f8, one unit above fround(π / 2000)
 const STEERING_ANGLE_SCALE = 80
 const STEERING_ANGLE_LIMIT = Math.fround(0.3)
-const HEADING_DEADBAND = getFloatFromBits(0x3c656042)
+const HEADING_DEADBAND = getFloatFromBits(0x3c656042) // 0.014 at 0x004b040c, negated at 0x004b0410
 const DISTANCE_GROWTH_FROM_NEGATIVE = Math.fround(0.004)
 const DISTANCE_GROWTH_FROM_POSITIVE = Math.fround(0.002)
 const MINIMUM_EASING_DISTANCE = 12

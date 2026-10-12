@@ -52,8 +52,8 @@ import type {
 const TIME_SCALE_FLAG = 0x100
 // Racer flags (+0xd04): 0x10 warping, 0x80 power sliding, 0x4000 going the wrong way.
 const WARPING_FLAG = 0x10
-const WARP_PENDING_FLAG = 0x200000
-const PLACED_FLAG = 0x1000
+const WARP_PENDING_FLAG = 0x200000 // tested by Race_UpdateState3 0x00434c80 and Race_UpdateState4 0x00434eb0
+const PLACED_FLAG = 0x1000 // set by 0x00434c80 and 0x00434eb0, tested by 0x00434eb0
 const POWER_SLIDING_FLAG = 0x80
 const WRONG_WAY_FLAG = 0x4000
 // Racer flags 0x400 (the engine sounds run) and 0x1000 (they are quieter), driver flag 0x1 (full throttle).
