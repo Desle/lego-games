@@ -16,6 +16,7 @@ import {
   createSkeletonAnimationState,
 } from '@lego-games/lego-racers/skeletal-animation'
 import {
+  AmbientLight,
   Box3,
   Color,
   ColorManagement,
@@ -27,6 +28,7 @@ import {
 } from 'three'
 import { useLookFromAddress } from '../ldraw-car/ldraw-look.ts'
 import { DEVELOPMENT_JAM_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
+import { createModelObject } from '../../../track-viewer/index.ts'
 import { RacerPartKind } from '../ldraw-racer/ldraw-racer-drawing.types.ts'
 import type { RacerPartDrawingRequest } from '../ldraw-racer/ldraw-racer-drawing.types.ts'
 import { createLDrawDriverDrawing } from '../ldraw-racer/ldraw-driver-drawing.ts'
@@ -392,15 +394,32 @@ const renderChampion = async (
 }
 
 // The wheels of every chassis of the race's database in a sheet (the order of the database).
+// Every chassis's wheels: the original's model (when `isGameBesideLDraw`) then the LDraw parts, from `first` for `count` chassis.
 const renderWheelSheet = async (
   columns: number,
   cell: number,
-  view: GalleryView
+  view: GalleryView,
+  isGameBesideLDraw = false,
+  first = 0,
+  count = 1000
 ): Promise<readonly string[]> => {
   const archive = await getArchive()
-  const chassisList = parseChassisDatabase(archive.readFile(CHASSIS_DATABASE_PATH)).chassis
-  const rows = Math.ceil(chassisList.length / columns)
+  const chassisList = parseChassisDatabase(archive.readFile(CHASSIS_DATABASE_PATH)).chassis.slice(
+    first,
+    first + count
+  )
+  const cellsPerChassis = isGameBesideLDraw ? 2 : 1
+  const rows = Math.ceil((chassisList.length * cellsPerChassis) / columns)
   clearSheet(columns * cell, rows * cell)
+  const drawCell = (scene: Scene, slot: number) =>
+    drawIn(
+      scene,
+      getFramedCamera(scene, VIEW_DIRECTIONS[view], 1, null),
+      (slot % columns) * cell,
+      (rows - 1 - Math.floor(slot / columns)) * cell,
+      cell,
+      cell
+    )
   for (const [position, chassis] of chassisList.entries()) {
     const names = chassis.variants[0]
     if (names === undefined) continue
@@ -410,15 +429,13 @@ const renderWheelSheet = async (
     )
     if (drawing === null) continue
     await drawing.settled
-    const scene = createSceneOf(model, drawing, false)
-    drawIn(
-      scene,
-      getFramedCamera(scene, VIEW_DIRECTIONS[view], 1, null),
-      (position % columns) * cell,
-      (rows - 1 - Math.floor(position / columns)) * cell,
-      cell,
-      cell
-    )
+    if (isGameBesideLDraw) {
+      const gameScene = new Scene()
+      gameScene.add(createModelObject(model).group)
+      gameScene.add(new AmbientLight(0xffffff, 1))
+      drawCell(gameScene, position * cellsPerChassis)
+    }
+    drawCell(createSceneOf(model, drawing, false), position * cellsPerChassis + cellsPerChassis - 1)
     drawing.dispose()
   }
   return chassisList.map((chassis) => chassis.name)
