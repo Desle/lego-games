@@ -3,5 +3,6 @@ export type DevelopmentOverlayController = {
   readonly isTrackViewerOpen: boolean
   readonly onTrackViewerOpened: () => void
   readonly onTrackViewerClosed: () => void
+  readonly onRecordingDownloaded: () => void
   readonly onOverlayClosed: () => void
 }

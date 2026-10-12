@@ -17,7 +17,7 @@ import {
 } from '../../../ghost/index.ts'
 import { findNamedRecord } from '../../../named-record/index.ts'
 import { loadRaceDefinition } from '../../../race/index.ts'
-import type { RaceState, RaceStepResult } from '../../../race/index.ts'
+import type { LoadRaceOptions, RaceState, RaceStepResult } from '../../../race/index.ts'
 import { RacePhase } from '../../../race/index.ts'
 import type {
   CircuitOutcome,
@@ -57,14 +57,15 @@ const getChampionGhost = (session: GameSession, race: SessionRace) => {
     : null
 }
 
-const getRaceStart = (session: GameSession, race: SessionRace): RaceStart => {
-  const { settings, resources } = session
-  const circuit = findNamedRecord(resources.circuits.circuits, settings.circuitName)
-  const ghost: GhostSession | null =
-    session.ghost === null
-      ? null
-      : loadChampionGhost(session.ghost, getChampionGhost(session, race))
-  const definition = loadRaceDefinition(resources.jam, resources.executable, {
+// What the session hands the race loader; the session replay records it to load the same race again.
+export const getRaceLoadOptions = (
+  session: GameSession,
+  race: SessionRace,
+  ghost: GhostSession | null
+): LoadRaceOptions => {
+  const { settings } = session
+  const circuit = findNamedRecord(session.resources.circuits.circuits, settings.circuitName)
+  return {
     raceFolder: race.folder,
     racerCount: getRacerCount(session),
     localPlayerCount: settings.localPlayerCount,
@@ -77,7 +78,20 @@ const getRaceStart = (session: GameSession, race: SessionRace): RaceStart => {
     multiplayerLapCount: settings.multiplayerLapCount,
     isPointsRecordPresent: session.standings !== null,
     ghost,
-  })
+  }
+}
+
+const getRaceStart = (session: GameSession, race: SessionRace): RaceStart => {
+  const { settings, resources } = session
+  const ghost: GhostSession | null =
+    session.ghost === null
+      ? null
+      : loadChampionGhost(session.ghost, getChampionGhost(session, race))
+  const definition = loadRaceDefinition(
+    resources.jam,
+    resources.executable,
+    getRaceLoadOptions(session, race, ghost)
+  )
   return Object.freeze({
     kind: 'race',
     session: getChanged(session, { ghost }),
