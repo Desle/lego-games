@@ -289,6 +289,11 @@ export type TrackSession = HazardBus & {
   // The animation index (+0xbc) and flags (+0x5c) of the scene object (a skeleton instance of the track world, or of
   // the blended world) an event names, or null when the name is unknown.
   readonly getObject: (reference: ObjectReference) => TrackWorldObject | null
+  // Where a bone of the scene object is in the world now (0x0045ebe0: the bone's chain of transforms, then the object's
+  // frame), or null when the object or its skeleton is unknown.
+  readonly getObjectBonePosition: (reference: ObjectReference, boneIndex: number) => Vector3 | null
+  // 0x00489660 on the emitter a track event holds.
+  readonly setEmitterPosition: (handle: EmitterReference, position: Vector3) => void
   // 0x00463570, 0x004635c0 and 0x004633f0 write the requested animation (+0xd8, the second clip) and the flag word
   // (+0x5c) of the scene object; the instance's next update starts the clip (0x10023b10).
   readonly requestObjectAnimation: (

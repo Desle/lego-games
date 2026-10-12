@@ -1,6 +1,7 @@
 import {
   getHasEmitterDefinition,
   releaseEmitter,
+  setEmitterPosition,
   spawnEmitter,
   updateEmitterPool,
 } from '../../../emitter/index.ts'
@@ -19,6 +20,7 @@ import {
   updateHazardsAfterRacers,
 } from '../../../hazard/index.ts'
 import type { HazardSession, HazardStore } from '../../../hazard/index.ts'
+import { getBonePosition, getRestPose, getSkeletonPose } from '../../../skeletal-animation/index.ts'
 import { drawRandomScaledRange, drawRandomValue } from '../../../random-table/index.ts'
 import {
   advanceWorldAnimation,
@@ -446,6 +448,37 @@ export const createTrackSession = (
         }
   }
 
+  const getObjectBonePosition = (reference: ObjectReference, boneIndex: number): Vector3 | null => {
+    const found = getObjectInstance(reference)
+    const instance = found === null ? undefined : worlds[found.key].skeletonInstances[found.index]
+    if (instance === undefined || instance.skeleton === null || instance.animation === null) {
+      return null
+    }
+    const pose =
+      instance.clip === null
+        ? getRestPose(instance.skeleton)
+        : getSkeletonPose(getRestPose(instance.skeleton), instance.animation, instance.clip)
+    const local = getBonePosition(context.arithmetic, instance.skeleton, pose, boneIndex)
+    if (local === null) return null
+    const { add, storeFloat } = context.arithmetic
+    return [
+      storeFloat(add(instance.position[0], local[0])),
+      storeFloat(add(instance.position[1], local[1])),
+      storeFloat(add(instance.position[2], local[2])),
+    ]
+  }
+
+  const setEventEmitterPosition = (handle: EmitterReference, position: Vector3): void => {
+    const pool = handle.isCommonPool ? emitters.common : emitters.track
+    if (pool === null) return
+    const moved = setEmitterPosition(pool, handle.handleIndex, {
+      x: position[0],
+      y: position[1],
+      z: position[2],
+    })
+    emitters = handle.isCommonPool ? { ...emitters, common: moved } : { ...emitters, track: moved }
+  }
+
   const requestObjectAnimation = (
     reference: ObjectReference,
     animation: number,
@@ -477,6 +510,8 @@ export const createTrackSession = (
   const session: TrackSession = {
     context,
     getObject,
+    getObjectBonePosition,
+    setEmitterPosition: setEventEmitterPosition,
     requestObjectAnimation,
     drawRandomValue: () => {
       const draw = drawRandomValue(state.random.table, position)

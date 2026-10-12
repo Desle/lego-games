@@ -14,6 +14,7 @@ import type {
   HudState,
 } from '../../race-hud/index.ts'
 import type { SkeletonAnimationState } from '../../skeletal-animation/index.ts'
+import type { VehicleSkids } from '../../racer/index.ts'
 import type { DecalPlacement } from '../../decal/index.ts'
 import type { ColourShift } from '../../racer/index.ts'
 import type { Matrix3, Vector3 } from '../../simulation-math/index.ts'
@@ -116,6 +117,8 @@ export type RacerPose = {
   // The shadow the car casts, drawn when the camera is within the figure's draw distance; null while the racer is off the
   // track for a warp (0x0043dbb0 sets the parts' draw distance to -1 until the landing 0x0043db60) or in the warp's own draw.
   readonly shadow: RacerShadow | null
+  // The vehicle's skid marks: the last step's wheels and the trails to let go (0x0043f1e0).
+  readonly skids: VehicleSkids
   // The racer is off the track (racer flag 0x10): its parts are not drawn there either.
   readonly isOffTrack: boolean
 }

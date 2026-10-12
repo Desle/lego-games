@@ -49,5 +49,6 @@ export type {
   FrontEndStep,
   FrontEndTextCommand,
   FrontEndViewportCommand,
+  RaceCinemaView,
   RacerShowcaseView,
 } from './types/front-end.types.ts'

@@ -6,6 +6,7 @@ import type {
   SceneMesh,
 } from '@lego-games/lego-racers/scene'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
+import type { SceneLights } from './vertex-lighting.types.ts'
 import type {
   ColourShiftLike,
   FrustumView,
@@ -39,6 +40,8 @@ export type SceneObject = {
   // Advances every animated instance by this many whole milliseconds.
   readonly animate: (deltaMilliseconds: number) => void
   readonly animatedInstanceCount: number
+  // Lights the skeleton models that have normals and no vertex colours with these lights again (null: none, as in a race).
+  readonly setLights: (lights: SceneLights | null) => void
   // Poses every skeleton instance from this animation state (a racer's figure, whose clock the race keeps).
   readonly setAnimationState: (state: SkeletonAnimationState) => void
   readonly dispose: () => void

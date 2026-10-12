@@ -11,6 +11,8 @@ import { loadScene } from '@lego-games/lego-racers/scene'
 import { LinearSRGBColorSpace, PerspectiveCamera, Scene as ThreeScene, WebGLRenderer } from 'three'
 import { createBuilderCarView } from '../builder-car-view/builder-car-view.ts'
 import type { BuilderCarView } from '../builder-car-view/builder-car-view.types.ts'
+import { createCinemaStage } from '../cinema-stage/cinema-stage.ts'
+import type { CinemaStage } from '../cinema-stage/cinema-stage.types.ts'
 import { createDriverView } from '../driver-view/driver-view.ts'
 import type { DriverView } from '../driver-view/driver-view.types.ts'
 import { createShowcaseStage } from '../showcase-stage/showcase-stage.ts'
@@ -39,6 +41,7 @@ export const createMenuViewport = (archive: JamArchive): MenuViewport => {
       let carView: BuilderCarView | null = null
       let driverView: DriverView | null = null
       let showcaseStage: ShowcaseStage | null = null
+      let cinemaStage: CinemaStage | null = null
       return {
         driverView: () => {
           driverView ??= createDriverView(archive, three)
@@ -51,6 +54,10 @@ export const createMenuViewport = (archive: JamArchive): MenuViewport => {
           driverView ??= createDriverView(archive, three)
           showcaseStage ??= createShowcaseStage(archive, three, scene, object, driverView)
           return showcaseStage
+        },
+        cinemaStage: () => {
+          cinemaStage ??= createCinemaStage(archive, three, scene, object)
+          return cinemaStage
         },
         camera: scene.cameras[0] ?? null,
         carView: () => {
@@ -89,6 +96,7 @@ export const createMenuViewport = (archive: JamArchive): MenuViewport => {
     world.object.animate(deltaMilliseconds)
     if (command.builder !== null) world.carView().show(command.builder)
     if (command.showcase !== null) world.showcaseStage().show(command.showcase)
+    if (command.cinema !== null) world.cinemaStage().show(command.cinema)
     if (command.driver !== null) {
       const driverView = world.driverView()
       driverView.show(command.driver)

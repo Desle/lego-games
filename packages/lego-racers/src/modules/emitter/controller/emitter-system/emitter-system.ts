@@ -28,6 +28,7 @@ export const createIdleEmitterSystem = (): EmitterSystem =>
     fourthFloat: 0,
     squaredRadius: 0,
     bornCount: 0,
+    defaultMaterialName: null,
     framePosition: ZERO_VECTOR3,
   })
 
@@ -64,6 +65,8 @@ export const getStartedEmitterSystem = (
     ...system,
     particles: Object.freeze([]),
     entryIndex: emitter.entryIndex,
+    defaultMaterialName:
+      emitter.entryIndex === null ? emitter.linkedName : system.defaultMaterialName,
     firstFloat: emitter.firstFloat,
     secondFloat: emitter.secondFloat,
     thirdFloat: emitter.thirdFloat,
@@ -118,6 +121,7 @@ export const getEmitterSystemWithBirth = (
     ageMilliseconds: 0,
     lifetimeMilliseconds,
     tableIndex: null,
+    isDrawable: false,
   })
   const reusedIndex = getParticleIndexToFill(system)
   const particles =
@@ -198,6 +202,8 @@ export const getAdvancedEmitterSystem = (
         system.entryIndex === null || animation === null
           ? null
           : getTableIndex(arithmetic, animation, system.entryIndex, ageMilliseconds),
+      isDrawable:
+        system.entryIndex === null ? system.defaultMaterialName !== null : animation !== null,
     })
     return [getMovedParticle(arithmetic, aged, seconds, system.acceleration)]
   })

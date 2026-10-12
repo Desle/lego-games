@@ -13,6 +13,9 @@ const MENU_WORLD_PATHS: ReadonlyMap<string, string> = new Map([
   ['racer', 'MENUDATA\\RS_SET\\RACER.WDB'],
   // The driver editor's platform (screen 0xf): `MENUDATA\CB_SET` (0x0047d230).
   ['cbset', 'MENUDATA\\CB_SET\\CBSET.WDB'],
+  // The race previews of the single race and circuit race screens: `MENUDATA\SINGRACE` (0x0047a2b0, 0x00488010), the
+  // worlds PST.CDB names (its keyword 0x28).
+  ['pst', 'MENUDATA\\SINGRACE\\PST.WDB'],
 ])
 
 export const getMenuWorldPath = (modelName: string): string | null =>
@@ -22,6 +25,7 @@ export const getMenuWorldPath = (modelName: string): string | null =>
 // materials). `RS_SET\BLENDED.WDB` has the two skeleton instances `shadow` (under the driver) and `crsdow` (under the car).
 const MENU_WORLD_EXTRA_PATHS: ReadonlyMap<string, readonly string[]> = new Map([
   ['racer', ['MENUDATA\\RS_SET\\BLENDED.WDB']],
+  ['pst', ['MENUDATA\\SINGRACE\\BLENDED.WDB', 'MENUDATA\\SINGRACE\\EMITTER.WDB']],
 ])
 
 // Every world file of a 3D item, the main one first.
@@ -40,6 +44,7 @@ export const getMenuWorldPaths = (modelName: string): readonly string[] | null =
 const WORLD_CAMERA_INSETS: ReadonlyMap<string, number> = new Map([
   ['tt', 0],
   ['racer', 16],
+  ['pst', 0],
 ])
 
 export const getWorldCameraInset = (modelName: string): number | null =>

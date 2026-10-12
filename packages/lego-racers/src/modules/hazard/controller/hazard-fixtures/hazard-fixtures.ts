@@ -43,6 +43,7 @@ export const createTestSkeletonInstance = (
 ): SkeletonInstanceRuntime => ({
   name,
   animation: TEST_ANIMATION,
+  skeleton: null,
   clip: createSkeletonAnimationState(TEST_ANIMATION, 0),
   isAnimated: true,
   otherFlags: 0,

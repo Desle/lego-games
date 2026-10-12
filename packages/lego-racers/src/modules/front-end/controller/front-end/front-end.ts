@@ -37,6 +37,9 @@ import {
   getStateWithShowcaseReaction,
   getStateWithShowcaseStep,
 } from '../front-end-showcase/front-end-showcase.ts'
+import { advanceRacePreviewEmitters } from '../race-preview/race-preview-emitters.ts'
+import { advanceRacePreviewClock, createRacePreviewClock } from '../race-preview/race-preview.ts'
+import { getRacePreviewCinemaName } from '../screens/race-selection-screens.ts'
 import { getFrontEndMusicIndex } from '../front-end-music/front-end-music.ts'
 import { getWidgetCommands } from '../widget-commands/widget-commands.ts'
 
@@ -55,6 +58,8 @@ const getRuntime = (
     builder: state.builder,
     driver: state.driver,
     screenMilliseconds: state.screenMilliseconds,
+    racePreview: state.racePreview,
+    racePreviewEmitters: state.racePreviewEmitters,
     menuFigureAnimation: state.menuFigure?.animation ?? null,
     showcase: state.showcase,
   }
@@ -101,6 +106,8 @@ export const createFrontEnd = (
           builder: null,
           driver: null,
           screenMilliseconds: 0,
+          racePreview: createRacePreviewClock(),
+          racePreviewEmitters: null,
           menuFigureAnimation: null,
           showcase: null,
         }),
@@ -109,6 +116,8 @@ export const createFrontEnd = (
     settings,
     outcome: 'running',
     screenMilliseconds: 0,
+    racePreview: createRacePreviewClock(),
+    racePreviewEmitters: null,
     musicListIndex: getFrontEndMusicIndex(firstScreenId, null),
     menuFigure:
       firstScreenId === FrontEndScreen.MAIN_MENU
@@ -150,6 +159,8 @@ const applyNavigation = (
           builder: getBuilderForScreen(screenId, navigated.builder, resources),
           driver: getDriverForScreen(screenId, navigated.settings, resources, environment),
           screenMilliseconds: 0,
+          racePreview: createRacePreviewClock(),
+          racePreviewEmitters: null,
         },
         screenId
       )
@@ -159,7 +170,12 @@ const applyNavigation = (
       if (screens.length <= 1) return { state: navigated, soundNames, musicListIndex: null }
       const remaining = screens.slice(0, -1)
       const opened = getOpenedState(
-        { ...navigated, screens: remaining, screenMilliseconds: 0 },
+        {
+          ...navigated,
+          screens: remaining,
+          screenMilliseconds: 0,
+          racePreview: createRacePreviewClock(),
+        },
         remaining.at(-1)?.screenId ?? FrontEndScreen.MAIN_MENU
       )
       return { ...opened, soundNames }
@@ -235,6 +251,51 @@ const getEnteredFigure = (
     : restartMenuFigureAnimation(state.menuFigure, animation)
 }
 
+// Only the circuit race screen switches races (0x0047a3f0), and not on the last circuit.
+const getIsPreviewCycling = (state: FrontEndState, resources: FrontEndResources): boolean => {
+  const screen = state.screens.at(-1)
+  return (
+    screen?.screenId === FrontEndScreen.CIRCUIT_RACE &&
+    screen.selection.circuitIndex !== resources.circuits.circuits.length - 1
+  )
+}
+
+// The race preview's emitters after a frame (Cinema_Update 0x00466d90): they follow the cinema of the race on show, and
+// their births draw from the shared random table, which moves its cursor.
+const getStateWithPreviewEmitters = (
+  before: FrontEndState,
+  after: FrontEndState,
+  isRestarted: boolean,
+  resources: FrontEndResources,
+  environment: FrontEndEnvironment,
+  frameMilliseconds: number
+): FrontEndState => {
+  const runtime = getRuntime(after, resources, environment)
+  const screenId = after.screens.at(-1)?.screenId
+  const cinemaName =
+    runtime === null || screenId === undefined ? null : getRacePreviewCinemaName(runtime, screenId)
+  if (cinemaName === null && before.racePreviewEmitters === null) return after
+  const preview = resources.getRacePreview()
+  const step = advanceRacePreviewEmitters({
+    previous: before.racePreviewEmitters,
+    resources: preview,
+    cinema:
+      preview.cinemas.cinemas.find(
+        (candidate) => candidate.name.toLowerCase() === cinemaName?.toLowerCase()
+      ) ?? null,
+    previousMilliseconds: before.racePreview.cinemaMilliseconds,
+    milliseconds: after.racePreview.cinemaMilliseconds,
+    frameMilliseconds,
+    isRestarted: isRestarted || after.racePreview.cycleCount !== before.racePreview.cycleCount,
+    random: { table: environment.randomTable, position: after.settings.randomPosition },
+  })
+  return {
+    ...after,
+    racePreviewEmitters: step.emitters,
+    settings: { ...after.settings, randomPosition: step.randomPosition },
+  }
+}
+
 // One pass of the loop of 0x0042d510: the time advances and the input, if any, reaches the current screen, which
 // answers with the next screen, the race or the exit (0x004812c0, 0x004850a0).
 export const stepFrontEnd = (
@@ -248,6 +309,11 @@ export const stepFrontEnd = (
   const advanced: FrontEndState = {
     ...getStateWithShowcaseStep(state, resources, environment, frameMilliseconds),
     screenMilliseconds: state.screenMilliseconds + frameMilliseconds,
+    racePreview: advanceRacePreviewClock(
+      state.racePreview,
+      frameMilliseconds,
+      getIsPreviewCycling(state, resources)
+    ),
     menuFigure: figureStep?.figure ?? state.menuFigure,
   }
   const figureSounds = figureStep?.soundNames ?? []
@@ -263,10 +329,26 @@ export const stepFrontEnd = (
   ) {
     return { ...stepped, state: { ...stepped.state, outcome: 'demonstration' } }
   }
+  const isScreenChanged =
+    stepped.state.screens.length !== advanced.screens.length ||
+    stepped.state.screens.at(-1)?.screenId !== advanced.screens.at(-1)?.screenId
+  // A new circuit shows its first race (0x0047a0e0 calls 0x0047a2b0): the timer and the cinema start again.
+  const isPreviewRestarted =
+    isScreenChanged ||
+    stepped.state.screens.at(-1)?.selection.circuitIndex !==
+      advanced.screens.at(-1)?.selection.circuitIndex
   const entered: FrontEndState = getStateWithShowcaseOpened(
     advanced,
     {
       ...stepped.state,
+      // The frame that opens a screen already runs its update (0x0047a3f0).
+      racePreview: isPreviewRestarted
+        ? advanceRacePreviewClock(
+            createRacePreviewClock(),
+            frameMilliseconds,
+            getIsPreviewCycling(stepped.state, resources)
+          )
+        : stepped.state.racePreview,
       menuFigure:
         stepped.state.screens.length === advanced.screens.length &&
         stepped.state.screens.at(-1)?.screenId === advanced.screens.at(-1)?.screenId
@@ -277,7 +359,15 @@ export const stepFrontEnd = (
     environment,
     frameMilliseconds
   )
-  return { ...stepped, state: entered, soundNames: [...figureSounds, ...stepped.soundNames] }
+  const previewed = getStateWithPreviewEmitters(
+    state,
+    entered,
+    isPreviewRestarted,
+    resources,
+    environment,
+    frameMilliseconds
+  )
+  return { ...stepped, state: previewed, soundNames: [...figureSounds, ...stepped.soundNames] }
 }
 
 // The commands of the current screen's widgets, in the order the screen lists them.

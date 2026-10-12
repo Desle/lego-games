@@ -411,8 +411,8 @@ export const useRaceController = (): RaceController => {
           frame.warpView
         )
         viewport.showHazards(raceState.trackLogic.worlds.track, [
-          raceState.trackLogic.emitters.common,
-          raceState.trackLogic.emitters.track,
+          raceState.racerSet.emitters.common,
+          raceState.racerSet.emitters.track,
         ])
         viewport.animate(advance.frameMilliseconds)
         setScreen((previous) => ({

@@ -126,7 +126,10 @@ export const getPortWorldTriangles = (roots: readonly Object3D[]): PortTriangles
         map === null ? null : getTextureKey(map as DataTexture, keys, textures, material.name)
       const state = getDrawState(renderState, material)
       const source = getSourceName(mesh, material.name)
-      const count = mesh.geometry.getAttribute('position').count / CORNERS_PER_TRIANGLE
+      // A mesh whose draw range is cut (the decals, the particles) shows only the corners in it.
+      const count =
+        Math.min(mesh.geometry.getAttribute('position').count, mesh.geometry.drawRange.count) /
+        CORNERS_PER_TRIANGLE
       for (let triangleIndex = 0; triangleIndex < count; triangleIndex++) {
         const vertices = getVertices(mesh, mesh.matrixWorld, triangleIndex)
         const localVertices = getVertices(

@@ -36,6 +36,14 @@ const getAppearance = (
         : getVariantModel(secondVariant),
     driverModel,
     seatPoint: Object.freeze({ x, y, z }),
+    wheelMarks: Object.freeze({
+      points: Object.freeze(
+        chassis.vehiclePoints.map(([pointX, pointY, pointZ]) =>
+          Object.freeze({ x: pointX, y: pointY, z: pointZ })
+        )
+      ),
+      widths: chassis.vehicleValues,
+    }),
     sharedResourceName: chassis.sharedResourceName,
     shadowImageName: `${SHADOW_IMAGE_PREFIX}${String(racerIndex)}`,
   })

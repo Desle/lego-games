@@ -169,7 +169,7 @@ describe('the vehicle effects of Vehicle_Update, 0x0043e070', () => {
     const started = startVehicleTurboEffects(context, racerSet, 0)
 
     // Act
-    const updated = updateVehicleEmitters(context, started, 0)
+    const updated = updateVehicleEmitters(context, started, 0, 33)
 
     // Assert
     expect(updated.randomPosition).toBe(2)
@@ -190,7 +190,7 @@ describe('the vehicle effects of Vehicle_Update, 0x0043e070', () => {
     )
 
     // Act
-    const updated = updateVehicleEmitters(context, disabled, 0)
+    const updated = updateVehicleEmitters(context, disabled, 0, 33)
 
     // Assert
     expect(updated.randomPosition).toBe(0)
@@ -214,7 +214,7 @@ describe('the vehicle effects of Vehicle_Update, 0x0043e070', () => {
     })
 
     // Act
-    const updated = updateVehicleEmitters(context, born, 0)
+    const updated = updateVehicleEmitters(context, born, 0, 33)
 
     // Assert
     expect(getRacer(updated, 0).vehicle.dustEmitter).toBeNull()
@@ -236,7 +236,7 @@ describe('the vehicle effects of Vehicle_Update, 0x0043e070', () => {
       common: createPool(COMMON_NAMES),
       track: null,
     })
-    const aloft = updateVehicleEmitters(context, racerSet, 0)
+    const aloft = updateVehicleEmitters(context, racerSet, 0, 33)
     const landing = createRacerSet(
       [
         {
@@ -253,7 +253,7 @@ describe('the vehicle effects of Vehicle_Update, 0x0043e070', () => {
     )
 
     // Act
-    const landed = updateVehicleEmitters(context, landing, 0)
+    const landed = updateVehicleEmitters(context, landing, 0, 33)
 
     // Assert
     const instances = landed.emitters.common?.instances ?? []
