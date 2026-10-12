@@ -7,6 +7,7 @@ import type { DebrisAnimations, DebrisPool } from '../debris/debris.types.ts'
 import type { ExplosionPool } from '../explosion/explosion.types.ts'
 import type { GrappleHook } from '../grapple-hook/grapple-hook.types.ts'
 import type { RouteNode } from '../route-movement/route-movement.types.ts'
+import type { BarrelSpin } from '../barrel-spin/barrel-spin.types.ts'
 import type { WandBeam } from '../wand-beam/wand-beam.types.ts'
 import type { FlightRacer, LineProbe, RocketLaunchBone } from '../projectiles.types.ts'
 
@@ -77,6 +78,9 @@ export type ProjectileWorld = {
   // The grapple hooks' model frame (the pointer at effect +0x268): one object every hook of the race moves and turns, so
   // the registry sees the pose the last hook update left, whichever hook it belongs to.
   readonly hookFrame: Frame
+  // Indexed by effect id: the barrel's spin angle (effect +0x178, kept when the effect is reused) and the rotation of its
+  // model frame.
+  readonly barrelSpins: readonly BarrelSpin[]
   // The events of the update in progress; updatePowerUpsWithProjectiles starts them empty.
   readonly events: readonly ProjectileEvent[]
   // The explosions of power-up system +0x193c ("Explsn") and +0x1940 ("spikexp"), and the debris at +0x18bc.
@@ -99,6 +103,8 @@ export type ProjectileContext = {
   readonly rocketModelScale: number
   // The lengths of the debris animations (model data the port does not read).
   readonly debrisAnimations: DebrisAnimations
+  // The float cosine table at 0x004bf7ec, by index.
+  readonly getTableCosine: (index: number) => number
   readonly probe: LineProbe
 }
 

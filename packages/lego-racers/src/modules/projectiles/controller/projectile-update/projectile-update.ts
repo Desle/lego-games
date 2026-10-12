@@ -15,6 +15,7 @@ import { BallisticFlightState } from '../../types/ballistic-flight/ballistic-fli
 import {
   getMotion,
   getWorldWithEvents,
+  getWorldWithBarrelSpin,
   getWorldWithMotion,
 } from '../../types/projectile-world/projectile-world.ts'
 import type {
@@ -27,6 +28,7 @@ import {
   getStepWithConsequences,
   getStepWithExplosionsAndDebris,
 } from '../projectile-consequences/projectile-consequences.ts'
+import { getBarrelSpun, NO_BARREL_SPIN } from '../../types/barrel-spin/barrel-spin.ts'
 import { updateRocket } from '../rocket-effect/rocket-effect.ts'
 import { updateWarp } from '../warp-effect/warp-effect.ts'
 import { updateWand } from '../wand-effect/wand-effect.ts'
@@ -110,6 +112,20 @@ const updateBarrel: EffectUpdate = (step, world, context, before, stepMillisecon
     flown === null
       ? Object.freeze({ step, world })
       : getStepAfterBarrelAdvance(step, world, context, before.id, flown.flight, flown.result)
+  // 0x00452ff0 spins the model after the flight, whatever the flight did, in every state but the last.
+  const spunWorld =
+    before.state === EffectState.FINISHED
+      ? afterFlight.world
+      : getWorldWithBarrelSpin(
+          afterFlight.world,
+          before.id,
+          getBarrelSpun(
+            context.powerUps.arithmetic,
+            context.getTableCosine,
+            afterFlight.world.barrelSpins[before.id] ?? NO_BARREL_SPIN,
+            stepMilliseconds
+          )
+        )
   const counted = updatePowerUpEffect(
     afterFlight.step,
     context.powerUps,
@@ -121,8 +137,8 @@ const updateBarrel: EffectUpdate = (step, world, context, before, stepMillisecon
     step: counted,
     world:
       before.state === EffectState.STARTING && after.state === EffectState.ACTIVE
-        ? getWithBallisticMotion(afterFlight.world, before.id, getBarrelFlight(context, after))
-        : afterFlight.world,
+        ? getWithBallisticMotion(spunWorld, before.id, getBarrelFlight(context, after))
+        : spunWorld,
   })
 }
 

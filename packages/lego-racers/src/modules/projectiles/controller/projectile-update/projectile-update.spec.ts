@@ -95,6 +95,7 @@ const getContexts = (
         thirdAxis: { x: 0, y: 0, z: 1 },
       })),
       rocketModelScale: 1,
+      getTableCosine: () => 0,
       debrisAnimations: [[200], [200], [200], [200]],
       probe,
     },

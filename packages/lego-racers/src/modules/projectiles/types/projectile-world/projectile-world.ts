@@ -1,6 +1,8 @@
 import type { PowerUpStep } from '../../../power-ups/index.ts'
 import { IDENTITY_MATRIX3, ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import type { Matrix3, Vector3 } from '../../../simulation-math/index.ts'
+import { NO_BARREL_SPIN } from '../barrel-spin/barrel-spin.ts'
+import type { BarrelSpin } from '../barrel-spin/barrel-spin.types.ts'
 import { createDebrisPool } from '../debris/debris.ts'
 import {
   createExplosionPool,
@@ -17,6 +19,7 @@ export const createProjectileWorld = (step: PowerUpStep): ProjectileWorld =>
     motions: Object.freeze(step.world.effects.effects.map(() => null)),
     rocketWobbleAngles: Object.freeze(step.world.effects.effects.map(() => 0)),
     hookFrame: Object.freeze({ rotation: IDENTITY_MATRIX3, position: ZERO_VECTOR3 }),
+    barrelSpins: Object.freeze(step.world.effects.effects.map(() => NO_BARREL_SPIN)),
     events: Object.freeze([]),
     explosions: createExplosionPool(NORMAL_EXPLOSION_COUNT, NORMAL_EXPLOSION_PARAMETERS),
     spikedExplosions: createExplosionPool(SPIKED_EXPLOSION_COUNT, SPIKED_EXPLOSION_PARAMETERS),
@@ -66,6 +69,18 @@ export const getWorldWithHookFrameRotation = (
   Object.freeze({
     ...world,
     hookFrame: Object.freeze({ rotation, position: world.hookFrame.position }),
+  })
+
+export const getWorldWithBarrelSpin = (
+  world: ProjectileWorld,
+  effectId: number,
+  spin: BarrelSpin
+): ProjectileWorld =>
+  Object.freeze({
+    ...world,
+    barrelSpins: Object.freeze(
+      world.barrelSpins.map((current, index) => (index === effectId ? spin : current))
+    ),
   })
 
 export const getWorldWithEvents = (

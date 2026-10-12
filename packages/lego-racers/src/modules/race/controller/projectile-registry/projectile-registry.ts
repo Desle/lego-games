@@ -9,6 +9,7 @@ import type { RegistryEntry } from '../../../projectiles/index.ts'
 import {
   getFloatFromBits,
   getFrameTransformedPoint,
+  IDENTITY_MATRIX3,
   ZERO_VECTOR3,
 } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Frame, Vector3 } from '../../../simulation-math/index.ts'
@@ -73,12 +74,17 @@ const getFlightSphere = (source: RegistrySource, effect: PowerUpEffect): Boundin
   const motion = source.projectileWorld.motions[effect.id]
   if (motion === undefined || motion === null) return ORIGIN_SPHERE
   if (motion.kind === 'ballistic') {
-    return getSphere(
-      motion.flight.framePosition,
-      effect.kind === PowerUpEffectKind.BARREL
-        ? source.projectileModelData.shapeBounds.barrel.radius
-        : CANNON_BALL_RADIUS
-    )
+    if (effect.kind === PowerUpEffectKind.BARREL) {
+      return getFigureSphere(
+        source.arithmetic,
+        {
+          rotation: source.projectileWorld.barrelSpins[effect.id]?.rotation ?? IDENTITY_MATRIX3,
+          position: motion.flight.framePosition,
+        },
+        source.projectileModelData.shapeBounds.barrel
+      )
+    }
+    return getSphere(motion.flight.framePosition, CANNON_BALL_RADIUS)
   }
   const { shapeBounds } = source.projectileModelData
   if (motion.kind === 'grapple') {

@@ -340,6 +340,7 @@ export const createProjectileContext = (
     rocketLaunchMilliseconds: modelData.rocketLaunchMilliseconds,
     rocketLaunchBones: modelData.rocketLaunchBones,
     rocketModelScale: modelData.rocketModelScale,
+    getTableCosine: (index: number) => getTableCosine(context.tables, index),
     debrisAnimations: modelData.debrisAnimations,
     probe:
       track === undefined
