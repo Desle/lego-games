@@ -27,3 +27,6 @@ __pycache__/
 
 # Recordings posted by the dev viewer, waiting for pnpm run replay:inbox
 reverse-engineering/replays/inbox
+
+# Render coverage sweep output
+packages/lego-racers-web/.render-coverage/
