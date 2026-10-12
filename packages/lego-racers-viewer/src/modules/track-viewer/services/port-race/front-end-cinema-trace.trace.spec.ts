@@ -57,6 +57,15 @@ type CinemaFrame = {
   readonly cinemaName: string | null
   readonly originalCount: number
   readonly share: number
+  // The original's draws with the colour the port tints the preview's frame with (8 pieces).
+  readonly tintedDrawCount: number
+}
+
+const getFrameTint = (state: FrontEndState): number | null => {
+  for (const command of getFrontEndFrame(state, resources, environment).commands) {
+    if (command.kind === 'image' && command.tint !== undefined) return command.tint
+  }
+  return null
 }
 
 const getCinemaView = (state: FrontEndState): RaceCinemaView | null => {
@@ -97,7 +106,12 @@ const runScenario = async (
     const matched = originalPositions.filter((position) =>
       bonePositions.some((bone) => getDistance(bone, position) < POSITION_TOLERANCE)
     )
+    const tint = getFrameTint(state)
     return {
+      tintedDrawCount:
+        tint === null
+          ? 0
+          : draws.filter((draw) => draw.vertices.some((vertex) => vertex.diffuse === tint)).length,
       frame: watchedFrame,
       cinemaName: view?.cinemaName ?? null,
       originalCount: originalPositions.length,
@@ -123,6 +137,7 @@ describe.skipIf(!(getIsOriginalGamePresent() && getIsOriginalPresentationAvailab
 
       // Assert
       expect(Math.min(...frames.map((frame) => frame.share))).toBeGreaterThan(MATCHED_SHARE)
+      expect(Math.min(...frames.map((frame) => frame.tintedDrawCount))).toBeGreaterThanOrEqual(8)
       expect(new Set(frames.map((frame) => frame.cinemaName)).size).toBeGreaterThan(1)
     })
   }

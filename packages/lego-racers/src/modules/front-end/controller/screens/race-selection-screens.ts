@@ -25,6 +25,12 @@ import { createResult, getClampedStep, MenuSound } from '../screen-helpers/scree
 const RACES_PER_CIRCUIT = 4
 // The last circuit has one race and no cycle.
 const FINAL_CIRCUIT_INDEX = 6
+// 0x00488cb0 gives the eight pieces of the preview's frame the colour DAT_004c2278[DAT_004c228c[circuit * 4 + race slot]]
+// (grey, gold, beige, blue and, for the last circuit, yellow), measured in the original's draws.
+const FRAME_TINT_INDICES: readonly number[] = [
+  1, 0, 3, 2, 1, 0, 3, 2, 0, 1, 2, 3, 2, 0, 3, 1, 2, 0, 3, 1, 3, 1, 2, 0, 4, 0, 0, 0,
+]
+const FRAME_TINTS: readonly number[] = [0xffadadad, 0xffffdf00, 0xffe6dcb4, 0xff253ddf, 0xffffda1f]
 const GONEXT_INDEX = 0
 const GOBACK_INDEX = 1
 const SELECTOR_RECTANGLE = Object.freeze({ left: 3, top: 29, right: 220, bottom: 72 })
@@ -112,6 +118,12 @@ const getCommonWidgets = (runtime: ScreenRuntime, kind: RaceSelectionKind): Fron
     kind === 'circuit_race'
       ? races[getRaceNumberWithinCycle(resources, runtime)]
       : races[selection.raceIndex]
+  const raceSlot = Math.max(
+    0,
+    races.findIndex((race) => race === previewRace)
+  )
+  const frameTint =
+    FRAME_TINTS[FRAME_TINT_INDICES[selection.circuitIndex * RACES_PER_CIRCUIT + raceSlot] ?? 0]
   const widgets: FrontEndWidget[] = [
     { kind: 'image', itemName: 'backdrp', imageName: 'backdrp' },
     {
@@ -121,7 +133,11 @@ const getCommonWidgets = (runtime: ScreenRuntime, kind: RaceSelectionKind): Fron
       styleName: 'banner',
       alignment: 'left',
     },
-    { kind: 'frame', itemName: 'brickbox' },
+    {
+      kind: 'frame',
+      itemName: 'brickbox',
+      ...(frameTint === undefined ? {} : { tint: frameTint }),
+    },
     {
       kind: 'placed_image',
       imageName: logoName,
@@ -162,6 +178,7 @@ const getCommonWidgets = (runtime: ScreenRuntime, kind: RaceSelectionKind): Fron
     {
       kind: 'viewport',
       itemName: 'singrace',
+      ...(frameTint === undefined ? {} : { frameTint }),
       cinema: getRaceCinema(runtime, previewRace),
     },
     {

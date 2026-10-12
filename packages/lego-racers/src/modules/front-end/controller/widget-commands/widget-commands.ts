@@ -178,11 +178,20 @@ const getButtonCommands = (
   return commands
 }
 
+const getTintedFrameDrawing = (
+  commands: readonly FrontEndDrawCommand[],
+  tint: number | undefined
+): readonly FrontEndDrawCommand[] =>
+  tint === undefined
+    ? commands
+    : commands.map((command) => (command.kind === 'image' ? { ...command, tint } : command))
+
 const getFrameDrawing = (
   context: ScreenContext,
   rectangle: FrontEndRectangle,
   names: readonly string[],
-  fill: FrameFill | null
+  fill: FrameFill | null,
+  tint?: number
 ): readonly FrontEndDrawCommand[] => {
   const commands: FrontEndDrawCommand[] = []
   if (fill !== null) commands.push({ kind: 'fill', rectangle, ...fill })
@@ -204,7 +213,13 @@ const getFrameDrawing = (
     top: number,
     right: number,
     bottom: number
-  ) => commands.push(...getImageCommand(context, name ?? '', { left, top, right, bottom }))
+  ) =>
+    commands.push(
+      ...getTintedFrameDrawing(
+        getImageCommand(context, name ?? '', { left, top, right, bottom }),
+        tint
+      )
+    )
   place(edgeTop, rectangle.left + step, rectangle.top, rectangle.right - step, rectangle.top + step)
   place(
     edgeBottom,
@@ -257,7 +272,8 @@ const getFrameDrawing = (
 const getFrameCommands = (
   context: ScreenContext,
   entry: MenuEntry,
-  rectangle: FrontEndRectangle
+  rectangle: FrontEndRectangle,
+  tint?: number
 ): readonly FrontEndDrawCommand[] => {
   const source =
     getPropertyValues(entry, 0x28) === null ? (getStyleEntry(context, entry.name) ?? entry) : entry
@@ -265,7 +281,7 @@ const getFrameCommands = (
   const colors = getPropertyValues(source, 0x2a) ?? []
   const fill =
     colors.length >= 8 ? { color: getColor(colors, 0), bottomColor: getColor(colors, 1) } : null
-  return getFrameDrawing(context, rectangle, names, fill)
+  return getFrameDrawing(context, rectangle, names, fill, tint)
 }
 
 // A widget's draw commands, in the order the original draws them: the item's own images and text.
@@ -320,7 +336,8 @@ export const getWidgetCommands = (
       return getFrameCommands(
         context,
         entry,
-        getAbsoluteRectangle(context.files.description, rectangleEntry, { width: 0, height: 0 })
+        getAbsoluteRectangle(context.files.description, rectangleEntry, { width: 0, height: 0 }),
+        widget.tint
       )
     }
     case 'fill': {
@@ -338,7 +355,10 @@ export const getWidgetCommands = (
       // A viewport names the box item it sits in (0x3a): the box is drawn around its rectangle.
       const frameName = getStringValue(getPropertyValues(entry, 0x3a)?.[0])
       const frameEntry = frameName === '' ? null : findEntry(context.files.description, frameName)
-      const frame = frameEntry === null ? [] : getFrameCommands(context, frameEntry, rectangle)
+      const frame =
+        frameEntry === null
+          ? []
+          : getFrameCommands(context, frameEntry, rectangle, widget.frameTint)
       return [
         ...frame,
         {

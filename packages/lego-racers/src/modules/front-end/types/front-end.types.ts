@@ -207,6 +207,8 @@ export type FrontEndImageCommand = {
   // The part of the image drawn, from its top left corner (tiles at an edge are cut).
   readonly width: number
   readonly height: number
+  // 0xAARRGGBB the image's pixels are multiplied by (the race selects tint their frame); absent: untinted.
+  readonly tint?: number
 }
 
 export type FrontEndTextCommand = {
