@@ -22,6 +22,7 @@ const createStep = (isSplitScreen: boolean): PowerUpStep =>
       racers: [],
       effects: createPowerUpEffects(isSplitScreen),
       brickSpinAngle: 0,
+      brickClockMilliseconds: 0,
       emitters: NO_EMITTER_POOLS,
       random: { table: createRandomTable(Array.from({ length: 1024 }, () => 0)), position: 0 },
     }),

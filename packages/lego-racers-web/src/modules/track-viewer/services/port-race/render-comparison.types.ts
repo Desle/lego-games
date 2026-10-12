@@ -30,7 +30,16 @@ export type FrameTotals = {
 // The HUD of one frame: the rectangles the original drew against the port's image commands.
 export type HudFrameResult = QuadComparison & { readonly frame: number }
 
+// How many triangles the original and the port drew of a watched drawing (TraceScenarioRequest.watched) in a frame.
+export type WatchedCount = {
+  readonly label: string
+  readonly frame: number
+  readonly originalCount: number
+  readonly portCount: number
+}
+
 export type RenderScenarioResult = {
+  readonly watched: readonly WatchedCount[]
   readonly hudResults: readonly HudFrameResult[]
   readonly totals: readonly FrameTotals[]
   readonly groups: readonly AggregatedGroup[]

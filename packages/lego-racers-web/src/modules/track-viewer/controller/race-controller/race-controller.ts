@@ -480,7 +480,7 @@ export const useRaceController = (): RaceController => {
           frame.screenFades,
           frame.fieldOfViewDegrees
         )
-        viewport.showHazards(raceState.trackLogic.worlds.track, [
+        viewport.showHazards(raceState.trackLogic.worlds, [
           raceState.racerSet.emitters.common,
           raceState.racerSet.emitters.track,
         ])

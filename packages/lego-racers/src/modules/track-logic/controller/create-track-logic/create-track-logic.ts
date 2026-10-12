@@ -12,8 +12,10 @@ import { NO_EMITTER_POOLS } from '../../../emitter/index.ts'
 import {
   EMPTY_WORLD_ANIMATION,
   findSkeletonInstanceIndex,
+  getInstanceLevelDistances,
   getSkeletonInstanceFlags,
   getSkeletonInstanceWithFlags,
+  getWorldWithInstanceLevelDistances,
   getWorldWithSkeletonInstance,
 } from '../../../world-animation/index.ts'
 import type { RaceWorlds } from '../../../world-animation/index.ts'
@@ -24,6 +26,7 @@ import type {
   TrackEvent,
   TrackEventBase,
   LoadedHazards,
+  LoadedHiddenObjects,
   TrackEventSet,
   TrackLogicInput,
   TrackLogicState,
@@ -83,6 +86,7 @@ const createEvent = <Kind extends TrackEvent['kind'], Record extends EventBlockH
   isHandleHeld: false,
   emitterHandle: null,
   isSignalHeld: false,
+  savedLevelSquaredDistances: null,
 })
 
 // 0x004641b0: a 2A event takes one draw (500..1499 ms) for its timer while Events_Load reads it.
@@ -277,6 +281,40 @@ const EMPTY_WORLDS: RaceWorlds = Object.freeze({
   local: EMPTY_WORLD_ANIMATION,
 })
 
+// 0x00463700 (the reader of a 53 event, from Events_Load): the event keeps the level distances of the object it names and,
+// unless it is braced, the object is hidden until the event begins.
+const HIDDEN_LEVEL_DISTANCES = Object.freeze([-1, -1, -1])
+
+const getHiddenObjectsLoaded = (
+  events: readonly TrackEvent[],
+  worlds: RaceWorlds
+): LoadedHiddenObjects =>
+  events.reduce<LoadedHiddenObjects>(
+    (loaded, event) => {
+      const reference = event.kind === TrackEventKind.KIND_53 ? event.record.objectReference : null
+      if (event.kind !== TrackEventKind.KIND_53 || reference === null) {
+        return { events: [...loaded.events, event], worlds: loaded.worlds }
+      }
+      const key = reference.isFromSecondWorld ? 'blended' : 'track'
+      const saved = getInstanceLevelDistances(loaded.worlds[key], reference.name)
+      if (saved === null) return { events: [...loaded.events, event], worlds: loaded.worlds }
+      return {
+        events: [...loaded.events, { ...event, savedLevelSquaredDistances: saved }],
+        worlds: event.record.isBraced
+          ? loaded.worlds
+          : Object.freeze({
+              ...loaded.worlds,
+              [key]: getWorldWithInstanceLevelDistances(
+                loaded.worlds[key],
+                reference.name,
+                HIDDEN_LEVEL_DISTANCES
+              ),
+            }),
+      }
+    },
+    { events: [], worlds }
+  )
+
 // Hazards_Load 0x0048a4d0: the loaders may change the worlds and draw (class 0x2d begins as it loads). Their
 // signals and effects have nobody to hear them yet.
 const createHazards = (
@@ -347,8 +385,19 @@ export const createTrackLogic = (
   random: TrackRandom
 ): TrackLogicState => {
   const { eventSet, timerList, mainTriggers, environmentTriggers } = input
-  const events = createEventState(eventSet, arithmetic, random)
-  const loadedHazards = createHazards(input, arithmetic, {
+  const loadedEvents = createEventState(eventSet, arithmetic, random)
+  const hiddenObjects = getHiddenObjectsLoaded(
+    loadedEvents.events[TrackEventKind.KIND_53],
+    input.worlds ?? EMPTY_WORLDS
+  )
+  const events = Object.freeze({
+    ...loadedEvents,
+    events: Object.freeze({
+      ...loadedEvents.events,
+      [TrackEventKind.KIND_53]: Object.freeze(hiddenObjects.events),
+    }),
+  })
+  const loadedHazards = createHazards({ ...input, worlds: hiddenObjects.worlds }, arithmetic, {
     table: random.table,
     position: events.random.position,
   })

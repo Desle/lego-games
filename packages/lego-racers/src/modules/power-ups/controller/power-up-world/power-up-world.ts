@@ -56,6 +56,7 @@ export const createPowerUpWorld = (definition: PowerUpWorldDefinition): PowerUpS
         ),
         effects: createPowerUpEffects(definition.isSplitScreen),
         brickSpinAngle: 0,
+        brickClockMilliseconds: 0,
         random: definition.random,
         emitters: NO_EMITTER_POOLS,
       }),
@@ -116,6 +117,7 @@ export const updatePowerUps = (
           )
         ),
         brickSpinAngle,
+        brickClockMilliseconds: step.world.brickClockMilliseconds + (stepMilliseconds | 0),
       }),
     }),
     appearEvents
