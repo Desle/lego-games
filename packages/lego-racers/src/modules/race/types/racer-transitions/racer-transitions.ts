@@ -9,6 +9,7 @@ import {
   endCarBodyBoost,
   endCarBodyFlaggedState,
   endCarBodySpin,
+  endCarBodyWarp,
   getDriven,
   getRacerWithoutTimedEffect,
   getRacerWithPartsMarked,
@@ -20,6 +21,7 @@ import {
   startCarBodyBoost,
   startCarBodyFlaggedState,
   startCarBodyFlip,
+  startCarBodyWarp,
   startCarBodySpin,
   getRacerWithColourShiftOverride,
   WAND_COLOUR_SHIFT,
@@ -315,7 +317,7 @@ const getRacerWarpStarted = (arithmetic: FloatArithmetic, racer: Racer): Racer =
     ...ended,
     flags: ((ended.flags & ~WARP_PENDING_FLAG) | WARP_DISABLED_FLAG) >>> 0,
     carBody: untowed.isScripted
-      ? untowed
+      ? startCarBodyWarp(untowed)
       : Object.freeze({
           ...untowed,
           rigidBody: Object.freeze({
@@ -336,7 +338,7 @@ const getRacerWarpEnded = (racer: Racer): Racer =>
     vehicle: Object.freeze({ ...racer.vehicle, flags: racer.vehicle.flags | 6 }),
     flags: (racer.flags & ~WARP_DISABLED_FLAG) >>> 0,
     carBody: racer.carBody.isScripted
-      ? racer.carBody
+      ? endCarBodyWarp(racer.carBody)
       : Object.freeze({
           ...racer.carBody,
           rigidBody: Object.freeze({
@@ -370,7 +372,8 @@ export const getRacerLanded = (
   forward: Vector3,
   speed: number
 ): Racer => {
-  if (racer.controllerKind === COMPUTER_CONTROLLER) return racer
+  // A computer's scripted body is only put down where the ground is (0x0045e080); the rest is for a human.
+  if (racer.controllerKind === COMPUTER_CONTROLLER) return getRacerMoved(racer, position)
   const rotation = getRotationFromFrameAxes(arithmetic, {
     first: forward,
     third: UP_AXIS,
@@ -436,6 +439,23 @@ export const getRacerAfterPowerUpEvent = (
       return getRacerWithoutTimedEffect(racer)
     case 'power_ups.racer_warp_started':
       return getRacerWarpStarted(arithmetic, racer)
+    case 'power_ups.racer_warp_stolen': {
+      // The reset runs in the racers' power-up pass, after the frame's vehicle update. A racer on the track has its
+      // parts read (and so refreshed) again before the frame ends; one that is off it (flag 0x10) keeps them marked.
+      if ((racer.flags & WARP_DISABLED_FLAG) !== 0) {
+        return Object.freeze({
+          ...racer,
+          vehicle: Object.freeze({ ...racer.vehicle, pendingPartsMarkScale: 1 }),
+        })
+      }
+      const marked = getRacerWithPartsMarked(arithmetic, racer, 1)
+      return Object.freeze({
+        ...marked,
+        vehicle: Object.freeze({ ...marked.vehicle, boundsCaches: null }),
+      })
+    }
+    case 'power_ups.racer_warp_reset':
+      return getRacerWithPartsMarked(arithmetic, racer, 1)
     case 'power_ups.racer_warp_ended':
       return getRacerWarpEnded(racer)
     case 'power_ups.racer_magnetized':

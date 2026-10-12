@@ -464,3 +464,40 @@ export const addCarBodyVelocity = (
     }),
   })
 }
+
+// 0x00429a90, the warp's start for a scripted body: two-point mode on (flag 0x8, with 0x10000 and 0x20000), the route
+// speed factor 4.5, no tilt, the height target 6 at 3 per millisecond-thousandth.
+const WARP_FLAGS = 0x30008
+const WARP_SPEED_FACTOR = 4.5
+const WARP_HEIGHT_TARGET = 6
+const WARP_HEIGHT_RATE = 3
+const WARP_END_HEIGHT_RATE = 15
+export const startCarBodyWarp = (body: CarBody): CarBody =>
+  body.isScripted
+    ? Object.freeze({
+        ...getWithSpeedFactor(body, WARP_SPEED_FACTOR),
+        rigidBody: Object.freeze({
+          ...body.rigidBody,
+          flags: (body.rigidBody.flags | WARP_FLAGS) >>> 0,
+          twoPointTargetTilt: 0,
+          twoPointTargetHeight: WARP_HEIGHT_TARGET,
+          twoPointHeightRate: WARP_HEIGHT_RATE,
+        }),
+      })
+    : body
+
+// 0x00429af0, its end: the speed factor goes back to the default target, the height target to 0 at 15, and the
+// two-point flags clear.
+export const endCarBodyWarp = (body: CarBody): CarBody =>
+  body.isScripted
+    ? Object.freeze({
+        ...getWithSpeedFactor(body, body.defaultTargetSpeedFactor),
+        rigidBody: Object.freeze({
+          ...body.rigidBody,
+          twoPointTargetHeight: 0,
+          twoPointTargetTilt: 0,
+          twoPointHeightRate: WARP_END_HEIGHT_RATE,
+          flags: (body.rigidBody.flags & ~WARP_FLAGS) >>> 0,
+        }),
+      })
+    : body

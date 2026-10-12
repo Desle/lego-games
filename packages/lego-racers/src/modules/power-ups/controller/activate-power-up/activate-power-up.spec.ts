@@ -8,7 +8,7 @@ import {
 import type { PowerUpEffect, RacerPowerUpStatus } from '../../types/power-ups.types.ts'
 import { createPowerUpWorld } from '../power-up-world/power-up-world.ts'
 import type { PowerUpContext, PowerUpStep } from '../power-up-step/power-up-step.types.ts'
-import { activatePowerUp } from './activate-power-up.ts'
+import { activateLauncherWarp, activatePowerUp } from './activate-power-up.ts'
 
 const SINGLE = createFloatArithmetic(FpuPrecision.SINGLE)
 
@@ -214,6 +214,32 @@ describe('activatePowerUp', () => {
     })
     expect(started.events).toEqual([{ type: 'power_ups.racer_warp_pending', racer: 0 }])
     expect(getActive(refused)[0]?.state).toBe(EffectState.FINISHED)
+  })
+
+  it('gives a launcher warp no wait and its destination (0x0045d560, 0x0048af80)', () => {
+    // Arrange
+    const context = createContext([createStatus(0)])
+
+    // Act
+    const started = activateLauncherWarp(
+      createStep(1),
+      context,
+      0,
+      { x: 1, y: 2, z: 3 },
+      { x: 0, y: 1, z: 0 }
+    )
+
+    // Assert
+    expect(getActive(started)[0]).toMatchObject({
+      kind: PowerUpEffectKind.WARP,
+      state: EffectState.STARTING,
+      timerMilliseconds: 0,
+      warpDestination: {
+        destination: { x: 1, y: 2, z: 3 },
+        forward: { x: 0, y: 1, z: 0 },
+        start: null,
+      },
+    })
   })
 
   it('lays a magnet for 20000 ms with three attachment slots', () => {

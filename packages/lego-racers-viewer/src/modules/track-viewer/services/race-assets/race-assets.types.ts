@@ -50,6 +50,8 @@ export type RaceAssets = {
   readonly effectModels: EffectModels
   readonly getString: (stringId: number) => string
   readonly imageNames: readonly string[]
+  // The race description's display bounds (keyword 0x46) the minimap maps the world onto, or null.
+  readonly displayBounds: readonly [number, number, number, number] | null
   readonly hudImages: ReadonlyMap<string, HudImage>
   readonly hudFonts: HudFonts
   readonly generalSounds: SoundBank

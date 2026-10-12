@@ -39,6 +39,11 @@ export type HudContext = {
   readonly imageNames: readonly string[]
   readonly getImageSize: (imageName: string) => HudImageSize | null
   readonly measureText: HudMeasureText
+  // The race description's display bounds (keyword 0x46) for the minimap, or null; whether the track is mirrored; and the
+  // image database name of the map picture (null when the world has none).
+  readonly displayBounds: readonly [number, number, number, number] | null
+  readonly isMirrored: boolean
+  readonly mapImageName: string | null
 }
 
 export type RacePresentationFrame = {

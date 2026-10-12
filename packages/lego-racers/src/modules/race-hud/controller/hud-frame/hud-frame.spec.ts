@@ -1,5 +1,5 @@
 import { HudFont } from '../../types/hud-font/hud-font.ts'
-import type { HudInput, HudRacerView } from '../../types/race-hud.types.ts'
+import type { HudTextCommand, HudInput, HudRacerView } from '../../types/race-hud.types.ts'
 import { getHudLayout } from '../hud-layout/hud-layout.ts'
 import { formatHudTime } from '../hud-time/hud-time.ts'
 import { createHudState, finishHud, getHudFrame, startHudCountdown } from './hud-frame.ts'
@@ -42,6 +42,7 @@ const racer: HudRacerView = {
 
 const getInput = (overrides: Partial<HudInput> = {}): HudInput => ({
   frameMilliseconds: 16,
+  minimap: null,
   layout,
   racer,
   getString,
@@ -201,7 +202,9 @@ describe('getHudFrame rows', () => {
 
     // Assert
     const find = (text: string) =>
-      frame.commands.find((command) => command.kind === 'text' && command.text === text)
+      frame.commands.find(
+        (command): command is HudTextCommand => command.kind === 'text' && command.text === text
+      )
     const number = find('1')
     const label = find('LAP')
     const time = find('0:12:34')
@@ -251,7 +254,7 @@ describe('getHudFrame rows', () => {
 
     // Assert
     const time = frame.commands.find(
-      (command) => command.kind === 'text' && command.text === '0:12:34'
+      (command): command is HudTextCommand => command.kind === 'text' && command.text === '0:12:34'
     )
     expect(time?.x).toBe(layout.timeColumnX + layout.longTimeWidth - layout.shortTimeWidth)
   })

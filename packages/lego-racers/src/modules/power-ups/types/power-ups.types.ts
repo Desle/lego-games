@@ -189,6 +189,16 @@ export type PowerUpEffect = {
   // The handle slot (common pool) of the emitter the effect holds: cannon +0xdc, grapple +0x26c, barrel +0x16c, wand
   // +0x244, oil slick +0x60, turbo +0x30. Null while it holds none, or when the spawn gave no handle.
   readonly emitterHandleIndex: number | null
+  // A warp a launcher gave a destination (0x0045d560's third argument, +0xc0..+0xd8): null for a racer's own warp.
+  readonly warpDestination: WarpDestination | null
+}
+
+// Where a launcher's warp puts the racer down (+0xc0, +0xc4, +0xc8) and which way it faces (+0xcc, +0xd0, +0xd4), and
+// where the racer was when the carry began (+0xb4, +0xb8, +0xbc, set by 0x0045dc90 state 2; null before).
+export type WarpDestination = {
+  readonly destination: Vector3
+  readonly forward: Vector3
+  readonly start: Vector3 | null
 }
 
 export type PowerUpEffects = {

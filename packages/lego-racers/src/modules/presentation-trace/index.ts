@@ -1,5 +1,9 @@
 export { compareAudioCalls, getOriginalAudioCalls } from './controller/audio-trace/audio-trace.ts'
-export { compareQuadPlacements, getOriginalQuads } from './controller/render-trace/compare-quads.ts'
+export {
+  compareQuadPlacements,
+  getBoundingRectangle,
+  getOriginalQuads,
+} from './controller/render-trace/compare-quads.ts'
 export { compareRenderFrameByRoot } from './controller/render-trace/compare-by-root.ts'
 export type {
   RootChoice,
