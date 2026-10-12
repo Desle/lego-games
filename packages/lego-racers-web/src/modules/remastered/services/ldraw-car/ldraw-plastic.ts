@@ -159,7 +159,8 @@ export const createPlasticMaterialFromTexture = (map: Texture): MeshPhysicalMate
 const isConditionalLineMaterial = (material: unknown): material is LineBasicMaterial =>
   material instanceof Object && Reflect.get(material, 'isConditionalLineMaterial') === true
 
-export const applyPlasticLook = (model: Object3D) => {
+// `bakedVolume` is the occlusion grid a worker has baked for the model, as a texture; left out, the model is baked here.
+export const applyPlasticLook = (model: Object3D, bakedVolume?: OcclusionVolume | null) => {
   const look = getActiveLook()
   const plasticBySource = new Map<Material, MeshPhysicalMaterial>()
   const edgeMaterials = new Set<LineBasicMaterial>()
@@ -175,9 +176,12 @@ export const applyPlasticLook = (model: Object3D) => {
         edgeMaterials.add(material)
     }
   })
-  const volume: OcclusionVolume | null = getLookNeedsShader(look)
-    ? bakeOcclusionVolume(model)
-    : null
+  const volume: OcclusionVolume | null =
+    bakedVolume !== undefined
+      ? bakedVolume
+      : getLookNeedsShader(look)
+        ? bakeOcclusionVolume(model)
+        : null
   for (const mesh of meshes) {
     const plastic = plasticBySource.get(mesh.material) ?? createPlasticMaterial(mesh.material, look)
     if (volume !== null && !plasticBySource.has(mesh.material)) {

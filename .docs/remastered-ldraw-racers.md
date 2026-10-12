@@ -41,7 +41,7 @@ A driver is five part bytes (hat, face, torso, legs, expression). The race's com
 
 ## The look
 
-Same plastic and the same studio as the cars. three.js lights every material by all lights of a scene, so a scene gets the studio once (`ensureStudioLights`): a car's drawing brings its own, a scene without one (a menu) gets it, turned to light from the front for the standing figure and from behind for the race, the way each is looked at. The menus' figure carries its own studio, in its own frame (front is +x), so a screen that turns the figure still lights its face; its key is 1.3 times a car's.
+Same plastic and the same studio as the cars. three.js lights every material by all lights of a scene, so a scene gets the studio once (`ensureStudioLights`, `createCarStudio`): the first car of the scene moves it with itself (a studio that a wheel or a driver brought first is taken over by it), a scene without a car (a menu) gets it, turned to light from the front for the standing figure and from behind for the race, the way each is looked at. The menus' figure carries its own studio, in its own frame (front is +x), so a screen that turns the figure still lights its face; its key is 1.3 times a car's.
 
 ## The gallery
 

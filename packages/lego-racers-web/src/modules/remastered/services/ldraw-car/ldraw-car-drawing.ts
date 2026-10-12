@@ -5,7 +5,8 @@ import {
 } from '@lego-games/lego-racers/car-builder'
 import { Group, Mesh } from 'three'
 import type { Object3D } from 'three'
-import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
+import type { LDrawDetail } from '../ldraw-library/ldraw-library-loader.types.ts'
+import { createDetailedBody } from './detailed-body.ts'
 import { createGameBrickMeshes } from './game-brick-meshes.ts'
 import { loadDesignGridOffset } from './chassis-grid-offset-loader.ts'
 import {
@@ -14,8 +15,9 @@ import {
   LDRAW_TO_STUDS,
   LDRAW_UNITS_PER_STUD,
 } from './ldraw-car-document.ts'
-import { applyPlasticLook, createStudioLights } from './ldraw-plastic.ts'
+import { createStudioLights } from './ldraw-plastic.ts'
 import type { PlasticMesh } from './ldraw-plastic.types.ts'
+import type { BodyWheel } from './detailed-body.types.ts'
 import type { LDrawCarDrawing, LDrawCarRequest } from './ldraw-car-drawing.types.ts'
 
 const NO_CHASSIS_MODELS: ReadonlyMap<string, string> = new Map()
@@ -36,7 +38,8 @@ export const createLDrawCarDrawing = (
   { archive, design }: LDrawCarRequest,
   isLDrawUsed = true,
   chassisModels: ReadonlyMap<string, string> = NO_CHASSIS_MODELS,
-  onModel: ((model: Group) => void) | null = null
+  onWheels: ((wheels: readonly BodyWheel[], detail: LDrawDetail) => void) | null = null,
+  isStudioIncluded = true
 ): LDrawCarDrawing => {
   const database = parseBrickDatabase(archive.readFile(BRICK_DATABASE_PATH))
   const origin = getCarOrigin(database, design)
@@ -50,7 +53,7 @@ export const createLDrawCarDrawing = (
     ].join('\n'),
   })
   const object = new Group()
-  object.add(createStudioLights())
+  if (isStudioIncluded) object.add(createStudioLights())
   const gameBricks = isLDrawUsed ? document.unmappedBricks : design.bricks
   const gameMeshes = createGameBrickMeshes(archive, database, gameBricks, origin)
   object.add(gameMeshes)
@@ -65,29 +68,37 @@ export const createLDrawCarDrawing = (
       gridOffset.z / LDRAW_UNITS_PER_STUD,
       -gridOffset.y / LDRAW_UNITS_PER_STUD
     )
-    const model = await parseLDrawModel(
+    const body = createDetailedBody(
       [
         shiftedDocument.text,
         ...[...chassisModels].map(([name, text]) => `0 FILE ${getChassisFileName(name)}\n${text}`),
-      ].join('\n')
+      ].join('\n'),
+      onWheels
     )
-    applyPlasticLook(model)
-    onModel?.(model)
+    await body.shown
     const holder = new Group()
     holder.matrixAutoUpdate = false
     holder.matrix.copy(LDRAW_TO_STUDS)
-    holder.add(model)
+    holder.add(body.object)
     object.add(holder)
     object.remove(placeholder)
     disposeMeshes(placeholder)
+    return body
   }
-  const settled = isLDrawUsed
-    ? draw().catch((error: unknown) =>
+  const drawn = isLDrawUsed
+    ? draw().catch((error: unknown) => {
         console.error(
           'The LDraw library could not build the car; drawing the original bricks',
           error
         )
-      )
-    : Promise.resolve()
-  return Object.freeze({ object, document, origin, settled })
+        return null
+      })
+    : Promise.resolve(null)
+  return Object.freeze({
+    object,
+    document,
+    origin,
+    shown: drawn.then(() => undefined),
+    settled: drawn.then((body) => body?.refined()),
+  })
 }

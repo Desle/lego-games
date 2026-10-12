@@ -1,4 +1,5 @@
 import type { Vector3 } from '../../../simulation-math/index.ts'
+import type { CurseFigureFrame } from '../../events/power-up.events.types.ts'
 import {
   EffectState,
   PowerUpEffectKind,
@@ -259,7 +260,8 @@ const hitWithHazard = (
   context: PowerUpContext,
   effect: PowerUpEffect,
   victim: number,
-  isWithinCaptureRange: boolean
+  isWithinCaptureRange: boolean,
+  curseFigureFrame: CurseFigureFrame | null
 ): PowerUpStep => {
   const status = getStatus(context, victim)
   if (effect.kind === PowerUpEffectKind.OIL_SLICK) {
@@ -278,7 +280,12 @@ const hitWithHazard = (
   if (effect.kind !== PowerUpEffectKind.CURSE) return step
   if (effect.state === EffectState.FINAL_STAGE || status.isCursed) return step
   return getStepWithEvents(step, [
-    { type: 'power_ups.racer_cursed', racer: victim, durationMilliseconds: CURSE_MILLISECONDS },
+    {
+      type: 'power_ups.racer_cursed',
+      racer: victim,
+      durationMilliseconds: CURSE_MILLISECONDS,
+      figureFrame: curseFigureFrame,
+    },
   ])
 }
 
@@ -288,12 +295,13 @@ export const touchHazardEffect = (
   context: PowerUpContext,
   effectId: number,
   victim: number,
-  isWithinCaptureRange: boolean
+  isWithinCaptureRange: boolean,
+  curseFigureFrame: CurseFigureFrame | null = null
 ): PowerUpStep => {
   const effect = getEffect(step, effectId)
   if (victim === effect.ownerRacer) return step
   if (!getStatus(context, victim).isShielded) {
-    return hitWithHazard(step, context, effect, victim, isWithinCaptureRange)
+    return hitWithHazard(step, context, effect, victim, isWithinCaptureRange, curseFigureFrame)
   }
   const struck = getStepWithShieldStruck(step, victim)
   if (effect.level >= SHIELD_PROOF_HAZARD_LEVEL) return struck

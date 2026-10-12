@@ -8,6 +8,15 @@ export type OcclusionVolume = {
   readonly cell: number
 }
 
+// The grid of an occlusion volume as plain numbers (what a worker can send): the voxels (x fastest) and where they lie in the model.
+export type OcclusionGrid = {
+  readonly data: Uint8Array
+  readonly counts: readonly [number, number, number]
+  readonly origin: readonly [number, number, number]
+  readonly size: readonly [number, number, number]
+  readonly cell: number
+}
+
 export type GeometryMesh = Mesh
 
 // A mesh's vertices in the model's frame.

@@ -40,7 +40,7 @@ Ported in `packages/lego-racers/src/modules/race` (and the modules it uses). Eve
 
 ## Timed effect (the curse)
 
-`0x00439900` (pass on: the receiver takes the giver's milliseconds left, charge 1000, racer flag `0x800`, driver flag `0x10`, vehicle reaction 2, car body held by `0x00429380`), `0x00439b00` (end: countdown 0, flags cleared, `0x004293c0`) and `0x004397b0` (car body slot `0x00429c30`) are ported with differential specs (figure, effect object and vehicle look stubbed out: presentation, not modelled). `0x00429330` (boost end, top speed = scale x 120) is ported with them; car body `+0x734` is not modelled. The boost start `0x004292e0` is not ported.
+`0x00439900` (pass on: the receiver takes the giver's milliseconds left, charge 1000, racer flag `0x800`, driver flag `0x10`, vehicle reaction 2, car body held by `0x00429380`), `0x00439b00` (end: countdown 0, flags cleared, `0x004293c0`) and `0x004397b0` (car body slot `0x00429c30`) are ported with differential specs (figure, effect object and vehicle look stubbed out there; the curse figure and the tint are ported and verified by the golden trace, see [power-up-visuals.md](power-up-visuals.md)). `0x00429330` (boost end, top speed = scale x 120) is ported with them; car body `+0x734` is not modelled. The boost start `0x004292e0` is not ported.
 
 ## Still open
 

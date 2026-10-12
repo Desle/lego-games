@@ -1,6 +1,7 @@
 import type { Group } from 'three'
 import { LDrawLoader } from 'three/examples/jsm/loaders/LDrawLoader.js'
 import { LDrawConditionalLineMaterial } from 'three/examples/jsm/materials/LDrawConditionalLineMaterial.js'
+import { LDrawDetail } from './ldraw-library-loader.types.ts'
 import { DEVELOPMENT_LDRAW_ROUTE } from './ldraw-library-route.ts'
 
 const LIBRARY_PATH = `${DEVELOPMENT_LDRAW_ROUTE}/`
@@ -27,23 +28,27 @@ export const setStudLogoLevel = (logoLevel: number) => {
   studLogoLevel = Math.max(0, Math.min(MAXIMUM_STUD_LOGO_LEVEL, Math.round(logoLevel)))
 }
 
-let loaderPromise: Promise<LDrawLoader> | null = null
+const loaderPromises = new Map<LDrawDetail, Promise<LDrawLoader>>()
 
-// One loader for every car: it keeps the parts it has read, so a part is fetched and built once. Only the parts a car names are
-// fetched, with the primitives they use.
-const getLoader = (): Promise<LDrawLoader> => {
-  if (loaderPromise !== null) return loaderPromise
+// One loader for each detail, for every car: it keeps the parts it has read, so a part is fetched and built once. Only the parts a car
+// names are fetched, with the primitives they use.
+const getLoader = (detail: LDrawDetail): Promise<LDrawLoader> => {
+  const existing = loaderPromises.get(detail)
+  if (existing !== undefined) return existing
   const loader = new LDrawLoader()
   loader.setConditionalLineMaterial(LDrawConditionalLineMaterial)
-  loader.setFileMap(getStudFileMap(studLogoLevel))
   loader.setPath(LIBRARY_PATH)
   loader.setPartsLibraryPath(LIBRARY_PATH)
-  loaderPromise = loader.preloadMaterials(COLOR_CONFIGURATION).then(() => loader)
-  return loaderPromise
+  loader.setFileMap(detail === LDrawDetail.LOW ? getStudFileMap(0) : getStudFileMap(studLogoLevel))
+  const prepared = loader.preloadMaterials(COLOR_CONFIGURATION).then(() => loader)
+  loaderPromises.set(detail, prepared)
+  return prepared
 }
 
-// An LDraw model (type 1 lines naming library parts) as three.js objects in the library's axes and units.
-export const parseLDrawModel = async (text: string): Promise<Group> => {
-  const loader = await getLoader()
+export const parseLDrawModel = async (
+  text: string,
+  detail: LDrawDetail = LDrawDetail.HIGH
+): Promise<Group> => {
+  const loader = await getLoader(detail)
   return new Promise<Group>((resolve, reject) => loader.parse(text, resolve, reject))
 }

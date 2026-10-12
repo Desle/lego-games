@@ -77,6 +77,7 @@ export const getWarpView = (
     shadow: null,
     skids: racer.vehicle.skids,
     isOffTrack: false,
+    curseFigure: null,
     partScale: 1,
   })
   const racerView = Object.freeze({

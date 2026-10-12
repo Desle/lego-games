@@ -80,7 +80,8 @@
     "./track-material": "./src/modules/track-material/index.ts",
     "./trigger": "./src/modules/trigger/index.ts",
     "./world": "./src/modules/world/index.ts",
-    "./world-animation": "./src/modules/world-animation/index.ts"
+    "./world-animation": "./src/modules/world-animation/index.ts",
+    "./world-sprite": "./src/modules/world-sprite/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

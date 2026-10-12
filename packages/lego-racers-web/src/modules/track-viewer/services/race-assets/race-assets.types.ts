@@ -60,6 +60,8 @@ export type EffectModels = {
   readonly warpPortal: ModelScene
   readonly warpPortalScroll: readonly [number, number]
   readonly turbos: readonly (readonly EffectFigureModel[])[]
+  // The three figures of a curse on the track: `curse` and the two scrolling rings `cgreen` and `cgreen2` (0x0045aeb0).
+  readonly curse: readonly EffectFigureModel[]
   // The power-up brick in the colour of each kind (projectile, shield, turbo, hazard).
   readonly powerUpBricks: Readonly<Record<string, ModelScene>>
   readonly enhancementBrick: ModelScene

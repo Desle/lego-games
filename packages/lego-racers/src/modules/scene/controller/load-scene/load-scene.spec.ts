@@ -68,6 +68,22 @@ describe.runIf(isOriginalPresent)('loadScene on the original LEGO.JAM', () => {
     }
   })
 
+  it('links the track world sprites to the materials of the chain', () => {
+    // Arrange
+    const worldPaths = getRaceWorldPaths('GAMEDATA\\RACEC0R0', FIRST_RACE_WORLDS)
+
+    // Act
+    const scene = loadScene(archive!, worldPaths)
+
+    // Assert
+    expect(scene.sprites).toHaveLength(8)
+    expect(
+      scene.sprites.map((sprite) => scene.materials[sprite.materialIndex ?? -1]?.name)
+    ).toEqual(Array.from({ length: 8 }, () => 'rktree'))
+    expect(scene.sprites[0]?.axis).toEqual({ x: 0, y: 0, z: 1 })
+    expect(scene.sprites[0]?.squaredDistance).toBe(250000)
+  })
+
   it('links the BSP tree instance to its tree and keeps the first command of every draw batch', () => {
     // Arrange
     const worldPaths = getRaceWorldPaths('GAMEDATA\\RACEC0R0', FIRST_RACE_WORLDS)
