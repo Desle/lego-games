@@ -1,12 +1,7 @@
-export type DevelopmentOverlayController = {
+import type { DevelopmentToolActions } from '../../types/development-tools/development-tools.types.ts'
+
+export type DevelopmentOverlayController = DevelopmentToolActions & {
   readonly isOverlayOpen: boolean
   readonly isTrackViewerOpen: boolean
-  readonly onTrackViewerOpened: () => void
   readonly onTrackViewerClosed: () => void
-  readonly onRecordingDownloaded: () => void
-  readonly onEverythingUnlocked: () => void
-  readonly textureVariants: readonly string[]
-  readonly selectedTextureVariant: string | null
-  readonly onTextureVariantSelected: (variant: string | null) => void
-  readonly onOverlayClosed: () => void
 }
