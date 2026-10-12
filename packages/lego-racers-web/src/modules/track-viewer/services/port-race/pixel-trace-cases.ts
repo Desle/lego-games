@@ -134,4 +134,15 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
       { label: '867676f1b4ecf538', maximumDifferingShare: 0.03 },
     ],
   },
+  {
+    // The last race's sky dome and planet (render-coverage.md items 1 and 7). The remaining differences are the countdown
+    // digits' colour, the skid marks and the planet's texture scroll, which the port does not run yet.
+    request: {
+      name: 'RACEC3R0, sky and planet',
+      raceFolder: 'RACEC3R0',
+      recordFrames: [100, 170, 250],
+    },
+    maximumDifferingShare: 0.06,
+    watchedTextures: [],
+  },
 ]
