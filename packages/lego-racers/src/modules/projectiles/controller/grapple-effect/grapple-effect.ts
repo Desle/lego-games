@@ -229,7 +229,7 @@ export const updateGrapple = (
     after.state === EffectState.FINAL_STAGE
   const countedHook =
     existing !== null && isTimedOut
-      ? getRetractingHook(existing, existing.flight.framePosition)
+      ? getRetractingHook(existing, hookWorld.hookFrame.position)
       : existing
   const started: ProjectileStep = Object.freeze({
     step: counted,
@@ -242,10 +242,15 @@ export const updateGrapple = (
     countedHook.flight.touchedRacer === null
       ? undefined
       : context.racers[countedHook.flight.touchedRacer]
+  // The body reads where it is from the model frame (0x00431550, 0x00444820: slot +4), which every hook shares.
+  const hookAtFrame = Object.freeze({
+    ...countedHook,
+    flight: Object.freeze({ ...countedHook.flight, framePosition: started.world.hookFrame.position }),
+  })
   const advance = advanceGrappleHook(
     context.powerUps.arithmetic,
     context.probe,
-    countedHook,
+    hookAtFrame,
     ownerRacer?.position ?? ZERO_VECTOR3,
     touchedRacer?.position ?? null,
     flightMilliseconds
