@@ -15,7 +15,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from unicorn.x86_const import UC_X86_REG_FPCW  # noqa: E402
+from unicorn.x86_const import UC_X86_REG_ECX, UC_X86_REG_ESP, UC_X86_REG_FPCW  # noqa: E402
 
 import boot  # noqa: E402
 import com_stubs  # noqa: E402
@@ -99,6 +99,10 @@ CONTROLLER_FIELDS = (
     ("controller.steering", 0x6C, 1),
 )
 DISPLAY_FRAME_POINTER_OFFSET = 0x3E8 + 0x13C
+# The race's cameras (Camera_Update 0x00428540, stride 0x150) and the Gol camera frame each hands its view to (+0x148).
+CAMERA_OFFSET = 0x2AD4
+CAMERA_STRIDE = 0x150
+CAMERA_FRAME_POINTER_OFFSET = 0x148
 
 
 def read_words(machine, address: int, count: int) -> list:
@@ -178,8 +182,44 @@ def snapshot_fields(machine, race: int, racer_count: int, local_players: int) ->
     return fields
 
 
+CAMERA_NODE_SET_ORIENTATION = 0x10002A30
+
+
+def record_camera_orientations(machine) -> dict:
+    """The (forward, up) arguments of the camera node's last orientation call (vtable +0x24, 0x10002a30), by node: what Camera_ApplyToFrame
+    and the introduction camera's lock hand over, before the engine orthonormalizes them."""
+    orientations = {}
+
+    def on_set_orientation() -> None:
+        esp = machine.uc.reg_read(UC_X86_REG_ESP)
+        node = machine.uc.reg_read(UC_X86_REG_ECX)
+        forward, up = machine.read_u32(esp + 4), machine.read_u32(esp + 8)
+        orientations[node] = read_words(machine, forward, 3) + read_words(machine, up, 3)
+
+    machine.add_address_hook(CAMERA_NODE_SET_ORIENTATION, on_set_orientation)
+    return orientations
+
+
+def snapshot_camera_fields(machine, race: int, local_players: int, orientations: dict) -> dict:
+    """What each local player's camera shows (the scenario's isCameraTraced): the camera object's mode, eased basis and eye, the camera
+    node's position (+0x40) and last orientation arguments, and the frame's view (field of view +8, aspect +0xc, near plane +0x10, far
+    plane +0x14)."""
+    fields = {}
+    for index in range(max(local_players, 1)):
+        camera = race + CAMERA_OFFSET + CAMERA_STRIDE * index
+        frame = machine.read_u32(camera + CAMERA_FRAME_POINTER_OFFSET)
+        node = machine.read_u32(frame + 4)
+        fields[f"camera{index}.mode"] = [machine.read_bytes(camera + 2, 1)[0], machine.read_bytes(camera + 4, 1)[0]]
+        fields[f"camera{index}.basis"] = read_words(machine, camera + 0x48, 9)
+        fields[f"camera{index}.eye"] = read_words(machine, camera + 0x6C, 3)
+        fields[f"camera{index}.node.position"] = read_words(machine, node + 0x40, 3)
+        fields[f"camera{index}.node.orientation"] = orientations.get(node, [0] * 6)
+        fields[f"camera{index}.view"] = read_words(machine, frame + 8, 4)
+    return fields
+
+
 class TraceRun:
-    def __init__(self, machine, race: int, scenario: dict):
+    def __init__(self, machine, race: int, scenario: dict, camera_orientations: dict = None):
         self.machine = machine
         self.race = race
         self.scenario = scenario
@@ -190,6 +230,7 @@ class TraceRun:
         self.held_keys = set()
         self.grants = scenario.get("powerUpGrants", [])
         self.out = sys.stdout
+        self.camera_orientations = camera_orientations if camera_orientations is not None else {}
 
     def on_pump(self) -> None:
         machine = self.machine
@@ -198,7 +239,11 @@ class TraceRun:
         index = self.pump_count
         if index > 0:
             delta = machine.read_u32(APPLICATION_BASE + FRAME_DELTA_OFFSET)
-            fields = snapshot_fields(machine, self.race, self.racer_count, self.local_players)
+            is_camera_only = self.scenario.get("isCameraOnly", False)
+            fields = {} if is_camera_only else snapshot_fields(machine, self.race, self.racer_count, self.local_players)
+            if is_camera_only or self.scenario.get("isCameraTraced", False):
+                fields.update(snapshot_camera_fields(machine, self.race, self.local_players, self.camera_orientations))
+            fields["race.phase"] = [machine.read_u32(self.race + 0x3328)]
             self.out.write(json.dumps({"frame": index - 1, "dt": delta, "fields": fields}) + "\n")
         if index >= len(self.frames):
             machine.request_stop("trace complete")
@@ -229,11 +274,13 @@ class TraceRun:
 
 def run_scenario(scenario: dict) -> None:
     machine = boot.create_machine({"fpu": scenario.get("fpu", "auto")})
+    # Hooked before the code runs: Unicorn keeps translated blocks without hooks added later.
+    camera_orientations = record_camera_orientations(machine) if scenario.get("isCameraTraced", False) or scenario.get("isCameraOnly", False) else {}
     boot.boot_to_front_end(machine)
     machine.apply_fpu_option()
     race = race_session.begin_race(machine, scenario)
     machine.apply_fpu_option()
-    trace = TraceRun(machine, race, scenario)
+    trace = TraceRun(machine, race, scenario, camera_orientations)
     machine.add_address_hook(race_session.PUMP_MESSAGES, trace.on_pump)
     reason = machine.call_function_until_stop(race_session.RACE_RUN_LOOP, "thiscall", [race])
     sys.stdout.write(json.dumps({"isDone": True, "reason": reason, "frames": trace.pump_count, "controlWord": machine.uc.reg_read(UC_X86_REG_FPCW)}) + "\n")
