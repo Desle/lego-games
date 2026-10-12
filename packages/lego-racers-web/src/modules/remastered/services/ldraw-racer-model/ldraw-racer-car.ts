@@ -74,7 +74,7 @@ const loadChassisModels = async (
   return new Map(texts.filter((entry): entry is readonly [string, string] => entry !== null))
 }
 
-const getReferencedChassisNames = (text: string): readonly string[] => {
+export const getReferencedChassisNames = (text: string): readonly string[] => {
   const known = Object.keys(getLDrawModelIndex().chassis)
   const referenced = text
     .split('\n')
