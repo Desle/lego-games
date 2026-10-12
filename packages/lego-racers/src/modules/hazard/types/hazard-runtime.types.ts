@@ -60,8 +60,21 @@ export type HazardEffect =
       readonly type: 'hazard.racer_affected'
       readonly keyword: number
       readonly racerIndex: number
-      readonly reaction: string
+      readonly reaction: HazardReaction
+      // The impulse of a flung racer, or the pull of a captured one.
+      readonly vector: Vector3 | null
     }
+
+// What a hazard's touch does to the racer: spun (car body slot 9 with 1.0, 0.01, 0), flung (spun, then slot 14, the
+// velocity cleared and slot 7 with the vector), captured (racer flag 0x20000000 and the push of slot 0x48 with the
+// vector) and released (flag cleared, slot 0x4c).
+export type HazardReaction = 'spun' | 'flung' | 'captured' | 'released'
+
+// The collision sphere a hazard registers with the collision registry (the shape at hazard +0x10).
+export type HazardSphere = {
+  readonly centre: Vector3
+  readonly radius: number
+}
 
 // What the hazard hands the power-up system as its launcher: where the effect starts (or, for a warp, where it
 // lands) and, for classes that give one, its direction.
@@ -71,11 +84,14 @@ export type HazardLauncher = {
   readonly direction: Vector3 | null
 }
 
-// A racer as a hazard sees it (racer +0xd04 flags, +0x5c frame position).
+// A racer as a hazard sees it (racer +0xd04 flags, +0x5c frame position, car body +0x6c0 bit 2 at +0xaa8, and the
+// car body's forward speed at +0xa00).
 export type HazardRacer = {
   readonly index: number
   readonly flags: number
   readonly position: Vector3
+  readonly isSpinning: boolean
+  readonly forwardSpeed: number
 }
 
 export type HazardRandom = {

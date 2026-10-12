@@ -1,6 +1,7 @@
 import { releaseEmitter, spawnEmitter } from '../../../emitter/index.ts'
 import {
   findMeshInstanceIndex,
+  getSkeletonInstanceBoneTranslation,
   findSkeletonInstanceIndex,
   getWorldWithMaterialPlayback,
   getWorldWithMeshInstance,
@@ -13,7 +14,9 @@ import type {
 } from '../../../world-animation/index.ts'
 import type {
   HazardInstance,
+  HazardRacer,
   HazardSession,
+  HazardSphere,
   HazardWorldKey,
   InstanceReference,
 } from '../../types/hazard-runtime.types.ts'
@@ -188,3 +191,34 @@ export const getIdleWithEmitterReleased = (
   releaseTrackEmitter(session, emitterHandle)
   return Object.freeze({ ...instance, lifecycle: HazardLifecycle.IDLE })
 }
+
+// Begin registers the shape with the collision registry and End ends the entry (+0x24 = 0); a hazard asked to end is
+// still registered until its update runs End.
+export const getSphereWhileRegistered = (
+  instance: HazardInstance,
+  sphere: HazardSphere
+): HazardSphere | null =>
+  instance.lifecycle === HazardLifecycle.ACTIVE || instance.lifecycle === HazardLifecycle.ENDING
+    ? sphere
+    : null
+
+// 0x00411cc0 with the hazards' reading of a bone (0x0048e1c0, 0x0048da10, 0x0048cbb0): the shape moves to the bone's
+// translation carried by the instance; an instance that is not there leaves it where it was.
+export const getSphereOnBone = (
+  session: HazardSession,
+  reference: InstanceReference | null,
+  boneIndex: number,
+  sphere: HazardSphere
+): HazardSphere => {
+  const skeleton = getSkeletonInstance(session, reference)
+  const centre =
+    skeleton === null
+      ? null
+      : getSkeletonInstanceBoneTranslation(session.arithmetic, skeleton, boneIndex)
+  return centre === null ? sphere : Object.freeze({ centre, radius: sphere.radius })
+}
+
+// The touch callbacks of the lava, the ghost and the crane act on a racer that is not spinning already and is moving
+// (car body flags 0x6c0 bit 2 and forward speed +0x618, at racer +0xaa8 and +0xa00).
+export const getIsRacerSpinnable = (racer: HazardRacer): boolean =>
+  !racer.isSpinning && racer.forwardSpeed !== 0

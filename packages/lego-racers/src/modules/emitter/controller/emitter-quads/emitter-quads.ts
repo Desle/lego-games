@@ -7,7 +7,6 @@ import type {
   BillboardCamera,
   EmitterQuad,
   EmitterQuadCorner,
-  SpriteRequest,
 } from '../../types/emitter-quad.types.ts'
 
 const HALF = getFloatFromBits(0x3f000000)
@@ -136,46 +135,4 @@ export const getEmitterQuads = (
       })
     )
   )
-}
-
-// GolDP.dll 0x10009a70 (the draw of a sprite object, the matrix 0x10014e50): a camera-facing rectangle `width` by
-// `height` centred on the sprite's position, with the whole picture on it. The corners go bottom left, top left, top
-// right and bottom right, so that the particle triangles (2, 1, 0) and (3, 2, 0) are the sprite's two (0x10010330: the
-// diagonal from bottom left to top right).
-export const getSpriteQuad = (
-  arithmetic: FloatArithmetic,
-  axes: BillboardAxes,
-  sprite: SpriteRequest
-): EmitterQuad => {
-  const { add, multiply, storeFloat } = arithmetic
-  const { position } = sprite
-  const right = getScaled(arithmetic, axes.right, sprite.width)
-  const down = getScaled(arithmetic, axes.down, sprite.height)
-  const getCorner = (
-    rightSign: number,
-    downSign: number,
-    u: number,
-    v: number
-  ): EmitterQuadCorner => {
-    const getAxis = (centre: number, rightAxis: number, downAxis: number) =>
-      storeFloat(
-        add(centre, add(multiply(rightAxis, rightSign * HALF), multiply(downAxis, downSign * HALF)))
-      )
-    return Object.freeze({
-      x: getAxis(position.x, right.x, down.x),
-      y: getAxis(position.y, right.y, down.y),
-      z: getAxis(position.z, right.z, down.z),
-      u,
-      v,
-    })
-  }
-  return Object.freeze({
-    materialName: sprite.materialName,
-    corners: Object.freeze([
-      getCorner(-1, 1, 0, 1),
-      getCorner(-1, -1, 0, 0),
-      getCorner(1, -1, 1, 0),
-      getCorner(1, 1, 1, 1),
-    ] as const),
-  })
 }

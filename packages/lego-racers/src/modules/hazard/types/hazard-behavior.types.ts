@@ -4,6 +4,7 @@ import type {
   HazardLoadContext,
   HazardRacer,
   HazardSession,
+  HazardSphere,
 } from './hazard-runtime.types.ts'
 
 // What a hazard class implements: its vtable (0x004b4194 and the other nineteen).
@@ -41,6 +42,9 @@ export type HazardBehavior = {
     session: HazardSession,
     racer: HazardRacer
   ) => HazardInstance
+  // The sphere the hazard has in the collision registry (its Begin registers it, its End ends the entry): null for a
+  // class that registers none, or while it is not registered.
+  readonly getRegisteredSphere: (instance: HazardInstance) => HazardSphere | null
   // +0x28: a signal with the given identifier started, with the position that came with it.
   readonly onSignalStarted: (
     instance: HazardInstance,

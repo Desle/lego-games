@@ -1,5 +1,4 @@
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
-import type { FigureAnimation } from '@lego-games/lego-racers/racer'
 import type { ModelResourceNames } from '@lego-games/lego-racers/racer-appearance'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import type { RaceDefinition } from '@lego-games/lego-racers/race'
@@ -27,32 +26,11 @@ export type RacerModels = {
 // The models of the effects the race draws (GAMEDATA\COMMON): the rocket and the magnet have bones, the barrel and the
 // spiked explosion are plain. The cannon ball, the grapple hook, the wand's beam and the plain explosion are not drawn:
 // the files that give them their look are not traced (projectiles.md).
-// A model with the animation set its figure plays.
-export type EffectFigureModel = {
-  readonly model: ModelScene
-  readonly animations: readonly FigureAnimation[]
-  // The texture scroll per second (keyword 0x3f of its instance).
-  readonly scroll: readonly [number, number]
-}
-
 export type EffectModels = {
-  // The materials and textures of the power-up libraries (the cannon ball, the beams and the flames name them).
-  readonly materials: Scene
   readonly rocket: ModelScene
-  readonly rocketAnimations: readonly FigureAnimation[]
   readonly barrel: ModelScene
   readonly magnet: ModelScene
   readonly spikedExplosion: ModelScene
-  // The shield around a racer by level (0 to 3).
-  readonly shields: readonly ModelScene[]
-  // The animation set the four shields share (SHEOUT0.ADB), for the figure that plays it.
-  readonly shieldAnimations: readonly FigureAnimation[]
-  readonly shieldScroll: readonly [number, number]
-  // The three figures of a turbo by level (0 to 2): the burn behind the car and its two flames (0x0045c8f0).
-  // The warp's portal (the instance warpprt of POWERUP.WDB: the mesh warphole).
-  readonly warpPortal: ModelScene
-  readonly warpPortalScroll: readonly [number, number]
-  readonly turbos: readonly (readonly EffectFigureModel[])[]
   // The power-up brick in the colour of each kind (projectile, shield, turbo, hazard).
   readonly powerUpBricks: Readonly<Record<string, ModelScene>>
   readonly enhancementBrick: ModelScene

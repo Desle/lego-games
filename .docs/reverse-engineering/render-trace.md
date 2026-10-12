@@ -54,5 +54,3 @@ The bug reports checked: "some races misaligned versus the rendered map" is find
 ## Adding a scenario
 
 Add a `TraceScenarioRequest` to `RENDER_CASES` in `render-trace.trace.spec.ts` (the frames to record go in `recordFrames`; the race idles through the introduction and the countdown unless `isSteering`). A front-end case is a list of tapped scan codes in `front-end-render-trace.trace.spec.ts`.
-
-A race case may grant the player a power-up: `powerUp: { kind, level, grantFrame, useFrame, frameCount }` (the brick is granted at `grantFrame`, the player accelerates from frame 175 and presses use from `useFrame`). The sixteen power-up cases and what they compare are in [power-up-visuals.md](power-up-visuals.md).

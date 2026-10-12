@@ -117,7 +117,7 @@ export const createCinemaStage = (
   const database = readCinemaDatabase(archive, source)
   let shiftedInstanceNames: readonly string[] = []
   const figureSlot = createModelSlot(three)
-  const particles = createRaceParticles([scene])
+  const particles = createRaceParticles(scene)
   three.add(particles.group)
   let figureAnimation: SkeletalAnimation | null = null
   const camera = scene.cameras[0]

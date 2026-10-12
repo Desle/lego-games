@@ -327,6 +327,8 @@ export type TrackSession = HazardBus & {
   // Triggers_Update: the environment triggers, then the main triggers, release what nobody touched.
   readonly updateTriggers: (racerCount: number) => void
   readonly touchTrigger: (contact: TrackTriggerContact) => void
+  // The collision registry found a racer overlapping the sphere of the hazard at this index (vtable +0x00).
+  readonly touchHazard: (hazardIndex: number, racerIndex: number) => void
   readonly tickTimeEntries: (milliseconds: number) => void
 }
 

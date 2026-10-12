@@ -34,18 +34,20 @@ const getPresentationScenario = (
     powerUpGrants,
   })
 
-const ACCELERATE_FRAME = 175
+const TURBO_KIND = 3
+const WARP_LEVEL = 3
+const WARP_ACCELERATE_FRAME = 175
 const USE_FRAME_COUNT = 3
 
-// Idling, the steering sweep, or a drive with a power-up: accelerate from frame 175 and press the use key from the use frame.
+// Idling, the steering sweep, or a drive with a warp: accelerate from frame 175 and press the use key from the use frame.
 const getRequestFrames = (request: TraceScenarioRequest): readonly TraceFrameInput[] => {
-  if (request.powerUp !== undefined) {
-    const { useFrame, frameCount } = request.powerUp
+  if (request.warp !== undefined) {
+    const { useFrame, frameCount } = request.warp
     return Array.from({ length: frameCount }, (_, frame) => ({
       milliseconds: 33,
       scanCodes:
         holdBindings(1, [
-          ...(frame >= ACCELERATE_FRAME ? ['accelerate' as const] : []),
+          ...(frame >= WARP_ACCELERATE_FRAME ? ['accelerate' as const] : []),
           ...(frame >= useFrame && frame < useFrame + USE_FRAME_COUNT
             ? ['use_power_up' as const]
             : []),
@@ -74,15 +76,8 @@ export const createPresentationScenario = (
     golden,
     request.recordFrames ?? null,
     request.isRenderRecorded ?? false,
-    request.powerUp === undefined
+    request.warp === undefined
       ? []
-      : [
-          {
-            frame: request.powerUp.grantFrame,
-            racer: 0,
-            kind: request.powerUp.kind,
-            level: request.powerUp.level,
-          },
-        ]
+      : [{ frame: request.warp.grantFrame, racer: 0, kind: TURBO_KIND, level: WARP_LEVEL }]
   )
 }

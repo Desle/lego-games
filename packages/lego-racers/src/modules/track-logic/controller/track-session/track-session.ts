@@ -16,16 +16,16 @@ import {
   startHazardSignal,
   startStopHazardSignal,
   stopHazardSignal,
+  touchHazard,
   updateHazards,
   updateHazardsAfterRacers,
 } from '../../../hazard/index.ts'
 import type { HazardSession, HazardStore } from '../../../hazard/index.ts'
-import { getFrameTransformedPoint } from '../../../simulation-math/index.ts'
-import { getBonePosition, getRestPose, getSkeletonPose } from '../../../skeletal-animation/index.ts'
 import { drawRandomScaledRange, drawRandomValue } from '../../../random-table/index.ts'
 import {
   advanceWorldAnimation,
   findSkeletonInstanceIndex,
+  getSkeletonInstanceChainPosition,
   getSkeletonInstanceClipIndex,
   getSkeletonInstanceFlags,
   getSkeletonInstanceWithFlags,
@@ -458,34 +458,9 @@ export const createTrackSession = (
   const getObjectBonePosition = (reference: ObjectReference, boneIndex: number): Vector3 | null => {
     const found = getObjectInstance(reference)
     const instance = found === null ? undefined : worlds[found.key].skeletonInstances[found.index]
-    if (instance === undefined || instance.skeleton === null || instance.animation === null) {
-      return null
-    }
-    const pose =
-      instance.clip === null
-        ? getRestPose(instance.skeleton)
-        : getSkeletonPose(getRestPose(instance.skeleton), instance.animation, instance.clip)
-    const local = getBonePosition(context.arithmetic, instance.skeleton, pose, boneIndex)
-    if (local === null) return null
-    const { multiply, storeFloat } = context.arithmetic
-    const scaled = {
-      x: storeFloat(multiply(local[0], instance.scale)),
-      y: storeFloat(multiply(local[1], instance.scale)),
-      z: storeFloat(multiply(local[2], instance.scale)),
-    }
-    const moved = getFrameTransformedPoint(
-      context.arithmetic,
-      {
-        rotation: instance.rotation,
-        position: {
-          x: instance.position[0],
-          y: instance.position[1],
-          z: instance.position[2],
-        },
-      },
-      scaled
-    )
-    return [moved.x, moved.y, moved.z]
+    return instance === undefined
+      ? null
+      : getSkeletonInstanceChainPosition(context.arithmetic, instance, boneIndex, instance.scale)
   }
 
   const setEventEmitterPosition = (handle: EmitterReference, position: Vector3): void => {
@@ -575,6 +550,10 @@ export const createTrackSession = (
     },
     touchTrigger: (contact) => {
       triggers = touchTrigger(triggers, contact, session)
+    },
+    touchHazard: (hazardIndex, racerIndex) => {
+      const racer = getHazardRacer(racerIndex)
+      if (racer !== null) touchHazard(hazardStore, hazardSession, hazardIndex, racer)
     },
     tickTimeEntries: (milliseconds) => {
       timers = tickTimeEntries(timers, session, milliseconds)
