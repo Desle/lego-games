@@ -1,4 +1,5 @@
 import type { SceneBitmap } from '@lego-games/lego-racers/scene'
+import type { FittedBricks } from './brick-fit.types.ts'
 
 // A printed picture of a champion's body (a logo, a number): triangles with a texture of the game, in studs.
 export type BodyDecal = {
@@ -91,4 +92,35 @@ export type BoxPart = {
   readonly length: number
   readonly width: number
   readonly height: number
+}
+
+// An `OpponentCarDesign` as the data file holds it (see `opponent-car-records.ts`).
+export type OpponentCarRecord = {
+  readonly modelName: string
+  readonly note: string
+  readonly offset: readonly [number, number, number]
+  readonly bricks: string
+  readonly coveredTriangles: string
+}
+
+// The material a face of a champion's body is drawn with: plastic, a stud (the bricks bring their own) or a printed picture.
+export type MaterialRole = 'plastic' | 'stud' | 'decal'
+
+// The printed faces of one material while a body's triangles are read.
+export type DecalAccumulator = {
+  readonly bitmap: SceneBitmap
+  readonly positions: number[]
+  readonly textureCoordinates: number[]
+}
+
+// A grid offset the fit tried: the body on that grid and the bricks the fit placed on it.
+export type Candidate = {
+  readonly voxels: BodyVoxels
+  readonly fitted: FittedBricks
+}
+
+// A fitted car: its design and how well it stands for the body.
+export type OpponentCarFit = {
+  readonly design: OpponentCarDesign
+  readonly quality: OpponentCarFitQuality
 }

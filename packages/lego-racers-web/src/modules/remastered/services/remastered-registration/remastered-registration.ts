@@ -12,6 +12,7 @@ import {
   applyHighDefinitionTexture,
   getHighDefinitionVariant,
 } from '../high-definition-texture/high-definition-texture.ts'
+import { createOpponentCarDrawing } from '../opponent-car/opponent-car-drawing.ts'
 import { createLDrawCarDrawing } from '../ldraw-car/ldraw-car-drawing.ts'
 import { getAudioVariants, getTextureVariants } from '../texture-variants/texture-variants.ts'
 import { getNativeMenuSurfaceScale } from '../widescreen-display/menu-surface.ts'
@@ -40,6 +41,10 @@ export const registerRemastered = (search: string) => {
     getMenuSurfaceScale: getNativeMenuSurfaceScale,
     getBuiltCarDrawing: (request) =>
       getIsLDrawRequested(search) ? createLDrawCarDrawing(request).object : null,
+    getCarBodyDrawing: ({ archive, names }) =>
+      getIsLDrawRequested(search)
+        ? (createOpponentCarDrawing(archive, names)?.object ?? null)
+        : null,
     getSelections: () => [
       `textures=${getHighDefinitionVariant(search)}`,
       `audio=${audioVariant ?? 'none'}`,

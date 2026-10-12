@@ -1,5 +1,5 @@
 import { BRICK_COLOR_COUNT, getBrickColorIndex } from './body-colors.ts'
-import type { BodyHit, BodyRay } from './body-voxels.types.ts'
+import type { BodyHit, BodyRay, RayHits } from './body-voxels.types.ts'
 import type { BodyVoxels, ChampionBodyFaces, VoxelGrid } from './opponent-car.types.ts'
 
 // A stud is 1 and a plate (a brick height unit of the game) 0.4.
@@ -74,8 +74,7 @@ export const castBodyRays = (positions: Float32Array): readonly BodyRay[] => {
     maximumY = Math.max(maximumY, positions[index + 1] ?? 0)
     minimumZ = Math.min(minimumZ, positions[index + 2] ?? 0)
   }
-  const hitsByRay: { readonly x: number; readonly y: number; readonly hits: readonly BodyHit[] }[] =
-    []
+  const hitsByRay: RayHits[] = []
   for (let x = minimumX + RAY_JITTER; x < maximumX; x += RAY_STEP) {
     for (let y = minimumY + RAY_JITTER; y < maximumY; y += RAY_STEP) {
       const hits: BodyHit[] = []

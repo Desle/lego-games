@@ -10,3 +10,10 @@ export type BodyHit = {
   readonly height: number
   readonly turn: number
 }
+
+// The hits of one ray.
+export type RayHits = {
+  readonly x: number
+  readonly y: number
+  readonly hits: readonly BodyHit[]
+}

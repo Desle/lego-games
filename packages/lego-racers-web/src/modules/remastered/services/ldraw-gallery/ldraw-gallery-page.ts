@@ -131,6 +131,18 @@ const getSingleBrickDesign = (piece: PlacedBrick['piece']): CarDesign => ({
   grid: createBuildGrid(),
 })
 
+const renderCell = (
+  scene: Scene,
+  view: GalleryView,
+  left: number,
+  bottom: number,
+  size: number
+) => {
+  renderer.setViewport(left, bottom, size, size)
+  renderer.setScissor(left, bottom, size, size)
+  renderer.render(scene, frameCamera(scene, view, 1))
+}
+
 // Every named piece alone, the game's mesh on the left and the LDraw part on the right of each pair.
 const renderPieceSheet = async (
   names: readonly string[],
@@ -160,9 +172,7 @@ const renderPieceSheet = async (
       const { scene } = await createDesignScene(archive, getSingleBrickDesign(piece), mode)
       const left = (column * 2 + side) * cellSize
       const bottom = height - (row + 1) * cellSize
-      renderer.setViewport(left, bottom, cellSize, cellSize)
-      renderer.setScissor(left, bottom, cellSize, cellSize)
-      renderer.render(scene, frameCamera(scene, view, 1))
+      renderCell(scene, view, left, bottom, cellSize)
     }
   }
   return { width, height, missing }
@@ -240,9 +250,7 @@ const renderOpponentSheet = async (
     for (const [row, view] of OPPONENT_SHEET_VIEWS.entries()) {
       const left = column * cellSize
       const bottom = height - (row + 1) * cellSize
-      renderer.setViewport(left, bottom, cellSize, cellSize)
-      renderer.setScissor(left, bottom, cellSize, cellSize)
-      renderer.render(scene, frameCamera(scene, view, 1))
+      renderCell(scene, view, left, bottom, cellSize)
     }
   }
   return { width, height, missing }

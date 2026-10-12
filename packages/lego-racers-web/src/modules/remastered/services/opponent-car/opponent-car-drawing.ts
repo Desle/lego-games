@@ -13,12 +13,18 @@ import { createBodyResidualMeshes } from './body-residual-meshes.ts'
 import { loadChampionBodyFaces } from './champion-body-faces.ts'
 import { createBoxPartLines } from './opponent-car-document.ts'
 import { OPPONENT_CAR_DESIGNS } from './opponent-car-designs.ts'
-import type { OpponentCarDesign } from './opponent-car.types.ts'
+import { getDesign } from './opponent-car-records.ts'
+import type { OpponentCarDesign, OpponentCarRecord } from './opponent-car.types.ts'
+
+const getOptionalDesign = (record: OpponentCarRecord | undefined): OpponentCarDesign | null =>
+  record === undefined ? null : getDesign(record)
 
 export const getOpponentCarDesign = (modelName: string): OpponentCarDesign | null =>
-  OPPONENT_CAR_DESIGNS.find(
-    (design) => design.modelName.toUpperCase() === modelName.toUpperCase()
-  ) ?? null
+  getOptionalDesign(
+    OPPONENT_CAR_DESIGNS.find(
+      (record) => record.modelName.toUpperCase() === modelName.toUpperCase()
+    )
+  )
 
 const getCarDesign = (database: BrickDatabase, opponent: OpponentCarDesign): CarDesign => ({
   bricks: opponent.bricks.flatMap(

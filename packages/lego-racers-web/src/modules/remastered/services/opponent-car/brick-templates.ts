@@ -1,4 +1,4 @@
-import { getBrickFaces } from '@lego-games/lego-racers/car-builder'
+import { getBrickFaces, getTriangles } from '@lego-games/lego-racers/car-builder'
 import type { BrickDatabase, BrickPiece } from '@lego-games/lego-racers/car-builder'
 import { BOX_PARTS, getBoxPartName } from './opponent-box-parts.ts'
 import { castBodyRays, getBodyVoxels, PLATE_HEIGHT } from './body-voxels.ts'
@@ -45,16 +45,7 @@ const getPieceFaces = (
     piece,
     { x: 0, y: 0, baseHeight: 0, orientation },
     0
-  ).flatMap((face) => {
-    const [first, second, third, fourth] = face.vertices
-    if (first === undefined || second === undefined || third === undefined) return []
-    return fourth === undefined
-      ? [[first, second, third]]
-      : [
-          [first, second, third],
-          [third, second, fourth],
-        ]
-  })
+  ).flatMap((face) => getTriangles(face))
   return {
     positions: Float32Array.from(
       faces.flatMap((triangle) =>

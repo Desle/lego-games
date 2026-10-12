@@ -1,5 +1,6 @@
 import type { CarDesign } from '@lego-games/lego-racers/car-builder'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
+import type { ModelResourceNames } from '@lego-games/lego-racers/racer-appearance'
 import type { HudCommand } from '@lego-games/lego-racers/race-hud'
 import type { DataTexture, Object3D } from 'three'
 
@@ -54,6 +55,12 @@ export type BuiltCarDrawingRequest = {
   readonly design: CarDesign
 }
 
+// A car body model of the original (a champion's, which no brick list builds) that the race is about to draw.
+export type CarBodyDrawingRequest = {
+  readonly archive: JamArchive
+  readonly names: ModelResourceNames
+}
+
 // A choice the developer panel offers for a layer above the original port.
 export type DevelopmentSelector = {
   readonly label: string
@@ -76,6 +83,8 @@ export type ViewerExtension = {
   readonly getRaceDisplay: (window: WindowMetrics) => RaceDisplay | null
   // Something to draw in place of the mesh the original builds for a car built from bricks, in that mesh's frame; null keeps the original's.
   readonly getBuiltCarDrawing: (request: BuiltCarDrawingRequest) => Object3D | null
+  // Something to draw in place of the car body model with these names, in that model's frame (its vertices times its scale); null keeps the original's.
+  readonly getCarBodyDrawing: (request: CarBodyDrawingRequest) => Object3D | null
   // The selections the layer runs with (texture pack, audio pack, bricks), for the notes of a recording.
   readonly getSelections: () => readonly string[]
 }

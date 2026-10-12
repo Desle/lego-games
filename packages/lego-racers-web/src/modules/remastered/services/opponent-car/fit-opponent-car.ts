@@ -2,9 +2,9 @@ import { BRICK_COLOR_COUNT } from './body-colors.ts'
 import { castBodyRays, getBodyVoxels, PLATE_HEIGHT } from './body-voxels.ts'
 import type { BodyRay } from './body-voxels.types.ts'
 import { fitBodyBricks } from './brick-fit.ts'
-import type { FittedBricks } from './brick-fit.types.ts'
 import type {
-  BodyVoxels,
+  Candidate,
+  OpponentCarFit,
   BrickTemplate,
   ChampionBodyFaces,
   OpponentBrick,
@@ -51,11 +51,6 @@ const getGrid = (
     offsetY: startY,
     offsetZ: startZ,
   }
-}
-
-type Candidate = {
-  readonly voxels: BodyVoxels
-  readonly fitted: FittedBricks
 }
 
 const getBestCandidate = (
@@ -214,7 +209,7 @@ export const fitOpponentCar = (
   modelName: string,
   faces: ChampionBodyFaces,
   templates: readonly BrickTemplate[]
-): { readonly design: OpponentCarDesign; readonly quality: OpponentCarFitQuality } => {
+): OpponentCarFit => {
   const rays = castBodyRays(faces.positions)
   const candidate = getBestCandidate(faces, rays, templates)
   const fallbackColor = getFallbackColor(candidate)

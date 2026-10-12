@@ -3,7 +3,12 @@ import { getRacerModelFiles } from '@lego-games/lego-racers/racer-appearance'
 import type { ModelResourceNames } from '@lego-games/lego-racers/racer-appearance'
 import { loadModelScene } from '@lego-games/lego-racers/scene'
 import type { SceneBitmap, SceneMaterial } from '@lego-games/lego-racers/scene'
-import type { BodyDecal, ChampionBodyFaces } from './opponent-car.types.ts'
+import type {
+  BodyDecal,
+  ChampionBodyFaces,
+  DecalAccumulator,
+  MaterialRole,
+} from './opponent-car.types.ts'
 
 const CORNERS_PER_TRIANGLE = 3
 const VALUES_PER_POSITION = 3
@@ -11,17 +16,9 @@ const VALUES_PER_COLOR = 4
 const VALUES_PER_TEXTURE_COORDINATE = 2
 const STUD_TEXTURE_PATTERN = /nub/i
 
-type MaterialRole = 'plastic' | 'stud' | 'decal'
-
 const getMaterialRole = (material: SceneMaterial | undefined, bitmap: SceneBitmap | null) => {
   if (material === undefined || material.textureIndex === null || bitmap === null) return 'plastic'
   return STUD_TEXTURE_PATTERN.test(material.name) ? 'stud' : 'decal'
-}
-
-type DecalAccumulator = {
-  readonly bitmap: SceneBitmap
-  readonly positions: number[]
-  readonly textureCoordinates: number[]
 }
 
 // The surface of a champion's car body model (a plain GDB model, as `Champion_CreateInstance` 0x0041d7a0 loads it) as triangles in
