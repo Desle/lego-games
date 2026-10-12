@@ -78,18 +78,22 @@ export const getDistance = (left: readonly number[], right: readonly number[]): 
     (left[2] ?? 0) - (right[2] ?? 0)
   )
 
+// The draws of a menu figure: its part frames carry the figure's 1/64 scale, which no other draw of a menu has.
+export const getOriginalFigureDraws = (draws: readonly OriginalDraw[]): readonly OriginalDraw[] =>
+  draws.filter(
+    (draw) =>
+      draw.modelMatrix.length === MATRIX_SIZE &&
+      draw.clipMatrix.length === MATRIX_SIZE &&
+      Math.hypot(draw.modelMatrix[0] ?? 0, draw.modelMatrix[1] ?? 0) <= SCALE_LIMIT
+  )
+
 // The world position of every part frame the original drew (each once): the draw's model matrix is its frame times the
 // camera matrix, so the frame's translation is `model x inverse(camera)`.
 export const getOriginalFramePositions = (
   draws: readonly OriginalDraw[]
 ): readonly (readonly number[])[] =>
-  draws
-    .flatMap((draw) => {
-      if (draw.modelMatrix.length !== MATRIX_SIZE || draw.clipMatrix.length !== MATRIX_SIZE)
-        return []
-      if (Math.hypot(draw.modelMatrix[0] ?? 0, draw.modelMatrix[1] ?? 0) > SCALE_LIMIT) return []
-      return [multiply(draw.modelMatrix, invert(draw.clipMatrix)).slice(12, 15)]
-    })
+  getOriginalFigureDraws(draws)
+    .map((draw) => multiply(draw.modelMatrix, invert(draw.clipMatrix)).slice(12, 15))
     .filter(
       (position, index, all) =>
         all.findIndex((other) => getDistance(other, position) < DUPLICATE_TOLERANCE) === index
