@@ -125,8 +125,8 @@ export const runRenderComparison = async (
         presentation.warpView
       )
       stage.showHazards(raceState.trackLogic.worlds.track, [
-        raceState.trackLogic.emitters.common,
-        raceState.trackLogic.emitters.track,
+        raceState.racerSet.emitters.common,
+        raceState.racerSet.emitters.track,
       ])
       stage.animate(milliseconds)
       const originalFrame = original.renderFrames.find((candidate) => candidate.frame === frame)
