@@ -968,3 +968,13 @@
 0042f240 Profile_GetGhostBeatenFlags
 00488010 RaceSelectScreen_ShowRace
 00487b50 RaceSelectScreen_CreateWidgets
+0045a7b0 PowerUps_Draw
+0045a8a0 PowerUps_DrawBlended
+00457900 PowerUpBrick_DrawBody
+00457930 PowerUpBrick_DrawTrail
+00453b30 Brick_DrawBodyInstance
+00453b90 Brick_DrawTrailInstance
+00461070 Events_LoadSection53
+00463700 Event53_Setup
+004637c0 Event53_Begin
+00463800 Event53_End
