@@ -37,17 +37,17 @@ Fields (`power_up_trace.py`, `power-up-trace.ts`): `powerUps.bricks` (state `+0x
 
 ## Grid (RACEC0R0, the player holds the brick and fires at frame 165; 560 frames)
 
-| Kind and level                 | Result                                                                                |
-| ------------------------------ | ------------------------------------------------------------------------------------- |
-| 1/0 cannon                     | match                                                                                 |
-| 1/1 grapple                    | match                                                                                 |
-| 1/2 wand                       | bodies match; one voice draw differs at frame 199                                     |
-| 1/3 rocket                     | match                                                                                 |
-| 2/0 to 2/3 shield              | match                                                                                 |
-| 3/0 to 3/2 turbo               | match                                                                                 |
-| 3/3 warp                       | match, also with every racer holding the brick (`POWER_UP_COMPUTERS=1`)               |
-| 4/0 oil, 4/2 magnet, 4/3 curse | match                                                                                 |
-| 4/1 barrel                     | match                                                                                 |
+| Kind and level                 | Result                                                                  |
+| ------------------------------ | ----------------------------------------------------------------------- |
+| 1/0 cannon                     | match                                                                   |
+| 1/1 grapple                    | match                                                                   |
+| 1/2 wand                       | bodies match; one voice draw differs at frame 199                       |
+| 1/3 rocket                     | match                                                                   |
+| 2/0 to 2/3 shield              | match                                                                   |
+| 3/0 to 3/2 turbo               | match                                                                   |
+| 3/3 warp                       | match, also with every racer holding the brick (`POWER_UP_COMPUTERS=1`) |
+| 4/0 oil, 4/2 magnet, 4/3 curse | match                                                                   |
+| 4/1 barrel                     | match                                                                   |
 
 With every racer holding the brick (`POWER_UP_COMPUTERS=1`, before the hit reaction and curse fixes): shield all match; cannon and turbo 0 and 1 differ only in computers' volume spheres; magnet and curse thrown at the player differ from frames 181 to 185; the warp is open.
 
@@ -74,6 +74,7 @@ The golden run draws every frame, so the draw callbacks change the sim. What the
 - Magnet `0x0043a130` / `0x0043a1a0`: a human's driver gets flag `0x80` and its vehicle starts the tire smoke (`0x0043dc00`) while held; a scripted body's target speed factors (`+0x7e8`, and `+0x7ec` unless car body flag `0x40000`) go to 0 and back to 1; `0x004395a0` ends a tumble.
 - Curse (4/3): a warp or curse taken over by a racer's use (`0x00439100`, in the racers' pass after the vehicle update) ends its registry entry in the same frame, so the registry is synced again at the end of the frame.
 - Wand (1/2): `0x00454d70` hands the rest of the step, after the countdown, to the jitter, the hold and the sparks.
+
 ## Projectile shape centres (fix/shape-centres)
 
 All sixteen cells of the grid match with `POWER_UP_COMPUTERS=1`. What the registry's shapes are:
