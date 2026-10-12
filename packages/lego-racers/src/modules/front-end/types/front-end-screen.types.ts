@@ -1,4 +1,4 @@
-import type { RacePreviewClock } from './race-preview.types.ts'
+import type { RacePreviewClock, RacePreviewEmitters } from './race-preview.types.ts'
 import type { RacerShowcase } from './racer-showcase/racer-showcase.types.ts'
 import type { SkeletonAnimationState } from '../../skeletal-animation/index.ts'
 import type { BuilderSession } from '../../car-builder/index.ts'
@@ -25,6 +25,8 @@ export type ScreenRuntime = {
   readonly screenMilliseconds: number
   // The race select's preview timers.
   readonly racePreview: RacePreviewClock
+  // The emitters of the race preview's cinema.
+  readonly racePreviewEmitters: RacePreviewEmitters | null
   // The main menu figure's pose (null on the other screens and before it exists).
   readonly menuFigureAnimation: SkeletonAnimationState | null
   // The race select's racer showcase (null on the other screens).

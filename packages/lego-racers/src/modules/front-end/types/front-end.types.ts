@@ -1,4 +1,9 @@
-import type { RacePreviewClock } from './race-preview.types.ts'
+import type { EmitterPool } from '../../emitter/index.ts'
+import type {
+  RacePreviewClock,
+  RacePreviewEmitters,
+  RacePreviewResources,
+} from './race-preview.types.ts'
 import type { BitmapFont, FontDrawCommand } from '../../font-rendering/index.ts'
 import type {
   BuilderCatalog,
@@ -64,6 +69,8 @@ export type FrontEndResources = {
   readonly getMenuFigureAnimation: () => SkeletalAnimation
   // `MENUDATA\RSANIM.ADB` and the idle clips of the racer showcase.
   readonly getRacerShowcaseAnimation: () => RacerShowcaseAnimation
+  // `MENUDATA\SINGRACE\PST.CDB`, `.CEB` and the emitter files they name: the race previews.
+  readonly getRacePreview: () => RacePreviewResources
 }
 
 // What the menus read from the machine: the original's input manager (`+0x98` of it counts the controllers).
@@ -184,6 +191,8 @@ export type FrontEndState = {
   readonly screenMilliseconds: number
   // The race select's preview timers.
   readonly racePreview: RacePreviewClock
+  // The emitters of the race preview's cinema (null while a screen without a preview is on top).
+  readonly racePreviewEmitters: RacePreviewEmitters | null
   // The entry of MENUDATA\LEGOMSC the music stream plays (FrontEnd_SetMusic 0x00480470), or null before any.
   readonly musicListIndex: number | null
   // The main menu's figure and its timers; they run only while that screen is the top one.
@@ -252,6 +261,8 @@ export type RaceCinemaView = {
   // The five part bytes of the race's champion (the race's third name, looked up in the menus' driver database,
   // 0x00488b40): the figure that takes the place of the cinema's `guy1`; null when the database has no such driver.
   readonly partBytes: readonly number[] | null
+  // The emitters the cinema has started (the snow of the ice world), drawn with the world's materials.
+  readonly emitterPool: EmitterPool | null
 }
 
 // The racer of the save the showcase shows: his car, turning on the turntable, and his driver standing on the platform.

@@ -5,3 +5,5 @@ import type { RaceCinemaView } from '@lego-games/lego-racers/front-end'
 export type CinemaStage = {
   readonly show: (view: RaceCinemaView) => void
 }
+
+export type UnitVector = { readonly x: number; readonly y: number; readonly z: number }

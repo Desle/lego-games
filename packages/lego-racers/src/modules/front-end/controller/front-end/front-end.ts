@@ -37,7 +37,9 @@ import {
   getStateWithShowcaseReaction,
   getStateWithShowcaseStep,
 } from '../front-end-showcase/front-end-showcase.ts'
+import { advanceRacePreviewEmitters } from '../race-preview/race-preview-emitters.ts'
 import { advanceRacePreviewClock, createRacePreviewClock } from '../race-preview/race-preview.ts'
+import { getRacePreviewCinemaName } from '../screens/race-selection-screens.ts'
 import { getFrontEndMusicIndex } from '../front-end-music/front-end-music.ts'
 import { getWidgetCommands } from '../widget-commands/widget-commands.ts'
 
@@ -57,6 +59,7 @@ const getRuntime = (
     driver: state.driver,
     screenMilliseconds: state.screenMilliseconds,
     racePreview: state.racePreview,
+    racePreviewEmitters: state.racePreviewEmitters,
     menuFigureAnimation: state.menuFigure?.animation ?? null,
     showcase: state.showcase,
   }
@@ -104,6 +107,7 @@ export const createFrontEnd = (
           driver: null,
           screenMilliseconds: 0,
           racePreview: createRacePreviewClock(),
+          racePreviewEmitters: null,
           menuFigureAnimation: null,
           showcase: null,
         }),
@@ -113,6 +117,7 @@ export const createFrontEnd = (
     outcome: 'running',
     screenMilliseconds: 0,
     racePreview: createRacePreviewClock(),
+    racePreviewEmitters: null,
     musicListIndex: getFrontEndMusicIndex(firstScreenId, null),
     menuFigure:
       firstScreenId === FrontEndScreen.MAIN_MENU
@@ -155,6 +160,7 @@ const applyNavigation = (
           driver: getDriverForScreen(screenId, navigated.settings, resources, environment),
           screenMilliseconds: 0,
           racePreview: createRacePreviewClock(),
+          racePreviewEmitters: null,
         },
         screenId
       )
@@ -254,6 +260,42 @@ const getIsPreviewCycling = (state: FrontEndState, resources: FrontEndResources)
   )
 }
 
+// The race preview's emitters after a frame (Cinema_Update 0x00466d90): they follow the cinema of the race on show, and
+// their births draw from the shared random table, which moves its cursor.
+const getStateWithPreviewEmitters = (
+  before: FrontEndState,
+  after: FrontEndState,
+  isRestarted: boolean,
+  resources: FrontEndResources,
+  environment: FrontEndEnvironment,
+  frameMilliseconds: number
+): FrontEndState => {
+  const runtime = getRuntime(after, resources, environment)
+  const screenId = after.screens.at(-1)?.screenId
+  const cinemaName =
+    runtime === null || screenId === undefined ? null : getRacePreviewCinemaName(runtime, screenId)
+  if (cinemaName === null && before.racePreviewEmitters === null) return after
+  const preview = resources.getRacePreview()
+  const step = advanceRacePreviewEmitters({
+    previous: before.racePreviewEmitters,
+    resources: preview,
+    cinema:
+      preview.cinemas.cinemas.find(
+        (candidate) => candidate.name.toLowerCase() === cinemaName?.toLowerCase()
+      ) ?? null,
+    previousMilliseconds: before.racePreview.cinemaMilliseconds,
+    milliseconds: after.racePreview.cinemaMilliseconds,
+    frameMilliseconds,
+    isRestarted: isRestarted || after.racePreview.cycleCount !== before.racePreview.cycleCount,
+    random: { table: environment.randomTable, position: after.settings.randomPosition },
+  })
+  return {
+    ...after,
+    racePreviewEmitters: step.emitters,
+    settings: { ...after.settings, randomPosition: step.randomPosition },
+  }
+}
+
 // One pass of the loop of 0x0042d510: the time advances and the input, if any, reaches the current screen, which
 // answers with the next screen, the race or the exit (0x004812c0, 0x004850a0).
 export const stepFrontEnd = (
@@ -317,7 +359,15 @@ export const stepFrontEnd = (
     environment,
     frameMilliseconds
   )
-  return { ...stepped, state: entered, soundNames: [...figureSounds, ...stepped.soundNames] }
+  const previewed = getStateWithPreviewEmitters(
+    state,
+    entered,
+    isPreviewRestarted,
+    resources,
+    environment,
+    frameMilliseconds
+  )
+  return { ...stepped, state: previewed, soundNames: [...figureSounds, ...stepped.soundNames] }
 }
 
 // The commands of the current screen's widgets, in the order the screen lists them.
