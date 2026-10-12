@@ -1,4 +1,8 @@
-import { getHighDefinitionUrl, getMaskedColors } from './high-definition-texture.ts'
+import {
+  getHighDefinitionPixelRatio,
+  getHighDefinitionUrl,
+  getMaskedColors,
+} from './high-definition-texture.ts'
 
 describe('getHighDefinitionUrl', () => {
   it('maps an archive bitmap path to the pack PNG', () => {
@@ -26,5 +30,19 @@ describe('getMaskedColors', () => {
     expect([...colors]).toEqual([
       200, 200, 200, 0, 200, 200, 200, 0, 200, 200, 200, 255, 200, 200, 200, 255,
     ])
+  })
+})
+
+describe('getHighDefinitionPixelRatio', () => {
+  it('draws the stage with as many device pixels as it covers', () => {
+    // Arrange
+    const stage = { width: 800, height: 600 }
+    const window = { innerWidth: 1600, innerHeight: 1000, devicePixelRatio: 2 }
+
+    // Act
+    const ratio = getHighDefinitionPixelRatio(stage, window)
+
+    // Assert
+    expect(ratio).toBeCloseTo((1000 / 600) * 2)
   })
 })

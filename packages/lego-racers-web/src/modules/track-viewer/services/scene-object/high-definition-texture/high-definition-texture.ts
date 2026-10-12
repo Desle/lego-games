@@ -1,8 +1,13 @@
 import { DEVELOPMENT_HIGH_DEFINITION_ROUTE } from '../../../../../shared/development-jam/development-jam-route.ts'
-import type { TexturePixels } from './high-definition-texture.types.ts'
+import type { StageSize, TexturePixels, WindowMetrics } from './high-definition-texture.types.ts'
 
 export const getIsHighDefinitionEnabled = (search: string): boolean =>
   import.meta.env.DEV && new URLSearchParams(search).has('hd')
+
+// In the high-definition view the fixed stage is drawn with as many device pixels as it covers on screen.
+export const getHighDefinitionPixelRatio = (stage: StageSize, window: WindowMetrics): number =>
+  Math.min(window.innerWidth / stage.width, window.innerHeight / stage.height) *
+  window.devicePixelRatio
 
 export const getHighDefinitionUrl = (bitmapPath: string): string =>
   `${DEVELOPMENT_HIGH_DEFINITION_ROUTE}/${bitmapPath.replaceAll('\\', '/').replace(/\.[^./]+$/, '.png')}`
