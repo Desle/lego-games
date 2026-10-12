@@ -8,6 +8,7 @@ export type TextureLine = {
   readonly pitch: number
   readonly bitsPerPixel: number
   readonly masks: readonly number[]
+  readonly colorKey?: readonly [number, number] | null
   readonly pixels: string
 }
 

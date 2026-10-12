@@ -145,6 +145,7 @@ class RenderRecorder:
                     "pitch": surface["pitch"],
                     "bitsPerPixel": pixel_format[3],
                     "masks": list(pixel_format[4:8]),
+                    "colorKey": list(surface["color_key"]) if surface.get("color_key") else None,
                     "pixels": encode(pixels),
                 }
             )

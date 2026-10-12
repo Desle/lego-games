@@ -26,6 +26,8 @@ export type Target = {
 export type DrawContext = {
   readonly state: DrawState
   readonly texture: DecodedTexture | null
+  // Whether the colour key of the texture removes fragments (the draw has the key state on and the surface a key).
+  readonly isColorKeyed: boolean
   readonly textureIndex: number
 }
 

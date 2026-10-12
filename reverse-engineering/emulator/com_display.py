@@ -116,6 +116,12 @@ class DisplayMethods:
         self.machine.write_u32(argument(1), 0x2000)
         return S_OK
 
+    def any_SetColorKey(self, this, record, argument):
+        # DDCOLORKEY: low and high value of the key in the surface's pixel format; DDCKEY_SRCBLT (8) is the one textures use.
+        if argument(1) & 0x8 and argument(2):
+            record["color_key"] = struct.unpack("<2I", self.machine.read_bytes(argument(2), 8))
+        return S_OK
+
     def any_IsLost(self, this, record, argument):
         return S_OK
 

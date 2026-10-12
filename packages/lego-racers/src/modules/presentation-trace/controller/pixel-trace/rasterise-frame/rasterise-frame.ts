@@ -200,13 +200,14 @@ const sampleTexture = (
   }
 }
 
-// The colour of one fragment into `scratch.source` (0..1): the texture operation, then nothing else.
+// The colour of one fragment into `scratch.source` (0..1): the texture operation, then nothing else. False when the
+// colour key removes the fragment.
 const shadeFragment = (
   context: DrawContext,
   scratch: Scratch,
   weights: readonly [number, number, number],
   corners: readonly [Corner, Corner, Corner]
-) => {
+): boolean => {
   const [first, second, third] = corners
   const [weightFirst, weightSecond, weightThird] = weights
   scratch.diffuse[0] = weightFirst * first.red + weightSecond * second.red + weightThird * third.red
@@ -226,7 +227,7 @@ const shadeFragment = (
     for (let channel = 0; channel < CHANNEL_COUNT; channel++) {
       scratch.source[channel] = (scratch.diffuse[channel] ?? 0) / CHANNEL_MAXIMUM
     }
-    return
+    return true
   }
   const u =
     (perspectiveFirst * first.u + perspectiveSecond * second.u + perspectiveThird * third.u) /
@@ -235,6 +236,11 @@ const shadeFragment = (
     (perspectiveFirst * first.v + perspectiveSecond * second.v + perspectiveThird * third.v) /
     perspectiveTotal
   sampleTexture(texture, context.state, u, v, scratch.texel)
+  if (context.isColorKeyed) {
+    // The surface has no alpha: the key only decides whether the texel is drawn (the decoded alpha is 0 on the key).
+    if ((scratch.texel[3] ?? 0) <= 0) return false
+    scratch.texel[3] = CHANNEL_MAXIMUM
+  }
   for (let channel = 0; channel < CHANNEL_COUNT; channel++) {
     const texel = (scratch.texel[channel] ?? 0) / CHANNEL_MAXIMUM
     scratch.source[channel] =
@@ -242,6 +248,7 @@ const shadeFragment = (
         ? (texel * (scratch.diffuse[channel] ?? 0)) / CHANNEL_MAXIMUM
         : texel
   }
+  return true
 }
 
 // Alpha test, then blend into the colour buffer; returns whether the fragment wrote its colour.
@@ -326,7 +333,7 @@ const rasteriseTriangle = (
       if (context.state.isDepthTestEnabled && (depth < 0 || depth > (target.depths[offset] ?? 1))) {
         continue
       }
-      shadeFragment(context, scratch, weights, corners)
+      if (!shadeFragment(context, scratch, weights, corners)) continue
       if (!writeFragment(target, offset, context, scratch)) continue
       if (context.state.isDepthWriteEnabled) target.depths[offset] = depth
       target.textureIndices[offset] = context.textureIndex
@@ -374,6 +381,7 @@ export const rasteriseFrame = (
     ),
   ]
   const decoded = new Map<string, DecodedTexture>()
+  const keyedDecoded = new Map<string, DecodedTexture>()
   frame.draws.forEach((draw, drawIndex) => {
     const state = states[draw.stateIndex]
     if (state === undefined) return
@@ -382,9 +390,19 @@ export const rasteriseFrame = (
     if (draw.textureHash !== null && original !== undefined && !decoded.has(draw.textureHash)) {
       decoded.set(draw.textureHash, decodeTexture(original))
     }
+    const isColorKeyed = state.isColorKeyEnabled && original !== undefined && original.colorKey !== null
+    if (isColorKeyed && draw.textureHash !== null && original !== undefined) {
+      if (!keyedDecoded.has(draw.textureHash)) {
+        keyedDecoded.set(draw.textureHash, decodeTexture(original, true))
+      }
+    }
     const context: DrawContext = {
       state,
-      texture: draw.textureHash === null ? null : (decoded.get(draw.textureHash) ?? null),
+      isColorKeyed,
+      texture:
+        draw.textureHash === null
+          ? null
+          : ((isColorKeyed ? keyedDecoded : decoded).get(draw.textureHash) ?? null),
       textureIndex:
         draw.textureHash === null ? NO_TEXTURE : textureHashes.indexOf(draw.textureHash),
     }

@@ -35,7 +35,7 @@ export const createDynamicGeometry = (cornerCount: number): BufferGeometry => {
 // with the depth written.
 export const createDecalMaterial = (scene: Scene, material: SceneMaterial): Material => {
   const three = createSceneMaterial(
-    { ...material, renderState: { ...material.renderState, isAlphaTestEnabled: false } },
+    material,
     scene.textures,
     new Map(),
     true

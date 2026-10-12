@@ -104,6 +104,7 @@ const getTexture = (line: TextureLine): OriginalTexture =>
     pitch: line.pitch,
     bitsPerPixel: line.bitsPerPixel,
     masks: line.masks,
+    colorKey: line.colorKey ?? null,
     pixels: getBytes(line.pixels),
   })
 

@@ -46,6 +46,8 @@ export type OriginalTexture = {
   readonly pitch: number
   readonly bitsPerPixel: number
   readonly masks: readonly number[]
+  // The surface's colour key (low and high value in the surface's pixel format), or null; SetColorKey with DDCKEY_SRCBLT.
+  readonly colorKey: readonly [number, number] | null
   readonly pixels: Uint8Array
 }
 

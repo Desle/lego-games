@@ -31,6 +31,7 @@ export type DrawState = Pick<
 > & {
   readonly isDepthTestEnabled: boolean
   readonly isDepthWriteEnabled: boolean
+  readonly isColorKeyEnabled: boolean
 }
 
 // A triangle as it is drawn: the original's from a DrawIndexedPrimitive, the port's from the viewer's three.js objects.
