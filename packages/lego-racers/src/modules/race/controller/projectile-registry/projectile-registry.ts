@@ -1,12 +1,19 @@
 import { EffectState, PowerUpEffectKind } from '../../../power-ups/index.ts'
 import type { PowerUpEffect } from '../../../power-ups/index.ts'
-import { ExplosionState } from '../../../projectiles/index.ts'
+import { BallisticFlightState, ExplosionState } from '../../../projectiles/index.ts'
 import type { ExplosionPool } from '../../../projectiles/index.ts'
 import { getBoundingInterval } from '../../../racer-collision/index.ts'
 import type { BoundingSphere } from '../../../racer-collision/index.ts'
+import type { ModelBounds } from '../../../model/index.ts'
 import type { RegistryEntry } from '../../../projectiles/index.ts'
-import { getFloatFromBits, ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
-import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
+import {
+  getFloatFromBits,
+  getFrameTransformedPoint,
+  getStoredScaledVector,
+  IDENTITY_MATRIX3,
+  ZERO_VECTOR3,
+} from '../../../simulation-math/index.ts'
+import type { FloatArithmetic, Frame, Vector3 } from '../../../simulation-math/index.ts'
 import {
   touchProjectileExplosions,
   touchProjectileFlights,
@@ -35,10 +42,28 @@ const MAGNET_HEIGHT = 30
 // 0x00429xxx registrations: type 4, flags 1, no call limit, no interval.
 const REGISTRATION_FLAGS = 0x1
 
+const FIGURE_SCALE = 1
+
 const ORIGIN_SPHERE: BoundingSphere = Object.freeze({ centre: ZERO_VECTOR3, radius: 0 })
 
 const getSphere = (centre: Vector3, radius: number): BoundingSphere =>
   Object.freeze({ centre, radius })
+
+// 0x0040e0b0 for a figure that does not play (flag 0x10000 clear): the model's bounds centre and radius times the figure's
+// scale (+0x58, 1 here), the centre carried through the figure's frame (slot +0x2c).
+const getFigureSphere = (
+  arithmetic: FloatArithmetic,
+  frame: Frame,
+  bounds: ModelBounds
+): BoundingSphere =>
+  getSphere(
+    getFrameTransformedPoint(
+      arithmetic,
+      frame,
+      getStoredScaledVector(arithmetic, bounds.centre, FIGURE_SCALE)
+    ),
+    arithmetic.storeFloat(arithmetic.multiply(FIGURE_SCALE, bounds.radius))
+  )
 
 const getEffectOf = (source: RegistrySource, effectId: number): PowerUpEffect | undefined =>
   source.powerUpStep.world.effects.effects[effectId]
@@ -47,31 +72,28 @@ const getFlightSphere = (source: RegistrySource, effect: PowerUpEffect): Boundin
   const motion = source.projectileWorld.motions[effect.id]
   if (motion === undefined || motion === null) return ORIGIN_SPHERE
   if (motion.kind === 'ballistic') {
-    return getSphere(
-      motion.flight.framePosition,
-      effect.kind === PowerUpEffectKind.BARREL
-        ? source.projectileModelData.shapeBounds.barrel.radius
-        : CANNON_BALL_RADIUS
-    )
+    if (effect.kind === PowerUpEffectKind.BARREL) {
+      return getFigureSphere(
+        source.arithmetic,
+        {
+          rotation: source.projectileWorld.barrelSpins[effect.id]?.rotation ?? IDENTITY_MATRIX3,
+          position: motion.flight.framePosition,
+        },
+        source.projectileModelData.shapeBounds.barrel
+      )
+    }
+    return getSphere(motion.flight.framePosition, CANNON_BALL_RADIUS)
   }
   const { shapeBounds } = source.projectileModelData
   if (motion.kind === 'grapple') {
-    const { framePosition, velocityX, velocityY } = motion.hook.flight
-    const { centre, radius } = shapeBounds.grapple
-    // Hypothesis: the hook's frame faces along its horizontal velocity with z up, and the bounds centre sits in it.
-    const length = Math.hypot(velocityX, velocityY) || 1
-    const forward = { x: velocityX / length, y: velocityY / length }
-    return getSphere(
-      Object.freeze({
-        x: framePosition.x + centre.x * forward.x - centre.y * forward.y,
-        y: framePosition.y + centre.x * forward.y + centre.y * forward.x,
-        z: framePosition.z + centre.z,
-      }),
-      radius
-    )
+    return getFigureSphere(source.arithmetic, source.projectileWorld.hookFrame, shapeBounds.grapple)
   }
   if (motion.kind === 'rocket' && motion.homing !== null) {
-    return getSphere(motion.homing.flight.framePosition, shapeBounds.rocket.radius)
+    return getFigureSphere(
+      source.arithmetic,
+      { rotation: motion.frameRotation, position: motion.homing.flight.framePosition },
+      shapeBounds.rocket
+    )
   }
   return ORIGIN_SPHERE
 }
@@ -124,8 +146,10 @@ const getIsFlightRegistered = (source: RegistrySource, effect: PowerUpEffect): b
   if (motion === undefined || motion === null || !getIsLive(effect)) return false
   switch (effect.kind) {
     case PowerUpEffectKind.CANNON:
-    case PowerUpEffectKind.BARREL:
       return motion.kind === 'ballistic'
+    case PowerUpEffectKind.BARREL:
+      // 0x00452ff0 lets the body go (0x00431530) in the update that sees its flight end; a racer's touch only marks it.
+      return motion.kind === 'ballistic' && motion.flight.state !== BallisticFlightState.IDLE
     case PowerUpEffectKind.GRAPPLE:
       return motion.kind === 'grapple' && !motion.hook.isRetracting
     case PowerUpEffectKind.ROCKET:

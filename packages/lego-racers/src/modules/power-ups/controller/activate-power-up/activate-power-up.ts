@@ -50,11 +50,12 @@ const getStatus = (context: PowerUpContext, racer: number): RacerPowerUpStatus =
 const getNearestRacer = (
   context: PowerUpContext,
   status: RacerPowerUpStatus,
-  window: ConeQueryWindow
+  window: ConeQueryWindow,
+  direction: Vector3 = status.forward
 ): number | null => {
   const index = getNearestInCone(context.arithmetic, {
     origin: status.position,
-    direction: status.forward,
+    direction,
     window,
     targets: context.racers,
   })
@@ -329,7 +330,15 @@ const activateHazard = (
   if (level === 0)
     return startEffect(step, PowerUpEffectKind.OIL_SLICK, getPlainStart(racer, 0, 0, null))
   if (level === 1) {
-    const target = getNearestRacer(context, getStatus(context, racer), BARREL_WINDOW)
+    // 0x0045ad30 looks behind the racer: the barrel is thrown backwards.
+    const status = getStatus(context, racer)
+    const { forward } = status
+    const target = getNearestRacer(
+      context,
+      status,
+      BARREL_WINDOW,
+      Object.freeze({ x: -forward.x, y: -forward.y, z: -forward.z })
+    )
     return startEffect(step, PowerUpEffectKind.BARREL, getPlainStart(racer, 1, 0, target))
   }
   if (level !== 2 && level !== 3) return step

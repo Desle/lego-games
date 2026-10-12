@@ -886,3 +886,7 @@
 004a3dd0 CinemaEmitterEvent_Reset
 004a1240 CinemaEvents_LoadEmitterPools
 004a3150 CinemaEvents_Reset
+004a4ca0 CinemaVertexEffect_Start
+004a4cf0 CinemaVertexEffect_Stop
+004a4d10 CinemaVertexEffect_Update
+004a4da0 CinemaVertexEffect_Apply

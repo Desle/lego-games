@@ -19,14 +19,6 @@ export type ProjectileEvent =
       readonly factor: number
       readonly milliseconds: number
     }
-  // Car body slot +0x40 (0x004298a0, the latched racer: vector stored at body +0x630, flag +0x6c0 |= 0x20) or slot
-  // +0x48 (0x004298f0, the grapple's owner: +0x63c, flag 0x40), the vector scaled by body +0x15c on the body's side.
-  | {
-      readonly type: 'projectiles.racer_towed'
-      readonly racer: number
-      readonly vector: Vector3
-      readonly isOwner: boolean
-    }
   // Car body slots +0x44 and +0x4c (0x004298d0, 0x00429920): the tow ends (flags +0x6c0 &= ~0x20 and ~0x40).
   | { readonly type: 'projectiles.racer_tow_ended'; readonly racer: number }
   // 0x0045d780 state 3: the warp moves the racer's frame (racer +0x5c, slot 8) to this position.

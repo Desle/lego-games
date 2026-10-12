@@ -101,7 +101,7 @@ const getRegistryWords = (raceState: RaceState): readonly number[] =>
   raceState.racerSet.registryEntries.flatMap((entry) => {
     const object = raceState.registryObjects[entry.id]
     if (!entry.isActive || object === undefined) return []
-    const source = { ...raceState, powerUpStep: raceState.powerUpStep }
+    const source = { ...raceState, arithmetic: raceState.context.arithmetic }
     if (object.type === 'explosion') {
       const sphere = getProjectileRegistrySphere(source, object)
       return [EXPLOSION_TAG, ...getVectorWords(sphere.centre), ...getFloatWords([sphere.radius])]

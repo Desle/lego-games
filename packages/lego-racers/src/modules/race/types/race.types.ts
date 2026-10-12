@@ -34,6 +34,7 @@ import type {
   DebrisAnimations,
   ProjectileEvent,
   ProjectileWorld,
+  RocketLaunchBone,
   RouteNode,
 } from '../../projectiles/index.ts'
 import type { RandomTablePosition } from '../../random-table/index.ts'
@@ -144,6 +145,9 @@ export type ProjectileModelData = {
   // Racer set +0x10: the route a warping racer follows.
   readonly routeNodes: readonly RouteNode[]
   readonly rocketLaunchMilliseconds: readonly number[]
+  // The missile skeleton's launch bone per rocket and the missile model's scale (0x00456db0).
+  readonly rocketLaunchBones: readonly RocketLaunchBone[]
+  readonly rocketModelScale: number
   readonly debrisAnimations: DebrisAnimations
 }
 
@@ -260,6 +264,7 @@ export type RegistryObject =
 
 // What the registry's volumes are read from: the objects, the triggers' state and the bricks.
 export type RegistrySource = {
+  readonly arithmetic: FloatArithmetic
   readonly registryObjects: readonly RegistryObject[]
   readonly trackLogic: TrackLogicState
   readonly powerUpStep: PowerUpStep
@@ -351,4 +356,5 @@ export type RaceRacerSet = RacerSet &
   > & {
     readonly raceModeFlags: number
     readonly pendingContacts: RaceContacts
+    readonly arithmetic: FloatArithmetic
   }

@@ -71,6 +71,15 @@ export type PowerUpEvent =
   | { readonly type: 'power_ups.racer_released_by_lightning'; readonly racer: number }
   // 0x004545d0: the grapple latched on; 0x00453ef0 then pulls the two racers together (not ported).
   | { readonly type: 'power_ups.racer_grappled'; readonly racer: number; readonly owner: number }
+  // The tow of 0x00453ef0's state 4: car body slot +0x40 (0x004298a0, the latched racer: vector stored at body +0x630,
+  // flag +0x6c0 |= 0x20) or slot +0x48 (0x004298f0, the grapple's owner: +0x63c, flag 0x40), the vector scaled by body
+  // +0x15c on the body's side. It is an event of this list so it stays in order with the releases of other hooks.
+  | {
+      readonly type: 'power_ups.racer_towed'
+      readonly racer: number
+      readonly vector: Vector3
+      readonly isOwner: boolean
+    }
   // 0x00454690: car body slot +0x44 on the latched racer and +0x4c on the owner.
   | {
       readonly type: 'power_ups.grapple_released'

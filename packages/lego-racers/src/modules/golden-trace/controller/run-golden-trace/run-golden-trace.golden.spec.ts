@@ -29,7 +29,7 @@ const OTHER_TRACKS = [
   { folder: 'RACEC0R2', expected: { frame: 278, field: 'racer0.body.forwardSpeed' } },
   { folder: 'RACEC0R3', expected: null },
   { folder: 'RACEC1R0', expected: null },
-  { folder: 'RACEC3R0', expected: { frame: 278, field: 'powerUps.registry' } },
+  { folder: 'RACEC3R0', expected: null },
 ] as const
 
 // Where the port first leaves the original in any compared field, or null for a match.
@@ -77,7 +77,7 @@ const getCases = (): readonly ScenarioCase[] => {
     { scenario: royalKnights('royal-knights-power-slide', getPowerSlideFrames()), expected: null },
     {
       scenario: royalKnights('royal-knights-weaving', getWeavingFrames(1200)),
-      expected: { frame: 1208, field: 'powerUps.registry' },
+      expected: null,
     },
     {
       scenario: royalKnights('royal-knights-frame-times', getFrameTimes()),
@@ -94,7 +94,7 @@ const getCases = (): readonly ScenarioCase[] => {
       scenario: royalKnights('royal-knights-route-driving', [
         ...getRouteDrivingFrames(drivingDefinition, 3000),
       ]),
-      expected: { frame: 1609, field: 'powerUps.registry' },
+      expected: { frame: 1882, field: 'powerUps.registry' },
     },
     {
       scenario: createTraceScenario({

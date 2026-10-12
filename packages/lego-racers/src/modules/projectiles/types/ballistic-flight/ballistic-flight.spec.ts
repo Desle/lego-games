@@ -39,7 +39,7 @@ const getRacer = (position: Vector3, velocity: Vector3 = ZERO): FlightRacer => (
   boundingRadius: 1,
   beamRadius: 1,
   routeNodeIndex: null,
-  rocketHeading: { x: 1, y: 0, z: 0 },
+  displayRotation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
   isComputer: false,
 })
 

@@ -20,10 +20,19 @@ const INTEGERS_KEYWORD = 0x2d
 const MATERIAL_KEYWORD = 0x5e
 const START_KEYWORD = 0x4e
 const STOP_KEYWORD = 0x4f
-const EFFECT_INTEGER_COUNT = 3
+const EFFECT_VALUE_COUNT = 3
+const SHIFTS_KEYWORD = 0x2c
+const RATES_KEYWORD = 0x2e
+const ZERO_INTEGERS: readonly number[] = Object.freeze([0, 0, 0])
 
 const readName = (reader: TokenReader): string =>
   reader.readStringWithMaximumLength(NAME_MAXIMUM_LENGTH)
+
+const readIntegers = (reader: TokenReader): readonly number[] =>
+  Object.freeze(Array.from({ length: EFFECT_VALUE_COUNT }, () => reader.readInteger()))
+
+const readFloats = (reader: TokenReader): readonly number[] =>
+  Object.freeze(Array.from({ length: EFFECT_VALUE_COUNT }, () => reader.readFloat()))
 
 const readEntries = <Entry>(
   reader: TokenReader,
@@ -59,22 +68,21 @@ const readEmitterEvent = (reader: TokenReader, name: string): CinemaEmitterEvent
 }
 
 const readVertexEffect = (reader: TokenReader, name: string): CinemaVertexEffect => {
-  let integers: readonly number[] = []
-  let materialName = ''
+  let shifts: readonly number[] = ZERO_INTEGERS
+  let biases: readonly number[] = ZERO_INTEGERS
+  let rates: readonly number[] = ZERO_INTEGERS
+  let instanceName = ''
   for (
     let token = reader.getNextToken();
     token !== RIGHT_CURLY_TOKEN;
     token = reader.getNextToken()
   ) {
-    if (token === INTEGERS_KEYWORD) {
-      integers = Object.freeze(
-        Array.from({ length: EFFECT_INTEGER_COUNT }, () => reader.readInteger())
-      )
-    } else if (token === MATERIAL_KEYWORD) {
-      materialName = readName(reader)
-    }
+    if (token === SHIFTS_KEYWORD) shifts = readIntegers(reader)
+    else if (token === INTEGERS_KEYWORD) biases = readIntegers(reader)
+    else if (token === RATES_KEYWORD) rates = readFloats(reader)
+    else if (token === MATERIAL_KEYWORD) instanceName = readName(reader)
   }
-  return Object.freeze({ name, integers, materialName })
+  return Object.freeze({ name, shifts, biases, rates, instanceName })
 }
 
 // FUN_004a2730: `0x5x [ count ] { (0x5x "entry" { target 0x4e|0x4f "name" }) * count }`.

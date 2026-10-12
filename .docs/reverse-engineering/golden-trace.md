@@ -26,19 +26,19 @@ The player drives its **champion car** (`isPlayerChampionCar` in `loadRaceDefini
 
 ## Scenarios (`run-golden-trace.golden.spec.ts`)
 
-| Scenario                        | Frames | Result (every racer, the emitter pools, the route followers, the random cursor)                                                                                                   |
-| ------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Royal Knights, no input         | 300    | match                                                                                                                                                                             |
-| Royal Knights, steering sweep   | 475    | match                                                                                                                                                                             |
-| Royal Knights, start boost      | 280    | match                                                                                                                                                                             |
-| Royal Knights, weaving          | 1,375  | match until frame 1208: `powerUps.registry`, the shape centre of a projectile (the oil slick's `oilbub` emitter is ported)                                                        |
-| Royal Knights, frame times      | 475    | match                                                                                                                                                                             |
-| Royal Knights, route driving    | 3,175  | match until frame 1609 (`powerUps.registry`, as the weaving)                                                                                                                      |
-| Royal Knights, double precision | 475    | the player matches; computers differ by one unit in the last place at frame 160 (15)                                                                                              |
-| `racec0r3`                      | 475    | match                                                                                                                                                                             |
-| `racec0r1`                      | 475    | match until frame 436 (`powerUps.registry`)                                                                                                                                       |
-| `racec0r2`, `c1r0`, `c3r0`      | 475    | `c1r0` matches; `c3r0` until frame 278 (`powerUps.registry`: the grapple hook's shape centre, x by 0.07 at its launch); `racec0r2` until frame 278 (`racer0.body.heading`, row 8) |
-| Royal Knights, power slide      | 475    | match (the tire smoke, the dust and the skid marks run)                                                                                                                           |
+| Scenario                        | Frames | Result (every racer, the emitter pools, the route followers, the random cursor)      |
+| ------------------------------- | ------ | ------------------------------------------------------------------------------------ |
+| Royal Knights, no input         | 300    | match                                                                                |
+| Royal Knights, steering sweep   | 475    | match                                                                                |
+| Royal Knights, start boost      | 280    | match                                                                                |
+| Royal Knights, weaving          | 1,375  | match                                                                                |
+| Royal Knights, frame times      | 475    | match                                                                                |
+| Royal Knights, route driving    | 3,175  | match until frame 1882 (`powerUps.registry`)                                         |
+| Royal Knights, double precision | 475    | the player matches; computers differ by one unit in the last place at frame 160 (15) |
+| `racec0r3`, `c3r0`              | 475    | match                                                                                |
+| `racec0r1`                      | 475    | match until frame 436 (`powerUps.registry`)                                          |
+| `racec0r2`, `c1r0`              | 475    | `c1r0` matches; `racec0r2` until frame 278 (`racer0.body.heading`, row 8)            |
+| Royal Knights, power slide      | 475    | match (the tire smoke, the dust and the skid marks run)                              |
 
 The expectation per scenario is in the spec: the first field and frame where any compared field may differ (`null` for none). Fixing a divergence makes the spec fail until the expectation is updated, so progress is visible.
 

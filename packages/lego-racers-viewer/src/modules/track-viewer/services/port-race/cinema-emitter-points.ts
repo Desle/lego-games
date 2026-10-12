@@ -1,4 +1,8 @@
-import { getBillboardAxes, getEmitterQuads } from '@lego-games/lego-racers/emitter'
+import {
+  getBillboardAxes,
+  getEmitterQuads,
+  getIsEmitterQuadDrawn,
+} from '@lego-games/lego-racers/emitter'
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
 import type { SceneCamera } from '@lego-games/lego-racers/scene'
 import type { ScreenRectangle } from './cinema-emitter-points.types.ts'
@@ -42,16 +46,28 @@ export const getEmitterScreenPoints = (
     getEmitterQuads(arithmetic, instance.system, pool.animation, {
       position: camera.position,
       axes,
-    }).flatMap((quad) => {
-      const corners = quad.corners.map((corner) => {
-        const relative = subtract([corner.x, corner.y, corner.z], position)
-        const depth = dot(relative, forward)
-        return [
-          rectangle.left + (0.5 + dot(relative, right) / (depth * 2 * halfWidth)) * rectangle.width,
-          rectangle.top + (0.5 - dot(relative, up) / (depth * 2 * halfHeight)) * rectangle.height,
-        ]
-      })
-      return corners
     })
+      .filter((quad) =>
+        getIsEmitterQuadDrawn(
+          quad,
+          {
+            position: camera.position,
+            forward: { x: forward[0] ?? 0, y: forward[1] ?? 0, z: forward[2] ?? 0 },
+          },
+          rectangle.height / (2 * halfHeight)
+        )
+      )
+      .flatMap((quad) => {
+        const corners = quad.corners.map((corner) => {
+          const relative = subtract([corner.x, corner.y, corner.z], position)
+          const depth = dot(relative, forward)
+          return [
+            rectangle.left +
+              (0.5 + dot(relative, right) / (depth * 2 * halfWidth)) * rectangle.width,
+            rectangle.top + (0.5 - dot(relative, up) / (depth * 2 * halfHeight)) * rectangle.height,
+          ]
+        })
+        return corners
+      })
   )
 }

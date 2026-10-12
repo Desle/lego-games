@@ -66,6 +66,11 @@ const getFrameMatrix = (rotation: Matrix3, position: Vector3Like): Matrix4 => {
 
 // The race's three.js scene graphs and camera, without a renderer: the sky and the backdrop first without the depth
 // test, then the track and the cars, from the player's chase camera. The render trace reads this directly.
+// The pixels one unit spans at depth 1 on the original's 480-pixel-high surface (the quad cut is measured there).
+const ORIGINAL_SURFACE_HEIGHT = 480
+const getFocalLengthPixels = (): number =>
+  ORIGINAL_SURFACE_HEIGHT / (2 * Math.tan((ORIGINAL_FIELD_OF_VIEW_DEGREES * Math.PI) / 360))
+
 export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceStage => {
   const trackScene = new ThreeScene()
   const backgroundScene = new ThreeScene()
@@ -224,7 +229,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     for (const instance of trackWorld.skeletonInstances) {
       if (instance.clip !== null) shown.track.setSkeletonState(instance.name, instance.clip)
     }
-    if (lastCameraView !== null) particles.update(pools, lastCameraView)
+    if (lastCameraView !== null) particles.update(pools, lastCameraView, getFocalLengthPixels())
   }
 
   return Object.freeze({
