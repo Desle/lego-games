@@ -16,6 +16,8 @@ export type GrappleHook = {
   readonly isHookArrived: boolean
   // +0x224: grows while latched; the rope is tested against the track once it reaches 1.
   readonly tension: number
+  // The owner's frame position the rope was last laid from (0x00444540 and its siblings run in the hook's update).
+  readonly ropeOwnerPosition: Vector3
 }
 
 export type GrappleAdvance = {

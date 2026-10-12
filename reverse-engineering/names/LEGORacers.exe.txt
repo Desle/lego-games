@@ -894,7 +894,7 @@
 00456ce0 Rocket_Draw
 00455020 Wand_Draw
 00494850 Strip_Draw
-00494ca0 EmitterSystem_Draw
+00494ca0 StripFigure_Draw
 0045c0c0 Shield_Update
 0045c160 Shield_Draw
 0045c8f0 Turbo_Start
@@ -944,6 +944,25 @@
 00427e80 Camera_UpdateFieldOfView
 004047b0 CameraObject_ApplyAnimationLock
 00404780 CameraObject_LockToAnimation
+# Ribbons: the grapple's tether and the wand's beam (power-up-visuals.md)
+00493c90 Strip_Initialize
+00493ea0 Strip_Begin
+00494030 Strip_SetSegmentBone
+00494140 Strip_AddSingleRingSegment
+00494230 Strip_End
+00494290 Strip_AddRing
+00494480 Strip_AddRingTriangles
+00494820 Strip_SetColors
+00494870 Strip_AddSegment
+00494ad0 Strip_InterpolatePoint
+00494be0 Strip_SetJitter
+00444340 GrappleHook_InitializeRope
+00444540 GrappleHook_BuildFlyingRope
+00453cd0 Grapple_Initialize
+004548f0 Wand_Initialize
+00454b20 Wand_StepJitter
+00454b90 Wand_FillJitter
+00454bb0 Wand_BuildBeam
 0040d550 Figure_Bind
 0040da30 Figure_SetLevel
 0042f240 Profile_GetGhostBeatenFlags

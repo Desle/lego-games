@@ -111,9 +111,25 @@ describe('checkEffectEmitter', () => {
     const started = startEffectEmitter(createStep(), SINGLE, 0, 'cannsmk')
 
     // Act
-    const checked = checkEffectEmitter(started, 0)
+    const checked = checkEffectEmitter(started, 0, SINGLE, null)
 
     // Assert
     expect(getEffect(checked, 0).emitterHandleIndex).toBe(0)
+  })
+
+  it('has the smoke follow the owner: 4 above its frame, its rotation and its velocity (0x00451b50)', () => {
+    // Arrange
+    const started = startEffectEmitter(createStep(), SINGLE, 0, 'cannsmk')
+    const rotation = [0, 1, 0, -1, 0, 0, 0, 0, 1] as const
+    const owner = { position: { x: 1, y: 2, z: 3 }, rotation, velocity: { x: 0, y: 0.5, z: 0 } }
+
+    // Act
+    const checked = checkEffectEmitter(started, 0, SINGLE, owner)
+
+    // Assert
+    const instance = checked.world.emitters.common?.instances[0]
+    expect(instance?.position).toEqual({ x: 1, y: 2, z: 7 })
+    expect(instance?.basis).toEqual(rotation)
+    expect(instance?.velocityOffset).toEqual({ x: 0, y: 500, z: 0 })
   })
 })

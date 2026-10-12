@@ -67,6 +67,8 @@ const createIdleEffect = (id: number, kind: PowerUpEffectKindValue): PowerUpEffe
     attachmentSlotIndices: Object.freeze([]),
     rocketIndex: 0,
     jitterMilliseconds: 0,
+    jitterDraws: Object.freeze([]),
+    jitterIndex: 0,
     sparkMilliseconds: 0,
     heldMilliseconds: 0,
     emitterHandleIndex: null,

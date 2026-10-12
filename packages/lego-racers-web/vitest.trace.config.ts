@@ -7,6 +7,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['src/**/*.trace.spec.ts'],
+    setupFiles: ['./vitest.trace.setup.ts'],
     testTimeout: 1_800_000,
   },
 })

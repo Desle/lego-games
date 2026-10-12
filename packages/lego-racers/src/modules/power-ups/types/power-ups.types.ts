@@ -182,6 +182,10 @@ export type PowerUpEffect = {
   readonly rocketIndex: number
   // Wand +0x224: milliseconds towards the next 50 ms jitter draw.
   readonly jitterMilliseconds: number
+  // Wand +0x1d0..+0x21c: the random table values behind the 20 jitter floats 0x00454b20 stores in a ring (empty for the
+  // other effects), and +0x220: the slot the next one goes in.
+  readonly jitterDraws: readonly number[]
+  readonly jitterIndex: number
   // Wand +0x22c: milliseconds to the next spark.
   readonly sparkMilliseconds: number
   // Wand +0x240: milliseconds the struck racer has been held.
