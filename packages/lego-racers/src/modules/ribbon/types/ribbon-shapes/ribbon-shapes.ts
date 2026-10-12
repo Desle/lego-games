@@ -26,3 +26,29 @@ export const TETHER_RIBBON_SHAPE: RibbonShape = Object.freeze({
   positiveControlColor: TETHER_POSITIVE_CONTROL_COLOR,
   negativeControlColor: TETHER_NEGATIVE_CONTROL_COLOR,
 })
+
+// 0x004b1558: the beam's half width (0.85).
+const LIGHTNING_HALF_WIDTH = Math.fround(0.85)
+// 0x004548f0: the offsets' third component, -0.25 (0xbe800000), at the sides of the ring.
+const LIGHTNING_SIDE_HEIGHT = -0.25
+// 0x004b1568, 0x004b156c, 0x004b1570: the bytes 0x004548f0 hands to 0x00494820.
+const LIGHTNING_END_COLOR: RibbonColor = Object.freeze([0x19, 0x41, 0xf5, 0xff])
+const LIGHTNING_POSITIVE_CONTROL_COLOR: RibbonColor = Object.freeze([0x19, 0x41, 0xff, 0xff])
+const LIGHTNING_NEGATIVE_CONTROL_COLOR: RibbonColor = Object.freeze([0x19, 0x41, 0xeb, 0xff])
+
+// 0x004548f0: the wand's beam (material "lightng"), five rings to a segment, the ring (0, w, -0.25), (0, 0, w / 2),
+// (0, -w, -0.25), its texture coordinates 0, 0.5 and 1; the counter wraps after 3 and the figure faces the camera.
+export const LIGHTNING_RIBBON_SHAPE: RibbonShape = Object.freeze({
+  ringsPerSegment: 5,
+  vertexOffsets: Object.freeze([
+    Object.freeze({ x: 0, y: LIGHTNING_HALF_WIDTH, z: LIGHTNING_SIDE_HEIGHT }),
+    Object.freeze({ x: 0, y: 0, z: Math.fround(LIGHTNING_HALF_WIDTH * HALF) }),
+    Object.freeze({ x: 0, y: -LIGHTNING_HALF_WIDTH, z: LIGHTNING_SIDE_HEIGHT }),
+  ]),
+  textureU: Object.freeze([0, HALF, 1]),
+  wrapRingCount: 3,
+  isWrapped: true,
+  endColor: LIGHTNING_END_COLOR,
+  positiveControlColor: LIGHTNING_POSITIVE_CONTROL_COLOR,
+  negativeControlColor: LIGHTNING_NEGATIVE_CONTROL_COLOR,
+})

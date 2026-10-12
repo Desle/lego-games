@@ -17,6 +17,7 @@ import type { RaceState } from '../../../race/index.ts'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
 import type { RibbonView } from '../../../ribbon/index.ts'
 import { getTetherRibbon } from '../get-tether-ribbon/get-tether-ribbon.ts'
+import { getWandRibbon } from '../get-wand-ribbon/get-wand-ribbon.ts'
 import type {
   AttachmentState,
   AttachmentView,
@@ -268,16 +269,24 @@ const getSpriteViews = (
       ]
     : []
 
-// 0x004542d0 draws the rope while the grapple flies, holds a racer and retracts (states 3 to 5).
+// 0x004542d0 draws the rope while the grapple flies, holds a racer and retracts (states 3 to 5); the wand draws its
+// beam as long as it lasts (0x00455020).
 const getRibbonViews = (raceState: RaceState): readonly RibbonView[] => {
   const { effects, activeEffectIds } = raceState.powerUpStep.world.effects
   return activeEffectIds.flatMap((effectId): readonly RibbonView[] => {
     const effect = effects[effectId]
     const motion = raceState.projectileWorld.motions[effectId]
+    if (effect === undefined || !DRAWN_STATES.includes(effect.state)) return []
     if (
-      effect === undefined ||
+      effect.kind === PowerUpEffectKind.WAND &&
+      motion?.kind === 'wand'
+    ) {
+      return [
+        getWandRibbon(raceState.context.arithmetic, motion.beam, motion.jitter, motion.initialJitter),
+      ]
+    }
+    if (
       effect.kind !== PowerUpEffectKind.GRAPPLE ||
-      !DRAWN_STATES.includes(effect.state) ||
       effect.state === EffectState.STARTING ||
       effect.ownerRacer === null ||
       motion?.kind !== 'grapple'

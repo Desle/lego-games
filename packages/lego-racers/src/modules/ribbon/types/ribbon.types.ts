@@ -1,4 +1,4 @@
-import type { Vector3 } from '../../simulation-math/index.ts'
+import type { Frame, Vector3 } from '../../simulation-math/index.ts'
 
 // Four bytes in the order the ribbon stores them (+0x160, +0x164, +0x168).
 export type RibbonColor = readonly [number, number, number, number]
@@ -48,8 +48,35 @@ export type RibbonCorner = {
   readonly color: RibbonColor
 }
 
-// The ribbon as triangles: corners in threes.
+// One ring laid along the ribbon: where each vertex sits in the frame of the segment's bone, the colour and the texture's v.
+export type RibbonRing = {
+  // Each vertex in its segment's frame: the ring's centre, the vertex offset and the jitter.
+  readonly locals: readonly Vector3[]
+  readonly color: RibbonColor
+  readonly v: number
+  // The bone (segment) the ring belongs to.
+  readonly bone: number
+}
+
+// A segment's bone (0x00494030): where the segment starts and how it points, in the ribbon figure's own frame.
+export type Bone = {
+  readonly frame: Frame
+}
+
+// The skinned strip 0x00494870 leaves in the figure: its frame, the bones, the rings and which ring joins which.
+export type RibbonSkin = {
+  readonly figure: Frame
+  readonly bones: readonly Bone[]
+  readonly rings: readonly RibbonRing[]
+  // The strips: [ring, the ring laid before it].
+  readonly pairs: readonly (readonly [number, number])[]
+  readonly textureU: readonly number[]
+}
+
+// A ribbon an effect draws: the skin, in the material it is drawn with. A ribbon that faces the camera turns its bones to
+// the camera when it is drawn (0x00494ca0).
 export type RibbonView = {
   readonly materialName: string
-  readonly corners: readonly RibbonCorner[]
+  readonly skin: RibbonSkin
+  readonly isFacingCamera: boolean
 }

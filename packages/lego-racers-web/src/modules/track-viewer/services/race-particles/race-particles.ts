@@ -6,6 +6,7 @@ import {
 } from '@lego-games/lego-racers/emitter'
 import type { EmitterPool, EmitterQuad } from '@lego-games/lego-racers/emitter'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-racers/simulation-math'
+import { getRibbonCorners } from '@lego-games/lego-racers/ribbon'
 import type { RibbonView } from '@lego-games/lego-racers/ribbon'
 import type { SpriteView } from '@lego-games/lego-racers/race-presentation'
 import type { Scene } from '@lego-games/lego-racers/scene'
@@ -106,7 +107,12 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
       const batch = getBatch(ribbon.materialName)
       if (batch === null) continue
       let corner = counts.get(ribbon.materialName) ?? 0
-      for (const source of ribbon.corners) {
+      const corners = getRibbonCorners(
+        arithmetic,
+        ribbon.skin,
+        ribbon.isFacingCamera ? cameraView.forward : null
+      )
+      for (const source of corners) {
         if (corner >= MAXIMUM_CORNERS) continue
         addCorner(batch, corner, { ...source.position, u: source.u, v: source.v }, source.color)
         corner += 1

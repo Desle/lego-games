@@ -7,12 +7,20 @@ import {
 } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Frame, Vector3 } from '../../../simulation-math/index.ts'
 import type {
+  Bone,
   RibbonColor,
   RibbonCorner,
   RibbonRequest,
   RibbonSegment,
   RibbonShape,
+  RibbonSkin,
 } from '../ribbon.types.ts'
+
+type RibbonBuild = {
+  rings: RibbonSkin['rings'][number][]
+  bones: Bone[]
+  pairs: [number, number][]
+}
 
 // 0x004b47a4: a segment shorter than the square root of this is not laid (0x00494870, 0x00494140).
 const MINIMUM_SQUARED_SEGMENT_LENGTH = Math.fround(0.02)
@@ -22,25 +30,6 @@ const WORLD_UP: Vector3 = Object.freeze({ x: 0, y: 0, z: 1 })
 const ALTERNATIVE_UP: Vector3 = Object.freeze({ x: 1, y: 0, z: 0 })
 // 0x004b47a4 compares squares; 0x004af388 is the 1.0 of the dot product test in 0x00493ea0.
 const PARALLEL_DOT = 1
-
-type Ring = {
-  // Each vertex in its segment's frame: the ring's centre, the vertex offset and the jitter.
-  readonly locals: readonly Vector3[]
-  readonly color: RibbonColor
-  readonly v: number
-  readonly bone: number
-}
-
-type Bone = {
-  // Where the segment starts and how it points, in the ribbon figure's own frame (0x00494030).
-  readonly frame: Frame
-}
-
-type RibbonBuild = {
-  readonly rings: Ring[]
-  readonly bones: Bone[]
-  readonly pairs: [number, number][]
-}
 
 type PlacedRing = {
   readonly center: Vector3
@@ -184,11 +173,11 @@ const getSegmentRings = (
 // The ribbon of 0x00493c90 as triangles in the world: rings of vertices along a chain of segments (0x00494870), each
 // segment a bone whose frame starts at the previous end and points along the segment (0x00494030). The skin puts every
 // vertex through its bone and then the figure's frame.
-export const getRibbonCorners = (
+export const getRibbonSkin = (
   arithmetic: FloatArithmetic,
   shape: RibbonShape,
   request: RibbonRequest
-): readonly RibbonCorner[] => {
+): RibbonSkin => {
   const figure = getFigureFrame(arithmetic, request)
   const build: RibbonBuild = { rings: [], bones: [], pairs: [] }
   let counter = 1
@@ -234,33 +223,65 @@ export const getRibbonCorners = (
     build.bones.push(bone)
     previousEnd = segment.end
   }
-  return getCorners(arithmetic, shape, build, figure)
+  return Object.freeze({ figure, textureU: shape.textureU, ...build })
 }
 
-const getCorners = (
+// 0x00494ca0: a figure with the camera-facing flag (+0x94) turns each bone about its first axis before it is drawn, so that
+// the bone's third axis points back at the camera (unless the two are parallel).
+const getBoneFacingCamera = (arithmetic: FloatArithmetic, bone: Bone, toCamera: Vector3): Bone => {
+  const { rotation } = bone.frame
+  const first: Vector3 = { x: rotation[0], y: rotation[1], z: rotation[2] }
+  const { add, multiply } = arithmetic
+  const dot = add(
+    add(multiply(first.z, toCamera.z), multiply(first.y, toCamera.y)),
+    multiply(first.x, toCamera.x)
+  )
+  if (dot >= PARALLEL_DOT || dot <= -PARALLEL_DOT) return bone
+  return Object.freeze({
+    frame: Object.freeze({
+      rotation: getRotationFromFrameAxes(arithmetic, { first, third: toCamera }),
+      position: bone.frame.position,
+    }),
+  })
+}
+
+// The ribbon's triangles in the world. `cameraForward` is the direction the camera looks along; a ribbon that faces the
+// camera (0x00494ca0) is given it, the others null.
+export const getRibbonCorners = (
   arithmetic: FloatArithmetic,
-  shape: RibbonShape,
-  build: RibbonBuild,
-  figure: Frame
+  skin: RibbonSkin,
+  cameraForward: Vector3 | null
 ): readonly RibbonCorner[] => {
+  const toCamera =
+    cameraForward === null
+      ? null
+      : getFrameInverseRotatedVector(
+          arithmetic,
+          skin.figure,
+          Object.freeze({ x: -cameraForward.x, y: -cameraForward.y, z: -cameraForward.z })
+        )
+  const bones =
+    toCamera === null
+      ? skin.bones
+      : skin.bones.map((bone) => getBoneFacingCamera(arithmetic, bone, toCamera))
   const getCorner = (ringIndex: number, vertexIndex: number): RibbonCorner => {
-    const ring = build.rings[ringIndex]
-    const bone = build.bones[ring?.bone ?? 0]
+    const ring = skin.rings[ringIndex]
+    const bone = bones[ring?.bone ?? 0]
     const local = ring?.locals[vertexIndex]
     if (ring === undefined || bone === undefined || local === undefined) {
       throw new MissingRibbonVertexError(ringIndex, vertexIndex)
     }
     const inFigure = getFrameTransformedPoint(arithmetic, bone.frame, local)
     return Object.freeze({
-      position: getFrameTransformedPoint(arithmetic, figure, inFigure),
-      u: shape.textureU[vertexIndex] ?? 0,
+      position: getFrameTransformedPoint(arithmetic, skin.figure, inFigure),
+      u: skin.textureU[vertexIndex] ?? 0,
       v: ring.v,
       color: ring.color,
     })
   }
   const corners: RibbonCorner[] = []
-  for (const [current, previous] of build.pairs) {
-    for (let cell = 0; cell < shape.vertexOffsets.length - 1; cell++) {
+  for (const [current, previous] of skin.pairs) {
+    for (let cell = 0; cell < (skin.rings[0]?.locals.length ?? 1) - 1; cell++) {
       // 0x00494480 writes the cell's triangles as (previous, current + 1, current) and (previous, previous + 1,
       // current + 1).
       corners.push(

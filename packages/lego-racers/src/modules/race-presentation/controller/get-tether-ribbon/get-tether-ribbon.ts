@@ -1,4 +1,4 @@
-import { getRibbonCorners, TETHER_RIBBON_SHAPE } from '../../../ribbon/index.ts'
+import { getRibbonSkin, TETHER_RIBBON_SHAPE } from '../../../ribbon/index.ts'
 import type { RibbonRequest, RibbonSegment, RibbonView } from '../../../ribbon/index.ts'
 import { BallisticFlightState, ROPE_START_HEIGHT } from '../../../projectiles/index.ts'
 import type { GrappleHook } from '../../../projectiles/index.ts'
@@ -195,6 +195,7 @@ export const getTetherRibbon = (
   }
   return Object.freeze({
     materialName: TETHER_MATERIAL_NAME,
-    corners: getRibbonCorners(arithmetic, TETHER_RIBBON_SHAPE, request),
+    skin: getRibbonSkin(arithmetic, TETHER_RIBBON_SHAPE, request),
+    isFacingCamera: false,
   })
 }
