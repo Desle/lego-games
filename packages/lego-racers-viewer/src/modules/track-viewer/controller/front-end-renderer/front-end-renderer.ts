@@ -74,7 +74,8 @@ export const createFrontEndRenderer = (
         tinted.height = source.height
         context.drawImage(source, 0, 0)
         context.globalCompositeOperation = 'multiply'
-        context.fillStyle = getCssColor(tint)
+        // The frame draws have alpha blending off, so the colour's alpha byte does not show.
+        context.fillStyle = getCssColor(tint | 0xff000000)
         context.fillRect(0, 0, tinted.width, tinted.height)
         context.globalCompositeOperation = 'destination-in'
         context.drawImage(source, 0, 0)

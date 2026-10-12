@@ -38,6 +38,16 @@ const SINGLE_KEYS: readonly (readonly [number, FrontEndInput, number])[] = [
   [250, 'down', 208],
   [270, 'accept', 28],
 ]
+// Six presses of right on the circuit race screen reach the last circuit (the yellow frame, the Final cinema).
+const LAST_CIRCUIT_KEYS: readonly (readonly [number, FrontEndInput, number])[] = [
+  ...CIRCUIT_KEYS,
+  ...[290, 310, 330, 350, 370, 390].map((frame): readonly [number, FrontEndInput, number] => [
+    frame,
+    'right',
+    205,
+  ]),
+]
+const LAST_CIRCUIT_FRAMES = [430, 440, 500]
 const CIRCUIT_FRAMES = [285, 300, 330, 332, 345, 350, 356, 392, 396, 400, 460, 520, 700]
 const SINGLE_FRAMES = [285, 300, 400, 500, 700]
 
@@ -139,6 +149,16 @@ describe.skipIf(!(getIsOriginalGamePresent() && getIsOriginalPresentationAvailab
       expect(Math.min(...frames.map((frame) => frame.share))).toBeGreaterThan(MATCHED_SHARE)
       expect(Math.min(...frames.map((frame) => frame.tintedDrawCount))).toBeGreaterThanOrEqual(8)
       expect(new Set(frames.map((frame) => frame.cinemaName)).size).toBeGreaterThan(1)
+    })
+
+    it('colours the frame of the last circuit yellow with the alpha the original draws', async () => {
+      // Arrange / Act
+      const frames = await runScenario(LAST_CIRCUIT_KEYS, LAST_CIRCUIT_FRAMES)
+
+      // Assert
+      expect(frames.every((frame) => frame.cinemaName === 'Final')).toBe(true)
+      expect(Math.min(...frames.map((frame) => frame.share))).toBeGreaterThan(MATCHED_SHARE)
+      expect(Math.min(...frames.map((frame) => frame.tintedDrawCount))).toBeGreaterThanOrEqual(8)
     })
   }
 )

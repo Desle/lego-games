@@ -26,11 +26,12 @@ const RACES_PER_CIRCUIT = 4
 // The last circuit has one race and no cycle.
 const FINAL_CIRCUIT_INDEX = 6
 // 0x00488cb0 gives the eight pieces of the preview's frame the colour DAT_004c2278[DAT_004c228c[circuit * 4 + race slot]]
-// (grey, gold, beige, blue and, for the last circuit, yellow), measured in the original's draws.
+// (grey, gold, beige, blue and, for the last circuit, yellow), measured in the original's draws; the yellow's alpha byte is 0x1f
+// in the draws too, and their alpha blending is off, so the pieces are opaque.
 const FRAME_TINT_INDICES: readonly number[] = [
   1, 0, 3, 2, 1, 0, 3, 2, 0, 1, 2, 3, 2, 0, 3, 1, 2, 0, 3, 1, 3, 1, 2, 0, 4, 0, 0, 0,
 ]
-const FRAME_TINTS: readonly number[] = [0xffadadad, 0xffffdf00, 0xffe6dcb4, 0xff253ddf, 0xffffda1f]
+const FRAME_TINTS: readonly number[] = [0xffadadad, 0xffffdf00, 0xffe6dcb4, 0xff253ddf, 0x1fffda1f]
 const GONEXT_INDEX = 0
 const GOBACK_INDEX = 1
 const SELECTOR_RECTANGLE = Object.freeze({ left: 3, top: 29, right: 220, bottom: 72 })

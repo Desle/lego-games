@@ -290,12 +290,17 @@ export const stepFrontEnd = (
   const isScreenChanged =
     stepped.state.screens.length !== advanced.screens.length ||
     stepped.state.screens.at(-1)?.screenId !== advanced.screens.at(-1)?.screenId
+  // A new circuit shows its first race (0x0047a0e0 calls 0x0047a2b0): the timer and the cinema start again.
+  const isPreviewRestarted =
+    isScreenChanged ||
+    stepped.state.screens.at(-1)?.selection.circuitIndex !==
+      advanced.screens.at(-1)?.selection.circuitIndex
   const entered: FrontEndState = getStateWithShowcaseOpened(
     advanced,
     {
       ...stepped.state,
       // The frame that opens a screen already runs its update (0x0047a3f0).
-      racePreview: isScreenChanged
+      racePreview: isPreviewRestarted
         ? advanceRacePreviewClock(
             createRacePreviewClock(),
             frameMilliseconds,
