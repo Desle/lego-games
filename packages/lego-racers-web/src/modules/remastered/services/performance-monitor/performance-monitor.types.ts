@@ -1,3 +1,9 @@
+export type HeaviestRow = {
+  readonly label: string
+  readonly triangles: number
+  readonly segments: number
+}
+
 export type PerformanceSnapshot = {
   readonly drawCalls: number
   readonly triangles: number

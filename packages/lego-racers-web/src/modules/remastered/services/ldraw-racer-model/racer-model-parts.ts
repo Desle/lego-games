@@ -1,5 +1,6 @@
 import { Box3, Group, Vector3 } from 'three'
 import type { Object3D } from 'three'
+import { disposeObject } from '../ldraw-racer/dispose-object.ts'
 import type { FoundWheel } from './ldraw-racer-model.types.ts'
 
 const WHEEL_CATEGORIES: readonly string[] = ['wheel', 'tyre']
@@ -10,6 +11,20 @@ const SAME_WHEEL_DISTANCE = 12
 const getCategory = (object: Object3D): string => {
   const category: unknown = object.userData['category']
   return typeof category === 'string' ? category.toLowerCase() : ''
+}
+
+// Gives the wheels found in the low resolution model the parts of the same wheels found in the high one (the units stay where they are
+// drawn: only what they hold changes), nearest first. A wheel has no studs, so its high resolution is drawn at any distance.
+export const upgradeWheels = (found: readonly FoundWheel[], detailed: readonly FoundWheel[]) => {
+  for (const wheel of detailed) {
+    const target = found.find(
+      (candidate) => candidate.centre.distanceTo(wheel.centre) < SAME_WHEEL_DISTANCE
+    )
+    if (target === undefined) continue
+    disposeObject(target.unit)
+    target.unit.clear()
+    target.unit.add(...wheel.unit.children)
+  }
 }
 
 // Takes the wheels and any minifigure out of a parsed LDraw model, by the category the library gives their parts (`Wheel`, `Tyre`,

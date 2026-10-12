@@ -22,6 +22,7 @@ import {
   SHADOW_RADIUS,
   SHADOW_STRENGTH,
 } from './shadow-pass.constants.ts'
+import { setIsShadowRenderActive } from '../ldraw-car/detail-switch.ts'
 import { bakeSceneryShadow } from './baked-scenery-shadow.ts'
 import type { BakedSceneryShadow } from './baked-scenery-shadow.types.ts'
 import { createLightFrame } from './light-frame.ts'
@@ -126,7 +127,9 @@ export const createShadowPass = (
       trackScene.overrideMaterial = depthMaterial
       renderer.setRenderTarget(target)
       renderer.clear(false, true, false)
+      setIsShadowRenderActive(true)
       renderer.render(trackScene, lightCamera)
+      setIsShadowRenderActive(false)
       renderer.setRenderTarget(previousTarget)
       trackScene.overrideMaterial = previousOverride
       showAgain(hidden)

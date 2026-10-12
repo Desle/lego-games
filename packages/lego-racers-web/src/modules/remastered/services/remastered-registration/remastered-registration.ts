@@ -24,6 +24,7 @@ import {
   createPerformancePass,
   getIsPerformanceRequested,
 } from '../performance-monitor/performance-monitor.ts'
+import { setShaderPrecompiler } from '../ldraw-car/shader-precompiler.ts'
 import { createLDrawPickupDrawing } from '../ldraw-pickup/ldraw-pickup-drawing.ts'
 import { loadLDrawModelIndex, getLDrawModelIndex } from '../ldraw-models/ldraw-model-client.ts'
 import { createLDrawRacerCar } from '../ldraw-racer-model/ldraw-racer-car.ts'
@@ -91,9 +92,24 @@ export const registerRemastered = async (search: string) => {
               mode,
               getTrackSun(search, request.trackKey, request.trackGroup)
             )
-      return getIsPerformanceRequested(search)
+      const pass = getIsPerformanceRequested(search)
         ? createPerformancePass(request, shadowPass)
         : shadowPass
+      // Programs depend on the scene's lights: with none yet (no car has posed), compiling now would be wasted.
+      setShaderPrecompiler((object) =>
+        request.trackScene.getObjectByProperty('isDirectionalLight', true) === undefined
+          ? Promise.resolve()
+          : request.renderer
+              .compileAsync(object, request.camera, request.trackScene)
+              .then(() => undefined)
+      )
+      return {
+        beforeRender: () => pass?.beforeRender(),
+        dispose: () => {
+          setShaderPrecompiler(null)
+          pass?.dispose()
+        },
+      }
     },
     getEffectModelDrawing: (request) =>
       getIsLDrawRequested(search) ? createLDrawPickupDrawing(request) : null,
