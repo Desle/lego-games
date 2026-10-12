@@ -68,7 +68,8 @@ export const getSceneTextures = (assets: RaceAssets): ReadonlyMap<string, PortTe
     )
   )
 
-const CANDIDATE_COUNT = 6
+// Each car part has a model matrix of its own: with fewer candidates the far racers lose theirs and count as missing.
+const CANDIDATE_COUNT = 24
 const HUD_TOLERANCE_PIXELS = 0.25
 // The HUD never wraps its text (the overlay's width, race-hud-overlay.tsx).
 const HUD_UNBOUNDED_WIDTH = 0x7fff
