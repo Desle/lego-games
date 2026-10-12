@@ -26,6 +26,7 @@
     "pixel-trace": "sh reverse-engineering/emulator/setup.sh && pnpm --filter @lego-games/lego-racers-web run pixel-trace",
     "render-coverage": "sh reverse-engineering/emulator/setup.sh && pnpm --filter @lego-games/lego-racers-web run render-coverage",
     "audio-trace": "sh reverse-engineering/emulator/setup.sh && pnpm --filter @lego-games/lego-racers-web run audio-trace",
+    "ldraw-fidelity": "pnpm --filter @lego-games/lego-racers-web run ldraw-fidelity",
     "dev": "pnpm --filter @lego-games/lego-racers-web run dev"
   },
   "prettier": "@lego-games/tooling/prettier",

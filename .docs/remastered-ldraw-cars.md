@@ -72,6 +72,8 @@ Where the LDraw car is drawn: the race, the build-a-car screen (as bricks are pl
 
 ## The gallery
 
+How well a brick, chassis or car matches the original is measured, not looked at: see [Judging LDraw work](remastered.md#judging-ldraw-work) (`pnpm run ldraw-fidelity`); the gallery is for people.
+
 `/ldraw-gallery.html` on the dev server is a page that exposes `renderCar(savePath, index, mode, view, width, height)`, `renderPieceSheet(names, columns, cellSize)` and `getDesignCount(savePath)` on `window` (modes `ldraw`, `game`, `overlay`; views `front`, `rear`, `top`), for a headless browser to call and save the canvas. The page is not part of the build (`vite build` only builds `index.html`).
 
 ## Champion cars and chassis recipes
