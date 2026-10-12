@@ -133,6 +133,13 @@ const getAlphaTestCode = (sceneMaterial: SceneMaterial): string | null => {
   ].join('\n')
 }
 
+// Direct3D's surface has no alpha channel, so a blend leaves it alone; three.js would blend the canvas's alpha with the
+// colour's and the page would composite (and read back) the image brighter than it was drawn.
+export const KEPT_SURFACE_ALPHA = Object.freeze({
+  blendSrcAlpha: ZeroFactor,
+  blendDstAlpha: OneFactor,
+})
+
 const getBlendingParameters = (sceneMaterial: SceneMaterial): BlendingParameters => {
   const { renderState } = sceneMaterial
   if (!renderState.isBlendEnabled) return { blending: NoBlending, transparent: false }
@@ -140,6 +147,7 @@ const getBlendingParameters = (sceneMaterial: SceneMaterial): BlendingParameters
     blending: CustomBlending,
     blendSrc: BLEND_FACTORS[renderState.sourceBlend],
     blendDst: BLEND_FACTORS[renderState.destinationBlend] as BlendingDstFactor,
+    ...KEPT_SURFACE_ALPHA,
     transparent: true,
   }
 }

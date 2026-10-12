@@ -1,4 +1,4 @@
-import { getDisplayedColourShift } from '../../../racer/index.ts'
+import { getDisplayedColourShift, getWarpTunnelSwing } from '../../../racer/index.ts'
 import { EffectState, PowerUpEffectKind } from '../../../power-ups/index.ts'
 import {
   getCameraRacerView,
@@ -7,6 +7,7 @@ import {
   updateCamera,
 } from '../../../race-camera/index.ts'
 import type { CameraState } from '../../../race-camera/index.ts'
+import { INITIAL_FIELD_OF_VIEW_DEGREES } from '../../../race/index.ts'
 import type { RaceState } from '../../../race/index.ts'
 import {
   getFrameTransformedPoint,
@@ -24,6 +25,12 @@ const FIGURE_THIRD_AXIS: Vector3 = Object.freeze({ x: 0, y: 0, z: 1 })
 const WARP_TRAVEL_MILLISECONDS = 1500
 // The camera follows the car as after a snap; one millisecond is a step the follow modes never read as a pause.
 const SNAP_STEP_MILLISECONDS = 1
+
+// 0x0045d940 sets the view's field of view to the table value times 45 plus the base the power-up system carries (+0x54
+// of it, effect +0xb0: the game settings' +0xc, less 25 with two local players); **hypothesis:** the settings' +0xc is the camera's initial 65 degrees, which the
+// pixel trace of the warp confirms.
+const SWING_DEGREES = 45 // 0x004b1a68
+const MULTIPLAYER_FIELD_OF_VIEW_REDUCTION = 25 // 0x004b08bc
 
 // What the player's warp draws (0x0045d940, vtable 0x004b1a94, run by the draw of the power-up system for the camera of
 // the warping racer): the tunnel world of TURBO3.WDB (`dbricks` and `dtube`) animated for the time spent in the warp,
@@ -77,7 +84,13 @@ export const getWarpView = (
     position: ZERO_VECTOR3,
     rotation,
   })
+  const { multiply, add, subtract } = arithmetic
+  const baseFieldOfView = raceState.isMultiplayer
+    ? subtract(INITIAL_FIELD_OF_VIEW_DEGREES, MULTIPLAYER_FIELD_OF_VIEW_REDUCTION)
+    : INITIAL_FIELD_OF_VIEW_DEGREES
+  const swing = getWarpTunnelSwing(arithmetic, raceState.context.tables, effect.timerMilliseconds)
   return Object.freeze({
+    fieldOfViewDegrees: add(multiply(swing, SWING_DEGREES), baseFieldOfView),
     tunnelMilliseconds: WARP_TRAVEL_MILLISECONDS - effect.timerMilliseconds,
     pose,
     cameraView: getCameraView(

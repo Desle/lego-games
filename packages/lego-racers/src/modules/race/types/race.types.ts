@@ -28,6 +28,7 @@ import type {
 } from '../../power-ups/index.ts'
 import type { SavedCar } from '../../car-builder/index.ts'
 import type { CameraFovEffect } from './camera-fov-effect/camera-fov-effect.types.ts'
+import type { ScreenFader } from './screen-fader/screen-fader.types.ts'
 import type { PowerUpPlacements } from '../../power-up/index.ts'
 import type { RacerAppearance, RacerFigures } from '../../racer-appearance/index.ts'
 import type {
@@ -217,6 +218,8 @@ export type RaceState = {
   readonly playerControllers: readonly PlayerController[]
   // Camera +0x134..+0x148 of each local player: the field-of-view effect, which draws from the random table.
   readonly cameraFovEffects: readonly CameraFovEffect[]
+  // Race +0x27fc (0x00494e10, two entries): the screen fader the warp (and the race's start and end) lay over the views.
+  readonly screenFader: ScreenFader
   // Race +0x6dc: the power-ups, and the events they raised that Race_Update has not handed on yet.
   readonly powerUpStep: PowerUpStep
   readonly powerUpSetups: readonly RaceRacerPowerUpSetup[]

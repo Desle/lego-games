@@ -2,6 +2,7 @@ import type {
   EffectViews,
   GhostCar,
   RacerPose,
+  ScreenFadeView,
   SpriteView,
   WarpView,
 } from '@lego-games/lego-racers/race-presentation'
@@ -25,6 +26,7 @@ import { createRaceDecals } from '../race-decals/race-decals.ts'
 import { createRaceParticles } from '../race-particles/race-particles.ts'
 import { getFrameMatrix } from '../frame-matrix/frame-matrix.ts'
 import { createRaceEffects } from '../race-effects/race-effects.ts'
+import { createScreenFadeOverlay } from '../screen-fade-overlay/screen-fade-overlay.ts'
 import { createSceneObject } from '../scene-object/scene-object.ts'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import { createModelObject } from '../model-object/model-object.ts'
@@ -124,6 +126,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   // (vehicle +0x3c); the driver at the seat carried by that frame (LEGORacers.exe 0x0043e740).
   const colourShiftKeys = new Map<number, string>()
   const effects = createRaceEffects(trackScene, assets.effectModels)
+  const screenFadeOverlay = createScreenFadeOverlay()
   // 0x0045d940: while the player is carried the tunnel and the car are drawn and the track is not. The tunnel is made
   // anew when a warp starts, so its clocks start at 0, and is advanced to the time spent in the warp.
   const warpGroup = new Group()
@@ -173,8 +176,11 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     allCameraView: CameraView,
     effectViews: EffectViews,
     warpView: WarpView | null = null,
-    ghostCars: readonly GhostCar[] = []
+    ghostCars: readonly GhostCar[] = [],
+    screenFades: readonly ScreenFadeView[] = [],
+    fieldOfViewDegrees = ORIGINAL_FIELD_OF_VIEW_DEGREES
   ) => {
+    screenFadeOverlay.update(screenFades)
     setWarpTunnel(warpView)
     shown.track.group.visible = warpView === null
     particles.group.visible = warpView === null
@@ -264,6 +270,8 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
       }
     }
     const { position, forward, up } = cameraView
+    camera.fov = warpView === null ? fieldOfViewDegrees : warpView.fieldOfViewDegrees
+    camera.updateProjectionMatrix()
     camera.position.set(position.x, position.y, position.z)
     // The engine's camera frames take a negated up vector (see the world's cameras).
     camera.up.set(-up.x, -up.y, -up.z)
@@ -287,6 +295,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   return Object.freeze({
     trackScene,
     backgroundScene,
+    screenFadeOverlay,
     camera,
     racerRigs,
     update,
@@ -303,6 +312,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
       shown.backdrop?.dispose()
       shown.sky?.dispose()
       effects.dispose()
+      screenFadeOverlay.dispose()
       for (const { objects } of racerRigs) for (const object of objects) object.dispose()
       for (const rig of Object.values(ghostRigs)) {
         if (rig !== null) for (const object of rig.objects) object.dispose()
@@ -333,6 +343,7 @@ export const createRaceViewport = (
       renderer.clear()
       renderer.render(stage.backgroundScene, stage.camera)
       renderer.render(stage.trackScene, stage.camera)
+      renderer.render(stage.screenFadeOverlay.scene, stage.screenFadeOverlay.camera)
     },
     dispose: () => {
       stage.dispose()

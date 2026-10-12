@@ -60,7 +60,10 @@ export const runPixelTrace = async (request: PixelTraceRequest): Promise<PixelTr
         getRacerPoses(raceState),
         presentation.cameraView,
         getEffectViews(raceState),
-        presentation.warpView
+        presentation.warpView,
+        [],
+        presentation.screenFades,
+        presentation.fieldOfViewDegrees
       )
       viewport.showHazards(raceState.trackLogic.worlds.track, [
         raceState.racerSet.emitters.common,

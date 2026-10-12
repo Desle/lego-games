@@ -38,6 +38,9 @@ export {
   stepScriptedCarBody,
 } from './types/scripted-car-body/scripted-car-body.ts'
 export { PauseMenuMode } from './types/pause-menu/pause-menu.ts'
+export { INITIAL_FOV as INITIAL_FIELD_OF_VIEW_DEGREES } from './controller/camera-fov-effect/camera-fov-effect.ts'
+export { getScreenFadeAlpha } from './types/screen-fader/screen-fader.ts'
+export type { ScreenFade, ScreenFader } from './types/screen-fader/screen-fader.types.ts'
 export { RaceExit } from './types/race-exit/race-exit.ts'
 export { getStartFrame } from './types/start-frame/start-frame.ts'
 export type {

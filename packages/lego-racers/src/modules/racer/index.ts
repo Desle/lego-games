@@ -8,6 +8,7 @@ export {
   getRacerAfterWarpDraw,
   getRacerWithPartsMarked,
   getWarpFadeScale,
+  getWarpTunnelSwing,
 } from './types/vehicle-bounds/vehicle-bounds.ts'
 export {
   getFreshRacerVolumeParts,

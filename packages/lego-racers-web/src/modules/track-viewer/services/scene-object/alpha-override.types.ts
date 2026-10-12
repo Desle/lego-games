@@ -6,6 +6,8 @@ export type AlphaOverrideOriginal = {
   readonly blending: Blending
   readonly blendSrc: BlendingSrcFactor
   readonly blendDst: BlendingDstFactor
+  readonly blendSrcAlpha: BlendingSrcFactor | null
+  readonly blendDstAlpha: BlendingDstFactor | null
   readonly isTransparent: boolean
   readonly renderState: SceneRenderState | undefined
 }

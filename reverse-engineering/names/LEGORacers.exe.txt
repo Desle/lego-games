@@ -932,3 +932,13 @@
 0048bbf0 HazardHammer_Load
 0043ab10 CollisionManager_AnswerShapes
 004513d0 Listener_DoNothing
+00494e10 ScreenFader_SetEntryCount
+00494eb0 ScreenFader_Start
+00494f30 ScreenFader_GetIsActive
+00494f60 ScreenFader_Update
+00494fa0 ScreenFader_Draw
+00490550 ScreenFade_Start
+00490590 ScreenFade_Update
+004905e0 ScreenFade_Draw
+00490530 ScreenFade_Reset
+00427e80 Camera_UpdateFieldOfView

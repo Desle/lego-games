@@ -25,17 +25,40 @@ const TABLE_INDEX_SCALE = getFloatFromBits(0xc322f983) // 0x004b02f4, -1024 / 2p
 const TABLE_SIZE_MASK = 0x3ff
 const TABLE_QUARTER_TURN = 0x100
 
+const getWarpTableValue = (
+  arithmetic: FloatArithmetic,
+  tables: RacerTables,
+  radians: number
+): number => {
+  const index = Math.trunc(arithmetic.multiply(radians, TABLE_INDEX_SCALE))
+  return getTableCosine(tables, (-index - TABLE_QUARTER_TURN) & TABLE_SIZE_MASK)
+}
+
 export const getWarpFadeScale = (
   arithmetic: FloatArithmetic,
   tables: RacerTables,
   timeMilliseconds: number
-): number => {
-  const { multiply } = arithmetic
-  const index = Math.trunc(
-    multiply(multiply(multiply(timeMilliseconds, FADE_RATE), PI), TABLE_INDEX_SCALE)
+): number =>
+  getWarpTableValue(
+    arithmetic,
+    tables,
+    arithmetic.multiply(arithmetic.multiply(timeMilliseconds, FADE_RATE), PI)
   )
-  return getTableCosine(tables, (-index - TABLE_QUARTER_TURN) & TABLE_SIZE_MASK)
-}
+
+// The warp draw's view swing (0x0045d940): the same table, read for the effect's timer (counting the 1,500 ms of the
+// carry down) at `timer * pi * (1 / 1500)`.
+const TUNNEL_RATE = getFloatFromBits(0x3a2ec33e) // 0x004b1aa8
+
+export const getWarpTunnelSwing = (
+  arithmetic: FloatArithmetic,
+  tables: RacerTables,
+  timerMilliseconds: number
+): number =>
+  getWarpTableValue(
+    arithmetic,
+    tables,
+    arithmetic.multiply(arithmetic.multiply(timerMilliseconds, PI), TUNNEL_RATE)
+  )
 
 const getFigureWithScale = (figure: Figure, scale: number): Figure =>
   Object.freeze({ ...figure, scale })

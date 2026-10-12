@@ -88,6 +88,10 @@ export type RacePresentationFrame = {
   readonly cameraView: CameraView
   // The warp's tunnel scene while the player is carried (0x0045d940), else null.
   readonly warpView: WarpView | null
+  // The camera's field of view (the frame's +8, eased by the camera's view effect) when no warp tunnel is drawn.
+  readonly fieldOfViewDegrees: number
+  // The screen fades laid over the view, drawn in order after everything else.
+  readonly screenFades: readonly ScreenFadeView[]
   // null in the introduction and the results, when the original draws no HUD.
   readonly hudFrame: HudFrame | null
   readonly sounds: readonly SoundRequest[]
@@ -96,9 +100,22 @@ export type RacePresentationFrame = {
   readonly music: MusicCue | null
 }
 
+// A screen fade (0x004905e0): a quad over the player's view in one colour, blended with `alpha` of 255. The warp's draw
+// (0x0045d940) draws the fader once inside the tunnel scene and Race_Render once more at the end, so the fade lays
+// over the view `drawCount` times.
+export type ScreenFadeView = {
+  readonly red: number
+  readonly green: number
+  readonly blue: number
+  readonly alpha: number
+  readonly drawCount: number
+}
+
 // What the player's warp draws instead of the track: the tunnel animated for `tunnelMilliseconds`, the car at the origin
 // (`pose`) and the camera that follows it.
 export type WarpView = {
+  // The view's vertical field of view while the tunnel is drawn (it swings with the carry's clock).
+  readonly fieldOfViewDegrees: number
   readonly tunnelMilliseconds: number
   readonly pose: RacerPose
   readonly cameraView: CameraView

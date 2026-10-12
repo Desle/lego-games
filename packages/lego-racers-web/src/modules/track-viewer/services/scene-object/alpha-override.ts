@@ -2,6 +2,7 @@ import { BlendFactor } from '@lego-games/lego-racers/scene'
 import type { SceneRenderState } from '@lego-games/lego-racers/scene'
 import { CustomBlending, OneMinusSrcAlphaFactor, SrcAlphaFactor } from 'three'
 import type { BufferAttribute, BufferGeometry, Material, Mesh, Object3D } from 'three'
+import { KEPT_SURFACE_ALPHA } from './scene-material.ts'
 import type { AlphaOverrideOriginal } from './alpha-override.types.ts'
 
 const CHANNEL_MAXIMUM = 255
@@ -28,6 +29,8 @@ const setMaterialOverride = (material: Material, isOverridden: boolean): void =>
     blending: material.blending,
     blendSrc: material.blendSrc,
     blendDst: material.blendDst,
+    blendSrcAlpha: material.blendSrcAlpha,
+    blendDstAlpha: material.blendDstAlpha,
     isTransparent: material.transparent,
     renderState: material.userData['renderState'] as SceneRenderState | undefined,
   }
@@ -37,6 +40,8 @@ const setMaterialOverride = (material: Material, isOverridden: boolean): void =>
       blending: original.blending,
       blendSrc: original.blendSrc,
       blendDst: original.blendDst,
+      blendSrcAlpha: original.blendSrcAlpha,
+      blendDstAlpha: original.blendDstAlpha,
       transparent: original.isTransparent,
     })
     Object.assign(material.userData, { renderState: original.renderState })
@@ -46,6 +51,7 @@ const setMaterialOverride = (material: Material, isOverridden: boolean): void =>
     blending: CustomBlending,
     blendSrc: SrcAlphaFactor,
     blendDst: OneMinusSrcAlphaFactor,
+    ...KEPT_SURFACE_ALPHA,
     transparent: true,
   })
   if (original.renderState !== undefined) {
