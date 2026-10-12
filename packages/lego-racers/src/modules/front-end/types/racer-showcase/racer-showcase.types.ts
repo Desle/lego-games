@@ -1,3 +1,4 @@
+import type { ScreenNavigation } from '../front-end-screen.types.ts'
 import type { SavedCar } from '../../../car-builder/index.ts'
 import type {
   SkeletalAnimation,
@@ -11,6 +12,8 @@ export type RacerShowcaseAnimation = {
   // `breath1 breath2 swayf watch hips tapfoot hey!` (string ids 0x74 0x75 0x77 0x78 0x79 0x7a 0x7b); -1 for a name the
   // animation does not have (0x00486730 returns -1).
   readonly idleClipIndices: readonly number[]
+  // `jump yes! spin` (string ids 0x7c 0x7e 0x7f, 0x004c21cc): the clips a pressed button starts.
+  readonly reactionClipIndices: readonly number[]
 }
 
 // What the pick racer screen keeps of the showcase (the racer slot's figure `+0x232c` and the rotating shadow's clock).
@@ -23,6 +26,8 @@ export type RacerShowcase = {
   // The clock of the turntable, from the first frame of the screen: `CRSDOW.ADB` clip `a0` (200 frames) turns the car and
   // the shadows.
   readonly turntableMilliseconds: number
+  // The way the screen leaves once the reaction clip of a pressed button has ended (0x004869b0 holds it until then).
+  readonly pendingNavigation: ScreenNavigation | null
 }
 
 // The showcase after a step: the shared random cursor moves with every idle clip drawn.

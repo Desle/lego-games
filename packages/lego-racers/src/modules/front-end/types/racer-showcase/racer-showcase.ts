@@ -17,7 +17,14 @@ export const RACER_SHOWCASE_CAR_POSITION: readonly [number, number, number] = Ob
 ])
 
 // The string ids (MENUNAME.SRF) of the idle clips 0x00486730 draws from (`0x004c21bc`) and of the clips a pressed button
-// starts (`0x004c21cc`: `jump`, `yes!`, `spin`; not ported: the screen leaves at once).
+// starts (`0x004c21cc`: `jump`, `yes!`, `spin`; 0x00486890 draws one of the three).
 export const RACER_SHOWCASE_IDLE_STRING_IDS: readonly number[] = Object.freeze([
   0x74, 0x75, 0x77, 0x78, 0x79, 0x7a, 0x7b,
 ])
+
+export const RACER_SHOWCASE_REACTION_STRING_IDS: readonly number[] = Object.freeze([
+  0x7c, 0x7e, 0x7f,
+])
+
+// 0x00486890: the reaction blends in over 200 ms with both clips held (`0x0040db80(clip, 200, 0.0, 0, 0, 0)`).
+export const RACER_SHOWCASE_REACTION_BLEND_MILLISECONDS = 200
