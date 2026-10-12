@@ -6,6 +6,8 @@ import type {
   CarDrawingRequest,
   DriverDrawing,
   DriverDrawingRequest,
+  RaceRenderPass,
+  RaceRenderRequest,
   TextureCreatedEvent,
   ViewerExtension,
 } from './viewer-extensions.types.ts'
@@ -17,11 +19,15 @@ export const NEUTRAL_EXTENSION: ViewerExtension = Object.freeze({
   getRaceDisplay: () => null,
   getMenuSurfaceScale: () => null,
   getSoundReplacement: () => Promise.resolve(null),
+  getRaceRenderPass: () => null,
   getEffectModelDrawing: () => null,
   getCarDrawing: () => null,
   getDriverDrawing: () => null,
   getSelections: () => [],
 })
+
+// The name of the mesh of a racer's blob shadow (the decal the original projects under each car), so a layer can find it.
+export const RACER_SHADOW_DECAL_NAME = 'racer-shadow-decal'
 
 let registeredExtensions: readonly ViewerExtension[] = Object.freeze([])
 
@@ -67,6 +73,12 @@ export const getSoundReplacement = async (
   }
   return null
 }
+
+export const getRaceRenderPasses = (request: RaceRenderRequest): readonly RaceRenderPass[] =>
+  registeredExtensions.flatMap((extension) => {
+    const pass = extension.getRaceRenderPass(request)
+    return pass === null ? [] : [pass]
+  })
 
 export const getEffectModelDrawing = (request: EffectModelDrawingRequest): Object3D | null => {
   for (const extension of registeredExtensions) {

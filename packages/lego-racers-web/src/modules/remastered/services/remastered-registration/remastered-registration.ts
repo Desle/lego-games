@@ -17,6 +17,17 @@ import { loadLDrawModelIndex, getLDrawModelIndex } from '../ldraw-models/ldraw-m
 import { createLDrawRacerCar } from '../ldraw-racer-model/ldraw-racer-car.ts'
 import { createLDrawRacerDriver } from '../ldraw-racer-model/ldraw-racer-driver.ts'
 import { CHAMPION_CAR_CODES, CHASSIS_NAMES } from '../ldraw-racer-model/known-racer-models.ts'
+import {
+  getShadowMode,
+  getShadowModeFromLabel,
+  getShadowModeLabel,
+  REAL_SHADOWS_LABEL,
+  SCENERY_SHADOWS_LABEL,
+  SHADOWS_PARAMETER,
+} from '../real-shadows/shadow-mode.ts'
+import { ShadowMode } from '../real-shadows/shadow-mode.types.ts'
+import { createShadowPass } from '../real-shadows/shadow-pass.ts'
+import { getTrackSun } from '../real-shadows/sun-selection.ts'
 import { getAudioVariants, getTextureVariants } from '../texture-variants/texture-variants.ts'
 import { getNativeMenuSurfaceScale } from '../widescreen-display/menu-surface.ts'
 import { getWidescreenDisplay } from '../widescreen-display/widescreen-display.ts'
@@ -57,6 +68,15 @@ export const registerRemastered = async (search: string) => {
       getIsLDrawRequested(search) ? createLDrawRacerCar(request, settings) : null,
     getDriverDrawing: (request) =>
       getIsLDrawRequested(search) ? createLDrawRacerDriver(request, search) : null,
+    getRaceRenderPass: (request) => {
+      const mode = getShadowMode(search)
+      if (mode === ShadowMode.CLASSIC) return null
+      return createShadowPass(
+        request,
+        mode,
+        getTrackSun(search, request.trackKey, request.trackGroup)
+      )
+    },
     getEffectModelDrawing: (request) =>
       getIsLDrawRequested(search) ? createLDrawPickupDrawing(request) : null,
     getSelections: () => [
@@ -64,6 +84,7 @@ export const registerRemastered = async (search: string) => {
       `audio=${audioVariant ?? 'none'}`,
       `bricks=${getIsLDrawRequested(search) ? LDRAW_BRICKS : CLASSIC_BRICKS}`,
       `chassis=${getIsChassisFallbackRequested(search) ? GAME_CHASSIS : 'recipe'}`,
+      `shadows=${getShadowMode(search)}`,
     ],
     getSoundReplacement: (context, archivePath) =>
       audioVariant === null
@@ -97,6 +118,14 @@ const selectChassis = (chassis: string | null) => {
   const url = new URL(globalThis.location.href)
   if (chassis === null) url.searchParams.delete(CHASSIS_PARAMETER)
   else url.searchParams.set(CHASSIS_PARAMETER, GAME_CHASSIS)
+  if (!url.searchParams.has('hd')) url.searchParams.set('hd', '')
+  globalThis.location.assign(url.toString())
+}
+
+// Switching shadows reloads the page: the shadow pass is made with the race.
+const selectShadows = (label: string | null) => {
+  const url = new URL(globalThis.location.href)
+  url.searchParams.set(SHADOWS_PARAMETER, getShadowModeFromLabel(label))
   if (!url.searchParams.has('hd')) url.searchParams.set('hd', '')
   globalThis.location.assign(url.toString())
 }
@@ -138,6 +167,12 @@ export const getRemasteredSelectors = async (
       options: ['Game geometry'],
       selected: getIsChassisFallbackRequested(search) ? 'Game geometry' : null,
       onSelected: selectChassis,
+    },
+    {
+      label: 'Shadows (reloads): Classic blobs / Real / Real + scenery',
+      options: [REAL_SHADOWS_LABEL, SCENERY_SHADOWS_LABEL],
+      selected: getIsRemasteredRequested(search) ? getShadowModeLabel(getShadowMode(search)) : null,
+      onSelected: selectShadows,
     },
     getModelSelector(),
   ]

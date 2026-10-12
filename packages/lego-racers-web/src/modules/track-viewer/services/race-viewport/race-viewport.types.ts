@@ -5,7 +5,7 @@ import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import type { ScreenFadeOverlay } from '../screen-fade-overlay/screen-fade-overlay.types.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
-import type { PerspectiveCamera, Scene as ThreeScene } from 'three'
+import type { Group, PerspectiveCamera, Scene as ThreeScene } from 'three'
 import type {
   EffectViews,
   GhostCar,
@@ -77,6 +77,8 @@ export type RacerRig = {
 export type RaceStage = Pick<RaceViewport, 'update' | 'showHazards' | 'animate' | 'dispose'> & {
   readonly backgroundScene: ThreeScene
   readonly trackScene: ThreeScene
+  readonly trackGroup: Group
+  readonly trackKey: string
   readonly screenFadeOverlay: ScreenFadeOverlay
   readonly camera: PerspectiveCamera
   readonly racerRigs: readonly RacerRig[]

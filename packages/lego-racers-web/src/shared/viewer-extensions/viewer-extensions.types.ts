@@ -3,7 +3,15 @@ import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { HudCommand } from '@lego-games/lego-racers/race-hud'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
-import type { DataTexture, Matrix4, Object3D } from 'three'
+import type {
+  DataTexture,
+  Group,
+  Matrix4,
+  Object3D,
+  PerspectiveCamera,
+  Scene,
+  WebGLRenderer,
+} from 'three'
 
 export type TexturePixels = {
   readonly colors: Uint8Array
@@ -48,6 +56,23 @@ export type RaceDisplay = {
   // True when the stage fills the whole window instead of being scaled into it.
   readonly isFullWindow: boolean
   readonly getHudCommands: (commands: readonly HudCommand[]) => readonly HudCommand[]
+}
+
+// The race's drawing as a layer may add to it before each frame is rendered.
+export type RaceRenderRequest = {
+  readonly renderer: WebGLRenderer
+  readonly camera: PerspectiveCamera
+  readonly trackScene: Scene
+  // The objects of the track's world (its instances, one group each, tagged with `userData.instanceKind`), in the track's own frame.
+  readonly trackGroup: Group
+  // The world path of the track's BSP tree: what tells one track from another.
+  readonly trackKey: string
+}
+
+// Work a layer does just before the race's scenes are rendered (after the poses are set).
+export type RaceRenderPass = {
+  readonly beforeRender: () => void
+  readonly dispose: () => void
 }
 
 // An effect the race draws from a model of the original's (a power-up brick on the track, say).
@@ -141,6 +166,8 @@ export type ViewerExtension = {
   readonly getCarDrawing: (request: CarDrawingRequest) => CarDrawing | null
   // Something to draw in place of a driver, complete; null keeps the original's.
   readonly getDriverDrawing: (request: DriverDrawingRequest) => DriverDrawing | null
+  // Something to run before each frame of this race is rendered; null adds nothing.
+  readonly getRaceRenderPass: (request: RaceRenderRequest) => RaceRenderPass | null
   // Something to draw in place of the model the original draws for an effect, in that model's frame (the original's units, its scale applied); null keeps the original's.
   readonly getEffectModelDrawing: (request: EffectModelDrawingRequest) => Object3D | null
   // The selections the layer runs with (texture pack, audio pack, bricks), for the notes of a recording.

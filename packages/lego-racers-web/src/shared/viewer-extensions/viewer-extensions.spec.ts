@@ -8,6 +8,7 @@ import {
   getMenuSurfaceScale,
   getCarDrawing,
   getDriverDrawing,
+  getRaceRenderPasses,
   getSoundReplacement,
   getIsClassic,
   NEUTRAL_EXTENSION,
@@ -73,6 +74,21 @@ describe('viewer extensions', () => {
 
     // Assert
     expect(replacement).toBe(buffer)
+  })
+
+  it('adds no render pass to a race with no extension, and takes the ones extensions have', () => {
+    // Arrange
+    const request = {} as Parameters<typeof getRaceRenderPasses>[0]
+    const pass = { beforeRender: () => undefined, dispose: () => undefined }
+    const classicPasses = getRaceRenderPasses(request)
+    registerViewerExtension(NEUTRAL_EXTENSION)
+    registerViewerExtension({ ...NEUTRAL_EXTENSION, getRaceRenderPass: () => pass })
+
+    // Act
+    const passes = getRaceRenderPasses(request)
+
+    // Assert
+    expect([classicPasses, passes]).toEqual([[], [pass]])
   })
 
   it('draws an effect model as the original does until an extension offers a drawing', () => {
