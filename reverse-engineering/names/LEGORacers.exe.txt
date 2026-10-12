@@ -968,6 +968,12 @@
 0042f240 Profile_GetGhostBeatenFlags
 00488010 RaceSelectScreen_ShowRace
 00487b50 RaceSelectScreen_CreateWidgets
+0043f530 Vehicle_UpdateCurseFigure
+0045aeb0 PowerUps_StartCurse
+00452970 Curse_Finish
+00452a00 Curse_Update
+00452a40 Curse_DrawFloatingFigure
+00452a80 Curse_DrawRings
 0045a7b0 PowerUps_Draw
 0045a8a0 PowerUps_DrawBlended
 00457900 PowerUpBrick_DrawBody

@@ -23,6 +23,7 @@ export type {
   DecalView,
   EffectViews,
   ExplosionView,
+  CurseView,
   GhostCar,
   GhostCarsStep,
   HudContext,

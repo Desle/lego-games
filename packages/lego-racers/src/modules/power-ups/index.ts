@@ -61,7 +61,7 @@ export type {
 } from './controller/power-up-world/power-up-world.types.ts'
 export { usePowerUp } from './controller/use-power-up/use-power-up.ts'
 export type { WandBeamStep } from './controller/power-up-effect-timeline/power-up-effect-timeline.types.ts'
-export type { PowerUpEvent } from './events/power-up.events.types.ts'
+export type { CurseFigureFrame, PowerUpEvent } from './events/power-up.events.types.ts'
 export {
   getFarthestInCone,
   getNearestInCone,
