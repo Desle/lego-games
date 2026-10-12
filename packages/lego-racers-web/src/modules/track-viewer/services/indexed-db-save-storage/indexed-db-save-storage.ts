@@ -1,3 +1,4 @@
+import { getRequestResult, openDatabase } from '../indexed-db/indexed-db.ts'
 import { createInMemorySaveStorage } from '@lego-games/lego-racers/save-data'
 import type { SaveStorage } from '@lego-games/lego-racers/save-data'
 
@@ -6,25 +7,6 @@ const STORE_NAME = 'saves'
 const DATABASE_VERSION = 1
 // The original keeps slot n as the file `Save\<n>\LEGORac1` (0x004512e0, 0x004befd8); the key keeps that name.
 const getKey = (slot: number): string => `Save/${String(slot)}/LEGORac1`
-
-const getRequestResult = <Value>(request: IDBRequest<Value>): Promise<Value> =>
-  new Promise((resolve, reject) => {
-    request.addEventListener('success', () => resolve(request.result))
-    request.addEventListener('error', () =>
-      reject(request.error ?? new Error('IndexedDB request failed'))
-    )
-  })
-
-const openDatabase = (): Promise<IDBDatabase> =>
-  new Promise((resolve, reject) => {
-    const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION)
-    request.addEventListener('upgradeneeded', () => request.result.createObjectStore(STORE_NAME))
-    request.addEventListener('success', () => resolve(request.result))
-    request.addEventListener('error', () =>
-      reject(request.error ?? new Error('IndexedDB could not be opened'))
-    )
-    request.addEventListener('blocked', () => reject(new Error('IndexedDB is blocked')))
-  })
 
 const getStore = async (
   database: Promise<IDBDatabase>,
@@ -38,7 +20,7 @@ export const createIndexedDbSaveStorage = (): SaveStorage => {
   const fallback = createInMemorySaveStorage()
   let database: Promise<IDBDatabase> | null = null
   const getDatabase = (): Promise<IDBDatabase> => {
-    database ??= openDatabase()
+    database ??= openDatabase(DATABASE_NAME, STORE_NAME, DATABASE_VERSION)
     return database
   }
   return Object.freeze({
