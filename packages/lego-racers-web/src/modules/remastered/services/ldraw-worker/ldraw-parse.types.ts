@@ -40,6 +40,7 @@ export type SerializedAttribute = {
 export type SerializedPrimitive = {
   readonly kind: MergedPrimitiveKind
   readonly materialIndex: number
+  readonly isMaterialList: boolean
   readonly attributes: readonly SerializedAttribute[]
 }
 

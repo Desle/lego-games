@@ -118,6 +118,22 @@ describe('mergeModelByMaterial', () => {
     const merged = mergeModelByMaterial(model)
 
     // Assert
-    expect(getMeshes(merged).map((mesh) => mesh.material)).toEqual([red, blue])
+    expect(getMeshes(merged).map((mesh) => mesh.material)).toEqual([[red], [blue]])
+  })
+
+  it('keeps a mesh that had a list of materials as a list, drawn by one group', () => {
+    // Arrange
+    const material = new MeshBasicMaterial()
+    const geometry = new BufferGeometry()
+    geometry.setAttribute('position', new Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3))
+    geometry.addGroup(0, 3, 0)
+    const model = new Group()
+    model.add(new Mesh(geometry, [material]))
+
+    // Act
+    const [mesh] = getMeshes(mergeModelByMaterial(model))
+
+    // Assert
+    expect([mesh?.material, mesh?.geometry.groups.length]).toEqual([[material], 1])
   })
 })

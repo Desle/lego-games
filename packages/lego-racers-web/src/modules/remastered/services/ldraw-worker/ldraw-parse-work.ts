@@ -57,13 +57,15 @@ export const serializeModel = (merged: Group): SerializedModel => {
   const primitives: SerializedPrimitive[] = []
   for (const child of merged.children) {
     const kind = getKind(child)
-    const source: unknown = Reflect.get(child, 'material')
+    const list: unknown = Reflect.get(child, 'material')
+    const source: unknown = Array.isArray(list) ? list[0] : list
     const geometry: unknown = Reflect.get(child, 'geometry')
     if (kind === null || !getIsMaterial(source) || !isGeometry(geometry)) continue
     if (!materials.includes(source)) materials.push(source)
     primitives.push({
       kind,
       materialIndex: materials.indexOf(source),
+      isMaterialList: Array.isArray(list),
       attributes: serializeAttributes(geometry),
     })
   }

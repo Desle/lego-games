@@ -102,9 +102,20 @@ const createMergedGeometry = (bucket: MergeBucket): BufferGeometry => {
   return geometry
 }
 
+// A mesh with a list of one material, as the loader makes a part of several colours: three.js draws a list's materials by the
+// geometry's groups, so the whole geometry is the list's one group.
+export const createListMesh = (geometry: BufferGeometry, material: Material): Mesh => {
+  geometry.addGroup(0, geometry.getAttribute('position').count, 0)
+  return new Mesh(geometry, [material])
+}
+
 const createMergedObject = (bucket: MergeBucket): Object3D => {
   const geometry = createMergedGeometry(bucket)
-  if (bucket.kind === MergedPrimitiveKind.TRIANGLES) return new Mesh(geometry, bucket.material)
+  if (bucket.kind === MergedPrimitiveKind.TRIANGLES) {
+    return bucket.isMaterialList
+      ? createListMesh(geometry, bucket.material)
+      : new Mesh(geometry, bucket.material)
+  }
   const lines = new LineSegments(geometry, bucket.material)
   Object.assign(lines, { isConditionalLine: bucket.kind === MergedPrimitiveKind.CONDITIONAL_LINES })
   return lines
@@ -140,8 +151,14 @@ export const mergeModelByMaterial = (model: Group): Group => {
     for (const run of getRuns(primitive.geometry, getMaterials(primitive.material))) {
       const materialIndex = bucketKeys.get(run.material) ?? bucketKeys.size
       bucketKeys.set(run.material, materialIndex)
-      const key = `${String(materialIndex)}|${kind}|${signature}`
-      const bucket = buckets.get(key) ?? { material: run.material, kind, chunks: [] }
+      const isMaterialList = Array.isArray(primitive.material)
+      const key = `${String(materialIndex)}|${kind}|${signature}|${String(isMaterialList)}`
+      const bucket = buckets.get(key) ?? {
+        material: run.material,
+        kind,
+        isMaterialList,
+        chunks: [],
+      }
       buckets.set(key, bucket)
       bucket.chunks.push({
         geometry: primitive.geometry,

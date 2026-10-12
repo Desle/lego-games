@@ -10,6 +10,7 @@ import {
 } from 'three'
 import type { Material } from 'three'
 import { LDrawConditionalLineMaterial } from 'three/examples/jsm/materials/LDrawConditionalLineMaterial.js'
+import { createListMesh } from '../ldraw-car/ldraw-model-merge.ts'
 import { MergedPrimitiveKind } from '../ldraw-car/ldraw-model-merge.types.ts'
 import { addLoadMilliseconds } from '../performance-monitor/performance-monitor.ts'
 import { LDRAW_COLOR_SPACE } from './ldraw-parse.constants.ts'
@@ -108,6 +109,20 @@ const createMaterial = (source: SerializedMaterial, kind: MergedPrimitiveKind): 
   })
 }
 
+const sharedLineMaterials = new Map<string, Material>()
+
+// The loader hands every model of a page the same edge material for a colour, and the plastic look darkens each one it meets (a
+// model's edge materials once each), so the edges of a colour that many models use come out near black. The edge materials are
+// shared here for the same reason: the lines look as they did when the page parsed the models itself.
+const getSharedLineMaterial = (source: SerializedMaterial, kind: MergedPrimitiveKind): Material => {
+  const key = `${kind}|${source.name}|${source.color.join(',')}`
+  const existing = sharedLineMaterials.get(key)
+  if (existing !== undefined) return existing
+  const material = createMaterial(source, kind)
+  sharedLineMaterials.set(key, material)
+  return material
+}
+
 // The merged model a worker sent, as the three.js objects the loader would have made: standard materials for triangles and the
 // library's edge materials for lines.
 export const deserializeModel = (model: SerializedModel): Group => {
@@ -117,7 +132,11 @@ export const deserializeModel = (model: SerializedModel): Group => {
     const source = model.materials[primitive.materialIndex]
     if (source === undefined) continue
     const key = `${String(primitive.materialIndex)}|${primitive.kind}`
-    const material = materials.get(key) ?? createMaterial(source, primitive.kind)
+    const material =
+      materials.get(key) ??
+      (primitive.kind === MergedPrimitiveKind.TRIANGLES
+        ? createMaterial(source, primitive.kind)
+        : getSharedLineMaterial(source, primitive.kind))
     materials.set(key, material)
     const geometry = new BufferGeometry()
     for (const attribute of primitive.attributes) {
@@ -127,7 +146,9 @@ export const deserializeModel = (model: SerializedModel): Group => {
       )
     }
     if (primitive.kind === MergedPrimitiveKind.TRIANGLES) {
-      group.add(new Mesh(geometry, material))
+      group.add(
+        primitive.isMaterialList ? createListMesh(geometry, material) : new Mesh(geometry, material)
+      )
     } else {
       const lines = new LineSegments(geometry, material)
       Object.assign(lines, {

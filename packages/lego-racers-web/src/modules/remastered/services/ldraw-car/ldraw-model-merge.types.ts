@@ -20,6 +20,8 @@ export type GeometryChunk = {
 
 export type MergeBucket = {
   readonly material: Material
+  // The meshes it merges had a list of materials (a part of several colours): the plastic look leaves those as the library made them.
+  readonly isMaterialList: boolean
   readonly kind: MergedPrimitiveKind
   readonly chunks: GeometryChunk[]
 }

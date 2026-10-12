@@ -86,6 +86,9 @@ export const instantiateModel = (prepared: Group, materials: MaterialSet): Group
     if (!(child instanceof Mesh)) return
     const material: unknown = child.material
     if (getIsMaterial(material)) Object.assign(child, { material: materials.getCopy(material) })
+    else if (Array.isArray(material)) {
+      Object.assign(child, { material: material.filter(getIsMaterial).map(materials.getCopy) })
+    }
   })
   return copy
 }
