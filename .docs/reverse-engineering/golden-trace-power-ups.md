@@ -69,6 +69,13 @@ The golden run draws every frame, so the draw callbacks change the sim. What the
 - The launcher variant (`0x0045d560` with the third argument, set by the warp pad `0x0048af80` through power-up system `+0x1998`): the timer is 0, `+0xc0..` take the destination and `+0xcc..` the facing, `+0xd8` is 1; `0x0045dc90` state 2 stores the racer's position (`+0xb4`), `0x0045d780` interpolates from it to the destination by `timer / 1500` (the z subtracts from the destination's x: `+0xc0` is read where `+0xc8` belongs) for any owner, and the landing starts from the destination with the launcher's facing. Ported from the decompilation; no golden scenario touches a warp pad, so it is not verified against the original.
 - The parts' `+0x84` values are the car shadow's draw distance squared (`0x0043fa50` draws a decal when the camera is nearer): 250000 normally, -1 (never) from the warp's start (`0x0043dbb0`) until the landing, and 250000 again in the warp's own draw (`0x0043db60`). The shadow, like the oil slick and the scorch marks, is a decal projected onto the world's triangles (`0x00414a30`, `0x00414c90`); the shadow is ported (see [decal.md](decal.md)); the vehicle's skid marks (`+0x1e4`) are particle emitters and not drawn yet.
 
+## Computers grid: magnet, curse and wand cells (fixed)
+
+- Magnet `0x0043a130` / `0x0043a1a0`: a human's driver gets flag `0x80` and its vehicle starts the tire smoke (`0x0043dc00`) while held; a scripted body's target speed factors (`+0x7e8`, and `+0x7ec` unless car body flag `0x40000`) go to 0 and back to 1; `0x004395a0` ends a tumble.
+- Curse (4/3): a warp or curse taken over by a racer's use (`0x00439100`, in the racers' pass after the vehicle update) ends its registry entry in the same frame, so the registry is synced again at the end of the frame.
+- Wand (1/2): `0x00454d70` hands the rest of the step, after the countdown, to the jitter, the hold and the sparks.
+- Still open in the grid: kind 1 level 3 (rocket: the missile's shape centre).
+
 ## Open
 
 - Shape centres: the hook's bounds centre is placed with a hypothesis (the frame faces along the horizontal velocity); the barrel's spin and the missile's animated figure bounds (its first registered centre is about 6 units off the owner) are not ported.

@@ -397,6 +397,52 @@ export const getRacerLanded = (
   })
 }
 
+const MAGNETIZED_FLAG = 0x100000
+const DRIVER_MAGNETIZED_FLAG = 0x80
+const CAR_BODY_FADING_FLAG = 0x40000
+
+// 0x0043a130 (then 0x004395a0): flag 0x100000; a human's driver gets flag 0x80 (the tire smoke starts, see race-world); a
+// scripted body's target speed factors go to 0 (the current one unless flag 0x40000 is set).
+const getRacerMagnetized = (racer: Racer): Racer => {
+  const flagged: Racer = Object.freeze({
+    ...racer,
+    flags: (racer.flags | MAGNETIZED_FLAG) >>> 0,
+    driver:
+      racer.controllerKind === COMPUTER_CONTROLLER
+        ? racer.driver
+        : Object.freeze({ ...racer.driver, flags: racer.driver.flags | DRIVER_MAGNETIZED_FLAG }),
+  })
+  return getRacerFromTumbling(getRacerWithScriptedSpeedFactors(flagged, 0))
+}
+
+// 0x0043a1a0 (then 0x004395a0): the undo of the above, the factors going back to 1.
+const getRacerReleasedByMagnet = (racer: Racer): Racer => {
+  const flagged: Racer = Object.freeze({
+    ...racer,
+    flags: (racer.flags & ~MAGNETIZED_FLAG) >>> 0,
+    driver:
+      racer.controllerKind === COMPUTER_CONTROLLER
+        ? racer.driver
+        : Object.freeze({ ...racer.driver, flags: racer.driver.flags & ~DRIVER_MAGNETIZED_FLAG }),
+  })
+  return getRacerFromTumbling(getRacerWithScriptedSpeedFactors(flagged, 1))
+}
+
+const getRacerWithScriptedSpeedFactors = (racer: Racer, factor: number): Racer =>
+  !racer.carBody.isScripted
+    ? racer
+    : Object.freeze({
+        ...racer,
+        carBody: Object.freeze({
+          ...racer.carBody,
+          defaultTargetSpeedFactor: factor,
+          targetSpeedFactor:
+            (racer.carBody.rigidBody.flags & CAR_BODY_FADING_FLAG) === 0
+              ? factor
+              : racer.carBody.targetSpeedFactor,
+        }),
+      })
+
 const getRacerWithFlags = (racer: Racer, flags: number): Racer =>
   Object.freeze({ ...racer, flags: flags >>> 0 })
 
@@ -459,7 +505,9 @@ export const getRacerAfterPowerUpEvent = (
     case 'power_ups.racer_warp_ended':
       return getRacerWarpEnded(racer)
     case 'power_ups.racer_magnetized':
-      return getRacerWithFlags(racer, racer.flags | 0x100000)
+      return getRacerMagnetized(racer)
+    case 'power_ups.racer_released_by_magnet':
+      return getRacerReleasedByMagnet(racer)
     case 'power_ups.racer_spun_out':
       return Object.freeze({
         ...racer,

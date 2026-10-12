@@ -248,8 +248,13 @@ export const updateRace = (
       return camerasStepped
     }
   )
-  const hazardsFollowed = changeTrackLogic(counted.context, stepped, (trackLogic, trackContext) =>
-    updateTrackHazardsAfterRacers(trackLogic, trackContext, NO_CAMERA_POSITIONS)
+  // A racer's use of a power-up (0x00439100, after the vehicle update) can take an effect over, whose reset ends its
+  // registry entry at once.
+  const hazardsFollowed = getRacerSetWithProjectileRegistry(
+    arithmetic,
+    changeTrackLogic(counted.context, stepped, (trackLogic, trackContext) =>
+      updateTrackHazardsAfterRacers(trackLogic, trackContext, NO_CAMERA_POSITIONS)
+    )
   )
   const progressed = Object.freeze({
     ...getStateWithProgress(Object.freeze({ ...counted, projectileWorld }), {

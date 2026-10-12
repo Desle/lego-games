@@ -15,6 +15,8 @@ export type Particle = {
   // +0x30: the row of the emitter's material animation entry that the age selects (0x00410560), or null while
   // the emitter has none (the system's default material applies).
   readonly tableIndex: number | null
+  // +0x30 is not null: the particle has a material to draw with (a newborn one gets it at the next update).
+  readonly isDrawable: boolean
 }
 
 // The particle system inside an emitter instance (instance +0x08, flags +0xb8 of the system; 0x00412430).
@@ -41,6 +43,8 @@ export type EmitterSystem = {
   readonly squaredRadius: number
   // +0xe8: how many particles were born since the system was last started.
   readonly bornCount: number
+  // +0xd4: the material of the particles of a system without a material animation (the definition's linked name), or null.
+  readonly defaultMaterialName: string | null
   // The position of the frame at system +0x10; set by the first particle born (0x00412760).
   readonly framePosition: Vector3
 }
