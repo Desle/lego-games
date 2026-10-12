@@ -261,6 +261,9 @@ export type RegistryObject =
   | { readonly type: 'effect_flight'; readonly effectId: number }
   | { readonly type: 'effect_hazard'; readonly effectId: number }
   | { readonly type: 'explosion'; readonly isSpiked: boolean; readonly index: number }
+  // A track hazard registers in its Begin (0x0048cac0, 0x0048d980, 0x0048df20, 0x0048e4b0, 0x00490070) and ends its
+  // entry in its End.
+  | { readonly type: 'hazard'; readonly index: number }
 
 // What the registry's volumes are read from: the objects, the triggers' state and the bricks.
 export type RegistrySource = {

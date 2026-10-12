@@ -6,12 +6,13 @@ import type { HazardInstance } from '../../types/hazard-runtime.types.ts'
 // to do after the racers, no reaction to a signal.
 export const DEFAULT_HAZARD_SLOTS: Pick<
   HazardBehavior,
-  'isRacerTriggered' | 'updateAfterRacers' | 'onSignalStarted' | 'touch'
+  'isRacerTriggered' | 'updateAfterRacers' | 'onSignalStarted' | 'touch' | 'getRegisteredSphere'
 > = Object.freeze({
   isRacerTriggered: false,
   updateAfterRacers: (instance: HazardInstance) => instance,
   onSignalStarted: (instance: HazardInstance) => instance,
   touch: (instance: HazardInstance) => instance,
+  getRegisteredSphere: () => null,
 })
 
 // 0x0048d470: the common End of the classes that only go back to idle.

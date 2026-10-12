@@ -1,8 +1,10 @@
 import { getSkeletonInstanceWithTime } from '../../../world-animation/index.ts'
 import {
+  createTestRacer,
   createTestSession,
   createTestSkeletonInstance,
   createTestWorld,
+  TEST_SKELETON,
 } from '../hazard-fixtures/hazard-fixtures.ts'
 import { CRANE, CRANE_SIGNAL } from './crane.ts'
 
@@ -61,33 +63,41 @@ describe('the crane', () => {
     expect(updated.data).toMatchObject({ flags: 2 })
   })
 
-  it('keeps the world point of its fourth bone for the shadow', () => {
+  it('spins a racer that touches it and announces signal 0x15', () => {
     // Arrange
-    const skeleton = {
-      bones: [0, 1, 2, 3].map((index) => ({
-        name: `bone${String(index)}`,
-        position: index === 3 ? ([1, 2, 3] as const) : null,
-        quaternion: null,
-        parentIndex: null,
-      })),
-      readByteCount: 0,
-    }
+    const { test, begun } = createAt(40)
+
+    // Act
+    CRANE.touch(begun, test.session, createTestRacer(2))
+    CRANE.touch(begun, test.session, createTestRacer(3, 0, { isSpinning: true }))
+
+    // Assert
+    expect(test.effects).toEqual([
+      {
+        type: 'hazard.racer_affected',
+        keyword: 0x32,
+        racerIndex: 2,
+        reaction: 'spun',
+        vector: null,
+      },
+    ])
+    expect(test.calls).toEqual(['startStop 21 21'])
+  })
+
+  it('registers a sphere of radius 3 on the chain of its fourth bone while it is active', () => {
+    // Arrange
     const test = createTestSession({
       track: createTestWorld([
-        {
-          ...getSkeletonInstanceWithTime(createTestSkeletonInstance('crane'), 40),
-          skeleton,
-          position: [100, 200, 300],
-        },
+        createTestSkeletonInstance('crane', { skeleton: TEST_SKELETON, position: [100, 0, 0] }),
       ]),
     })
     const loaded = CRANE.create({ keyword: 0x32 }, { isMirrored: false, session: test.session })
-    const begun = CRANE.begin(loaded, test.session, null)
 
     // Act
-    const updated = CRANE.update(begun, test.session, 33)
+    const updated = CRANE.update(CRANE.begin(loaded, test.session, null), test.session, 33)
 
     // Assert
-    expect(updated.data).toMatchObject({ bone: [101, 202, 303] })
+    expect(CRANE.getRegisteredSphere(loaded)).toBeNull()
+    expect(CRANE.getRegisteredSphere(updated)).toEqual({ centre: [104, 5, 8], radius: 3 })
   })
 })

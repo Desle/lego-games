@@ -95,6 +95,7 @@ describe('stepRace', () => {
         skeleton: null,
         rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as const,
         scale: 1,
+        boundsRadius: 0,
         clip: { ...clip, clip: { ...clip.clip, timeInFrames } },
         isAnimated: true,
         otherFlags: 0,

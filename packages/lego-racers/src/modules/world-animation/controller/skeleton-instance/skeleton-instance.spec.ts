@@ -1,11 +1,8 @@
 import { createSkeletonAnimationState } from '../../../skeletal-animation/index.ts'
-import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
-import type { Skeleton } from '../../../skeleton/index.ts'
 import type { SkeletalAnimation } from '../../../skeletal-animation/index.ts'
 import type { SkeletonInstanceRuntime } from '../../types/world-animation.types.ts'
 import {
   advanceSkeletonInstance,
-  getSkeletonInstanceBonePosition,
   getSkeletonInstanceFlags,
   getSkeletonInstanceTime,
   getSkeletonInstanceWithFlags,
@@ -46,6 +43,7 @@ const createInstance = (overrides: Partial<SkeletonInstanceRuntime>): SkeletonIn
   skeleton: null,
   rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
   scale: 1,
+  boundsRadius: 0,
   clip: createSkeletonAnimationState(animation, 0),
   isAnimated: true,
   otherFlags: 0,
@@ -147,41 +145,5 @@ describe('startSkeletonInstanceClip', () => {
 
     // Assert
     expect(started).toBe(instance)
-  })
-})
-
-describe('getSkeletonInstanceBonePosition', () => {
-  const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
-  const skeleton: Skeleton = {
-    bones: [{ name: 'root', position: [10, 0, 2], quaternion: null, parentIndex: null }],
-    readByteCount: 0,
-  }
-
-  it('takes the bone through the instance scale, rotation and position', () => {
-    // Arrange
-    const instance = createInstance({
-      skeleton,
-      clip: null,
-      scale: 0.5,
-      rotation: [0, 1, 0, -1, 0, 0, 0, 0, 1],
-      position: [100, 200, 300],
-    })
-
-    // Act
-    const position = getSkeletonInstanceBonePosition(arithmetic, instance, 0)
-
-    // Assert
-    expect(position).toEqual([100, 205, 301])
-  })
-
-  it('is null without a skeleton', () => {
-    // Arrange
-    const instance = createInstance({ skeleton: null })
-
-    // Act
-    const position = getSkeletonInstanceBonePosition(arithmetic, instance, 0)
-
-    // Assert
-    expect(position).toBeNull()
   })
 })

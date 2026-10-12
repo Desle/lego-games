@@ -9,7 +9,6 @@ export {
 export {
   advanceSkeletonInstance,
   getIsSkeletonInstanceFinished,
-  getSkeletonInstanceBonePosition,
   getSkeletonInstanceClipIndex,
   getSkeletonInstanceWithTime,
   getSkeletonInstanceFlags,
@@ -25,6 +24,10 @@ export {
   INSTANCE_WRAPPED_FLAG,
   startSkeletonInstanceClip,
 } from './controller/skeleton-instance/skeleton-instance.ts'
+export {
+  getSkeletonInstanceBoneTranslation,
+  getSkeletonInstanceChainPosition,
+} from './controller/skeleton-instance-bones/skeleton-instance-bones.ts'
 export {
   advanceWorldAnimation,
   createWorldAnimation,

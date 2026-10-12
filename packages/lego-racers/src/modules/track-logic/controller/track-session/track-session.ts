@@ -16,6 +16,7 @@ import {
   startHazardSignal,
   startStopHazardSignal,
   stopHazardSignal,
+  touchHazard,
   updateHazards,
   updateHazardsAfterRacers,
 } from '../../../hazard/index.ts'
@@ -24,7 +25,7 @@ import { drawRandomScaledRange, drawRandomValue } from '../../../random-table/in
 import {
   advanceWorldAnimation,
   findSkeletonInstanceIndex,
-  getSkeletonInstanceBonePosition,
+  getSkeletonInstanceChainPosition,
   getSkeletonInstanceClipIndex,
   getSkeletonInstanceFlags,
   getSkeletonInstanceWithFlags,
@@ -459,7 +460,7 @@ export const createTrackSession = (
     const instance = found === null ? undefined : worlds[found.key].skeletonInstances[found.index]
     return instance === undefined
       ? null
-      : getSkeletonInstanceBonePosition(context.arithmetic, instance, boneIndex)
+      : getSkeletonInstanceChainPosition(context.arithmetic, instance, boneIndex, instance.scale)
   }
 
   const setEventEmitterPosition = (handle: EmitterReference, position: Vector3): void => {
@@ -549,6 +550,10 @@ export const createTrackSession = (
     },
     touchTrigger: (contact) => {
       triggers = touchTrigger(triggers, contact, session)
+    },
+    touchHazard: (hazardIndex, racerIndex) => {
+      const racer = getHazardRacer(racerIndex)
+      if (racer !== null) touchHazard(hazardStore, hazardSession, hazardIndex, racer)
     },
     tickTimeEntries: (milliseconds) => {
       timers = tickTimeEntries(timers, session, milliseconds)

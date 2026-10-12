@@ -6,6 +6,7 @@ import type {
   HazardRacer,
   HazardRuntime,
   HazardSession,
+  HazardSphere,
   HazardStore,
 } from '../../types/hazard-runtime.types.ts'
 import type { HazardList, Vector3 } from '../../types/hazard.types.ts'
@@ -111,8 +112,8 @@ const notifySignalStarted = (
     getBehavior(instance).onSignalStarted(instance, session, identifier, parameter)
   )
 
-// A racer touched a hazard that sits in the collision registry (vtable +0x00); the registry's overlap tests are not
-// ported, so the caller reports the touch.
+// A racer touched a hazard that sits in the collision registry (vtable +0x00): the registry's walk found its sphere
+// overlapping the racer's volume.
 export const touchHazard = (
   store: HazardStore,
   session: HazardSession,
@@ -120,6 +121,16 @@ export const touchHazard = (
   racer: HazardRacer
 ): void =>
   apply(store, hazardIndex, (instance) => getBehavior(instance).touch(instance, session, racer))
+
+// The shape of the hazard at an index while it sits in the collision registry (its Begin registers it, its End ends
+// the entry), or null.
+export const getHazardRegisteredSphere = (
+  runtime: HazardRuntime,
+  hazardIndex: number
+): HazardSphere | null => {
+  const instance = runtime.instances[hazardIndex]
+  return instance === undefined ? null : getBehavior(instance).getRegisteredSphere(instance)
+}
 
 // Hazards_Update 0x0048add0.
 export const updateHazards = (

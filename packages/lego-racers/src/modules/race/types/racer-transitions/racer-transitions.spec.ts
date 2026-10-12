@@ -6,6 +6,7 @@ import {
   enterZoneTwo,
   enterZoneZero,
   getRacerAfterCheckpointTouch,
+  getRacerAfterHazardReaction,
   getRacerAfterPowerUpEvent,
   getRacerAfterTurboStart,
   getRacerLanded,
@@ -188,5 +189,46 @@ describe('racer transitions', () => {
     expect(moved.carBody.rigidBody.frame.position).toEqual(position)
     expect(landed.carBody.rigidBody.linearVelocity).toEqual({ x: 0, y: 0, z: 0 })
     expect(landed.carBody.rigidBody.displayFrame.rotation.slice(0, 3)).toEqual([0, 1, 0])
+  })
+
+  describe('after a track hazard touched it', () => {
+    it('is spinning when a lava monster or a crane spun it (slot 9: 1.0, 0.01, 0)', () => {
+      // Arrange
+      const racer = getRacer()
+
+      // Act
+      const spun = getRacerAfterHazardReaction(FIXTURE_ARITHMETIC, racer, 'spun', null)
+
+      // Assert
+      expect(spun.carBody.rigidBody.flags & 0x2).toBe(0x2)
+      expect(racer.carBody.rigidBody.flags & 0x2).toBe(0)
+    })
+
+    it("is spun and thrown up by the ghost's impulse", () => {
+      // Arrange
+      const racer = getRacer()
+
+      // Act
+      const flung = getRacerAfterHazardReaction(FIXTURE_ARITHMETIC, racer, 'flung', [0, 0, 150])
+
+      // Assert
+      expect(flung.carBody.rigidBody.flags & 0x2).toBe(0x2)
+      expect(flung.carBody.rigidBody.linearVelocity).toEqual({ x: 0, y: 0, z: 150 })
+    })
+
+    it('is held with flag 0x20000000 and pushed by the capture, and let go again', () => {
+      // Arrange
+      const racer = getRacer()
+
+      // Act
+      const held = getRacerAfterHazardReaction(FIXTURE_ARITHMETIC, racer, 'captured', [30, 0, 0])
+      const released = getRacerAfterHazardReaction(FIXTURE_ARITHMETIC, held, 'released', null)
+
+      // Assert
+      expect(held.flags & 0x20000000).toBe(0x20000000)
+      expect(held.carBody.rigidBody.flags & 0x40).toBe(0x40)
+      expect(released.flags & 0x20000000).toBe(0)
+      expect(released.carBody.rigidBody.flags & 0x40).toBe(0)
+    })
   })
 })

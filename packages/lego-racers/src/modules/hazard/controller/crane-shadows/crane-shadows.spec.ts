@@ -17,7 +17,11 @@ const createShadowsAt = (lifecycle: number) => {
     ]),
   })
   const loaded = CRANE.create({ keyword: 0x32 }, { isMirrored: false, session: test.session })
-  const instance = { ...loaded, lifecycle, data: { ...loaded.data, bone: [3, 4, 5] as const } }
+  const instance = {
+    ...loaded,
+    lifecycle,
+    data: Object.freeze({ ...loaded.data, sphere: { centre: [3, 4, 5] as const, radius: 3 } }),
+  }
   return getCraneShadows(
     { instances: [instance] },
     { track: test.session.getWorld('track'), blended: test.session.getWorld('blended') }

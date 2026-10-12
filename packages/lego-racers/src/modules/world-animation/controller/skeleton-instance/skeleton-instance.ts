@@ -1,17 +1,9 @@
 import {
   advanceSkeletonAnimation,
   createSkeletonAnimationState,
-  getBonePosition,
-  getRestPose,
-  getSkeletonPose,
 } from '../../../skeletal-animation/index.ts'
 import type { SkeletonAnimationState, Vector3 } from '../../../skeletal-animation/index.ts'
-import {
-  createFloatArithmetic,
-  getFrameTransformedPoint,
-  RACE_FPU_PRECISION,
-} from '../../../simulation-math/index.ts'
-import type { FloatArithmetic } from '../../../simulation-math/index.ts'
+import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
 import type { SkeletonInstanceRuntime } from '../../types/world-animation.types.ts'
 
 const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
@@ -190,29 +182,4 @@ export const advanceSkeletonInstance = (
       milliseconds
     ),
   })
-}
-
-// 0x0045ebe0 and the frame's transform (slot +0x2c): where a bone's origin is in the world, as the pose of the instance's
-// clip puts it.
-export const getSkeletonInstanceBonePosition = (
-  floatArithmetic: FloatArithmetic,
-  instance: SkeletonInstanceRuntime,
-  boneIndex: number
-): Vector3 | null => {
-  if (instance.skeleton === null || instance.animation === null) return null
-  const pose =
-    instance.clip === null
-      ? getRestPose(instance.skeleton)
-      : getSkeletonPose(getRestPose(instance.skeleton), instance.animation, instance.clip)
-  const local = getBonePosition(floatArithmetic, instance.skeleton, pose, boneIndex)
-  if (local === null) return null
-  const scale = (value: number) =>
-    floatArithmetic.storeFloat(floatArithmetic.multiply(value, instance.scale))
-  const [x, y, z] = instance.position
-  const moved = getFrameTransformedPoint(
-    floatArithmetic,
-    { rotation: instance.rotation, position: { x, y, z } },
-    { x: scale(local[0]), y: scale(local[1]), z: scale(local[2]) }
-  )
-  return Object.freeze([moved.x, moved.y, moved.z] as const)
 }
