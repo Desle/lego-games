@@ -1,7 +1,11 @@
 import type { CarDesign } from '@lego-games/lego-racers/car-builder'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { HudCommand } from '@lego-games/lego-racers/race-hud'
+import type { ModelScene } from '@lego-games/lego-racers/scene'
+import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import type { DataTexture, Object3D } from 'three'
+import { createEnum } from '../types/enum.types.ts'
+import type { EnumValues } from '../types/enum.types.ts'
 
 export type TexturePixels = {
   readonly colors: Uint8Array
@@ -61,6 +65,35 @@ export type EffectModelDrawingRequest = {
   readonly variant: string | null
 }
 
+export const RacerPartKind = createEnum({
+  WHEELS: 'wheels',
+  DRIVER: 'driver',
+})
+export type RacerPartKind = EnumValues<typeof RacerPartKind>
+
+// A part of a racer the viewer is about to draw from the original's skeleton model: the wheels of the car or its driver.
+export type RacerPartDrawingRequest = {
+  readonly kind: RacerPartKind
+  readonly archive: JamArchive
+  // The original's model of the part: the skeleton and the animation set that the poses are given for.
+  readonly model: ModelScene
+  // The name of the original's model (the chassis's wheel model, the driver's model), null for a driver built from part bytes.
+  readonly modelName: string | null
+  // The five part bytes (hat, face, torso, legs, expression) a driver is built from, null for a fixed driver model.
+  readonly partBytes: readonly number[] | null
+}
+
+// What a layer draws in place of a racer's part. Its object is in the original model's frame before the model's scale, so it
+// follows the group the viewer moves, leans and scales; the poses reach it through the two functions.
+export type RacerPartDrawing = {
+  readonly object: Object3D
+  // The viewer posed the part from this animation state (what the original poses its skeleton with).
+  readonly setAnimationState: (state: SkeletonAnimationState) => void
+  // The viewer advanced the part's own animation by whole milliseconds.
+  readonly animate: (deltaMilliseconds: number) => void
+  readonly dispose: () => void
+}
+
 // A choice the developer panel offers for a layer above the original port.
 export type DevelopmentSelector = {
   readonly label: string
@@ -85,6 +118,8 @@ export type ViewerExtension = {
   readonly getBuiltCarDrawing: (request: BuiltCarDrawingRequest) => Object3D | null
   // Something to draw in place of the model the original draws for an effect, in that model's frame (the original's units, its scale applied); null keeps the original's.
   readonly getEffectModelDrawing: (request: EffectModelDrawingRequest) => Object3D | null
+  // Something to draw in place of a racer's wheels or driver, posed by the viewer; null keeps the original's.
+  readonly getRacerPartDrawing: (request: RacerPartDrawingRequest) => RacerPartDrawing | null
   // The selections the layer runs with (texture pack, audio pack, bricks), for the notes of a recording.
   readonly getSelections: () => readonly string[]
 }
