@@ -112,6 +112,42 @@ const getStartPose = (run: GhostRun): GhostPlaybackPose =>
     isFinished: false,
   })
 
+// `piVar8[0x2e] = speed` (0x00422cdd): the speed estimate becomes the rate of the wheels (+0xb8), only while the clock
+// runs (the stopped branch leaves it). The best run's copy is never animated, so the rate changes nothing visible.
+const getWithWheelSpeeds = (
+  session: GhostSession,
+  best: GhostPlaybackPose | null,
+  champion: GhostPlaybackPose | null
+): GhostSession => {
+  const { bestCar, championCar } = session
+  const wheelClip = championCar?.wheels.clip ?? null
+  const isChampionStored =
+    session.isRunning && champion !== null && championCar !== null && wheelClip !== null
+  const isBestStored = session.isRunning && best !== null && bestCar !== null
+  if (!isChampionStored && !isBestStored) return session
+  return Object.freeze({
+    ...session,
+    championCar: isChampionStored
+      ? Object.freeze({
+          ...championCar,
+          wheels: Object.freeze({
+            ...championCar.wheels,
+            clip: Object.freeze({
+              ...wheelClip,
+              clip: Object.freeze({ ...wheelClip.clip, framesPerMillisecond: champion.speed }),
+            }),
+          }),
+        })
+      : championCar,
+    bestCar: isBestStored
+      ? Object.freeze({
+          ...bestCar,
+          wheels: Object.freeze({ ...bestCar.wheels, currentRate: best.speed }),
+        })
+      : bestCar,
+  })
+}
+
 const getShownRun = (session: GhostSession, selection: GhostRunSelection): GhostRun | null => {
   if (selection === 'best') {
     return session.isBestRunShown && !session.isBestPlaybackFinished ? session.bestRun : null
@@ -139,15 +175,16 @@ export const stepGhostPlayback = (
   const isBestEnded = best === null && getShownRun(session, 'best') !== null && session.isRunning
   const isChampionEnded =
     champion === null && getShownRun(session, 'champion') !== null && session.isRunning
+  const stored = getWithWheelSpeeds(session, best, champion)
   return Object.freeze({
     session:
       isBestEnded || isChampionEnded
         ? Object.freeze({
-            ...session,
+            ...stored,
             isBestPlaybackFinished: session.isBestPlaybackFinished || isBestEnded,
             isChampionPlaybackFinished: session.isChampionPlaybackFinished || isChampionEnded,
           })
-        : session,
+        : stored,
     best,
     champion,
   })

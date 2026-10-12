@@ -34,7 +34,7 @@ def fill_settings(machine, scenario: dict) -> None:
     racer_count = min(scenario.get("racerCount", 6), len(codes))
     racer_count = max(racer_count, local_players)
     machine.write_u32(SETTINGS + 0x20, scenario.get("raceModeFlags", 0))
-    machine.write_u32(SETTINGS + 0x24, 1)
+    machine.write_u32(SETTINGS + 0x24, 2 if scenario.get("isTimeTrial", False) else 1)
     machine.write_u32(SETTINGS + 0x2C, scenario.get("multiplayerLapCount", 3))
     machine.write_u32(SETTINGS + 0x38, 1)
     machine.write_u32(SETTINGS + 0x3C, 1 if scenario.get("isMirrored", False) else 0)

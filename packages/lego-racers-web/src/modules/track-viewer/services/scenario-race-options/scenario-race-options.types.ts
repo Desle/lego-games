@@ -4,4 +4,6 @@ export type ScenarioRace = {
   readonly racerCount: number
   readonly localPlayerCount: number
   readonly isMirrored: boolean
+  // Game mode 2: the race has the champion's ghost.
+  readonly isTimeTrial?: boolean
 }

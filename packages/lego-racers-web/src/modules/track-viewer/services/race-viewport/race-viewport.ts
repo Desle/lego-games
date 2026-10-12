@@ -27,6 +27,7 @@ import { createRaceParticles } from '../race-particles/race-particles.ts'
 import { getFrameMatrix } from '../frame-matrix/frame-matrix.ts'
 import { createRaceEffects } from '../race-effects/race-effects.ts'
 import { createScreenFadeOverlay } from '../screen-fade-overlay/screen-fade-overlay.ts'
+import { setAlphaOverride } from '../scene-object/alpha-override.ts'
 import { createSceneObject } from '../scene-object/scene-object.ts'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import { createModelObject } from '../model-object/model-object.ts'
@@ -48,10 +49,17 @@ const MILLISECONDS_PER_SECOND = 1000
 const getWrappedFraction = (value: number): number => value - Math.floor(value)
 const NEAR_PLANE = 0.5
 const FAR_PLANE = 20000
+// Race_Render's update (0x00435a00) draws the ghost cars between the device's alpha override (0x00422960 calls slot 0xb8
+// with 0x7f and 0, slot 0xbc afterwards): every vertex of both cars takes alpha 127 and blends over the picture.
+const GHOST_ALPHA = 0x7f
+
 const createGhostRig = (parts: Pick<RacerRig, 'wheels' | 'body' | 'driver'>): RacerRig => {
   const { wheels, body, driver } = parts
   const present = [wheels, body, driver].filter((part): part is ModelObject => part !== null)
-  for (const part of present) part.group.visible = false
+  for (const part of present) {
+    part.group.visible = false
+    setAlphaOverride(part.group, GHOST_ALPHA)
+  }
   return { wheels, body, driver, objects: present.map((part) => part.object) }
 }
 
@@ -265,6 +273,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
       if (car === undefined) continue
       rig.wheels.group.matrix.copy(getFrameMatrix(car.rotation, car.position))
       rig.wheels.group.matrixWorldNeedsUpdate = true
+      if (car.wheelAnimation !== null) rig.wheels.object.setAnimationState(car.wheelAnimation)
       if (rig.body !== null) {
         rig.body.group.matrix.copy(getFrameMatrix(car.rotation, car.position))
         rig.body.group.matrixWorldNeedsUpdate = true
@@ -272,6 +281,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
       if (rig.driver !== null) {
         rig.driver.group.matrix.copy(getFrameMatrix(car.rotation, car.driverPosition))
         rig.driver.group.matrixWorldNeedsUpdate = true
+        if (car.driverAnimation !== null) rig.driver.object.setAnimationState(car.driverAnimation)
       }
     }
     const { position, forward, up } = cameraView

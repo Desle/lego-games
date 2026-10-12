@@ -90,6 +90,7 @@ export const FrontEndText = Object.freeze({
   BEST_LAP_TIME: 0x46,
   BEST_TOTAL_TIME: 0x47,
   NONE: 0x48,
+  TIME_TRIAL_WON: 0x49, // PUSH 0x49 at 0x00487c78: the text of the widget 0x6d
   HOSTING_CHAMPION: 0x4a,
   CIRCUIT_NUMBER: 0x4b,
   FIRST_CHAMPION: 0x4c,
