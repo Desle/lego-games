@@ -1,5 +1,12 @@
 import { createSkeletonAnimationState } from '../../../skeletal-animation/index.ts'
 import type { SkeletalAnimation } from '../../../skeletal-animation/index.ts'
+import {
+  createFloatArithmetic,
+  getFrameAxes,
+  getRotationFromFrameAxes,
+  RACE_FPU_PRECISION,
+} from '../../../simulation-math/index.ts'
+import type { Matrix3 } from '../../../simulation-math/index.ts'
 import { getInstanceRotation } from '../../../scene/index.ts'
 import type { Skeleton } from '../../../skeleton/index.ts'
 import type {
@@ -186,6 +193,16 @@ const createMaterialAnimations = (
     })
   })
 
+// 0x00413310 (from World_Mirror 0x00416140): the rotation's first and third rows are read back, their y is negated
+// and the rotation is built again from them (0x00410900).
+const getMirroredRotation = (rotation: Matrix3): Matrix3 => {
+  const { first, third } = getFrameAxes(rotation)
+  return getRotationFromFrameAxes(createFloatArithmetic(RACE_FPU_PRECISION), {
+    first: Object.freeze({ ...first, y: -first.y }),
+    third: Object.freeze({ ...third, y: -third.y }),
+  })
+}
+
 // World_LinkInstances 0x1002e640 as far as the race moves things: the skeleton instances with their starting
 // clips, the mesh instances' positions and level distances, and the material animation entries instances play.
 export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation => {
@@ -201,6 +218,12 @@ export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation
           ] as const),
         })
       : instance
+  const getMirroredSkeletonRotation = (
+    instance: SkeletonInstanceRuntime
+  ): SkeletonInstanceRuntime =>
+    input.isMirrored === true
+      ? Object.freeze({ ...instance, rotation: getMirroredRotation(instance.rotation) })
+      : instance
   return Object.freeze({
     cameras: Object.freeze(
       world.cameras.map((camera) =>
@@ -214,12 +237,14 @@ export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation
     skeletonInstances: Object.freeze(
       world.skeletonInstances.map((instance) =>
         getMirrored(
-          createSkeletonInstance(
-            instance,
-            input.animations,
-            input.skeletons ?? [],
-            input.meshScales ?? [],
-            input.meshRadii ?? []
+          getMirroredSkeletonRotation(
+            createSkeletonInstance(
+              instance,
+              input.animations,
+              input.skeletons ?? [],
+              input.meshScales ?? [],
+              input.meshRadii ?? []
+            )
           )
         )
       )
