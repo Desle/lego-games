@@ -1,36 +1,34 @@
+import {
+  createFloatArithmetic,
+  getNormalizedVector3,
+  RACE_FPU_PRECISION,
+} from '../../../simulation-math/index.ts'
 import type { SceneRotation, SceneVector } from '../scene.types.ts'
 
-const { fround } = Math
+const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
+const { add, subtract, multiply, storeFloat } = arithmetic
 
-// GolDP.dll 0x1002f530: scales to unit length; a zero vector stays zero.
-const getNormalized = (vector: SceneVector): SceneVector => {
-  const length = Math.sqrt(vector.z * vector.z + vector.y * vector.y + vector.x * vector.x)
-  if (length === 0) return Object.freeze({ x: 0, y: 0, z: 0 })
-  const inverseLength = 1 / length
-  return Object.freeze({
-    x: fround(inverseLength * vector.x),
-    y: fround(inverseLength * vector.y),
-    z: fround(inverseLength * vector.z),
-  })
-}
+// 0x1002f530 normalises as 0x004492d0 does: `1 / sqrt((x² + y²) + z²)` kept on the FPU stack and each product stored.
+const getNormalized = (vector: SceneVector): SceneVector => getNormalizedVector3(arithmetic, vector)
 
 // GolDP.dll 0x10026b50 (instance vtable +0x40): forward is normalised, up made orthogonal to it and
-// normalised; the rows are forward, up × forward, up.
+// normalised; the rows are forward, up × forward, up. The dot product `(u.y·f.y + f.z·u.z) + f.x·u.x` stays on the
+// FPU stack, as does the z product of the correction.
 export const getInstanceRotation = (forward: SceneVector, up: SceneVector): SceneRotation => {
   const first = getNormalized(forward)
-  const dot = first.x * up.x + first.z * up.z + up.y * first.y
+  const dot = add(add(multiply(up.y, first.y), multiply(first.z, up.z)), multiply(first.x, up.x))
   const third = getNormalized({
-    x: fround(up.x - fround(first.x * dot)),
-    y: fround(up.y - fround(first.y * dot)),
-    z: fround(up.z - dot * first.z),
+    x: storeFloat(subtract(up.x, storeFloat(multiply(first.x, dot)))),
+    y: storeFloat(subtract(up.y, storeFloat(multiply(first.y, dot)))),
+    z: storeFloat(subtract(up.z, multiply(dot, first.z))),
   })
   return Object.freeze([
     first.x,
     first.y,
     first.z,
-    fround(third.y * first.z - third.z * first.y),
-    fround(third.z * first.x - first.z * third.x),
-    fround(first.y * third.x - third.y * first.x),
+    storeFloat(subtract(multiply(third.y, first.z), multiply(third.z, first.y))),
+    storeFloat(subtract(multiply(third.z, first.x), multiply(first.z, third.x))),
+    storeFloat(subtract(multiply(first.y, third.x), multiply(third.y, first.x))),
     third.x,
     third.y,
     third.z,

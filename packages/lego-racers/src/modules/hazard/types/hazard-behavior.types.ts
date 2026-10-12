@@ -1,3 +1,4 @@
+import type { CollisionBody } from '../../racer-collision/index.ts'
 import type { Hazard, Vector3 } from './hazard.types.ts'
 import type {
   HazardInstance,
@@ -45,6 +46,9 @@ export type HazardBehavior = {
   // The sphere the hazard has in the collision registry (its Begin registers it, its End ends the entry): null for a
   // class that registers none, or while it is not registered.
   readonly getRegisteredSphere: (instance: HazardInstance) => HazardSphere | null
+  // The rigid body the hazard has in the racers' collision list (manager list +0x2c, not the registry): null for a class
+  // that registers none, or while it is not registered.
+  readonly getCollisionBody: (instance: HazardInstance) => CollisionBody | null
   // +0x28: a signal with the given identifier started, with the position that came with it.
   readonly onSignalStarted: (
     instance: HazardInstance,

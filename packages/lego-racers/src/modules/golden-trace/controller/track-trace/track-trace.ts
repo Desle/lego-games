@@ -1,9 +1,13 @@
 import { getBitsFromFloat } from '../../../../shared/emulator/float-bits.ts'
+import { HazardKeyword, HazardLifecycle } from '../../../hazard/index.ts'
 import type { RaceState } from '../../../race/index.ts'
+import { getBoundingInterval } from '../../../racer-collision/index.ts'
+import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
 import type { TrackEvent } from '../../../track-logic/index.ts'
 import { getSkeletonInstanceFlags } from '../../../world-animation/index.ts'
 import type { WorldAnimation } from '../../../world-animation/index.ts'
 import type { TraceFieldProvider, TraceFields } from '../../types/golden-trace.types.ts'
+import { getFloatWords, getVectorWords } from '../trace-words/trace-words.ts'
 
 const PLAYING_FLAG = 2
 const LOOPING_FLAG = 4
@@ -82,6 +86,32 @@ const getRacerFlowFields = (raceState: RaceState): TraceFields =>
     ])
   )
 
+// The hammers' registration, rigid body and figure, in the order track_trace.py `read_hammers` reads them.
+const getHammerWords = (
+  hazards: RaceState['trackLogic']['hazards']['instances'],
+  world: WorldAnimation
+): readonly number[] =>
+  hazards.flatMap((hazard) => {
+    const { data } = hazard
+    if (data.keyword !== HazardKeyword.HAZARD_3E) return []
+    const { body } = data
+    const instance = world.skeletonInstances[data.instance?.index ?? -1]
+    const { box, sphere } = body
+    const interval = getBoundingInterval(createFloatArithmetic(RACE_FPU_PRECISION), sphere)
+    return [
+      hazard.lifecycle === HazardLifecycle.ACTIVE ? 1 : 0,
+      ...getVectorWords(box.centre),
+      ...getFloatWords([body.inverseMass]),
+      ...getVectorWords(box.dimensions),
+      ...getFloatWords([box.scale]),
+      ...getVectorWords(sphere.centre),
+      ...getFloatWords([sphere.radius, interval.minimum, interval.maximum]),
+      ...getFloatWords(box.rotation),
+      ...getFloatWords(instance?.rotation ?? []),
+      ...getFloatWords(instance?.position ?? []),
+    ]
+  })
+
 // The race flow and track logic fields the emulator side reads (reverse-engineering/emulator/track_trace.py).
 const KICK_TIMER_MILLISECONDS = 0x2ee
 
@@ -98,6 +128,7 @@ export const getTrackFields: TraceFieldProvider = (raceState) => {
       hazard.identifier >>> 0,
       hazard.lifecycle,
     ]),
+    'track.hammers': getHammerWords(trackLogic.hazards.instances, trackLogic.worlds.track),
     'track.surfaces': [...raceState.surfaces.trackMaterials.values()].map(
       (material) => material.flags >>> 0
     ),

@@ -125,6 +125,7 @@ export const getRacerSetOf = (racerSet: RaceRacerSet): RacerSet =>
     rubberBand: racerSet.rubberBand,
     randomPosition: racerSet.randomPosition,
     collisionOrder: racerSet.collisionOrder,
+    collisionBodies: racerSet.collisionBodies,
     registryEntries: racerSet.registryEntries,
     registryContacts: racerSet.registryContacts,
     emitters: racerSet.emitters,

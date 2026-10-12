@@ -4,7 +4,7 @@ import type { ComputerRacerRoute } from '../../computer-racer-route/index.ts'
 import type { RegistryContact, RegistryEntry } from '../../projectiles/index.ts'
 import type { EmitterPools, EmitterReference } from '../../emitter/index.ts'
 import type { RouteFollower, RubberBand } from '../../racer-ai/index.ts'
-import type { BoundingSphere } from '../../racer-collision/index.ts'
+import type { BoundingSphere, CollisionBody } from '../../racer-collision/index.ts'
 import type { CarRigidBody } from '../../racer-physics/index.ts'
 import type { RandomTable, RandomTablePosition } from '../../random-table/index.ts'
 import type { VehicleSkids } from './vehicle-skids/vehicle-skids.types.ts'
@@ -438,6 +438,14 @@ export type RankingEntry = {
   readonly progress: number
 }
 
+// A node of the racers' collision list that a track hazard registered (the hammer's Begin, 0x0048be00): `owner` is the
+// hazard's index, and the node stays in `collisionBodies` after its End (+0x24 = 0) so that the node numbers hold.
+export type CollisionBodyNode = {
+  readonly owner: number
+  readonly isActive: boolean
+  readonly body: CollisionBody
+}
+
 // The racer set (race +0x3bc).
 export type RacerSet = {
   // +0x140 (array, stride 0xe34) and +0x144 (count).
@@ -448,7 +456,10 @@ export type RacerSet = {
   readonly randomPosition: RandomTablePosition
   // Racer set +0xf0 (the collision manager, vtable 0x004b0aa8): the racers' nodes in list order (list +0x2c), as indexes.
   // The list is sorted by the display bounding sphere's lowest x on every step, so the order is state.
+  // A node number below the racer count is that racer; the count plus an index into `collisionBodies` is a body (a node
+  // of the same list whose shape belongs to no racer).
   readonly collisionOrder: readonly number[]
+  readonly collisionBodies: readonly CollisionBodyNode[]
   // The same manager's list +0x48 (objects the racers touch, registered by effects, projectiles and bricks) and the
   // contacts the last pass 4 found in it (0x0043d270); whoever registers an entry answers its contacts.
   readonly registryEntries: readonly RegistryEntry[]
@@ -615,3 +626,6 @@ export type RacerPassDependencies = RacerCollisionDependencies & {
     entry: RegistryEntry
   ) => boolean
 }
+
+// What the impulse reads of the second shape: its velocity (+0x8), its centre of mass (+0x20) and its inverse mass (+0xcc).
+export type ImpulseBody = Pick<CarRigidBody, 'linearVelocity' | 'inverseMass' | 'worldCentreOfMass'>
