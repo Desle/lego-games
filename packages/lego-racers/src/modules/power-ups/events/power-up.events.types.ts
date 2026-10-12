@@ -1,4 +1,10 @@
-import type { Vector3 } from '../../simulation-math/index.ts'
+import type { Matrix3, Vector3 } from '../../simulation-math/index.ts'
+
+// Where a curse's figure stands (its position and rotation) when a racer drives into it.
+export type CurseFigureFrame = {
+  readonly position: Vector3
+  readonly rotation: Matrix3
+}
 
 // What the power-ups ask of a racer, the explosions and the projectile code; each names the original call.
 export type PowerUpEvent =
@@ -38,6 +44,9 @@ export type PowerUpEvent =
       readonly type: 'power_ups.racer_cursed'
       readonly racer: number
       readonly durationMilliseconds: number
+      // The frame of the curse's figure (position and rotation), which the racer's own figure starts from; null when the
+      // caller has none (the origin and the identity then).
+      readonly figureFrame: CurseFigureFrame | null
     }
   // 0x00439b00: the curse ends early because a shield was raised.
   | { readonly type: 'power_ups.racer_curse_lifted'; readonly racer: number }

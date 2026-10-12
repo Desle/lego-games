@@ -13,6 +13,7 @@ import { linkBspTrees } from './link-bsp-trees.ts'
 import { linkMaterials } from './link-materials.ts'
 import { linkMaterialAssignments, linkMeshes } from './link-meshes.ts'
 import { linkAnimations, linkSkeletons } from './link-skeletons.ts'
+import { linkSprites } from './link-sprites.ts'
 import { linkTextures } from './link-textures.ts'
 
 const getRgb = (colorBytes: readonly number[]): readonly [number, number, number] =>
@@ -46,6 +47,7 @@ const EMPTY_SCENE: Scene = Object.freeze({
   skeletons: [],
   animations: [],
   instances: [],
+  sprites: [],
   cameras: [],
   ambientLights: [],
   directionalLights: [],
@@ -89,15 +91,17 @@ const getSceneWithWorld = (
     ...scene.animations,
     ...linkAnimations(source, world.animations),
   ])
+  const worldAssignments = linkMaterialAssignments(
+    source,
+    world.materialAssignments,
+    linkedMaterials
+  )
   return Object.freeze({
     worldPaths: Object.freeze([...scene.worldPaths, worldPath]),
     textures: linkedTextures.textures,
     materials: linkedMaterials.materials,
     meshes: Object.freeze([...scene.meshes, ...linkMeshes(source, world.meshes, linkedMaterials)]),
-    materialAssignments: Object.freeze([
-      ...scene.materialAssignments,
-      ...linkMaterialAssignments(source, world.materialAssignments, linkedMaterials),
-    ]),
+    materialAssignments: Object.freeze([...scene.materialAssignments, ...worldAssignments]),
     bspTrees: Object.freeze([...scene.bspTrees, ...linkBspTrees(source, world.bspTrees)]),
     skeletons: Object.freeze([...scene.skeletons, ...linkSkeletons(source, world.skeletons)]),
     animations,
@@ -106,6 +110,10 @@ const getSceneWithWorld = (
       ...linkMeshInstances(world.meshInstances, counts),
       ...linkSkeletonInstances(world.skeletonInstances, counts, animations),
       ...linkBspTreeInstances(world.bspTreeInstances, counts),
+    ]),
+    sprites: Object.freeze([
+      ...scene.sprites,
+      ...linkSprites(worldPath, world.sprites, linkedMaterials, worldAssignments),
     ]),
     cameras: Object.freeze([...scene.cameras, ...world.cameras.map(getSceneCamera)]),
     ambientLights: Object.freeze([
