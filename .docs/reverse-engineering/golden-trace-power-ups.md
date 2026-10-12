@@ -90,8 +90,9 @@ All sixteen cells of the grid match with `POWER_UP_COMPUTERS=1`. What the regist
 ## Open
 
 - Warp: the route (checkpoints), the carry (`0x0045d780`), the start (`0x004395d0`: flag 0x10, timed effect and spin end, tows end, flag 0x1000) and the landing (`0x0045dc90`) are ported for a human's free body. The bounds quirk, the vehicle's smoke and fade state, the computers' scripted warp and the launcher destination are ported (see the warp sections). Open: the oil slick and scorch decal callers and the skid emitters (vehicle `+0x1e4`).
-- Debris animation lengths are still the empty values of `EMPTY_PROJECTILE_MODEL_DATA` (the warp route now comes from the checkpoints); `trackTargets` (the TGB points the cannon and grapple aim at) are empty (the computers-grid cells do not reach them).
+- Debris animation lengths come from `2BRK02.ADB` (POWERUP.WDB: the four models "brick1".."brick4" all play its four clips, `(frames - 1) / rate` each: 1033, 833, 1033 and 1267 ms; the emulator frees the pieces after 31, 25, 31 and 38 frames), and `trackTargets` from the race's `.TGB` (`Tgb_Load` `0x0045c3d0`; the cannon and grapple of a human racer aim at the nearest, `0x0045c6a0`). Neither is reached by the traced scenarios' results (all expectations unchanged).
 - Sound-driven random draws (`tauntNearestRacer`, `updateRacerSounds`) are stand-ins: a draw is missing or extra after some hits (wand, frame 199).
+- `racec0r1` frame 436: a computer's oil slick sits 0.64 above the port's (z of the registered sphere): the ground probe `0x0041f4d0` (via `0x00456360`) answers a different surface in the original (dynamic sphere objects, `+0xa8` of the world, or the material flag `0x20000` test, are not ported).
 - `racec0r3` shows a track event difference at frame 797 (`track.events.2a[61]`) that the random cursor used to hide.
 - Brick colours per kind belong to the render-trace branch (PR 37): `pbrickP`, `pbrickS`, `pbrickT`, `pbrickM` (`0x00458a80`, `0x0045ba90`).
 
