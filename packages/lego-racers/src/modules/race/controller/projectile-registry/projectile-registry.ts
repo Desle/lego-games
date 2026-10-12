@@ -82,18 +82,10 @@ const getFlightSphere = (source: RegistrySource, effect: PowerUpEffect): Boundin
   }
   const { shapeBounds } = source.projectileModelData
   if (motion.kind === 'grapple') {
-    const { framePosition, velocityX, velocityY } = motion.hook.flight
-    const { centre, radius } = shapeBounds.grapple
-    // Hypothesis: the hook's frame faces along its horizontal velocity with z up, and the bounds centre sits in it.
-    const length = Math.hypot(velocityX, velocityY) || 1
-    const forward = { x: velocityX / length, y: velocityY / length }
-    return getSphere(
-      Object.freeze({
-        x: framePosition.x + centre.x * forward.x - centre.y * forward.y,
-        y: framePosition.y + centre.x * forward.y + centre.y * forward.x,
-        z: framePosition.z + centre.z,
-      }),
-      radius
+    return getFigureSphere(
+      source.arithmetic,
+      { rotation: motion.hook.frameRotation, position: motion.hook.flight.framePosition },
+      shapeBounds.grapple
     )
   }
   if (motion.kind === 'rocket' && motion.homing !== null) {

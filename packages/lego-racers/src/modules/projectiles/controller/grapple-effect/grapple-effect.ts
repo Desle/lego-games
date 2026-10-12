@@ -9,6 +9,7 @@ import {
 import type { PowerUpEffect, PowerUpStep } from '../../../power-ups/index.ts'
 import {
   getDotProduct,
+  getRotationFromFrameAxes,
   getNormalizedVector3,
   getSquaredLength,
   getStoredDifference,
@@ -43,6 +44,44 @@ const PULL_STRENGTH = 180
 const getGrappleHook = (world: ProjectileWorld, effectId: number): GrappleHook | null => {
   const motion = getMotion(world, effectId)
   return motion !== null && motion.kind === 'grapple' ? motion.hook : null
+}
+
+// 0x00453ef0 after the flight of the active state (0x004541f6's predecessor, 0x0045417b): the hook model's first axis
+// points from the owner at the aim, its third axis up.
+const FRAME_UP: Vector3 = Object.freeze({ x: 0, y: 0, z: 1 })
+
+const getStepWithHookOriented = (
+  context: ProjectileContext,
+  current: ProjectileStep,
+  effectId: number,
+  result: string,
+  ownerPosition: Vector3
+): ProjectileStep => {
+  const hook = getGrappleHook(current.world, effectId)
+  if (
+    hook === null ||
+    getEffect(current.step, effectId).state !== EffectState.ACTIVE ||
+    result === BallisticFlightState.HIT_GROUND
+  ) {
+    return current
+  }
+  const { subtract, storeFloat } = context.powerUps.arithmetic
+  const { targetPosition } = hook.flight
+  const first = Object.freeze({
+    x: storeFloat(subtract(targetPosition.x, ownerPosition.x)),
+    y: storeFloat(subtract(targetPosition.y, ownerPosition.y)),
+    z: storeFloat(subtract(targetPosition.z, ownerPosition.z)),
+  })
+  return Object.freeze({
+    step: current.step,
+    world: getWorldWithHook(current.world, effectId, {
+      ...hook,
+      frameRotation: getRotationFromFrameAxes(context.powerUps.arithmetic, {
+        first,
+        third: FRAME_UP,
+      }),
+    }),
+  })
 }
 
 const getWorldWithHook = (
@@ -214,7 +253,13 @@ export const updateGrapple = (
   })
   const victim = advance.hook.flight.touchedRacer
   if (advance.result !== BallisticFlightState.TOUCHED_RACER || victim === null) {
-    return getStepAfterAdvance(context, flown, before.id, advance.result, victim)
+    return getStepWithHookOriented(
+      context,
+      getStepAfterAdvance(context, flown, before.id, advance.result, victim),
+      before.id,
+      advance.result,
+      ownerRacer?.position ?? ZERO_VECTOR3
+    )
   }
   const hit = hitRacerWithProjectile(flown.step, context.powerUps, before.id, victim, ZERO_VECTOR3)
   const hitState = getEffect(hit, before.id).state
@@ -229,5 +274,11 @@ export const updateGrapple = (
           ),
         })
       : Object.freeze({ step: hit, world: flown.world })
-  return getStepAfterAdvance(context, afterHit, before.id, advance.result, victim)
+  return getStepWithHookOriented(
+    context,
+    getStepAfterAdvance(context, afterHit, before.id, advance.result, victim),
+    before.id,
+    advance.result,
+    ownerRacer?.position ?? ZERO_VECTOR3
+  )
 }

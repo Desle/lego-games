@@ -1,4 +1,4 @@
-import { getNormalizedVector3, ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
+import { getNormalizedVector3, IDENTITY_MATRIX3, ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 import {
   advanceBallisticFlight,
@@ -32,6 +32,7 @@ export const createGrappleHook = (flight: BallisticFlight): GrappleHook =>
     isRetracting: false,
     isHookArrived: false,
     tension: 0,
+    frameRotation: IDENTITY_MATRIX3,
   })
 
 // 0x00449a90 (cdecl: target, position, arrival distance squared, speed, seconds): moves the position towards the
