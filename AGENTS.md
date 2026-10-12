@@ -6,11 +6,11 @@ This repository is a workspace: several packages, one gate. Every rule is enforc
 
 ### Packages
 
-| Package                          | Folder                        | What it is                                                                                                             |
-| -------------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `@lego-games/lego-racers`        | `packages/lego-racers`        | LEGO Racers (1999), ported exactly from `LEGORacers.exe` and `GolDP.dll`.                                              |
-| `@lego-games/lego-racers-viewer` | `packages/lego-racers-viewer` | Browser track viewer (Vite, React, Three.js) rendering scenes from the player's own `LEGO.JAM`; `pnpm run dev:viewer`. |
-| `@lego-games/tooling`            | `packages/tooling/`           | The rules as code: lint, TypeScript and Prettier config, the architecture checks, the git and Claude hooks.            |
+| Package                       | Folder                     | What it is                                                                                                      |
+| ----------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `@lego-games/lego-racers`     | `packages/lego-racers`     | LEGO Racers (1999), ported exactly from `LEGORacers.exe` and `GolDP.dll`.                                       |
+| `@lego-games/lego-racers-web` | `packages/lego-racers-web` | Browser track viewer (Vite, React, Three.js) rendering scenes from the player's own `LEGO.JAM`; `pnpm run dev`. |
+| `@lego-games/tooling`         | `packages/tooling/`        | The rules as code: lint, TypeScript and Prettier config, the architecture checks, the git and Claude hooks.     |
 
 Each package has its own `AGENTS.md` with its layout, commands and definition of done. Read it before changing code there, and run package commands inside its folder.
 
