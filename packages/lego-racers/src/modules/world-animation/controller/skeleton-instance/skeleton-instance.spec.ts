@@ -41,6 +41,8 @@ const createInstance = (overrides: Partial<SkeletonInstanceRuntime>): SkeletonIn
   name: 'hammer',
   animation,
   skeleton: null,
+  rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+  scale: 1,
   clip: createSkeletonAnimationState(animation, 0),
   isAnimated: true,
   otherFlags: 0,
