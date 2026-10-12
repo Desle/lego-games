@@ -147,11 +147,11 @@ export const createLDrawRacerCar = (
         )
         return false
       }
+      // A built car keeps every part: the loader files its composite bricks' lances and swords under `Minifig`.
       const drawing = createLDrawCarDrawing(
         { archive: request.archive, design: request.design },
         true,
-        chassisModels,
-        keepModelParts
+        chassisModels
       )
       bodyHolder.add(drawing.object)
       await drawing.settled
