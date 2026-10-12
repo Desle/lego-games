@@ -13,12 +13,27 @@ import {
   getSkeletonPose,
 } from '../../../skeletal-animation/index.ts'
 import { parseSkeleton } from '../../../skeleton/index.ts'
-import type { RocketLaunchBone } from '../../../projectiles/index.ts'
+import type { DebrisAnimations, RocketLaunchBone } from '../../../projectiles/index.ts'
 import { EMPTY_PROJECTILE_MODEL_DATA } from '../../types/projectile-model-data/projectile-model-data.ts'
 import type { ProjectileModelData } from '../../types/race.types.ts'
 
 const ROCKET_ANIMATION_NAME = 'DMISSILE'
 const ROCKET_COUNT = 3
+// The four debris models "brick1".."brick4" of POWERUP.WDB all play the clips of this animation (2BRK02.ADB).
+const DEBRIS_ANIMATION_NAME = '2BRK02'
+const DEBRIS_MODEL_COUNT = 4
+
+// 0x004514b0 plays clip (thrown count mod clip count) from its first frame and 0x00451860 frees the piece when the
+// figure's clock reaches the clip's last frame (0x0040e360: (frames - 1) <= time at the clip's rate).
+const getDebrisAnimations = (readFile: (path: string) => Uint8Array): DebrisAnimations => {
+  const animation = getSkeletalAnimation(
+    parseAnimation(readFile(getRacerFilePath(DEBRIS_ANIMATION_NAME, 'ADB')))
+  )
+  const clipMilliseconds = Object.freeze(
+    animation.clips.map((clip) => (clip.frameCount - 1) / clip.framesPerMillisecond)
+  )
+  return Object.freeze(Array.from({ length: DEBRIS_MODEL_COUNT }, () => clipMilliseconds))
+}
 
 // 0x00456db0 starts the rocket's launch animation (rocket k plays clip k of the missile's animation) and 0x004568f0
 // holds state 2 until the figure's clock reaches its last frame (0x0040e360: (frames - 1) <= time at the clip's rate).
@@ -121,6 +136,7 @@ export const loadProjectileModelData = (
       rocket: getBounds(arithmetic, readFile, 'DMISSILE'),
     }),
     rocketLaunchMilliseconds: getRocketLaunchMilliseconds(readFile),
+    debrisAnimations: getDebrisAnimations(readFile),
     rocketLaunchBones: getRocketLaunchBones(readFile),
     rocketModelScale: parseModel(readFile(getRacerFilePath(ROCKET_ANIMATION_NAME, 'GDB'))).scale,
   })
