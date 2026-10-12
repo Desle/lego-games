@@ -40,7 +40,7 @@ const getRacerShadow = (racer: Racer, centre: Vector3): RacerShadow => {
 const WARP_SHRINK_MILLISECONDS = 250
 // Hypothesis, measured against the render trace: the car is drawn before the portal sets its scale, so it wears the scale
 // of the previous frame (one 33 ms step older timer).
-const WARP_SCALE_LAG_MILLISECONDS = 33
+const WARP_SCALE_LAG_MILLISECONDS = 33 // @check-allow traced-constants: hypothesis from the render trace, no original address yet
 
 const getPartScale = (raceState: RaceState, racerIndex: number): number => {
   const { effects, activeEffectIds } = raceState.powerUpStep.world.effects

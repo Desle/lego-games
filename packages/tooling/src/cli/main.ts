@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 import { loadConfig } from '../config/load-config.ts'
 import { createCheckContext, formatReport, runChecks } from '../checks/run-checks.ts'
+import {
+  refreshBaseline,
+  BASELINE_PATH,
+} from '../checks/traced-constants/traced-constants-baseline.ts'
 import { runPostEditHook } from '../hooks/post-edit-hook.ts'
 import { runPrePushHook } from '../hooks/pre-push-hook.ts'
 import { runStopHook } from '../hooks/stop-hook.ts'
@@ -9,12 +13,23 @@ import { getProjectRoot } from '../project/project-root.ts'
 const USAGE = `tooling <command>
 
   verify                          run every architecture check (part of \`pnpm run check\`)
+  traced-constants-baseline       shrink the traced-constants baseline after tracing literals
   hook <post-edit|stop|pre-push>  entry points for Claude Code and git hooks`
 
 const verify = async (root: string): Promise<number> => {
   const outcomes = await runChecks(createCheckContext(root, await loadConfig(root)))
   console.log(formatReport(outcomes))
   return outcomes.some((outcome) => outcome.violations.length > 0) ? 1 : 0
+}
+
+const refreshTracedConstantsBaseline = (root: string): number => {
+  const problems = refreshBaseline(root)
+  for (const problem of problems)
+    console.error(`${problem.path}:${String(problem.line)}  ${problem.message}`)
+  console.log(
+    problems.length === 0 ? `${BASELINE_PATH} updated` : 'not updated: trace the literals above'
+  )
+  return problems.length === 0 ? 0 : 1
 }
 
 const runHook = (root: string, hook: string | undefined): Promise<number> => {
@@ -32,6 +47,8 @@ const run = (parameters: readonly string[]): Promise<number> => {
   switch (command) {
     case 'verify':
       return verify(process.cwd())
+    case 'traced-constants-baseline':
+      return Promise.resolve(refreshTracedConstantsBaseline(process.cwd()))
     case 'hook':
       return runHook(getProjectRoot(), rest[0])
     default:
