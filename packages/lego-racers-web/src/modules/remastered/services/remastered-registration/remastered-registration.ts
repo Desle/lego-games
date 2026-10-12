@@ -20,6 +20,10 @@ import {
   LOOK_PARAMETER,
   setActiveLookPreset,
 } from '../ldraw-car/ldraw-look.ts'
+import {
+  createPerformancePass,
+  getIsPerformanceRequested,
+} from '../performance-monitor/performance-monitor.ts'
 import { createLDrawPickupDrawing } from '../ldraw-pickup/ldraw-pickup-drawing.ts'
 import { loadLDrawModelIndex, getLDrawModelIndex } from '../ldraw-models/ldraw-model-client.ts'
 import { createLDrawRacerCar } from '../ldraw-racer-model/ldraw-racer-car.ts'
@@ -79,12 +83,17 @@ export const registerRemastered = async (search: string) => {
       getIsLDrawRequested(search) ? createLDrawRacerDriver(request, search) : null,
     getRaceRenderPass: (request) => {
       const mode = getShadowMode(search)
-      if (mode === ShadowMode.CLASSIC) return null
-      return createShadowPass(
-        request,
-        mode,
-        getTrackSun(search, request.trackKey, request.trackGroup)
-      )
+      const shadowPass =
+        mode === ShadowMode.CLASSIC
+          ? null
+          : createShadowPass(
+              request,
+              mode,
+              getTrackSun(search, request.trackKey, request.trackGroup)
+            )
+      return getIsPerformanceRequested(search)
+        ? createPerformancePass(request, shadowPass)
+        : shadowPass
     },
     getEffectModelDrawing: (request) =>
       getIsLDrawRequested(search) ? createLDrawPickupDrawing(request) : null,

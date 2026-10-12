@@ -1,6 +1,7 @@
 import type { Group } from 'three'
 import { LDrawLoader } from 'three/examples/jsm/loaders/LDrawLoader.js'
 import { LDrawConditionalLineMaterial } from 'three/examples/jsm/materials/LDrawConditionalLineMaterial.js'
+import { addLoadMilliseconds } from '../performance-monitor/performance-monitor.ts'
 import { DEVELOPMENT_LDRAW_ROUTE } from './ldraw-library-route.ts'
 
 const LIBRARY_PATH = `${DEVELOPMENT_LDRAW_ROUTE}/`
@@ -43,7 +44,22 @@ const getLoader = (): Promise<LDrawLoader> => {
 }
 
 // An LDraw model (type 1 lines naming library parts) as three.js objects in the library's axes and units.
+// The wall time the library spends delivering parts counts once however many models are in flight (the monitor's load time).
+let pendingModelCount = 0
+let busySince = 0
+
+const finishModel = () => {
+  pendingModelCount -= 1
+  if (pendingModelCount === 0) addLoadMilliseconds(performance.now() - busySince)
+}
+
 export const parseLDrawModel = async (text: string): Promise<Group> => {
-  const loader = await getLoader()
-  return new Promise<Group>((resolve, reject) => loader.parse(text, resolve, reject))
+  if (pendingModelCount === 0) busySince = performance.now()
+  pendingModelCount += 1
+  try {
+    const loader = await getLoader()
+    return await new Promise<Group>((resolve, reject) => loader.parse(text, resolve, reject))
+  } finally {
+    finishModel()
+  }
 }
