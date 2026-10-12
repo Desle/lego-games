@@ -1,0 +1,42 @@
+{
+  "name": "@lego-games/lego-racers-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A browser track viewer that renders LEGO Racers scenes from the player's own LEGO.JAM.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "verify": "tooling verify",
+    "test": "vitest run",
+    "render-trace": "vitest run --config vitest.trace.config.ts render-trace",
+    "audio-trace": "vitest run --config vitest.trace.config.ts audio-trace",
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run verify && pnpm run test",
+    "format": "eslint --fix . && prettier --write .",
+    "format:check": "prettier --check .",
+    "build": "vite build",
+    "audit:high": "pnpm audit --audit-level high",
+    "ci": "pnpm run check && pnpm run format:check && pnpm run build && pnpm run audit:high"
+  },
+  "dependencies": {
+    "@lego-games/lego-racers": "workspace:*",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@lego-games/tooling": "workspace:*",
+    "@tailwindcss/vite": "4.3.3",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/three": "0.186.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "jsdom": "30.1.1",
+    "tailwindcss": "4.3.3",
+    "vite": "8.3.1",
+    "vitest": "5.0.2"
+  }
+}

@@ -12,6 +12,8 @@ export type ExplosionParameters = {
   readonly scarMilliseconds: number
   // +0x264: the frame scale at the end of the growth.
   readonly finalScale: number
+  // +0x25c: the side of the scar when the growth ends.
+  readonly scarWidth: number
   // +0x22c.
   readonly blastKind: number
 }
@@ -35,6 +37,8 @@ export type Explosion = {
   readonly rateChange: number
   // The frame scale (0x00410f10), which the collision registry multiplies with the model's radius.
   readonly scale: number
+  // +0x23c while the scar fades: its alpha, from 180 down to 0.
+  readonly scarAlpha: number
   readonly parameters: ExplosionParameters
 }
 

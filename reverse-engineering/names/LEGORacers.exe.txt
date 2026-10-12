@@ -924,3 +924,6 @@
 0048e230 HazardCapture_ReleaseRacer
 0043aa40 CollisionManager_RegisterBody
 0043d1b0 CollisionManager_Register
+00490190 HazardCrane_Update
+00490330 HazardCrane_ProjectShadow
+00490460 HazardCrane_DrawShadow

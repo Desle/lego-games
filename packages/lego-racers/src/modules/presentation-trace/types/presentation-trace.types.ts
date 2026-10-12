@@ -17,6 +17,8 @@ export type PresentationScenario = {
   // The frames whose draws are recorded (draws are large); null records every frame.
   readonly recordFrames: readonly number[] | null
   readonly isRenderRecorded: boolean
+  // Whether the triangles the decals hold are recorded too (reverse-engineering/emulator/decal_trace.py).
+  readonly isDecalRecorded?: boolean
   // Bricks handed to racers at a frame (the golden trace's grants).
   readonly powerUpGrants?: readonly {
     readonly frame: number
@@ -93,6 +95,25 @@ export type OriginalRenderFrame = {
   readonly draws: readonly OriginalDraw[]
 }
 
+// One triangle a decal holds: three corners of world x, y, z and picture u, v.
+export type OriginalDecalTriangle = readonly (readonly number[])[]
+
+// A decal object that held triangles at the end of a frame, and the address of the call that projected it last.
+export type OriginalDecal = {
+  readonly source: number
+  readonly triangles: readonly OriginalDecalTriangle[]
+  // For an explosion's scar: the explosion's state (2 growing, 3 fading) and its alpha, +0x04 and +0x23c of the owner.
+  readonly ownerState: number
+  readonly ownerAlpha: number
+  // The point the last projection was placed at (decal +0xe8).
+  readonly position: readonly number[]
+}
+
+export type OriginalDecalFrame = {
+  readonly frame: number
+  readonly decals: readonly OriginalDecal[]
+}
+
 export type OriginalAudioEvent = {
   readonly kind: string
   readonly values: Readonly<Record<string, unknown>>
@@ -108,4 +129,5 @@ export type OriginalPresentation = {
   readonly textures: ReadonlyMap<string, OriginalTexture>
   readonly renderFrames: readonly OriginalRenderFrame[]
   readonly audioFrames: readonly OriginalAudioFrame[]
+  readonly decalFrames: readonly OriginalDecalFrame[]
 }
