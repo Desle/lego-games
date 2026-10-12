@@ -8,6 +8,7 @@ import type { Object3D } from 'three'
 import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
 import { createGameBrickMeshes } from './game-brick-meshes.ts'
 import { loadDesignGridOffset } from './chassis-grid-offset-loader.ts'
+import { getDeckRestedDesign } from './deck-rested-design.ts'
 import {
   createLDrawCarDocument,
   getChassisFileName,
@@ -59,8 +60,23 @@ export const createLDrawCarDrawing = (
   if (isLDrawUsed) object.add(placeholder)
   const draw = async () => {
     const gridOffset = await loadDesignGridOffset(design, chassisModels)
-    const shiftedDocument = createLDrawCarDocument(design, origin, chassisReferences, gridOffset)
-    gameMeshes.position.set(
+    const builtDesign = chassisModels.size === 0 ? design : getDeckRestedDesign(design)
+    const shiftedDocument = createLDrawCarDocument(
+      builtDesign,
+      origin,
+      chassisReferences,
+      gridOffset
+    )
+    const restedGameMeshes = createGameBrickMeshes(
+      archive,
+      database,
+      shiftedDocument.unmappedBricks,
+      origin
+    )
+    object.remove(gameMeshes)
+    disposeMeshes(gameMeshes)
+    object.add(restedGameMeshes)
+    restedGameMeshes.position.set(
       gridOffset.x / LDRAW_UNITS_PER_STUD,
       gridOffset.z / LDRAW_UNITS_PER_STUD,
       -gridOffset.y / LDRAW_UNITS_PER_STUD

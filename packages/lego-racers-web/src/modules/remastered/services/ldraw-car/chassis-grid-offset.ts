@@ -8,8 +8,8 @@ const ATTACHABLE_TOP_FLAG = 0x80
 const HEIGHT_MASK = 0x3f
 const NO_GRID_OFFSET: GridOffset = Object.freeze({ x: 0, y: 0, z: 0 })
 
-// The height (LDU above the chassis brick's bottom) most attachable cells of the footprint have: where the first layer rests.
-export const getDominantDeckHeight = (footprint: BrickFootprint): number => {
+// The height (plates above the chassis brick's bottom) most attachable cells of the footprint have: where the first layer rests.
+export const getDominantDeckPlates = (footprint: BrickFootprint): number => {
   const cellCountsByHeight = new Map<number, number>()
   for (let index = 0; index < footprint.width * footprint.height; index += 1) {
     const top = footprint.cells[index * 2] ?? 0
@@ -25,8 +25,12 @@ export const getDominantDeckHeight = (footprint: BrickFootprint): number => {
       dominantCount = count
     }
   }
-  return dominantHeight * LDRAW_UNITS_PER_PLATE
+  return dominantHeight
 }
+
+// The same in LDU.
+export const getDominantDeckHeight = (footprint: BrickFootprint): number =>
+  getDominantDeckPlates(footprint) * LDRAW_UNITS_PER_PLATE
 
 const STUD_TOP_TOLERANCE = 1
 const COORDINATES_PER_POINT = 3
