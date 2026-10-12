@@ -1,7 +1,11 @@
 import { createDecalFrame, projectDecal } from '@lego-games/lego-racers/decal'
 import type { DecalFaceBatch, DecalTriangle } from '@lego-games/lego-racers/decal'
-import { RACER_FIGURE_LEVEL_DISTANCE } from '@lego-games/lego-racers/race-presentation'
+import {
+  getRacerShadowAlpha,
+  RACER_FIGURE_LEVEL_DISTANCE,
+} from '@lego-games/lego-racers/race-presentation'
 import type { RacerPose } from '@lego-games/lego-racers/race-presentation'
+import { getFloatFromBits } from '@lego-games/lego-racers/simulation-math'
 import { SceneInstanceKind } from '@lego-games/lego-racers/scene'
 import type { Scene, SceneMesh } from '@lego-games/lego-racers/scene'
 import {
@@ -23,6 +27,8 @@ const DECAL_RECEIVER_FLAG = 0x20000
 const MAXIMUM_TRIANGLES = 16
 const CORNERS_PER_TRIANGLE = 3
 const BYTE_MAXIMUM = 255
+// 0x004af914: the decal's instance is moved 0.4 along z when it is made (0x00414950), which lifts it off the track.
+const DECAL_LIFT = getFloatFromBits(0x3ecccccd)
 
 const getBatches = (scene: Scene, mesh: SceneMesh, assignmentIndex: number | null) => {
   const materialIndices =
@@ -87,9 +93,10 @@ const createShadowMesh = (material: Material): Mesh => {
     new BufferAttribute(new Uint8Array(MAXIMUM_TRIANGLES * CORNERS_PER_TRIANGLE * 4), 4, true)
   )
   const mesh = new Mesh(geometry, material)
+  mesh.position.set(0, 0, DECAL_LIFT)
   mesh.frustumCulled = false
   mesh.visible = false
-  // The shadow lies on the track: drawn after it, over the same depth.
+  // The shadow lies on the track: drawn after it.
   mesh.renderOrder = 1
   return mesh
 }
@@ -127,15 +134,17 @@ export const createRaceDecals = (
       (candidate) => candidate.name === racer.appearance.shadowImageName
     )
     if (surface === null || material === undefined) return null
-    const three = createSceneMaterial(material, assets.scene.textures, new Map())
-    three.depthWrite = false
+    // 0x0043fc20 draws the decal under an alpha of its own (device slot 0xb8): the material's colour key stays off.
+    const three = createSceneMaterial(
+      { ...material, renderState: { ...material.renderState, isAlphaTestEnabled: false } },
+      assets.scene.textures,
+      new Map()
+    )
+    three.depthWrite = true
     three.depthFunc = LessEqualDepth
-    three.polygonOffset = true
-    three.polygonOffsetFactor = -1
-    three.polygonOffsetUnits = -1
     const mesh = createShadowMesh(three)
     trackScene.add(mesh)
-    return { mesh, alpha: material.renderState.diffuseAlpha ?? BYTE_MAXIMUM }
+    return { mesh }
   })
   return Object.freeze({
     update: (poses: readonly RacerPose[], eye: Vector3Like) => {
@@ -147,15 +156,19 @@ export const createRaceDecals = (
           centre === undefined
             ? Infinity
             : (eye.x - centre.x) ** 2 + (eye.y - centre.y) ** 2 + (eye.z - centre.z) ** 2
-        // The draw is skipped unless the camera is nearer than the figure's draw distance (strictly).
-        if (pose.shadow === null || !(squaredDistance < RACER_FIGURE_LEVEL_DISTANCE)) {
+        // 0x0043fa50 projects only within the figure's draw distance (strictly), 0x0043fc20 draws it faded.
+        const alpha =
+          pose.shadow === null || !(squaredDistance < RACER_FIGURE_LEVEL_DISTANCE)
+            ? null
+            : getRacerShadowAlpha(pose.shadow, eye)
+        if (pose.shadow === null || alpha === null) {
           shadow.mesh.visible = false
           continue
         }
         setTriangles(
           shadow.mesh,
           projectDecal(surface.world, createDecalFrame(pose.shadow.placement)),
-          shadow.alpha
+          alpha
         )
       }
     },
