@@ -13,6 +13,10 @@ import { createRace, NO_MENU_INPUT, NO_RACE_CONTACTS, stepRace } from '@lego-gam
 import { getRacerControls } from '@lego-games/lego-racers/race-input'
 import { parseRecording } from '@lego-games/lego-racers/session-recording'
 import { replayOnPort } from '@lego-games/lego-racers/session-replay'
+import {
+  clearViewerExtensions,
+  registerViewerExtension,
+} from '../../../../shared/viewer-extensions/viewer-extensions.ts'
 import { createRaceRecording } from './race-recording.ts'
 import {
   getIsOriginalGamePresent,
@@ -83,7 +87,7 @@ describe('the session recording', () => {
       const executable = readOriginalExecutable()
       const start = getRoyalKnightsStart(jam, executable)
       const store = createSessionRecordingStore(createMemoryBackend())
-      const recording = createRaceRecording(start, '', store)
+      const recording = createRaceRecording(start, store)
       let raceState = createRace(start.definition)
       const liveFields: unknown[] = []
 
@@ -118,17 +122,18 @@ describe('the session recording', () => {
     120_000
   )
 
-  it('records nothing in the high-definition view', () => {
+  it('records nothing while an extension is registered', () => {
     // Arrange
     const store = createSessionRecordingStore(createMemoryBackend())
+    registerViewerExtension({ onTextureCreated: () => undefined, getRaceDisplay: () => null })
 
     // Act
     const recording = createRaceRecording(
-      // Never read: the high-definition check comes first.
+      // Never read: the extension check comes first.
       Object.freeze({}) as RaceStart,
-      '?hd',
       store
     )
+    clearViewerExtensions()
 
     // Assert
     expect(recording).toBeNull()

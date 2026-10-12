@@ -73,6 +73,7 @@ import { createRaceMenuInputSource } from '../../services/race-menu-input-source
 import { createRaceRecording } from '../../services/race-recording/race-recording.ts'
 import type { RaceRecording } from '../../services/race-recording/race-recording.types.ts'
 import { createRaceInputSource } from '../../services/race-input-source/race-input-source.ts'
+import { useRaceDisplayController } from '../race-display-controller/race-display-controller.ts'
 import { createRaceViewport } from '../../services/race-viewport/race-viewport.ts'
 import { RaceStatus } from '../../types/race-status/race-status.ts'
 import type { RaceController, RaceScreen } from './race-controller.types.ts'
@@ -166,6 +167,10 @@ const getChosenGameFiles = async (files: readonly File[]): Promise<LoadedGameFil
 // camera, HUD, music and sounds, and the services draw and play them.
 export const useRaceController = (): RaceController => {
   const containerReference = useRef<HTMLDivElement | null>(null)
+  const display = useRaceDisplayController()
+  const displayReference = useRef(display)
+  displayReference.current = display
+  const displayChangedReference = useRef<() => void>(() => undefined)
   const [screen, setScreen] = useState<RaceScreen>(INITIAL_SCREEN)
   const [assets, setAssets] = useState<RaceAssets | null>(null)
   const [gameFiles, setGameFiles] = useState<LoadedGameFiles | null>(null)
@@ -289,7 +294,7 @@ export const useRaceController = (): RaceController => {
     (next: RaceStart) => {
       if (gameFiles === null) return
       sessionReference.current = next.session
-      recordingReference.current = createRaceRecording(next, globalThis.location.search)
+      recordingReference.current = createRaceRecording(next)
       setScreen({ ...INITIAL_SCREEN, status: RaceStatus.LOADING })
       // Lets the loading state paint before the synchronous load.
       window.setTimeout(() => {
@@ -375,12 +380,21 @@ export const useRaceController = (): RaceController => {
     const container = containerReference.current
     if (assets === null || container === null) return undefined
     const recording = recordingReference.current
-    const viewport = createRaceViewport(container, assets, RACE_STAGE_SIZE)
+    const viewport = createRaceViewport(
+      container,
+      assets,
+      displayReference.current.stageSize,
+      displayReference.current.pixelRatio === 1 ? null : displayReference.current.pixelRatio
+    )
     const input = createRaceInputSource()
     const menuInput = createRaceMenuInputSource()
     const developmentPowerUps = import.meta.env.DEV ? createDevelopmentPowerUpSource() : null
     const audio = createRaceAudioPlayer(assets)
-    const hudContext = getHudContext(assets, RACE_STAGE_SIZE)
+    let hudContext = getHudContext(assets, displayReference.current.hudDesignSize)
+    displayChangedReference.current = () => {
+      viewport.resize(displayReference.current.stageSize)
+      hudContext = getHudContext(assets, displayReference.current.hudDesignSize)
+    }
     const hudImageUrls = createHudImageUrls(assets.hudImages)
     const resumeAudio = () => audio.resume()
     window.addEventListener('keydown', resumeAudio)
@@ -457,10 +471,10 @@ export const useRaceController = (): RaceController => {
         setScreen((previous) => ({
           ...previous,
           phase: raceState.phase,
-          hudCommands: [
+          hudCommands: displayReference.current.getHudCommands([
             ...(frame.hudFrame?.commands ?? []),
             ...getPauseMenuCommands(raceState, hudContext),
-          ],
+          ]),
         }))
         if (!raceState.isRunning && sessionReference.current !== null) {
           // The loop ended (Race_RunLoop 0x00432540): the pause menu's restart and quit are answered by the session,
@@ -493,11 +507,15 @@ export const useRaceController = (): RaceController => {
       developmentPowerUps?.dispose()
       audio.dispose()
       viewport.dispose()
+      displayChangedReference.current = () => undefined
     }
   }, [assets])
 
+  useEffect(() => displayChangedReference.current(), [display])
+
   return {
     ...screen,
+    display,
     containerReference,
     gameJam: screen.status === RaceStatus.MENU ? (gameFiles?.jam ?? null) : null,
     randomTable: screen.status === RaceStatus.MENU ? randomTable : null,

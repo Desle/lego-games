@@ -32,7 +32,8 @@ src/
     providers/           the viewer context
     components/          presentational pieces (props only, snapshot-tested)
     views/               the page
-  shared/                createEnum, the development route
+  modules/remastered/    the optional `?hd` layer (textures, widescreen), development only; see .docs/remastered.md
+  shared/                createEnum, the development route, the viewer extension points
 ```
 
 The layer table is the one in the root `.docs/rules.md` and `packages/lego-racers/AGENTS.md`.

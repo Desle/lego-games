@@ -1,0 +1,23 @@
+# Feature: remastered
+
+## Behaviour
+
+An optional layer above the original port, for development only: with `?hd[=<texture pack>]` the race fills the whole window at the display's native resolution (wider than 4:3, with the original's 65 degree vertical field of view), the HUD sits on the window's corners, and textures are swapped for an upscaled pack. It plugs into the viewer's extension points (`src/shared/viewer-extensions/`); the original's drawing code does not know it. See `.docs/remastered.md` at the repository root.
+
+## User flows
+
+- **Turn it on**: open the page with `?hd` (or `?hd=<pack>`) in development, or pick a pack in the developer panel (backquote key, Textures), which reloads the page.
+- **Turn it off**: open the page without `?hd`, or pick _Classic (original)_ in the developer panel.
+- **Play widescreen**: start a race; the canvas follows the window, including resizing. The menus stay 4:3.
+
+## Invariants
+
+- With no extension registered the viewer draws exactly what the original draws; the pixel trace and render trace run without this module.
+- A production build contains none of it: the module is imported only dynamically behind `import.meta.env.DEV`.
+- The culling frustum uses the camera's real (wider) aspect, with the original's vertical field of view.
+- A race with an extension registered is not recorded for replay.
+
+## Out of scope
+
+- Widescreen menus.
+- Anything that changes the simulation.

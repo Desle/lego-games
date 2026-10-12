@@ -1,5 +1,6 @@
+import { DataTexture } from 'three'
 import {
-  getHighDefinitionPixelRatio,
+  applyHighDefinitionTexture,
   getHighDefinitionUrl,
   getHighDefinitionVariant,
   getMaskedColors,
@@ -34,20 +35,6 @@ describe('getMaskedColors', () => {
   })
 })
 
-describe('getHighDefinitionPixelRatio', () => {
-  it('draws the stage with as many device pixels as it covers', () => {
-    // Arrange
-    const stage = { width: 800, height: 600 }
-    const window = { innerWidth: 1600, innerHeight: 1000, devicePixelRatio: 2 }
-
-    // Act
-    const ratio = getHighDefinitionPixelRatio(stage, window)
-
-    // Assert
-    expect(ratio).toBeCloseTo((1000 / 600) * 2)
-  })
-})
-
 describe('getHighDefinitionVariant', () => {
   it('uses the named pack, or the default for a bare flag', () => {
     // Arrange
@@ -59,5 +46,27 @@ describe('getHighDefinitionVariant', () => {
 
     // Assert
     expect(variants).toEqual(['nomos8k-dat', 'ultrasharp'])
+  })
+})
+
+describe('applyHighDefinitionTexture', () => {
+  it('keeps the original picture when the pack has none', async () => {
+    // Arrange
+    const replacePixels = vi.fn()
+    vi.stubGlobal('fetch', () => Promise.resolve({ ok: false }))
+    const event = {
+      texture: new DataTexture(new Uint8Array(4), 1, 1),
+      bitmapPath: 'GAMEDATA\\COMMON\\RH_CAR.BMP',
+      originalPixels: { colors: new Uint8Array(4), width: 1, height: 1 },
+      replacePixels,
+    }
+
+    // Act
+    applyHighDefinitionTexture(event, '?hd')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    vi.unstubAllGlobals()
+
+    // Assert
+    expect(replacePixels).not.toHaveBeenCalled()
   })
 })

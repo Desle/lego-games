@@ -16,9 +16,7 @@ const DevelopmentOverlay = ({ isRaceRunning, onRaceStopped }: DevelopmentOverlay
           onRaceStopped={onRaceStopped}
           onRecordingDownloaded={overlay.onRecordingDownloaded}
           onEverythingUnlocked={overlay.onEverythingUnlocked}
-          textureVariants={overlay.textureVariants}
-          selectedTextureVariant={overlay.selectedTextureVariant}
-          onTextureVariantSelected={overlay.onTextureVariantSelected}
+          selectors={overlay.selectors}
           onOverlayClosed={overlay.onOverlayClosed}
         />
       )}
