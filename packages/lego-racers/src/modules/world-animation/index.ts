@@ -26,6 +26,7 @@ export {
 } from './controller/skeleton-instance/skeleton-instance.ts'
 export {
   getSkeletonInstanceBoneAxes,
+  getSkeletonInstanceBonePoint,
   getSkeletonInstanceBoneTranslation,
   getSkeletonInstanceCameraView,
   getSkeletonInstanceChainAxes,
