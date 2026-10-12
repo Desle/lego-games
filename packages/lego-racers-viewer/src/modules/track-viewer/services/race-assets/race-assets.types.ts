@@ -50,6 +50,8 @@ export type RaceAssets = {
   readonly effectModels: EffectModels
   // GHOST.WDB with the race's worlds, only in a time trial (a race without a ghost draws no ghost car).
   readonly ghostScene: Scene | null
+  // The model scale (GDB keyword 0x33) of each ghost part by instance name.
+  readonly ghostScales: Readonly<Record<string, number>>
   readonly getString: (stringId: number) => string
   readonly imageNames: readonly string[]
   // The race description's display bounds (keyword 0x46) the minimap maps the world onto, or null.
