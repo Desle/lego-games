@@ -145,6 +145,12 @@ Team conventions, enforced mechanically; tunable per package in `tooling.config.
 - **Why**: Catches abandoned half-finished work.
 - **Enforced by**: `tooling verify` → `stale-todos`
 
+### Behaviour constants trace to the binary
+
+- **Rule**: In `packages/lego-racers/src/modules/**` (non-test), a numeric literal is either the initialiser of a named `const` with an original address (`0x00xxxxxx` or `0x10xxxxxx`) in a comment on the same line or alone on the line above, a structural value (`0`, `1`, `-1`, `2`; hex byte masks `0xff`/`0xffff`/`0xffffff`/`0xffffffff`; shift counts 8/16/24/32; array indices; type positions), or marked `// @check-allow traced-constants: reason`. A `createEnum` map gets no exemption: its values are binary codes and need addresses. `traced-constants-baseline.json` lists the literals that predate the rule, keyed by file, enclosing names and literal text (not line); it may only shrink: new literals fail, and so does slack, so run `pnpm run traced-constants:baseline` after tracing some. Renaming a scope means editing its baseline keys by hand, in review.
+- **Why**: A divergence from the original is fixed by finding the original value, never by tuning a number.
+- **Enforced by**: `tooling verify` → `traced-constants` (workspace root)
+
 ## Owned by review
 
 Not mechanically decidable; reviewers and agents uphold these.
