@@ -42,6 +42,7 @@ export type EffectModels = {
   readonly rocketAnimations: readonly FigureAnimation[]
   readonly barrel: ModelScene
   readonly magnet: ModelScene
+  readonly plainExplosion: ModelScene
   readonly spikedExplosion: ModelScene
   // The shield around a racer by level (0 to 3).
   readonly shields: readonly ModelScene[]

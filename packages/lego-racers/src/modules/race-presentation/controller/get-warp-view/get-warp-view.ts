@@ -70,6 +70,7 @@ export const getWarpView = (
     shadow: null,
     skids: racer.vehicle.skids,
     isOffTrack: false,
+    partScale: 1,
   })
   const racerView = Object.freeze({
     ...getCameraRacerView(racer, turboLevel),
