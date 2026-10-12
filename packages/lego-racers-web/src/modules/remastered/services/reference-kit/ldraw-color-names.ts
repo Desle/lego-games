@@ -7,6 +7,7 @@ const BRICK_COLOR_CODES: readonly number[] = [
   320, 321, 322, 323, 326, 330, 335, 366, 484,
 ]
 const GREY_SATURATION = 0.22
+const BLACK_VALUE = 0.3
 const GREY_CODES: readonly number[] = [0, 8, 7, 15]
 const COLOR_LINE = /^0\s+!COLOUR\s+(\S+)\s+CODE\s+(\d+)\s+VALUE\s+#([0-9A-Fa-f]{6})/
 const BYTE = 255
@@ -74,7 +75,8 @@ export const countLDrawColors = (
   }))
   const counts = new Map<number, number>()
   for (const { color } of triangles) {
-    const isGrey = color.saturation < GREY_SATURATION
+    // A dark triangle is black whatever its tint: the game's blacks are shaded bluish and would otherwise match a blue.
+    const isGrey = color.saturation < GREY_SATURATION || color.value < BLACK_VALUE
     const candidates = palette.filter((entry) =>
       isGrey ? GREY_CODES.includes(entry.code) : !GREY_CODES.includes(entry.code)
     )
