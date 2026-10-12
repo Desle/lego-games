@@ -63,7 +63,8 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
       isPowerSliding: true,
       recordFrames: [240, 260, 275, 285, 300, 340, 400],
     },
-    maximumDifferingShare: 0.05,
+    // The dust and smoke quads keep their texture's row order (flag 4 clear): before, frame 300 differed 4.15 percent.
+    maximumDifferingShare: 0.025,
     watchedTextures: [],
   },
   {
