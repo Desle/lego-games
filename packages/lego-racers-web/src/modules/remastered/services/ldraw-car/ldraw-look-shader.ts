@@ -263,13 +263,17 @@ export const applyLookShader = (
           lookRoughnessVariation: { value: look.roughnessVariation },
         }),
   }
+  // The defines go into the source, not the material: a material's copy (a drawing's own, to fade it) resets its defines.
+  const defineLines = Object.keys(lookDefines)
+    .map((name) => `#define ${name}\n`)
+    .join('')
   const onBeforeCompile = (shader: WebGLProgramParametersWithUniforms) => {
     Object.assign(shader.uniforms, uniforms)
     Object.assign(shader, {
-      vertexShader: shader.vertexShader
+      vertexShader: `${defineLines}${shader.vertexShader}`
         .replace('void main() {', VERTEX_DECLARATIONS)
         .replace('#include <begin_vertex>', VERTEX_COPY),
-      fragmentShader: shader.fragmentShader
+      fragmentShader: `${defineLines}${shader.fragmentShader}`
         .replace('void main() {', `${FRAGMENT_DECLARATIONS}\nvoid main() {`)
         .replace('#include <roughnessmap_fragment>', ROUGHNESS_CHUNK)
         .replace('#include <color_fragment>', COLOR_CHUNK)
@@ -279,7 +283,6 @@ export const applyLookShader = (
     })
   }
   Object.assign(material, {
-    defines: { ...material.defines, ...lookDefines },
     customProgramCacheKey: () => `ldraw-look-${Object.keys(lookDefines).join('-')}`,
     onBeforeCompile,
   })

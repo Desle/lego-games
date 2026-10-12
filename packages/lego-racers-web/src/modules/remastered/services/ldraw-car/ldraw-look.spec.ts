@@ -89,13 +89,10 @@ describe('applyLookShader', () => {
     material.onBeforeCompile(shader as unknown as WebGLProgramParametersWithUniforms, undefined!)
 
     // Assert
-    expect(material.defines).toEqual({
-      STANDARD: '',
-      PHYSICAL: '',
-      LOOK_SHADING_RETRO: '',
-      LOOK_STYLISED: '',
-      LOOK_MATTE: '',
-    })
+    expect(material.defines).toEqual({ STANDARD: '', PHYSICAL: '' })
+    expect(shader.fragmentShader).toMatch(
+      /^#define LOOK_SHADING_RETRO\n#define LOOK_STYLISED\n#define LOOK_MATTE\n/
+    )
     expect(material.customProgramCacheKey()).toBe(
       'ldraw-look-LOOK_SHADING_RETRO-LOOK_STYLISED-LOOK_MATTE'
     )
