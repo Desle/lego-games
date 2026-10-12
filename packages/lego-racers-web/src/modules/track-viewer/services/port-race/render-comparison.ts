@@ -38,6 +38,7 @@ const getEffectScenes = (assets: RaceAssets): readonly Scene[] => {
     rocket,
     barrel,
     magnet,
+    curse,
     spikedExplosion,
     enhancementBrick,
     enhancementTrail,
@@ -48,6 +49,7 @@ const getEffectScenes = (assets: RaceAssets): readonly Scene[] => {
       rocket,
       barrel,
       magnet,
+      ...curse.map((figure) => figure.model),
       spikedExplosion,
       enhancementBrick,
       enhancementTrail,
@@ -171,14 +173,24 @@ export const runRenderComparison = async (
       for (const watched of request.watched ?? []) {
         const originalPattern = new RegExp(watched.originalTexture, 'i')
         const portPattern = new RegExp(watched.portSource, 'i')
+        const portWatched = portTriangles.triangles.filter((triangle) =>
+          portPattern.test(triangle.source)
+        )
+        const corners = portWatched.flatMap((triangle) => triangle.vertices)
+        const getMean = (getValue: (corner: (typeof corners)[number]) => number) =>
+          corners.reduce((sum, corner) => sum + getValue(corner), 0) / (corners.length || 1)
         watchedCounts.push({
           label: watched.label,
           frame,
           originalCount: originalTriangles.filter((triangle) =>
             originalPattern.test(textureMatches.get(triangle.textureKey ?? '')?.bestKey ?? '')
           ).length,
-          portCount: portTriangles.triangles.filter((triangle) => portPattern.test(triangle.source))
-            .length,
+          portCount: portWatched.length,
+          portCentre: [
+            getMean((corner) => corner.x),
+            getMean((corner) => corner.y),
+            getMean((corner) => corner.z),
+          ],
         })
       }
       if (presentation.hudFrame !== null) {

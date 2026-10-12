@@ -8,7 +8,7 @@ import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts
 import type { ProjectileEvent } from '../projectile-event/projectile-event.types.ts'
 import type { FlightRacer } from '../projectiles.types.ts'
 import type { MagnetMotion } from '../projectile-world/projectile-world.types.ts'
-import type { MagnetPull, MagnetPullRacer } from './magnet-pull.types.ts'
+import type { HazardLanding, MagnetPull, MagnetPullRacer } from './magnet-pull.types.ts'
 
 // 0x004b162c: 0x00456360 probes this far below the racer, and 0x004b1628: lifts the ground point by this much.
 const PLACEMENT_PROBE_DEPTH = 50
@@ -28,29 +28,42 @@ const CAPTURED_TIMER_CAP_MILLISECONDS = 1000
 const LANDING_BOOST_FACTOR = Math.fround(0.0015)
 const LANDING_BOOST_MILLISECONDS = 150
 
-// 0x00456360: a vertical probe 50 down from the position, and the point it hits 1 up; the position itself on a miss.
-export const getHazardPlacement = (
+// 0x00456360: a vertical probe 50 down from the position, and the point it hits 1 up; the position itself on a miss. The
+// normal is that of the triangle it hit (null on a miss: the original leaves its plane unwritten).
+export const getHazardLanding = (
   arithmetic: FloatArithmetic,
   position: Vector3,
   getGroundPoint: GroundQuery
-): Vector3 => {
+): HazardLanding => {
   const { add, subtract, storeFloat } = arithmetic
+  const hitNormals: Vector3[] = []
   const hit = getGroundPoint(
     position,
     Object.freeze({
       x: subtract(position.x, 0),
       y: subtract(position.y, 0),
       z: storeFloat(subtract(position.z, PLACEMENT_PROBE_DEPTH)),
-    })
+    }),
+    (hitNormal) => hitNormals.push(hitNormal)
   )
-  return hit === null
-    ? position
-    : Object.freeze({
-        x: storeFloat(add(0, hit.x)),
-        y: storeFloat(add(0, hit.y)),
-        z: storeFloat(add(PLACEMENT_LIFT, hit.z)),
-      })
+  return Object.freeze({
+    normal: hitNormals[0] ?? null,
+    position:
+      hit === null
+        ? position
+        : Object.freeze({
+            x: storeFloat(add(0, hit.x)),
+            y: storeFloat(add(0, hit.y)),
+            z: storeFloat(add(PLACEMENT_LIFT, hit.z)),
+          }),
+  })
 }
+
+export const getHazardPlacement = (
+  arithmetic: FloatArithmetic,
+  position: Vector3,
+  getGroundPoint: GroundQuery
+): Vector3 => getHazardLanding(arithmetic, position, getGroundPoint).position
 
 // 0x004560b0 (the magnet's first update): placed on the ground under its owner, 30 up; the owner is boosted.
 export const createMagnetMotion = (

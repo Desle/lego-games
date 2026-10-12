@@ -7,11 +7,22 @@ import {
   clearColourShiftOverride,
   getRacerWithColourShiftOverride,
   TIMED_EFFECT_COLOUR_SHIFT,
-  COPIED_FIGURE_DISTANCE,
 } from '../../types/colour-shift-override/colour-shift-override.ts'
+import { IDENTITY_MATRIX3, ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
+import {
+  getCurseOrbitWithFigure,
+  getCurseOrbitWithoutFigure,
+} from '../../types/curse-orbit/curse-orbit.ts'
+import type { CurseFigureFrame } from '../../types/curse-orbit/curse-orbit.types.ts'
 import { getRacer, setRacer } from '../../types/racer-state/racer-state.ts'
 import type { FloatArithmetic } from '../../../simulation-math/index.ts'
 import type { Racer, RacerBoundary, RacerSet, RacerSetContext } from '../../types/racer.types.ts'
+
+// A figure that was never bound holds the frame its constructor makes: the origin and the identity.
+export const DEFAULT_FIGURE_FRAME: CurseFigureFrame = Object.freeze({
+  position: ZERO_VECTOR3,
+  rotation: IDENTITY_MATRIX3,
+})
 
 // Racer +0xd04 bit 0x800: the racer carries a timed effect.
 const RACER_TIMED_EFFECT_FLAG = 0x800
@@ -27,11 +38,10 @@ export const getRacerWithTimedEffect = (
   arithmetic: FloatArithmetic,
   receiver: Racer,
   milliseconds: number,
-  figureDistance: number
+  figureFrame: CurseFigureFrame
 ): Racer =>
   Object.freeze({
-    ...getRacerWithColourShiftOverride(receiver, TIMED_EFFECT_COLOUR_SHIFT, figureDistance),
-    timedEffectFigureDistance: COPIED_FIGURE_DISTANCE,
+    ...getRacerWithColourShiftOverride(receiver, TIMED_EFFECT_COLOUR_SHIFT, milliseconds),
     timedEffectMilliseconds: milliseconds,
     timedEffectCharge: TIMED_EFFECT_CHARGE,
     flags: receiver.flags | RACER_TIMED_EFFECT_FLAG,
@@ -42,6 +52,7 @@ export const getRacerWithTimedEffect = (
     vehicle: Object.freeze({
       ...receiver.vehicle,
       reactionFlags: receiver.vehicle.reactionFlags | VEHICLE_HIT_REACTION,
+      curseOrbit: getCurseOrbitWithFigure(receiver.vehicle.curseOrbit, figureFrame),
     }),
     carBody: holdCarBody(arithmetic, receiver.carBody),
   })
@@ -63,7 +74,7 @@ export const transferTimedEffect = (
       context.arithmetic,
       getRacer(racerSet, receiverIndex),
       getRacer(racerSet, giverIndex).timedEffectMilliseconds,
-      getRacer(racerSet, giverIndex).timedEffectFigureDistance
+      getRacer(racerSet, giverIndex).vehicle.curseOrbit.figure ?? DEFAULT_FIGURE_FRAME
     )
   )
 
@@ -81,6 +92,10 @@ export const getRacerWithoutTimedEffect = (racer: Racer): Racer =>
       flags: racer.driver.flags & ~DRIVER_TIMED_EFFECT_FLAG,
     }),
     carBody: releaseCarBody(racer.carBody),
+    vehicle: Object.freeze({
+      ...racer.vehicle,
+      curseOrbit: getCurseOrbitWithoutFigure(racer.vehicle.curseOrbit),
+    }),
   })
 
 export const endTimedEffect: RacerBoundary = (_context, racerSet, racerIndex) =>

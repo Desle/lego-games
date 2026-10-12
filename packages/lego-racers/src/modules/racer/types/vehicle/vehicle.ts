@@ -8,6 +8,11 @@ import {
 } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 import { stepColourShiftOverride } from '../colour-shift-override/colour-shift-override.ts'
+import {
+  getCurseOrbitIdle,
+  INITIAL_CURSE_ORBIT,
+  stepCurseOrbit,
+} from '../curse-orbit/curse-orbit.ts'
 import { getRestartedForceFeedback } from '../force-feedback/force-feedback.ts'
 import {
   blendFigureAnimation,
@@ -114,6 +119,7 @@ export const createVehicle = (
     bodyScale: 1,
     boundsCaches: null,
     pendingPartsMarkScale: null,
+    curseOrbit: INITIAL_CURSE_ORBIT,
   })
 
 // 0x0043cbb0 (thiscall on the racer set: position, minimum and maximum squared distance): the nearest racer inside the
@@ -365,6 +371,33 @@ export const getVehicleWithRestingDriver = (vehicle: Vehicle): Vehicle =>
     driverFigure: playFigureAnimation(vehicle.driverFigure, RESTING_ANIMATION),
   })
 
+// 0x0043e165: racer flag 0x800, the racer carries the timed effect (the curse).
+const TIMED_EFFECT_FLAG = 0x800
+
+// 0x0043e157..0x0043e17a of Vehicle_Update: a cursed racer's figure circles it (0x0043f530), any other update restarts
+// the blend.
+const stepVehicleCurseOrbit: RacerBoundary = (context, racerSet, racerIndex, stepMilliseconds) => {
+  const racer = getRacer(racerSet, racerIndex)
+  const { rigidBody } = racer.carBody
+  const orbit =
+    (racer.flags & TIMED_EFFECT_FLAG) === 0
+      ? getCurseOrbitIdle(racer.vehicle.curseOrbit)
+      : stepCurseOrbit(racer.vehicle.curseOrbit, {
+          arithmetic: context.arithmetic,
+          tables: context.tables,
+          carPosition: rigidBody.displayFrame.position,
+          carSpeed: rigidBody.speed,
+          stepMilliseconds,
+        })
+  return orbit === racer.vehicle.curseOrbit
+    ? racerSet
+    : setRacer(
+        racerSet,
+        racerIndex,
+        Object.freeze({ ...racer, vehicle: Object.freeze({ ...racer.vehicle, curseOrbit: orbit }) })
+      )
+}
+
 export const updateVehicle: RacerBoundary = (context, racerSet, racerIndex, stepMilliseconds) => {
   const { arithmetic } = context
   const { multiply, storeFloat, getIsBelow, getIsBelowOrEqual } = arithmetic
@@ -432,5 +465,10 @@ export const updateVehicle: RacerBoundary = (context, racerSet, racerIndex, step
       }),
     })
   )
-  return updateVehicleEmitters(context, measured, racerIndex, stepMilliseconds)
+  return stepVehicleCurseOrbit(
+    context,
+    updateVehicleEmitters(context, measured, racerIndex, stepMilliseconds),
+    racerIndex,
+    stepMilliseconds
+  )
 }

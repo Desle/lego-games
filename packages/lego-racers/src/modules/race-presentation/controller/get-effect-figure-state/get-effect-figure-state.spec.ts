@@ -47,4 +47,18 @@ describe('getEffectFigureState', () => {
     expect(state.clip.timeInFrames).toBeLessThan(10)
     expect(state.isLooping).toBe(true)
   })
+
+  it('keeps the phase of a looping clip an hour into the race without replaying every step', () => {
+    // Arrange
+    const turnMilliseconds = 500
+    const hourMilliseconds = 3_600_000
+    const request = { animationId: 0, isLooping: true, elapsedMilliseconds: hourMilliseconds + 150 }
+
+    // Act
+    const state = getEffectFigureState([animation], request)
+
+    // Assert
+    expect(hourMilliseconds % turnMilliseconds).toBe(0)
+    expect(state.clip.timeInFrames).toBeCloseTo(3, 3)
+  })
 })

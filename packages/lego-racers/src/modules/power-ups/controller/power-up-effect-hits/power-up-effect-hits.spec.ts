@@ -215,7 +215,11 @@ describe('touchHazardEffect', () => {
     const step = createFlying({ category: BrickKind.HAZARD, level: 3 })
 
     // Act
-    const cursed = touchHazardEffect(step, createContext(), getHead(step).id, 1, false)
+    const figureFrame = {
+      position: { x: 1, y: 2, z: 3 },
+      rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as const,
+    }
+    const cursed = touchHazardEffect(step, createContext(), getHead(step).id, 1, false, figureFrame)
     const already = touchHazardEffect(
       step,
       createContext({ isCursed: true }),
@@ -226,7 +230,7 @@ describe('touchHazardEffect', () => {
 
     // Assert
     expect(cursed.events).toEqual([
-      { type: 'power_ups.racer_cursed', racer: 1, durationMilliseconds: 10000 },
+      { type: 'power_ups.racer_cursed', racer: 1, durationMilliseconds: 10000, figureFrame },
     ])
     expect(already.events).toEqual([])
   })
