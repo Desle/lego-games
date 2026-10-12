@@ -1,5 +1,5 @@
 import type { PowerUpContext, PowerUpEffect, PowerUpStep } from '../../../power-ups/index.ts'
-import type { Matrix3, Vector3 } from '../../../simulation-math/index.ts'
+import type { Frame, Matrix3, Vector3 } from '../../../simulation-math/index.ts'
 import type { ProjectileEvent } from '../projectile-event/projectile-event.types.ts'
 import type { BallisticFlight } from '../ballistic-flight/ballistic-flight.types.ts'
 import type { HomingFlight } from '../homing-flight/homing-flight.types.ts'
@@ -74,6 +74,9 @@ export type ProjectileWorld = {
   // Indexed by effect id: the rocket body's wobble angle (+0xbc), which 0x00423980 does not reset, so a rocket that takes
   // over an effect continues the angle of the one before it.
   readonly rocketWobbleAngles: readonly number[]
+  // The grapple hooks' model frame (the pointer at effect +0x268): one object every hook of the race moves and turns, so
+  // the registry sees the pose the last hook update left, whichever hook it belongs to.
+  readonly hookFrame: Frame
   // The events of the update in progress; updatePowerUpsWithProjectiles starts them empty.
   readonly events: readonly ProjectileEvent[]
   // The explosions of power-up system +0x193c ("Explsn") and +0x1940 ("spikexp"), and the debris at +0x18bc.

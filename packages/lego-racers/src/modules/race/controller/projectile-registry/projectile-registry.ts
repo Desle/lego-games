@@ -84,7 +84,7 @@ const getFlightSphere = (source: RegistrySource, effect: PowerUpEffect): Boundin
   if (motion.kind === 'grapple') {
     return getFigureSphere(
       source.arithmetic,
-      { rotation: motion.hook.frameRotation, position: motion.hook.flight.framePosition },
+      source.projectileWorld.hookFrame,
       shapeBounds.grapple
     )
   }

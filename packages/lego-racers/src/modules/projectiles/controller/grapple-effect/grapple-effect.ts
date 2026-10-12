@@ -27,6 +27,8 @@ import type { GrappleHook } from '../../types/grapple-hook/grapple-hook.types.ts
 import {
   getMotion,
   getWorldWithEvents,
+  getWorldWithHookFramePosition,
+  getWorldWithHookFrameRotation,
   getWorldWithMotion,
 } from '../../types/projectile-world/projectile-world.ts'
 import type {
@@ -46,8 +48,8 @@ const getGrappleHook = (world: ProjectileWorld, effectId: number): GrappleHook |
   return motion !== null && motion.kind === 'grapple' ? motion.hook : null
 }
 
-// 0x00453ef0 after the flight of the active state (0x004541f6's predecessor, 0x0045417b): the hook model's first axis
-// points from the owner at the aim, its third axis up.
+// 0x00453ef0 after the flight of the active state (0x0045417b): the hook model's first axis points from the owner at the
+// aim, its third axis up. The model frame is the one every hook shares.
 const FRAME_UP: Vector3 = Object.freeze({ x: 0, y: 0, z: 1 })
 
 const getStepWithHookOriented = (
@@ -74,13 +76,10 @@ const getStepWithHookOriented = (
   })
   return Object.freeze({
     step: current.step,
-    world: getWorldWithHook(current.world, effectId, {
-      ...hook,
-      frameRotation: getRotationFromFrameAxes(context.powerUps.arithmetic, {
-        first,
-        third: FRAME_UP,
-      }),
-    }),
+    world: getWorldWithHookFrameRotation(
+      current.world,
+      getRotationFromFrameAxes(context.powerUps.arithmetic, { first, third: FRAME_UP })
+    ),
   })
 }
 
@@ -217,9 +216,14 @@ export const updateGrapple = (
       ? stepMilliseconds
       : stepMilliseconds - before.timerMilliseconds
   const isLaunching = before.state === EffectState.STARTING && after.state === EffectState.ACTIVE
-  const hookWorld = isLaunching
-    ? getWorldWithHook(world, before.id, createGrappleHook(getGrappleFlight(context, after)))
-    : world
+  const launchedHook = isLaunching ? createGrappleHook(getGrappleFlight(context, after)) : null
+  const hookWorld =
+    launchedHook === null
+      ? world
+      : getWorldWithHookFramePosition(
+          getWorldWithHook(world, before.id, launchedHook),
+          launchedHook.flight.framePosition
+        )
   const existing = getGrappleHook(hookWorld, before.id)
   const isTimedOut =
     (before.state === EffectState.ACTIVE || before.state === EffectState.ENDING) &&
@@ -247,9 +251,20 @@ export const updateGrapple = (
     touchedRacer?.position ?? null,
     flightMilliseconds
   )
+  // The body moves the shared model frame while it flies (0x00431550, not past its time) or follows a racer
+  // (0x00444820); a retracting hook only redraws its rope.
+  const isMovingFrame =
+    !countedHook.isRetracting &&
+    (countedHook.flight.state === BallisticFlightState.TOUCHED_RACER
+      ? touchedRacer !== undefined
+      : countedHook.flight.state === BallisticFlightState.FLYING &&
+        advance.result !== BallisticFlightState.ENDED)
+  const hookMoved = getWorldWithHook(started.world, before.id, advance.hook)
   const flown: ProjectileStep = Object.freeze({
     step: counted,
-    world: getWorldWithHook(started.world, before.id, advance.hook),
+    world: isMovingFrame
+      ? getWorldWithHookFramePosition(hookMoved, advance.hook.flight.framePosition)
+      : hookMoved,
   })
   const victim = advance.hook.flight.touchedRacer
   if (advance.result !== BallisticFlightState.TOUCHED_RACER || victim === null) {

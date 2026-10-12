@@ -1,4 +1,4 @@
-import type { Matrix3, Vector3 } from '../../../simulation-math/index.ts'
+import type { Vector3 } from '../../../simulation-math/index.ts'
 import type {
   BallisticFlight,
   BallisticFlightState,
@@ -16,9 +16,6 @@ export type GrappleHook = {
   readonly isHookArrived: boolean
   // +0x224: grows while latched; the rope is tested against the track once it reaches 1.
   readonly tension: number
-  // The hook model's frame rotation (+0x268 frame +0x28): 0x00453ef0 turns its first axis at the target as seen from the
-  // owner, with z up, after every flight step of the active state.
-  readonly frameRotation: Matrix3
 }
 
 export type GrappleAdvance = {
