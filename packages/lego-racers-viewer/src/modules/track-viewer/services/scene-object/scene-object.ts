@@ -139,6 +139,12 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
     animate: (deltaMilliseconds: number) => {
       for (const animator of animators) animator(deltaMilliseconds)
     },
+    setInstanceColourShift: (name: string, shift: ColourShiftLike | null) => {
+      for (const child of group.children) {
+        if (child.name.toLowerCase() !== name.toLowerCase()) continue
+        for (const geometry of getMeshGeometries(child)) applyColourShift(geometry, shift)
+      }
+    },
     setColourShift: (shift: ColourShiftLike | null) => {
       for (const geometry of getMeshGeometries(group)) applyColourShift(geometry, shift)
     },

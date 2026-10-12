@@ -25,7 +25,13 @@ describe('parseCinemaEvents', () => {
         { name: 'snow2', poolIndex: 0, emitterName: 'snow' },
       ])
       expect(events.vertexEffects).toEqual([
-        { name: 'vtx1', integers: [64, 0, 0], materialName: 'mm_sky' },
+        {
+          name: 'vtx1',
+          shifts: [0, 0, 0],
+          biases: [64, 0, 0],
+          rates: [0, 0, 0],
+          instanceName: 'mm_sky',
+        },
       ])
       const starts = events.reactionLists.find((list) => list.listKeyword === 0x56)?.starts
       expect(starts?.map((reaction) => [reaction.entryName, reaction.targetName])).toEqual([
