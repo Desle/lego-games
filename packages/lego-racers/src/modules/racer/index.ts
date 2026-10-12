@@ -106,6 +106,7 @@ export {
   startVehicleBoostSmoke,
   startVehiclePowerSlideEffects,
   startVehicleTurboEffects,
+  startVehicleTireSmoke,
   stopVehicleTireSmoke,
 } from './types/vehicle-emitters/vehicle-emitters.ts'
 export { getVehicleLeanAtReset } from './types/vehicle/vehicle-lean.ts'
