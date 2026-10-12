@@ -21,9 +21,10 @@ import {
   WebGLRenderer,
 } from 'three'
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
+import { getSkeletonInstanceSphere } from '@lego-games/lego-racers/world-animation'
+import type { RaceWorlds } from '@lego-games/lego-racers/world-animation'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-racers/simulation-math'
 import { getWorldSpriteQuads } from '@lego-games/lego-racers/world-sprite'
-import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
 import { getCameraFrustum, ORIGINAL_FIELD_OF_VIEW_DEGREES } from './camera-frustum.ts'
 import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
 import { createRaceDecals } from '../race-decals/race-decals.ts'
@@ -55,8 +56,13 @@ import type {
   RacerRig,
 } from './race-viewport.types.ts'
 
-const spriteArithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
 const BACKGROUND_COLOR = 0x101820
+const getPosition = (position: readonly [number, number, number]) => ({
+  x: position[0],
+  y: position[1],
+  z: position[2],
+})
+const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
 const MILLISECONDS_PER_SECOND = 1000
 // The scroll the original adds stays below 1 (it wraps).
 const getWrappedFraction = (value: number): number => value - Math.floor(value)
@@ -314,6 +320,14 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     lastCameraView = cameraView
     lastSprites = warpView === null ? effectViews.sprites : []
     lastRibbons = warpView === null ? effectViews.ribbons : []
+    const { position, forward, up } = cameraView
+    camera.fov = warpView === null ? fieldOfViewDegrees : warpView.fieldOfViewDegrees
+    camera.updateProjectionMatrix()
+    camera.position.set(position.x, position.y, position.z)
+    // The engine's camera frames take a negated up vector (see the world's cameras).
+    camera.up.set(-up.x, -up.y, -up.z)
+    camera.lookAt(position.x + forward.x, position.y + forward.y, position.z + forward.z)
+    const frustum = getCameraFrustum(camera)
     effects.update(
       warpView === null
         ? effectViews
@@ -327,7 +341,8 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
             ribbons: [],
           },
       cameraView.position,
-      poses
+      poses,
+      frustum
     )
     for (const rig of racerRigs) {
       const isShown = warpView === null || rig === racerRigs[warpView.pose.racerIndex]
@@ -401,15 +416,8 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
       }
       rig.sync(GHOST_OPACITY)
     }
-    const { position, forward, up } = cameraView
-    camera.fov = warpView === null ? fieldOfViewDegrees : warpView.fieldOfViewDegrees
-    camera.updateProjectionMatrix()
-    camera.position.set(position.x, position.y, position.z)
-    // The engine's camera frames take a negated up vector (see the world's cameras).
-    camera.up.set(-up.x, -up.y, -up.z)
-    camera.lookAt(position.x + forward.x, position.y + forward.y, position.z + forward.z)
-    shown.track.selectLevels(camera.position)
-    shown.track.selectVisibleLeaves(getCameraFrustum(camera))
+    shown.track.selectLevels(camera.position, frustum)
+    shown.track.selectVisibleLeaves(frustum)
     const placement = shown.sky?.place(camera.position)
     if (shown.backdrop !== null) {
       const point = placement?.backdrop ?? camera.position
@@ -417,13 +425,34 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     }
   }
 
-  const showHazards = (trackWorld: WorldAnimation, pools: readonly (EmitterPool | null)[]) => {
-    for (const instance of trackWorld.skeletonInstances) {
-      if (instance.clip !== null) shown.track.setSkeletonState(instance.name, instance.clip)
+  const showHazards = (worlds: RaceWorlds, pools: readonly (EmitterPool | null)[]) => {
+    for (const world of [worlds.track, worlds.blended, worlds.local]) {
+      for (const instance of world.skeletonInstances) {
+        if (instance.clip !== null) shown.track.setSkeletonState(instance.name, instance.clip)
+        const sphere = getSkeletonInstanceSphere(arithmetic, instance)
+        shown.track.setInstanceRuntime(instance.name, {
+          position: getPosition(instance.position),
+          levelSquaredDistances: instance.levelSquaredDistances,
+          sphere:
+            sphere === null
+              ? null
+              : {
+                  centre: { x: sphere.centre[0], y: sphere.centre[1], z: sphere.centre[2] },
+                  radius: sphere.radius,
+                },
+        })
+      }
+      for (const instance of world.meshInstances) {
+        shown.track.setInstanceRuntime(instance.name, {
+          position: getPosition(instance.position),
+          levelSquaredDistances: instance.levelSquaredDistances,
+          sphere: null,
+        })
+      }
     }
     if (lastCameraView !== null) {
       const worldSpriteQuads = getWorldSpriteQuads(
-        spriteArithmetic,
+        arithmetic,
         assets.scene.sprites,
         materialNames,
         lastCameraView,

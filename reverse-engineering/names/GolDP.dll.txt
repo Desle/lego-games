@@ -125,3 +125,6 @@
 10029fa0 Sprite_GetIsWithinDistance
 1002a020 Sprite_GetMaterial
 10029df0 Sprite_Constructor
+10023ef0 SkeletonInstance_UpdateBoundingSphere
+100240b0 SkeletonInstance_GetVisibility
+1002bc20 Frustum_TestSphere

@@ -61,6 +61,8 @@ export type TrackEventBase<Kind extends TrackEventKind, Record> = {
   readonly emitterHandle: EmitterReference | null
   // 4B byte +0x2c bit 0 and 59 byte +0x34 bit 0: set while the class's second signal is held
   readonly isSignalHeld: boolean
+  // 53 +0x24..+0x2c: the level distances the object had when the event was made (0x00463700), or null
+  readonly savedLevelSquaredDistances: readonly number[] | null
 }
 
 export type TrackEvent =
@@ -308,6 +310,12 @@ export type TrackSession = HazardBus & {
   // The animation index (+0xbc) and flags (+0x5c) of the scene object (a skeleton instance of the track world, or of
   // the blended world) an event names, or null when the name is unknown.
   readonly getObject: (reference: ObjectReference) => TrackWorldObject | null
+  // 0x004637c0 and 0x00463800 write the level distances (+0x84, +0x88, +0x8c) of the mesh or skeleton instance an event
+  // names; a negative distance hides it.
+  readonly setObjectLevelDistances: (
+    reference: ObjectReference,
+    levelSquaredDistances: readonly number[]
+  ) => void
   // Where a bone of the scene object is in the world now (0x0045ebe0: the bone's chain of transforms, then the object's
   // frame), or null when the object or its skeleton is unknown.
   readonly getObjectBonePosition: (reference: ObjectReference, boneIndex: number) => Vector3 | null
@@ -395,6 +403,12 @@ export type SessionBuild = {
 export type SessionReference = { current: TrackSession | null }
 
 // The hazards a race loaded, the worlds their loaders changed and the random table position after their draws.
+// The 53 events once they have taken the level distances of the objects they name, and the worlds with those objects hidden.
+export type LoadedHiddenObjects = {
+  readonly events: readonly TrackEvent[]
+  readonly worlds: RaceWorlds
+}
+
 export type LoadedHazards = Pick<TrackLogicState, 'hazards' | 'worlds'> & {
   readonly position: RandomTablePosition
 }

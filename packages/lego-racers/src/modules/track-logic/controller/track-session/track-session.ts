@@ -31,6 +31,7 @@ import {
   getSkeletonInstanceClipIndex,
   getSkeletonInstanceFlags,
   getSkeletonInstanceWithFlags,
+  getWorldWithInstanceLevelDistances,
   getWorldWithSkeletonInstance,
 } from '../../../world-animation/index.ts'
 import type { SkeletonInstanceRuntime } from '../../../world-animation/index.ts'
@@ -458,6 +459,17 @@ export const createTrackSession = (
         }
   }
 
+  const setObjectLevelDistances = (
+    reference: ObjectReference,
+    levelSquaredDistances: readonly number[]
+  ): void => {
+    const key = reference.isFromSecondWorld ? 'blended' : 'track'
+    worlds = {
+      ...worlds,
+      [key]: getWorldWithInstanceLevelDistances(worlds[key], reference.name, levelSquaredDistances),
+    }
+  }
+
   const getObjectBonePosition = (reference: ObjectReference, boneIndex: number): Vector3 | null => {
     const found = getObjectInstance(reference)
     const instance = found === null ? undefined : worlds[found.key].skeletonInstances[found.index]
@@ -526,6 +538,7 @@ export const createTrackSession = (
   const session: TrackSession = {
     context,
     getObject,
+    setObjectLevelDistances,
     getObjectBonePosition,
     getObjectBoneFrame,
     setEmitterPosition: setEventEmitterPosition,

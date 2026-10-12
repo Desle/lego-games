@@ -35,7 +35,13 @@ export type EffectFigureModel = {
   readonly scroll: readonly [number, number]
 }
 
+// The centre and the radius of the sphere a brick's instance is culled by (clip keyword 0x31 times the model's scale).
+export type BrickSphere = readonly [number, number, number, number]
+
 export type EffectModels = {
+  readonly brickSpheres: Readonly<
+    Record<'powerUpBrick' | 'powerUpTrail' | 'enhancementBrick' | 'enhancementTrail', BrickSphere>
+  >
   // The materials and textures of the power-up libraries (the cannon ball, the beams and the flames name them).
   readonly materials: Scene
   readonly rocket: ModelScene
@@ -57,6 +63,14 @@ export type EffectModels = {
   // The power-up brick in the colour of each kind (projectile, shield, turbo, hazard).
   readonly powerUpBricks: Readonly<Record<string, ModelScene>>
   readonly enhancementBrick: ModelScene
+  // The clips of the bricks (gen: pubricky, enh: enhabrik), advanced with the power-up system's clock.
+  readonly powerUpBrickAnimations: readonly FigureAnimation[]
+  readonly enhancementBrickAnimations: readonly FigureAnimation[]
+  // The trail instances the bricks draw with them in the blended pass (genblen: putraily), with their clips.
+  readonly powerUpTrails: Readonly<Record<string, ModelScene>>
+  readonly powerUpTrailAnimations: readonly FigureAnimation[]
+  readonly enhancementTrail: ModelScene
+  readonly enhancementTrailAnimations: readonly FigureAnimation[]
   // The warp's tunnel (TURBO3.WDB lists `dbricks` and `dtube`; 0x0045d940 draws them).
   readonly warpTunnel: Scene
   // The texture scroll per second of the tube (the world's keyword 0x3f on `dtube`: u, v), which the original adds to the

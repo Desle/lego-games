@@ -221,6 +221,9 @@ export type PowerUpWorld = {
   readonly effects: PowerUpEffects
   // +0x199c, radians.
   readonly brickSpinAngle: number
+  // The milliseconds the world of the bricks' instances (gen, genblen, enh, enhblen; 0x00416090 at +0x60) has been
+  // advanced by 0x0045a490, which is the clock of their clips.
+  readonly brickClockMilliseconds: number
   readonly random: RandomState
   // The emitter pools the effects and explosions spawn into (the race's, shared with the racers; synced by the race).
   readonly emitters: EmitterPools
