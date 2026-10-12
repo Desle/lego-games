@@ -49,6 +49,9 @@ import type {
 const DEFAULT_RACE_FOLDER = 'RACEC0R0'
 // The warp's tunnel world (LEGORacers.exe 0x0045d940 draws its `dbricks` and `dtube`).
 export const WARP_WORLD_PATH = `${COMMON_DIRECTORY}\\TURBO3.WDB`
+// The champion ghost's car (Ghost_Initialize 0x00422420 loads "ghost" from GAMEDATA\COMMON): `ghost2` (the wheels), `ghostb2` (the
+// body) and `ghostdr` (the driver).
+export const GHOST_WORLD_PATH = `${COMMON_DIRECTORY}\\GHOST.WDB`
 const ENGLISH_DIRECTORY = `${COMMON_DIRECTORY}\\ENGLISH`
 const SEPARATOR = '\\'
 // The image database flag for a colour key (IMAGE_KEYWORD_2B_FLAG, 0x20).
@@ -288,6 +291,8 @@ export const loadRaceAssets = (
       definition.racers.map((racer) => getRacerModels(archive, racer, loadModel))
     ),
     effectModels: getEffectModels(archive, scene),
+    ghostScene:
+      definition.ghost === null ? null : loadSceneOnto(archive, scene, [GHOST_WORLD_PATH]),
     getString: (stringId: number) => getString(table, stringId) ?? '',
     imageNames: Object.freeze(imageDatabase.images.map((image) => image.name.toUpperCase())),
     hudFonts: loadHudFonts(archive),

@@ -1,5 +1,6 @@
 export { getEffectViews } from './controller/get-effect-views/get-effect-views.ts'
 export { getPauseMenuCommands } from './controller/get-pause-menu-commands/get-pause-menu-commands.ts'
+export { getGhostCars } from './controller/get-ghost-cars/get-ghost-cars.ts'
 export { getWarpView } from './controller/get-warp-view/get-warp-view.ts'
 export {
   BRICK_LEVEL_DISTANCE,
@@ -16,6 +17,8 @@ export type {
   EffectView,
   EffectViews,
   ExplosionView,
+  GhostCar,
+  GhostCarsStep,
   HudContext,
   RacePresentation,
   RacePresentationFrame,

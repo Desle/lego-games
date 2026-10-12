@@ -890,3 +890,5 @@
 004a4cf0 CinemaVertexEffect_Stop
 004a4d10 CinemaVertexEffect_Update
 004a4da0 CinemaVertexEffect_Apply
+004881a0 TimeTrialScreen_ShowBestTime
+00488150 TimeTrialScreen_Update

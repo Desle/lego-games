@@ -238,9 +238,25 @@ Single races and time trials use `createSingleRaceSettings` / `createTimeTrialSe
 - The pause menu itself (`0x00436010`, `0x00436160`) beyond the ghost hold and its answers; the exact in-place restart (`0x0043a780`).
 - `0x0045b740` (effects of a finishing racer), the finish-by-object `0x40000`, the cameras and the HUD of the results.
 - The brick, part and driver databases behind the garage and the driver license screens.
-- The ghost car's models (`Ghost_Initialize` loads them) and their frames.
+- The ghost cars' wheel and driver clips (`0x0040dad0` loops clip 12 on the champion's wheels and 13 on the player's copy at the stored speed, `+0xb8`); the cars are drawn in their rest pose.
+- The champion-beaten mark of the time trial screen (widget `0x6d`, shown when the race's bit is set in the profile's ghost flags, `0x004881a0`); which image it is is not traced.
 - The input configuration records of the profile (see [save-data.md](save-data.md)).
 
 ## Headless runs
 
 `playScriptedRace(start, scripts)` runs a race with nobody at the controls while the named racers cross the start line at the given times (the contacts that would do it are not ported). Four circuit races, the elimination, the restart, a time trial against the champion, both result applications and every race of the catalog run in the specs. A race needs only the frame clock: at 100 ms a circuit race of three 30 s laps is about 1,100 frames.
+
+## The ghost cars in the race and the time trial screen
+
+`Race_Render`'s update (`0x00435a00`) runs the playback `0x00422960` once per rendered frame. It draws **two** cars, each only while its run has samples left, both with the one stored orientation on every part:
+
+| Car                                 | Shown while                                         | Parts                                                                                                                                                                                                                                                           |
+| ----------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The session's best run (first pass) | flag `0x01` (a run finished earlier in the session) | copies of the **player's own** car (`0x00422eb0` copies the racer's wheels, body and driver frames at `+0x1c`, `+0x300`, `+0x114`/`+0x20c`, and the racer's seat point `+0x64..+0x6c` into `+0x394`); wheel clip 13 looped                                      |
+| The champion (second pass)          | flag `0x08` (champion loaded)                       | `GAMEDATA\COMMON\GHOST.WDB`, loaded by `Ghost_Initialize` as "ghost": skeleton instance `ghost2` (the wheels), mesh `ghostb2` (the body), skeleton instance `ghostdr` (the driver); seat point `(-2.1317, 0.01123, 1.608)` (`this+0x3a0`); wheel clip 12 looped |
+
+With the clock stopped (before the start, after the player finished: `0x004230e0` clears flags `0x01` and `0x02`) the cars stand at the run's first position and orientation; running, they follow the interpolated samples. The driver sits at the seat point carried by the car's frame (`getFrameTransformedPoint`). Port: `getGhostCars` (`race-presentation`) steps `stepGhostPlayback` and returns the poses and the race with the playback flags; the viewer draws `GHOST.WDB` and a second copy of the player's car models (`race-viewport`). **Hypothesis**: no transparency (the draw brackets `0x00422960` with `vtable+0xb8(0x7f, 0)` / `+0xbc`, which could be a half alpha; the callee is not traced).
+
+The player's best run is **only kept in memory** for the session (`GhostSession.bestRun`, the buffer at `ghost+0x10`); the original never writes a `.GHB`, and the profile keeps only the times and the beaten bit. Before this fix the viewer never called the playback, so no ghost car was drawn.
+
+The time trial screen (`0x1d`, `TimeTrialScreen_ShowBestTime` `0x004881a0`, swapped every 2,500 ms by `0x00488150`) shows the race's best time from the profile: `Profile_GetBestTime` (`0x0042f290`) at the race's catalog index, the lap table first (text `0x46`) and the race table second (text `0x47`); a time never set shows "NONE" (`0xbe`/`0xbf`) and no time (**hypothesis**: the time widget stays empty). The time is formatted by `0x004246d0` (`formatHudTime`). Port: `getBestTimeWidgets` (**not exact**: the 2,500 ms countdown restarts in the original when the race on show changes). Before this fix the screen always showed "NONE", so a saved record never appeared although `applySessionOutcomeToSave` wrote it.
