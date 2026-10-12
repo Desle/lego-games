@@ -1,29 +1,28 @@
-import { createDecalFrame, projectDecal } from '@lego-games/lego-racers/decal'
-import type { DecalFaceBatch, DecalTriangle } from '@lego-games/lego-racers/decal'
+import { createDecalFrame, projectDecal, SHADOW_DECAL_LIMITS } from '@lego-games/lego-racers/decal'
+import type { DecalFaceBatch } from '@lego-games/lego-racers/decal'
 import {
   getRacerShadowAlpha,
   RACER_FIGURE_LEVEL_DISTANCE,
 } from '@lego-games/lego-racers/race-presentation'
 import type { RacerPose } from '@lego-games/lego-racers/race-presentation'
-import { getFloatFromBits } from '@lego-games/lego-racers/simulation-math'
 import { SceneInstanceKind } from '@lego-games/lego-racers/scene'
 import type { Scene, SceneMesh } from '@lego-games/lego-racers/scene'
-import type { BufferAttribute } from 'three'
-import { Mesh, type Material, type Scene as ThreeScene } from 'three'
+import type { Material, Scene as ThreeScene } from 'three'
+import { createRaceEffectDecals } from '../race-effect-decals/race-effect-decals.ts'
 import { createRaceSkidTrails } from '../race-skid-trails/race-skid-trails.ts'
-import { createDecalMaterial, createDynamicGeometry } from '../dynamic-mesh/dynamic-mesh.ts'
+import {
+  createDecalMaterial,
+  createDecalMesh,
+  setDecalTriangles,
+} from '../dynamic-mesh/dynamic-mesh.ts'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import type { Vector3Like } from '../race-viewport/race-viewport.types.ts'
 import type { DecalSurface, RaceDecals } from './race-decals.types.ts'
 
 // Material keyword 0x4a: the faces of this material take decals (0x00414b30 tests `flags & 0x20000`).
 const DECAL_RECEIVER_FLAG = 0x20000
-// 0x0043d9cc: a vehicle's decal holds at most 16 triangles.
-const MAXIMUM_TRIANGLES = 16
+
 const CORNERS_PER_TRIANGLE = 3
-const BYTE_MAXIMUM = 255
-// 0x004af914: the decal's instance is moved 0.4 along z when it is made (0x00414950), which lifts it off the track.
-const DECAL_LIFT = getFloatFromBits(0x3ecccccd)
 
 const getBatches = (scene: Scene, mesh: SceneMesh, assignmentIndex: number | null) => {
   const materialIndices =
@@ -73,37 +72,6 @@ export const getDecalSurface = (scene: Scene, isMirrored: boolean): DecalSurface
   })
 }
 
-const createShadowMesh = (material: Material): Mesh => {
-  const geometry = createDynamicGeometry(MAXIMUM_TRIANGLES * CORNERS_PER_TRIANGLE)
-  const mesh = new Mesh(geometry, material)
-  mesh.position.set(0, 0, DECAL_LIFT)
-  mesh.frustumCulled = false
-  mesh.visible = false
-  // The shadow lies on the track: drawn after it.
-  mesh.renderOrder = 1
-  return mesh
-}
-
-const setTriangles = (mesh: Mesh, triangles: readonly DecalTriangle[], alpha: number): void => {
-  const positions = mesh.geometry.getAttribute('position') as BufferAttribute
-  const coordinates = mesh.geometry.getAttribute('uv') as BufferAttribute
-  const colors = mesh.geometry.getAttribute('color') as BufferAttribute
-  for (const [triangleIndex, triangle] of triangles.entries()) {
-    for (const [cornerIndex, vertex] of triangle.entries()) {
-      const corner = triangleIndex * CORNERS_PER_TRIANGLE + cornerIndex
-      positions.setXYZ(corner, vertex.x, vertex.y, vertex.z)
-      coordinates.setXY(corner, vertex.u, vertex.v)
-      colors.setXYZW(corner, 1, 1, 1, alpha / BYTE_MAXIMUM)
-    }
-  }
-  positions.needsUpdate = true
-  coordinates.needsUpdate = true
-  colors.needsUpdate = true
-  mesh.geometry.setDrawRange(0, triangles.length * CORNERS_PER_TRIANGLE)
-  // eslint-disable-next-line no-param-reassign -- three.js shows an object by setting its flag
-  mesh.visible = triangles.length > 0
-}
-
 // The cars' shadows (LegoRacers.exe 0x0043fa50, GolDP-side decals 0x00414a30): one decal per racer, projected straight down
 // onto the track every frame while the camera is within the figure's draw distance.
 export const createRaceDecals = (
@@ -113,13 +81,14 @@ export const createRaceDecals = (
 ): RaceDecals => {
   const surface = getDecalSurface(assets.scene, isMirrored)
   const skidTrails = createRaceSkidTrails(trackScene, assets, surface?.world ?? null)
+  const effectDecals = createRaceEffectDecals(trackScene, assets, surface?.world ?? null)
   const shadows = assets.definition.racers.map((racer) => {
     const material = assets.scene.materials.find(
       (candidate) => candidate.name === racer.appearance.shadowImageName
     )
     if (surface === null || material === undefined) return null
     const three = createDecalMaterial(assets.scene, material)
-    const mesh = createShadowMesh(three)
+    const mesh = createDecalMesh(three, SHADOW_DECAL_LIMITS.maximumTriangles)
     trackScene.add(mesh)
     return { mesh }
   })
@@ -142,17 +111,19 @@ export const createRaceDecals = (
           shadow.mesh.visible = false
           continue
         }
-        setTriangles(
+        setDecalTriangles(
           shadow.mesh,
           projectDecal(surface.world, createDecalFrame(pose.shadow.placement)),
           alpha
         )
       }
     },
+    updateEffects: effectDecals.update,
     setPoses: skidTrails.setPoses,
     step: skidTrails.step,
     dispose: () => {
       skidTrails.dispose()
+      effectDecals.dispose()
       for (const shadow of shadows) {
         if (shadow === null) continue
         trackScene.remove(shadow.mesh)

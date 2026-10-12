@@ -15,7 +15,7 @@ import type {
 } from '../../race-hud/index.ts'
 import type { SkeletonAnimationState } from '../../skeletal-animation/index.ts'
 import type { VehicleSkids } from '../../racer/index.ts'
-import type { DecalPlacement } from '../../decal/index.ts'
+import type { DecalLimits, DecalPlacement } from '../../decal/index.ts'
 import type { ColourShift } from '../../racer/index.ts'
 import type { Matrix3, Vector3 } from '../../simulation-math/index.ts'
 import type { RacePhaseValue } from '../../race/index.ts'
@@ -167,9 +167,19 @@ export type BrickView = {
 // What the drawing of a brick reads of either brick class.
 export type DrawnBrick = BrickBase & { readonly kind?: string }
 
+// A decal the effects lay on the track (oil slick, explosion scar): the picture's material, where it is placed, how many
+// triangles it may hold and the alpha it is drawn with (null: opaque).
+export type DecalView = {
+  readonly imageName: string
+  readonly placement: DecalPlacement
+  readonly limits: DecalLimits
+  readonly alpha: number | null
+}
+
 export type EffectViews = {
   readonly bricks: readonly BrickView[]
   readonly spinAngle: number
   readonly effects: readonly EffectView[]
   readonly explosions: readonly ExplosionView[]
+  readonly decals: readonly DecalView[]
 }

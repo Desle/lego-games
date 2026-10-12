@@ -171,6 +171,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
         if (part !== null) part.group.visible = isShown
     }
     decals.update(poses, cameraView.position)
+    decals.updateEffects(warpView === null ? effectViews.decals : [])
     decals.setPoses(allPoses)
     for (const pose of poses) {
       const racerRig = racerRigs[pose.racerIndex]

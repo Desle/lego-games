@@ -45,6 +45,16 @@ export type AudioFrameLine = {
   readonly events: readonly { readonly kind: string; readonly [name: string]: unknown }[]
 }
 
+export type DecalFrameLine = {
+  readonly frame: number
+  readonly decals: readonly {
+    readonly source: number
+    readonly triangles: readonly (readonly (readonly number[])[])[]
+    readonly ownerState: number
+    readonly ownerAlpha: number
+  }[]
+}
+
 export type DoneLine = {
   readonly frames: number
 }
@@ -54,4 +64,5 @@ export type PresentationTraceLine =
   | ({ readonly type: 'texture' } & TextureLine)
   | ({ readonly type: 'render_frame' } & RenderFrameLine)
   | ({ readonly type: 'audio_frame' } & AudioFrameLine)
+  | ({ readonly type: 'decal_frame' } & DecalFrameLine)
   | ({ readonly type: 'done' } & DoneLine)

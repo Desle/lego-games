@@ -14,6 +14,7 @@ export {
 export type {
   BrickView,
   EffectView,
+  DecalView,
   EffectViews,
   ExplosionView,
   HudContext,

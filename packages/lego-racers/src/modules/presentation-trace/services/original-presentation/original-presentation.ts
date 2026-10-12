@@ -10,6 +10,7 @@ import {
 import type {
   OriginalAudioEvent,
   OriginalAudioFrame,
+  OriginalDecalFrame,
   OriginalDraw,
   OriginalPresentation,
   OriginalRenderFrame,
@@ -49,6 +50,7 @@ const getScenarioForEmulator = (scenario: PresentationScenario) => ({
   isMirrored: scenario.isMirrored,
   recordFrames: scenario.recordFrames,
   isRenderRecorded: scenario.isRenderRecorded,
+  isDecalRecorded: scenario.isDecalRecorded ?? false,
   powerUpGrants: scenario.powerUpGrants ?? [],
   frames: scenario.frames.map((frame) => ({ dt: frame.milliseconds, keys: frame.scanCodes })),
 })
@@ -153,6 +155,7 @@ const readTraceScript = async (
   const textures = new Map<string, OriginalTexture>()
   const renderFrames: OriginalRenderFrame[] = []
   const audioFrames: OriginalAudioFrame[] = []
+  const decalFrames: OriginalDecalFrame[] = []
   const progress = {
     isDone: false,
   }
@@ -166,6 +169,8 @@ const readTraceScript = async (
       renderFrames.push(getRenderFrame(line))
     } else if (line.type === 'audio_frame') {
       audioFrames.push(getAudioFrame(line))
+    } else if (line.type === 'decal_frame') {
+      decalFrames.push(Object.freeze({ frame: line.frame, decals: line.decals }))
     } else {
       progress.isDone = true
     }
@@ -181,5 +186,6 @@ const readTraceScript = async (
     textures,
     renderFrames,
     audioFrames,
+    decalFrames,
   })
 }
