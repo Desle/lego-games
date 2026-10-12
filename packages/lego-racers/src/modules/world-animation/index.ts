@@ -26,6 +26,7 @@ export {
 } from './controller/skeleton-instance/skeleton-instance.ts'
 export {
   getSkeletonInstanceBoneTranslation,
+  getSkeletonInstanceCameraView,
   getSkeletonInstanceChainAxes,
   getSkeletonInstanceChainPosition,
 } from './controller/skeleton-instance-bones/skeleton-instance-bones.ts'
@@ -33,6 +34,7 @@ export {
   advanceWorldAnimation,
   createWorldAnimation,
   EMPTY_WORLD_ANIMATION,
+  findCameraIndex,
   findMaterialAnimationIndex,
   findMeshInstanceIndex,
   findSkeletonInstanceIndex,
@@ -48,7 +50,9 @@ export type {
   MaterialAnimationRuntime,
   MeshInstanceRuntime,
   RaceWorlds,
+  SkeletonInstanceCameraView,
   SkeletonInstanceRuntime,
   WorldAnimation,
+  WorldCameraRuntime,
   WorldAnimationInput,
 } from './types/world-animation.types.ts'

@@ -932,3 +932,5 @@
 0048bbf0 HazardHammer_Load
 0043ab10 CollisionManager_AnswerShapes
 004513d0 Listener_DoNothing
+004047b0 CameraObject_ApplyAnimationLock
+00404780 CameraObject_LockToAnimation
