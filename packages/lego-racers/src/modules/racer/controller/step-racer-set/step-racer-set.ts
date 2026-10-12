@@ -351,7 +351,7 @@ const stepTaunt = (input: RacerSetStepInput, racerSet: RacerSet, racerIndex: num
   return setRandomPosition(updated, taunt.position)
 }
 
-// 0x004377f0, the collision sound: a random draw picks sound 0x19 or 0x38 (not modelled) and waits 250 ms.
+// 0x004377f0, the collision sound: a random draw picks sound 0x19 or 0x38 and waits 250 ms.
 const stepContact = (
   input: RacerSetStepInput,
   racerSet: RacerSet,
@@ -365,7 +365,15 @@ const stepContact = (
   const waited = updateRacer(notified, racerIndex, (current) =>
     Object.freeze({ ...current, collisionSoundMilliseconds: COLLISION_SOUND_MILLISECONDS })
   )
-  return setRandomPosition(waited, draw.position)
+  // The draw's low bit picks the sound: 0x19 when set, else 0x38 (0x00437b1a).
+  const sounded: RacerSet = Object.freeze({
+    ...waited,
+    sounds: Object.freeze([
+      ...waited.sounds,
+      { soundId: (draw.value & 1) === 0 ? 0x38 : 0x19, address: '0x00437b1a' },
+    ]),
+  })
+  return setRandomPosition(sounded, draw.position)
 }
 
 // Pass 7: 0x004377f0 (thiscall: step), the racer's timers.

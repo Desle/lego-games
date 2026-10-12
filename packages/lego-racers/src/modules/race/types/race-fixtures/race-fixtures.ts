@@ -78,6 +78,7 @@ export const createFixtureRacerDefinition = (controllerKind: number): RaceRacerD
   preferredPowerUpKind: null,
   preferredPowerUpLevel: 0,
   voiceBase: 1000,
+  engineSoundValue: 0,
   appearance: FIXTURE_RACER_APPEARANCE,
   figures: createFixtureRacerFigures(),
   savedCar: null,

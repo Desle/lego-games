@@ -92,10 +92,16 @@ describe('hitRacerWithProjectile', () => {
       'power_ups.voice',
       'power_ups.voice',
       'power_ups.racer_hit',
+      'power_ups.sound_played',
       'power_ups.explosion',
       'power_ups.debris_thrown',
     ])
     expect(hit.events[1]).toEqual({ type: 'power_ups.voice', racer: 1, sound: 20 })
+    expect(hit.events[3]).toEqual({
+      type: 'power_ups.sound_played',
+      soundId: 5,
+      address: '0x0045241a',
+    })
     expect(getHead(hit).state).toBe(EffectState.FINISHED)
     expect(hit.world.random.position).toBe(40 + 4 + 1 + 2)
   })

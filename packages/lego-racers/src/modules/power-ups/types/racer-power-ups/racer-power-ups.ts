@@ -72,6 +72,18 @@ const getSlotsWith = (
     slotIndex === 2 ? brickIndex : slots[2],
   ] as const)
 
+// 0x00436df0: the taunt sound of a racer (racer +0xd23) follows its voice base; a base the table does not list leaves 0.
+const TAUNT_SOUNDS: Readonly<Record<number, number>> = Object.freeze({
+  1000: 0x1a,
+  0x44c: 0x1c,
+  0x458: 0x1b,
+  0x464: 0x1d,
+  0x470: 0x1e,
+  0x47c: 0x1f,
+  0x488: 0x1f,
+})
+export const getTauntSoundId = (voiceBase: number): number => TAUNT_SOUNDS[voiceBase] ?? 0
+
 // 0x00439420: the first empty slot takes the brick; reaching level 3 plays a taunt.
 export const getRacerWithEnhancement = (
   racer: RacerPowerUps,

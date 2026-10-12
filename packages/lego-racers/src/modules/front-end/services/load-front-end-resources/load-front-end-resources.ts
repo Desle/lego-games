@@ -1,7 +1,10 @@
 import { decodeBitmap } from '../../../bitmap/index.ts'
 import { loadBuilderCatalog, loadSavedCars } from '../../../car-builder/index.ts'
 import type { BuilderCatalog, SavedCar } from '../../../car-builder/index.ts'
-import { RACER_SHOWCASE_IDLE_STRING_IDS } from '../../types/racer-showcase/racer-showcase.ts'
+import {
+  RACER_SHOWCASE_IDLE_STRING_IDS,
+  RACER_SHOWCASE_REACTION_STRING_IDS,
+} from '../../types/racer-showcase/racer-showcase.ts'
 import type { RacerShowcaseAnimation } from '../../types/racer-showcase/racer-showcase.types.ts'
 import { parseAnimation } from '../../../animation/index.ts'
 import { getSkeletalAnimation } from '../../../skeletal-animation/index.ts'
@@ -187,6 +190,9 @@ export const loadFrontEndResources = (
       racerShowcaseAnimation = {
         animation,
         idleClipIndices: RACER_SHOWCASE_IDLE_STRING_IDS.map((id) =>
+          clipNames.indexOf((menuNames[id] ?? '').toLowerCase())
+        ),
+        reactionClipIndices: RACER_SHOWCASE_REACTION_STRING_IDS.map((id) =>
           clipNames.indexOf((menuNames[id] ?? '').toLowerCase())
         ),
       }

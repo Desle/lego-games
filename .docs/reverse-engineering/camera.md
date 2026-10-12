@@ -57,4 +57,4 @@ Mode 2: eye = racer position + 10 (6 with `+0x05`) in z, basis from the racer's 
 
 ## Not ported
 
-Mode 0 (introduction fly-through from the race description's camera point); `0x00427e80`, the field-of-view effects (warp, and the curse's random shake which draws from the shared random table); the camera object's lock (`+0x28`); the sound listener (`0x00427c00`). **Hypothesis:** the viewer's 60° field of view stands in for the Direct3D camera.
+Mode 0 (introduction fly-through from the race description's camera point); `0x00427e80`'s field of view itself (the warp's part; the curse's random shake and its draws from the shared random table are in the simulation, `stepCameraFovEffect`: a 500 ms swing of `value % trunc(fov - 40)` or `value % trunc(80 - fov)` half-degrees from the base 65 while racer flag `0x800` is set and `0x10` clear); the camera object's lock (`+0x28`); the sound listener (`0x00427c00`). **Hypothesis:** the viewer's 60° field of view stands in for the Direct3D camera.

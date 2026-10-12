@@ -49,6 +49,7 @@ export const createRacer = (carBody: CarBody, figure: Figure = createFigure([], 
     powerUpChances: Object.freeze(Array.from({ length: 6 }, () => NO_POWER_UP_CHANCE)),
     proximityCheckMilliseconds: 0,
     voiceBase: 1000,
+    engineSoundValue: 0,
     voiceMilliseconds: 0,
     fadeMilliseconds: 0,
     collisionSoundMilliseconds: 0,
@@ -98,6 +99,7 @@ export const createRacerSet = (
     registryEntries: Object.freeze([]),
     registryContacts: Object.freeze([]),
     emitters,
+    sounds: Object.freeze([]),
   })
 
 export const getRacer = (racerSet: RacerSet, racerIndex: number): Racer => {

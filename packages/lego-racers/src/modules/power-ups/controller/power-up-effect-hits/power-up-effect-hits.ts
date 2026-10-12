@@ -88,6 +88,14 @@ export const getStepWithDebris = (
   ])
 }
 
+// 0x00452370 ends an unshielded hit with the cannon's hit sound (0x00451b50 plays it when the ball ends elsewhere).
+const getStepWithCannonHitSound = (step: PowerUpStep, effect: PowerUpEffect): PowerUpStep =>
+  effect.kind === PowerUpEffectKind.CANNON
+    ? getStepWithEvents(step, [
+        { type: 'power_ups.sound_played', soundId: 5, address: '0x0045241a' },
+      ])
+    : step
+
 // Cannon 0x00452370 and rocket 0x00456fa0 (vtable slot 8), then the rest of their update when the hit is reported
 // (0x00451b50, 0x004568f0): unless reflected, an explosion, debris from an unshielded victim, and the end.
 const hitWithExplodingProjectile = (
@@ -101,15 +109,18 @@ const hitWithExplodingProjectile = (
   const isReflected = getIsReflected(status)
   const handled = status.isShielded
     ? getStepWithShieldedVictim(step, victim)
-    : getStepWithVictimHit(
-        effect.kind === PowerUpEffectKind.ROCKET
-          ? getStepWithEvents(step, [
-              { type: 'power_ups.racer_spun_out', racer: victim, strength: 2, spinTime: 0 },
-            ])
-          : step,
-        context,
-        effect,
-        victim
+    : getStepWithCannonHitSound(
+        getStepWithVictimHit(
+          effect.kind === PowerUpEffectKind.ROCKET
+            ? getStepWithEvents(step, [
+                { type: 'power_ups.racer_spun_out', racer: victim, strength: 2, spinTime: 0 },
+              ])
+            : step,
+          context,
+          effect,
+          victim
+        ),
+        effect
       )
   if (isReflected) {
     return getStepWithEvents(
@@ -298,7 +309,13 @@ export const endProjectileFlight = (
 ): PowerUpStep => {
   const effect = getEffect(step, effectId)
   const isBarrel = effect.kind === PowerUpEffectKind.BARREL
-  const exploded = getStepWithEvents(step, [
+  const sounded =
+    effect.kind === PowerUpEffectKind.CANNON
+      ? getStepWithEvents(step, [
+          { type: 'power_ups.sound_played', soundId: 5, address: '0x00451c55' },
+        ])
+      : step
+  const exploded = getStepWithEvents(sounded, [
     {
       type: 'power_ups.explosion',
       effect: effectId,

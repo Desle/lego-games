@@ -41,6 +41,8 @@ const MENU_FIGURE_ANIMATION: SkeletalAnimation = {
   clips: [MENU_FIGURE_CLIP, MENU_FIGURE_CLIP, MENU_FIGURE_CLIP],
 }
 
+const MAXIMUM_SETTLE_FRAMES = 600
+
 const getCircuit = (name: string): Circuit => ({
   name,
   racerCodes: ['KK', 'IL'],
@@ -109,6 +111,7 @@ const resources: FrontEndResources = {
   getRacerShowcaseAnimation: () => ({
     animation: MENU_FIGURE_ANIMATION,
     idleClipIndices: [0, 1, 2],
+    reactionClipIndices: [0, 1, 2],
   }),
 }
 
@@ -121,12 +124,26 @@ const environment: FrontEndEnvironment = {
   standingRows: [],
 }
 
+// A racer picked on the race select leaves the screen when his reaction clip has ended.
+const settleReaction = (state: FrontEndState, options: FrontEndEnvironment): FrontEndState => {
+  let current = state
+  for (
+    let frame = 0;
+    frame < MAXIMUM_SETTLE_FRAMES && current.showcase?.pendingNavigation != null;
+    frame += 1
+  ) {
+    current = stepFrontEnd(current, resources, options, null, 16).state
+  }
+  return current
+}
+
 const play = (
   inputs: readonly FrontEndInput[],
   options: FrontEndEnvironment = environment
 ): FrontEndState =>
   inputs.reduce(
-    (state, input) => stepFrontEnd(state, resources, options, input, 16).state,
+    (state, input) =>
+      settleReaction(stepFrontEnd(state, resources, options, input, 16).state, options),
     createFrontEnd(resources, options)
   )
 

@@ -27,14 +27,25 @@ const getFlushedStep = (step: RaceStepResult): RaceStepResult => {
     type: 'race.projectile',
     event,
   }))
+  const racerSounds: readonly RaceEvent[] = step.raceState.racerSet.sounds.map((sound) => ({
+    type: 'race.racer_sound',
+    ...sound,
+  }))
   return Object.freeze({
     raceState: Object.freeze({
       ...step.raceState,
+      racerSet: Object.freeze({ ...step.raceState.racerSet, sounds: Object.freeze([]) }),
       powerUpStep: Object.freeze({ ...powerUpStep, events: Object.freeze([]) }),
       projectileWorld: Object.freeze({ ...projectileWorld, events: Object.freeze([]) }),
       trackEffects: Object.freeze([]),
     }),
-    events: Object.freeze([...step.events, ...powerUpEvents, ...projectileEvents, ...trackEffects]),
+    events: Object.freeze([
+      ...step.events,
+      ...powerUpEvents,
+      ...projectileEvents,
+      ...trackEffects,
+      ...racerSounds,
+    ]),
   })
 }
 
