@@ -45,6 +45,8 @@ Same plastic and the same studio as the cars. three.js lights every material by 
 
 ## The gallery
 
+Wheels and drivers (each pose) are scored against the original by `pnpm run ldraw-fidelity` (see [Judging LDraw work](remastered.md#judging-ldraw-work)); the gallery is for people.
+
 `/ldraw-racer-gallery.html` on the dev server (not part of the build) exposes `renderWheels(chassisIndex, view, width, height, milliseconds)`, `renderWheelSheet(columns, cell, view, isGameBesideLDraw, first, count)` (the original's wheel beside the LDraw one for each chassis), `renderDriver(partBytes, 'race' | 'menu', view, width, height, clip, milliseconds)`, `renderDriverSheet`, `renderChampion(name, view, width, height)` and `renderCatalogueSheet(slot, indices, baseBytes, columns, cell)` (every hat, face, torso or leg of the catalogue on a seated driver) for a headless browser to call and save the canvas. The renders in `~/ldraw-gallery/drivers/` come from it.
 
 `/ldraw-models.html` on the dev server (not part of the build) browses every `.ldr` and `.mpd` under `~/ldraw-models`, subfolders (`drafts/`, `chassis/`) included, from `/__development/ldraw-models/files.json` (the game itself still reads only `index.json`, so drafts never load into it): orbit and zoom by touch or mouse, Manual or Photo look, the original body or chassis beside a file named like a car code or chassis, the part count and header comments, and a reload when the file changes on disk. `#<path>` selects a file.
