@@ -6,6 +6,7 @@ import type {
   FrontEndRaceSlot,
   FrontEndResources,
   FrontEndSettings,
+  RaceCinemaView,
 } from '../../types/front-end.types.ts'
 import type { FrontEndWidget } from '../../types/front-end-widget.types.ts'
 import {
@@ -24,6 +25,8 @@ import { createResult, getClampedStep, MenuSound } from '../screen-helpers/scree
 const RACES_PER_CIRCUIT = 4
 // 0x0047a3f0: the circuit race screen shows the next race of the circuit every 2,000 ms.
 const RACE_CYCLE_MILLISECONDS = 2000
+// The last circuit has one race and no cycle.
+const FINAL_CIRCUIT_INDEX = 6
 const GONEXT_INDEX = 0
 const GOBACK_INDEX = 1
 const SELECTOR_RECTANGLE = Object.freeze({ left: 3, top: 29, right: 220, bottom: 72 })
@@ -76,9 +79,30 @@ const getRaceNumberWithinCycle = (
 ): number => {
   const circuit = getCircuit(resources, runtime.selection.circuitIndex)
   const count = circuit === null ? 0 : getAvailableRaces(resources, circuit.name).length
-  return count === 0 || runtime.selection.circuitIndex === 6
+  return count === 0 || runtime.selection.circuitIndex === FINAL_CIRCUIT_INDEX
     ? 0
     : Math.floor(screenMilliseconds / RACE_CYCLE_MILLISECONDS) % count
+}
+
+// 0x0047a2b0: a race whose cinema is not the one running switches to it (0x00466d00) and sets the champion's figure
+// (0x00488b40); the circuit screen does this every `RACE_CYCLE_MILLISECONDS` (hypothesis: a switch restarts the cinema's
+// clock, so it runs from the start of each race's turn).
+const getRaceCinema = (
+  runtime: ScreenRuntime,
+  kind: RaceSelectionKind,
+  race: RaceCatalogEntry | undefined
+): RaceCinemaView | null => {
+  if (race === undefined || race.secondName === '') return null
+  const { screenMilliseconds, selection, resources } = runtime
+  const isCycling = kind === 'circuit_race' && selection.circuitIndex !== FINAL_CIRCUIT_INDEX
+  const champion = resources
+    .getDriverDatabase()
+    .drivers.find((driver) => driver.name.toLowerCase() === race.thirdName.toLowerCase())
+  return {
+    cinemaName: race.secondName,
+    milliseconds: isCycling ? screenMilliseconds % RACE_CYCLE_MILLISECONDS : screenMilliseconds,
+    partBytes: champion?.unreadBytes ?? null,
+  }
 }
 
 // The sections of SINGRACE.MIB / CIRCRACE.MIB the two screens share: the backdrop, the title, the circuit selector and
@@ -90,6 +114,12 @@ const getCommonWidgets = (runtime: ScreenRuntime, kind: RaceSelectionKind): Fron
   const selectorLeft = SELECTOR_RECTANGLE.left
   const selectorTop = SELECTOR_RECTANGLE.top
   const isLocked = getIsCircuitLocked(runtime)
+  const circuit = getCircuit(resources, selection.circuitIndex)
+  const races = circuit === null ? [] : getAvailableRaces(resources, circuit.name)
+  const previewRace =
+    kind === 'circuit_race'
+      ? races[getRaceNumberWithinCycle(resources, runtime, runtime.screenMilliseconds)]
+      : races[selection.raceIndex]
   const widgets: FrontEndWidget[] = [
     { kind: 'image', itemName: 'backdrp', imageName: 'backdrp' },
     {
@@ -137,7 +167,11 @@ const getCommonWidgets = (runtime: ScreenRuntime, kind: RaceSelectionKind): Fron
     })
   }
   widgets.push(
-    { kind: 'viewport', itemName: 'singrace' },
+    {
+      kind: 'viewport',
+      itemName: 'singrace',
+      cinema: getRaceCinema(runtime, kind, previewRace),
+    },
     {
       kind: 'button',
       itemName: 'gonext',

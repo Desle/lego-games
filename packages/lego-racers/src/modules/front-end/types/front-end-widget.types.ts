@@ -4,6 +4,7 @@ import type {
   FrontEndRectangle,
   FrontEndResources,
   FrontEndScreenFiles,
+  RaceCinemaView,
   RacerShowcaseView,
 } from './front-end.types.ts'
 
@@ -58,6 +59,8 @@ export type ViewportWidget = {
   readonly driver?: DriverPreview | null
   // The racer showcase of the race select: the racer's car on the turntable and his driver.
   readonly showcase?: RacerShowcaseView | null
+  // The race preview of the race selects.
+  readonly cinema?: RaceCinemaView | null
 }
 
 // A rectangle the screen computed itself (a list row, a chooser).

@@ -349,6 +349,7 @@ export const getWidgetCommands = (
           builder: widget.builder ?? null,
           driver: widget.driver ?? null,
           showcase: widget.showcase ?? null,
+          cinema: widget.cinema ?? null,
         },
       ]
     }
