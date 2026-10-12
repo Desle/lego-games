@@ -111,6 +111,17 @@ const getTurboFlameAlpha = (attachment: AttachmentView): number | null => {
   return Math.trunc(Math.fround(fade * TURBO_ENDING_ALPHA_SCALE) * TURBO_ENDING_ALPHA_PEAK)
 }
 
+// 0x0045c160 draws an ending shield (state 4) with the device's alpha override: the timer (1000 ms down to 0) times
+// 0.001 (0x004af6fc) times 191 (0x004b0b4c), truncated. A shield in any other state draws without it.
+const SHIELD_ENDING_ALPHA_SCALE = Math.fround(0.001)
+const getShieldAlpha = (attachment: AttachmentView): number | null =>
+  attachment.state === 'ending'
+    ? Math.trunc(
+        Math.fround(attachment.timerMilliseconds * SHIELD_ENDING_ALPHA_SCALE) *
+          TURBO_ENDING_ALPHA_PEAK
+      )
+    : null
+
 // 0x00421850: the figure's scale grows from 0.05 (0x004b0148) to the explosion's end scale of 1 with the growth progress
 // (never past 1) and its opacity falls from 255 to 0 with it.
 const EXPLOSION_FIGURE_START_SCALE = 0.05
@@ -359,6 +370,7 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
         for (const pool of [shieldBackPools[attachment.level], shieldPools[attachment.level]]) {
           if (pool === undefined) continue
           const copy = pool.use()
+          setAlphaOverride(copy.group, getShieldAlpha(attachment))
           copy.group.matrix.copy(
             getFrameMatrix(
               getUprightRotation({ x: pose.rotation[0], y: pose.rotation[1], z: pose.rotation[2] }),
