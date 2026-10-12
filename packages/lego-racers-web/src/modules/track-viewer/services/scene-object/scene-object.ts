@@ -123,7 +123,7 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
           levelObjects.length > 1 ||
           sphere !== null ||
           distances.some((distance, index) => distance !== (fileDistances[index] ?? distance))
-        const centre = sphere?.centre ?? instance.position
+        const centre = sphere?.centre ?? runtime?.position ?? instance.position
         const squaredDistance =
           (camera.x - centre.x) ** 2 + (camera.y - centre.y) ** 2 + (camera.z - centre.z) ** 2
         const distanceLevel = getLevelIndex(distances, squaredDistance)

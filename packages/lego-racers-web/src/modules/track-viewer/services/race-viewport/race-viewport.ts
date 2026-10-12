@@ -56,6 +56,11 @@ import type {
 } from './race-viewport.types.ts'
 
 const BACKGROUND_COLOR = 0x101820
+const getPosition = (position: readonly [number, number, number]) => ({
+  x: position[0],
+  y: position[1],
+  z: position[2],
+})
 const sphereArithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
 const MILLISECONDS_PER_SECOND = 1000
 // The scroll the original adds stays below 1 (it wraps).
@@ -423,6 +428,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
         if (instance.clip !== null) shown.track.setSkeletonState(instance.name, instance.clip)
         const sphere = getSkeletonInstanceSphere(sphereArithmetic, instance)
         shown.track.setInstanceRuntime(instance.name, {
+          position: getPosition(instance.position),
           levelSquaredDistances: instance.levelSquaredDistances,
           sphere:
             sphere === null
@@ -435,6 +441,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
       }
       for (const instance of world.meshInstances) {
         shown.track.setInstanceRuntime(instance.name, {
+          position: getPosition(instance.position),
           levelSquaredDistances: instance.levelSquaredDistances,
           sphere: null,
         })

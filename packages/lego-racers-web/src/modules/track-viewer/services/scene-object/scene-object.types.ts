@@ -56,6 +56,8 @@ export type SceneObject = {
 // What the race simulation holds of an instance that decides whether it is drawn: the squared distances of its levels
 // (a hazard sets them to hide it) and, for an animated skeleton instance, the sphere it is culled by (0x10023ef0).
 export type InstanceRuntime = {
+  // Where the simulation holds the instance (a mirrored race negates y, as the camera's world does).
+  readonly position: Vector3Like
   readonly levelSquaredDistances: readonly number[]
   readonly sphere: { readonly centre: Vector3Like; readonly radius: number } | null
 }
