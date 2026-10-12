@@ -8,6 +8,7 @@ import type { RacerPose } from '@lego-games/lego-racers/race-presentation'
 import { SceneInstanceKind } from '@lego-games/lego-racers/scene'
 import type { Scene, SceneMesh } from '@lego-games/lego-racers/scene'
 import type { Material, Scene as ThreeScene } from 'three'
+import { RACER_SHADOW_DECAL_NAME } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
 import { createRaceEffectDecals } from '../race-effect-decals/race-effect-decals.ts'
 import { createRaceSkidTrails } from '../race-skid-trails/race-skid-trails.ts'
 import {
@@ -89,6 +90,7 @@ export const createRaceDecals = (
     if (surface === null || material === undefined) return null
     const three = createDecalMaterial(assets.scene, material)
     const mesh = createDecalMesh(three, SHADOW_DECAL_LIMITS.maximumTriangles)
+    mesh.name = RACER_SHADOW_DECAL_NAME
     trackScene.add(mesh)
     return { mesh }
   })

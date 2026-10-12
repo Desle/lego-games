@@ -4,7 +4,7 @@ import type { ModelResourceNames } from '@lego-games/lego-racers/racer-appearanc
 import type { HudCommand } from '@lego-games/lego-racers/race-hud'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
-import type { DataTexture, Object3D } from 'three'
+import type { DataTexture, Group, Object3D, PerspectiveCamera, Scene, WebGLRenderer } from 'three'
 import { createEnum } from '../types/enum.types.ts'
 import type { EnumValues } from '../types/enum.types.ts'
 
@@ -57,6 +57,23 @@ export type RaceDisplay = {
 export type BuiltCarDrawingRequest = {
   readonly archive: JamArchive
   readonly design: CarDesign
+}
+
+// The race's drawing as a layer may add to it before each frame is rendered.
+export type RaceRenderRequest = {
+  readonly renderer: WebGLRenderer
+  readonly camera: PerspectiveCamera
+  readonly trackScene: Scene
+  // The objects of the track's world (its instances, one group each, tagged with `userData.instanceKind`), in the track's own frame.
+  readonly trackGroup: Group
+  // The world path of the track's BSP tree: what tells one track from another.
+  readonly trackKey: string
+}
+
+// Work a layer does just before the race's scenes are rendered (after the poses are set).
+export type RaceRenderPass = {
+  readonly beforeRender: () => void
+  readonly dispose: () => void
 }
 
 // A car body model of the original (a champion's, which no brick list builds) that the race is about to draw.
@@ -123,6 +140,8 @@ export type ViewerExtension = {
   readonly getRaceDisplay: (window: WindowMetrics) => RaceDisplay | null
   // Something to draw in place of the mesh the original builds for a car built from bricks, in that mesh's frame; null keeps the original's.
   readonly getBuiltCarDrawing: (request: BuiltCarDrawingRequest) => Object3D | null
+  // Something to run before each frame of this race is rendered; null adds nothing.
+  readonly getRaceRenderPass: (request: RaceRenderRequest) => RaceRenderPass | null
   // Something to draw in place of the car body model with these names, in that model's frame (its vertices times its scale); null keeps the original's.
   readonly getCarBodyDrawing: (request: CarBodyDrawingRequest) => Object3D | null
   // Something to draw in place of the model the original draws for an effect, in that model's frame (the original's units, its scale applied); null keeps the original's.
