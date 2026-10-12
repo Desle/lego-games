@@ -21,6 +21,7 @@ import {
   WebGLRenderer,
 } from 'three'
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
+import { getTextureScrollOffsets } from '@lego-games/lego-racers/world-animation'
 import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
 import { getCameraFrustum, ORIGINAL_FIELD_OF_VIEW_DEGREES } from './camera-frustum.ts'
 import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
@@ -413,9 +414,23 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     }
   }
 
-  const showHazards = (trackWorld: WorldAnimation, pools: readonly (EmitterPool | null)[]) => {
+  const showHazards = (
+    trackWorld: WorldAnimation,
+    pools: readonly (EmitterPool | null)[],
+    blendedWorld: WorldAnimation
+  ) => {
     for (const instance of trackWorld.skeletonInstances) {
       if (instance.clip !== null) shown.track.setSkeletonState(instance.name, instance.clip)
+    }
+    for (const { name, textureScroll } of [
+      ...trackWorld.meshInstances,
+      ...trackWorld.skeletonInstances,
+      ...blendedWorld.meshInstances,
+      ...blendedWorld.skeletonInstances,
+    ]) {
+      if (textureScroll.rateU === 0 && textureScroll.rateV === 0) continue
+      const [offsetU, offsetV] = getTextureScrollOffsets(textureScroll)
+      shown.track.setInstanceTextureOffset(name, offsetU, offsetV)
     }
     if (lastCameraView !== null) particles.update(pools, lastCameraView, lastSprites, lastRibbons)
   }

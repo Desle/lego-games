@@ -11,6 +11,7 @@ import {
   INSTANCE_LOOPING_FLAG,
   startSkeletonInstanceClip,
 } from './skeleton-instance.ts'
+import { NO_TEXTURE_SCROLL } from '../texture-scroll/texture-scroll.ts'
 
 const animation: SkeletalAnimation = Object.freeze({
   positions: [],
@@ -49,6 +50,7 @@ const createInstance = (overrides: Partial<SkeletonInstanceRuntime>): SkeletonIn
   otherFlags: 0,
   position: [1, 2, 3],
   levelSquaredDistances: [3.4028234663852886e38, 3.4028234663852886e38, 3.4028234663852886e38],
+  textureScroll: NO_TEXTURE_SCROLL,
   ...overrides,
 })
 

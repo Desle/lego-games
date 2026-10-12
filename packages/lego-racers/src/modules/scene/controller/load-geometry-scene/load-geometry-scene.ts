@@ -82,6 +82,7 @@ export const loadGeometryScene = (
     kind: isSkeletal ? SceneInstanceKind.SKELETON : SceneInstanceKind.MESH,
     worldPath: files.directory,
     startClipIndex: null,
+    textureScrollPerSecond: null,
     levels: Object.freeze([
       Object.freeze({
         meshIndex: 0,

@@ -24,6 +24,7 @@ import {
   IDLE_MATERIAL_PLAYBACK,
 } from '../material-animation-playback/material-animation-playback.ts'
 import { advanceSkeletonInstance } from '../skeleton-instance/skeleton-instance.ts'
+import { createTextureScroll, getAdvancedTextureScroll } from '../texture-scroll/texture-scroll.ts'
 
 // GolDP.dll 0x10057330 and 0x100576e4: FLT_MAX, the distance of a level that is always shown.
 const LARGEST_FLOAT = 3.4028234663852886e38
@@ -127,6 +128,7 @@ const createSkeletonInstance = (
       instance.position.z,
     ] as const),
     levelSquaredDistances: getLevelDistances(levels),
+    textureScroll: createTextureScroll(instance.keyword3fValues),
   })
 }
 
@@ -150,6 +152,7 @@ const createMeshInstance = (instance: MeshInstance): MeshInstanceRuntime =>
         }))
     ),
     otherFlags: getFlags(instance),
+    textureScroll: createTextureScroll(instance.keyword3fValues),
   })
 
 // 0x1002e640 starts every material animation entry an instance refers to, looping (0x10025da0); so does 0x1002e250
@@ -244,8 +247,8 @@ export const EMPTY_WORLD_ANIMATION: WorldAnimation = Object.freeze({
   materialAnimations: Object.freeze([]),
 })
 
-// LEGORacers.exe 0x00416090: the world's material animations, its mesh instances (which only move by a velocity
-// nobody sets) and its skeleton instances advance by the milliseconds.
+// LEGORacers.exe 0x00416090: the world's material animations, its mesh instances (which only scroll their textures; the
+// velocity nobody sets) and its skeleton instances advance by the milliseconds.
 export const advanceWorldAnimation = (
   world: WorldAnimation,
   milliseconds: number
@@ -261,6 +264,14 @@ export const advanceWorldAnimation = (
               getAdvancedMaterialPlayback(animation.definition, entryIndex, playback, milliseconds)
             )
           ),
+        })
+      )
+    ),
+    meshInstances: Object.freeze(
+      world.meshInstances.map((instance) =>
+        Object.freeze({
+          ...instance,
+          textureScroll: getAdvancedTextureScroll(instance.textureScroll, milliseconds),
         })
       )
     ),

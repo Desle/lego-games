@@ -1,3 +1,5 @@
+import { getFloatFromBits, getTruncatedInteger } from '../../../simulation-math/index.ts'
+import { getTextureScrollWithRates } from '../../../world-animation/index.ts'
 import type { HazardBehavior } from '../../types/hazard-behavior.types.ts'
 import type { ScrollerData } from '../../types/hazard-data.types.ts'
 import { getHazard36 } from '../hazard-definition/hazard-definition.ts'
@@ -8,13 +10,24 @@ import { DEFAULT_HAZARD_SLOTS, getIdleHazard } from '../hazard-defaults/hazard-d
 import {
   findMeshReference,
   findSkeletonReference,
+  getMeshInstance,
+  getSkeletonInstance,
   getUpdatedAfterEndRequest,
+  setMeshInstance,
+  setSkeletonInstance,
   getWithData,
   NO_IDENTIFIER,
 } from '../hazard-helpers/hazard-helpers.ts'
 
 // 0x004b41f8: the scroll repeats every 10,000 milliseconds.
 const CYCLE_MILLISECONDS = 10_000
+
+// The clock as a table index, counted backwards.
+const CLOCK_SCALE = getFloatFromBits(0x38d1b717) // float32 0.0001 at 0x004b41f4
+const FULL_TURN = getFloatFromBits(0x40c90fdb) // float32 2 pi at 0x004b02f8
+const TABLE_INDEX_PER_RADIAN_BACKWARDS = getFloatFromBits(0xc322f983) // float32 -1024 / 2 pi at 0x004b02f4
+const TABLE_MASK = 0x3ff // the AND at 0x0048b2a2
+const TABLE_QUARTER_TURN = 0x100 // the MOV at 0x0048b29b (0xffffff00 minus the index)
 
 const getIsScrollerData = (data: HazardInstance['data']): data is ScrollerData =>
   data.keyword === HazardKeyword.HAZARD_36
@@ -28,8 +41,8 @@ const findScrolledInstance = (session: HazardSession, name: string) =>
   findSkeletonReference(session, 'blended', name)
 
 // 0x0048b080 (constructor), 0x0048b110 (loader), 0x0048b220 (Begin), 0x0048b240 (update): a texture scrolls with
-// the time of a 10,000 ms cycle. The scroll offset is drawing state (`0x00411700`, `0x00411730` set the instance's
-// scroll rates from a sine table); only the cycle is kept.
+// the time of a 10,000 ms cycle. Each update sets the instance's scroll rates (0x00411700, 0x00411730) to the two
+// floats times a sine of the cycle; the instance update (0x10027f40) integrates them into the offsets.
 export const SCROLLER: HazardBehavior = Object.freeze({
   ...DEFAULT_HAZARD_SLOTS,
   create: (definition, context) => {
@@ -67,6 +80,41 @@ export const SCROLLER: HazardBehavior = Object.freeze({
       time < CYCLE_MILLISECONDS
         ? time
         : arithmetic.storeFloat(arithmetic.subtract(time, CYCLE_MILLISECONDS))
+    const index =
+      (-TABLE_QUARTER_TURN -
+        getTruncatedInteger(
+          arithmetic.multiply(
+            arithmetic.multiply(arithmetic.multiply(cycleMilliseconds, CLOCK_SCALE), FULL_TURN),
+            TABLE_INDEX_PER_RADIAN_BACKWARDS
+          )
+        )) &
+      TABLE_MASK
+    const sine = session.getTableCosine(index)
+    const scrollU = arithmetic.storeFloat(arithmetic.multiply(data.firstFloat, sine))
+    const scrollV = arithmetic.storeFloat(arithmetic.multiply(data.secondFloat, sine))
+    const mesh = data.instance?.kind === 'mesh' ? getMeshInstance(session, data.instance) : null
+    if (mesh !== null) {
+      setMeshInstance(
+        session,
+        data.instance,
+        Object.freeze({
+          ...mesh,
+          textureScroll: getTextureScrollWithRates(mesh.textureScroll, scrollU, scrollV),
+        })
+      )
+    }
+    const skeleton =
+      data.instance?.kind === 'skeleton' ? getSkeletonInstance(session, data.instance) : null
+    if (skeleton !== null) {
+      setSkeletonInstance(
+        session,
+        data.instance,
+        Object.freeze({
+          ...skeleton,
+          textureScroll: getTextureScrollWithRates(skeleton.textureScroll, scrollU, scrollV),
+        })
+      )
+    }
     return getWithData(checked, { ...data, cycleMilliseconds })
   },
 })

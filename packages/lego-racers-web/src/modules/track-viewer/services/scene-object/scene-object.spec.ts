@@ -152,6 +152,7 @@ const SCENE: Scene = {
       kind: SceneInstanceKind.MESH,
       worldPath: 'GAMEDATA\\RACEC0R0\\RRTRK.WDB',
       startClipIndex: null,
+      textureScrollPerSecond: null,
       levels: [
         {
           meshIndex: 0,
@@ -170,6 +171,7 @@ const SCENE: Scene = {
       kind: SceneInstanceKind.SKELETON,
       worldPath: 'GAMEDATA\\RACEC0R0\\BACKGRD.WDB',
       startClipIndex: 0,
+      textureScrollPerSecond: null,
       levels: [
         {
           meshIndex: 1,
@@ -188,6 +190,7 @@ const SCENE: Scene = {
       kind: SceneInstanceKind.SKELETON,
       worldPath: 'GAMEDATA\\RACEC0R0\\RRTRK.WDB',
       startClipIndex: null,
+      textureScrollPerSecond: null,
       levels: [
         {
           meshIndex: -1,

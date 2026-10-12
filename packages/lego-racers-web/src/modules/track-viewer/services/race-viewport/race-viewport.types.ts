@@ -28,7 +28,12 @@ export type RaceViewport = {
   ) => void
   // Shows the simulation's hazards and emitters: the track world's skeleton instances take the clip states the
   // simulation advanced, and the emitter pools' particles are drawn as points.
-  readonly showHazards: (trackWorld: WorldAnimation, pools: readonly (EmitterPool | null)[]) => void
+  // The instances of the track's two worlds scroll their textures.
+  readonly showHazards: (
+    trackWorld: WorldAnimation,
+    pools: readonly (EmitterPool | null)[],
+    blendedWorld: WorldAnimation
+  ) => void
   // Advances the backdrop and the sky by whole milliseconds (the track's instances follow the simulation).
   readonly animate: (deltaMilliseconds: number) => void
   // Draws the race at another size, keeping the camera's vertical field of view.

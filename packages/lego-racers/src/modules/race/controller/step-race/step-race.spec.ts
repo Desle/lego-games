@@ -1,4 +1,5 @@
 import { createGhostSession } from '../../../ghost/index.ts'
+import { NO_TEXTURE_SCROLL } from '../../../world-animation/index.ts'
 import { createSkeletonAnimationState } from '../../../skeletal-animation/index.ts'
 import type { SkeletalAnimation } from '../../../skeletal-animation/index.ts'
 import { getRacer, setRacer } from '../../../racer/index.ts'
@@ -101,6 +102,7 @@ describe('stepRace', () => {
         otherFlags: 0,
         position: [0, 0, 0] as const,
         levelSquaredDistances: [],
+        textureScroll: NO_TEXTURE_SCROLL,
       }
       return {
         ...base,

@@ -116,6 +116,7 @@ const getLinkedInstance = <Level extends InstanceLevelInput>(
     kind,
     worldPath: counts.worldPath,
     startClipIndex: null,
+    textureScrollPerSecond: instance.keyword3fValues,
     levels: Object.freeze(levels),
     position: instance.position,
     rotation: getInstanceRotation(instance.forward, instance.up),
@@ -219,6 +220,7 @@ export const linkSkeletonInstances = (
           ? undefined
           : animations[counts.animationOffset + lastLevel.animationIndex]
       ),
+      textureScrollPerSecond: instance.keyword3fValues,
       levels: Object.freeze(levels),
       position: instance.position,
       rotation: getInstanceRotation(instance.forward, instance.up),

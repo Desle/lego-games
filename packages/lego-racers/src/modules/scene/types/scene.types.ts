@@ -165,6 +165,8 @@ export type SceneInstance = {
   // The animation clip a skeleton instance starts playing (world keyword 0x35, resolved by 0x1002e640);
   // null when it plays none.
   readonly startClipIndex: number | null
+  // World keyword 0x3f: the texture scroll per second (u, v), or null.
+  readonly textureScrollPerSecond: readonly number[] | null
   readonly levels: readonly SceneInstanceLevel[]
   readonly position: SceneVector
   readonly rotation: SceneRotation

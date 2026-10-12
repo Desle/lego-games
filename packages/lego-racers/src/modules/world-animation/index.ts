@@ -41,6 +41,13 @@ export {
   findSkeletonInstanceIndex,
 } from './controller/world-animation/world-animation.ts'
 export {
+  createTextureScroll,
+  getAdvancedTextureScroll,
+  getTextureScrollOffsets,
+  getTextureScrollWithRates,
+  NO_TEXTURE_SCROLL,
+} from './controller/texture-scroll/texture-scroll.ts'
+export {
   getWorldWithMaterialPlayback,
   getWorldWithMaterialRate,
   getWorldWithMeshInstance,
@@ -53,6 +60,7 @@ export type {
   RaceWorlds,
   SkeletonInstanceCameraView,
   SkeletonInstanceRuntime,
+  TextureScroll,
   WorldAnimation,
   WorldCameraRuntime,
   WorldAnimationInput,

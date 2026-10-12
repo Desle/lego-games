@@ -10,6 +10,12 @@ import type {
 } from '../race-viewport/race-viewport.types.ts'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import { getLocalVisibilityQuery, showVisibleLeaves } from './bsp-visibility.ts'
+import {
+  createTextureScroll,
+  getAdvancedTextureScroll,
+  getTextureScrollOffsets,
+} from '@lego-games/lego-racers/world-animation'
+import { setTextureOffset } from './texture-offset.ts'
 import { applyVertexLighting } from './vertex-lighting.ts'
 import type { SceneLights } from './vertex-lighting.types.ts'
 import { createSkeletonInstanceObject } from './skeleton-instance-object.ts'
@@ -74,6 +80,7 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
   const animators: ((deltaMilliseconds: number) => void)[] = []
   const stateSetters = new Map<string, NonNullable<InstanceObject['setState']>>()
   const levelSelectors: ((camera: Vector3Like) => void)[] = []
+  const scrollers: ((deltaMilliseconds: number) => void)[] = []
   const leafSelectors: ((view: FrustumView, worldToLocal: Matrix4) => void)[] = []
   for (const instance of scene.instances.filter(options.includeInstance)) {
     const levelObjects = instance.levels.flatMap((_level, levelIndex) => {
@@ -87,6 +94,16 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
       instanceObject.group.visible = levelIndex === 0
       group.add(instanceObject.group)
       if (instanceObject.animate !== null) animators.push(instanceObject.animate)
+    }
+    // The background's world is not part of the simulation: Sky_Update (0x00416090) scrolls its instances here.
+    if (options.isBackground && instance.textureScrollPerSecond !== null) {
+      let scroll = createTextureScroll(instance.textureScrollPerSecond)
+      scrollers.push((deltaMilliseconds) => {
+        scroll = getAdvancedTextureScroll(scroll, deltaMilliseconds)
+        const [offsetU, offsetV] = getTextureScrollOffsets(scroll)
+        for (const { instanceObject } of levelObjects)
+          setTextureOffset(instanceObject.group, offsetU, offsetV)
+      })
     }
     const setters = levelObjects.flatMap(({ instanceObject }) =>
       instanceObject.setState === null ? [] : [instanceObject.setState]
@@ -138,11 +155,18 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
     bounds,
     animate: (deltaMilliseconds: number) => {
       for (const animator of animators) animator(deltaMilliseconds)
+      for (const scroller of scrollers) scroller(deltaMilliseconds)
     },
     setInstanceColourShift: (name: string, shift: ColourShiftLike | null) => {
       for (const child of group.children) {
         if (child.name.toLowerCase() !== name.toLowerCase()) continue
         for (const geometry of getMeshGeometries(child)) applyColourShift(geometry, shift)
+      }
+    },
+    setInstanceTextureOffset: (name: string, offsetU: number, offsetV: number) => {
+      for (const child of group.children) {
+        if (child.name.toLowerCase() === name.toLowerCase())
+          setTextureOffset(child, offsetU, offsetV)
       }
     },
     setColourShift: (shift: ColourShiftLike | null) => {

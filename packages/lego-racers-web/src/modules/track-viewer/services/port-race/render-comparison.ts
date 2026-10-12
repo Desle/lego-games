@@ -88,10 +88,11 @@ export const compareWorldFrame = (input: WorldFrameInput): WorldFrameComparison 
     getEffectViews(raceState),
     presentation.warpView
   )
-  stage.showHazards(raceState.trackLogic.worlds.track, [
-    raceState.racerSet.emitters.common,
-    raceState.racerSet.emitters.track,
-  ])
+  stage.showHazards(
+    raceState.trackLogic.worlds.track,
+    [raceState.racerSet.emitters.common, raceState.racerSet.emitters.track],
+    raceState.trackLogic.worlds.blended
+  )
   stage.animate(milliseconds)
   const originalFrame = original.renderFrames.find((candidate) => candidate.frame === frame)
   if (originalFrame === undefined) return null

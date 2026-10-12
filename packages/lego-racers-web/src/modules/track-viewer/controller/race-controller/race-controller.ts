@@ -475,10 +475,11 @@ export const useRaceController = (): RaceController => {
           frame.screenFades,
           frame.fieldOfViewDegrees
         )
-        viewport.showHazards(raceState.trackLogic.worlds.track, [
-          raceState.racerSet.emitters.common,
-          raceState.racerSet.emitters.track,
-        ])
+        viewport.showHazards(
+          raceState.trackLogic.worlds.track,
+          [raceState.racerSet.emitters.common, raceState.racerSet.emitters.track],
+          raceState.trackLogic.worlds.blended
+        )
         viewport.animate(advance.frameMilliseconds)
         setScreen((previous) => ({
           ...previous,

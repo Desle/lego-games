@@ -86,10 +86,11 @@ export const runPixelTrace = async (request: PixelTraceRequest): Promise<PixelTr
         presentation.screenFades,
         presentation.fieldOfViewDegrees
       )
-      viewport.showHazards(raceState.trackLogic.worlds.track, [
-        raceState.racerSet.emitters.common,
-        raceState.racerSet.emitters.track,
-      ])
+      viewport.showHazards(
+        raceState.trackLogic.worlds.track,
+        [raceState.racerSet.emitters.common, raceState.racerSet.emitters.track],
+        raceState.trackLogic.worlds.blended
+      )
       viewport.animate(milliseconds)
       if (!request.recordFrames.includes(frame)) return
       viewport.render()

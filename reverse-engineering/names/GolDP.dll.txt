@@ -116,3 +116,7 @@
 10026d10 SkeletonInstance_TransformDirection
 10002c90 Bone_TransformDirection
 10002a00 Bone_GetAxes
+10028110 Instance_SetScrollRateU
+10028140 Instance_SetScrollRateV
+10028030 Instance_DrawWithScroll
+10008f70 Renderer_DrawInstanceWithTextureOffset
