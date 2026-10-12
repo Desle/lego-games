@@ -1,4 +1,4 @@
-import type { Figure, FigureBounds } from '../../racer/index.ts'
+import type { Figure, FigureBounds, VehicleWheelMarks } from '../../racer/index.ts'
 import type { Vector3 } from '../../simulation-math/index.ts'
 
 // The five files one drawn thing is made of, each named without its extension and read from GAMEDATA\COMMON: the
@@ -31,6 +31,9 @@ export type RacerAppearance = {
   readonly driverModel: ModelResourceNames | null
   // Vehicle +0x4c..+0x54 (chassis +0xc4): where the driver sits in the car model's frame.
   readonly seatPoint: Vector3
+  // Vehicle +0x1a8..+0x1d7 and +0x1a0, +0x1a4 (chassis +0x58..+0x87, +0xe4, +0xe8): the wheels' points in the car's frame and
+  // the width of the front and the rear skid marks.
+  readonly wheelMarks: VehicleWheelMarks
   // Chassis +0x50: the name 0x0043b480 writes into the car's texture database and material library entries.
   readonly sharedResourceName: string
   // 0x0043b480 copies "carshad" and the racer's index digit into the vehicle (+0x74): the blob shadow's image.

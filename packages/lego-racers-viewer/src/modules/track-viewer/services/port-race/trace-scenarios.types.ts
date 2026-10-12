@@ -4,6 +4,8 @@ export type TraceScenarioRequest = {
   readonly isMirrored?: boolean
   // The steering sweep of the golden trace (about 475 frames) instead of idling through the countdown.
   readonly isSteering?: boolean
+  // Full throttle and two power slides (the tire smoke runs and the wheels leave marks).
+  readonly isPowerSliding?: boolean
   readonly recordFrames?: readonly number[]
   readonly isRenderRecorded?: boolean
   // A warp: the player is handed a level 3 turbo at `grantFrame`, accelerates from 175 and presses use at `useFrame`.

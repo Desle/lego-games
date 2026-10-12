@@ -25,6 +25,12 @@ const RENDER_CASES: readonly TraceScenarioRequest[] = [
     recordFrames: [310, 320, 330, 345, 360, 375],
     warp: { grantFrame: 300, useFrame: 305, frameCount: 380 },
   },
+  {
+    name: 'Royal Knights, power slide',
+    raceFolder: 'RACEC0R0',
+    isPowerSliding: true,
+    recordFrames: [240, 260, 275, 285, 300, 340, 400],
+  },
   { name: 'RACEC0R1', raceFolder: 'RACEC0R1', recordFrames: RECORD_FRAMES },
   { name: 'RACEC0R2', raceFolder: 'RACEC0R2', recordFrames: RECORD_FRAMES },
   { name: 'RACEC0R3', raceFolder: 'RACEC0R3', recordFrames: RECORD_FRAMES },

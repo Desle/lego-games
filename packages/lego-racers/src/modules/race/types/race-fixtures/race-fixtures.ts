@@ -55,6 +55,7 @@ export const FIXTURE_RACER_APPEARANCE: RacerAppearance = Object.freeze({
   secondWheelModel: null,
   driverModel: null,
   seatPoint: ZERO_VECTOR3,
+  wheelMarks: { points: [], widths: [0, 0] as const },
   sharedResourceName: '',
   shadowImageName: '',
 })

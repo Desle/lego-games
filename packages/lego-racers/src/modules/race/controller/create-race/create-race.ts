@@ -83,7 +83,8 @@ const createRacerFromDefinition = (
     racerDefinition.figures.driver,
     racerDefinition.appearance.seatPoint,
     vehicleDraw.value % VEHICLE_LOOK_MILLISECONDS,
-    racerDefinition.figures.bodyBounds
+    racerDefinition.figures.bodyBounds,
+    racerDefinition.appearance.wheelMarks
   )
   const base = createRacer(
     racerDefinition.route === null

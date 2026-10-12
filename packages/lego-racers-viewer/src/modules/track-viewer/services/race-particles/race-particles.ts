@@ -6,7 +6,9 @@ import {
 import type { EmitterPool, EmitterQuad } from '@lego-games/lego-racers/emitter'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-racers/simulation-math'
 import type { Scene } from '@lego-games/lego-racers/scene'
-import { BufferAttribute, BufferGeometry, Group, Mesh, type Material } from 'three'
+import type { BufferAttribute } from 'three'
+import { Group, Mesh, type Material } from 'three'
+import { createDynamicGeometry } from '../dynamic-mesh/dynamic-mesh.ts'
 import { createSceneMaterial } from '../scene-object/scene-material.ts'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type { MaterialBatch, RaceParticles } from './race-particles.types.ts'
@@ -20,11 +22,7 @@ const BYTE_MAXIMUM = 255
 const createBatch = (scene: Scene, materialName: string): MaterialBatch | null => {
   const sceneMaterial = scene.materials.findLast((candidate) => candidate.name === materialName)
   if (sceneMaterial === undefined) return null
-  const geometry = new BufferGeometry()
-  geometry.setAttribute('position', new BufferAttribute(new Float32Array(MAXIMUM_CORNERS * 3), 3))
-  geometry.setAttribute('uv', new BufferAttribute(new Float32Array(MAXIMUM_CORNERS * 2), 2))
-  geometry.setAttribute('color', new BufferAttribute(new Uint8Array(MAXIMUM_CORNERS * 4), 4, true))
-  geometry.setDrawRange(0, 0)
+  const geometry = createDynamicGeometry(MAXIMUM_CORNERS)
   const mesh = new Mesh(geometry, createSceneMaterial(sceneMaterial, scene.textures, new Map()))
   mesh.frustumCulled = false
   mesh.visible = false

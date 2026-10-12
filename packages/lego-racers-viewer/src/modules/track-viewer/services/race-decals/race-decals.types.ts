@@ -10,5 +10,9 @@ export type DecalSurface = {
 export type RaceDecals = {
   // Projects every racer's shadow for the camera at `eye`.
   readonly update: (poses: readonly RacerPose[], eye: Vector3Like) => void
+  // Hands the simulation step's racers to their skid trails.
+  readonly setPoses: (poses: readonly RacerPose[]) => void
+  // The end of the frame: the skid trails take the milliseconds.
+  readonly step: (elapsedMilliseconds: number) => void
   readonly dispose: () => void
 }
