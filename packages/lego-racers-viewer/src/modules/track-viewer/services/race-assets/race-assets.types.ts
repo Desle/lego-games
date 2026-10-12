@@ -28,6 +28,8 @@ export type RacerModels = {
 // spiked explosion are plain. The cannon ball, the grapple hook, the wand's beam and the plain explosion are not drawn:
 // the files that give them their look are not traced (projectiles.md).
 export type EffectModels = {
+  // The materials and textures of the power-up libraries (the cannon ball, the beams and the flames name them).
+  readonly materials: Scene
   readonly rocket: ModelScene
   readonly rocketAnimations: readonly FigureAnimation[]
   readonly barrel: ModelScene

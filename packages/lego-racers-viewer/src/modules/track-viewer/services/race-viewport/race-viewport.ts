@@ -1,4 +1,9 @@
-import type { EffectViews, RacerPose, WarpView } from '@lego-games/lego-racers/race-presentation'
+import type {
+  EffectViews,
+  RacerPose,
+  SpriteView,
+  WarpView,
+} from '@lego-games/lego-racers/race-presentation'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type { Mesh, MeshBasicMaterial } from 'three'
 import {
@@ -25,12 +30,7 @@ import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import { showSceneObjects } from '../scene-viewport/scene-viewport.ts'
 import type { ShownScene } from '../scene-viewport/scene-viewport.types.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
-import type {
-  RaceStage,
-  RaceStageSize,
-  RaceViewport,
-  RacerRig,
-} from './race-viewport.types.ts'
+import type { RaceStage, RaceStageSize, RaceViewport, RacerRig } from './race-viewport.types.ts'
 
 const BACKGROUND_COLOR = 0x101820
 const MILLISECONDS_PER_SECOND = 1000
@@ -54,7 +54,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   // simulation puts them, so the track is drawn as its mirror image. three.js flips the faces of a mirrored object.
   if (assets.definition.isMirrored) shown.track.group.scale.set(1, -1, 1)
   trackScene.add(shown.track.group)
-  const particles = createRaceParticles(assets.scene)
+  const particles = createRaceParticles([assets.scene, assets.effectModels.materials])
   const decals = createRaceDecals(trackScene, assets, assets.definition.isMirrored)
   trackScene.add(particles.group)
   if (shown.backdrop !== null) backgroundScene.add(shown.backdrop.group)
@@ -117,6 +117,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     warpGroup.visible = true
   }
   let lastCameraView: CameraView | null = null
+  let lastSprites: readonly SpriteView[] = []
   const update = (
     allPoses: readonly RacerPose[],
     allCameraView: CameraView,
@@ -135,10 +136,11 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
           )
     const cameraView = warpView === null ? allCameraView : warpView.cameraView
     lastCameraView = cameraView
+    lastSprites = warpView === null ? effectViews.sprites : []
     effects.update(
       warpView === null
         ? effectViews
-        : { ...effectViews, effects: [], bricks: [], explosions: [], attachments: [] },
+        : { ...effectViews, effects: [], bricks: [], explosions: [], attachments: [], sprites: [] },
       cameraView.position,
       poses
     )
@@ -201,7 +203,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     for (const instance of trackWorld.skeletonInstances) {
       if (instance.clip !== null) shown.track.setSkeletonState(instance.name, instance.clip)
     }
-    if (lastCameraView !== null) particles.update(pools, lastCameraView)
+    if (lastCameraView !== null) particles.update(pools, lastCameraView, lastSprites)
   }
 
   return Object.freeze({

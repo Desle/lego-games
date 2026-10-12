@@ -10,6 +10,7 @@ import type {
   EffectView,
   EffectViews,
   ExplosionView,
+  SpriteView,
 } from '../../types/race-presentation.types.ts'
 
 // The states in which an effect has a body to draw: after the launch and before its pool takes it back.
@@ -97,6 +98,29 @@ const getAttachmentView = (effect: PowerUpEffect): AttachmentView | null => {
   }
 }
 
+// 0x00451a50 gives the cannon ball the material "cannon" and a sprite of 5 by 5 (0x004b13a0); 0x00451f30 draws it while
+// the ball flies (state 3).
+const CANNON_BALL_MATERIAL = 'cannon'
+const CANNON_BALL_SIZE = 5
+
+const getSpriteViews = (
+  effect: PowerUpEffect,
+  motion: EffectMotion | null
+): readonly SpriteView[] =>
+  effect.kind === PowerUpEffectKind.CANNON &&
+  effect.state === EffectState.ACTIVE &&
+  motion?.kind === 'ballistic' &&
+  motion.flight.state !== BallisticFlightState.IDLE
+    ? [
+        {
+          materialName: CANNON_BALL_MATERIAL,
+          position: motion.flight.framePosition,
+          width: CANNON_BALL_SIZE,
+          height: CANNON_BALL_SIZE,
+        },
+      ]
+    : []
+
 const getExplosionViews = (pool: ExplosionPool, isSpiked: boolean): readonly ExplosionView[] =>
   pool.activeIndices.flatMap((index) => {
     const explosion = pool.explosions[index]
@@ -131,7 +155,14 @@ export const getEffectViews = (raceState: RaceState): EffectViews => {
         : getAttachmentView(effect)
     return view === null ? [] : [view]
   })
+  const sprites = activeEffectIds.flatMap((effectId) => {
+    const effect = effects[effectId]
+    return effect === undefined
+      ? []
+      : getSpriteViews(effect, raceState.projectileWorld.motions[effectId] ?? null)
+  })
   return Object.freeze({
+    sprites: Object.freeze(sprites),
     attachments: Object.freeze(attachments),
     bricks: Object.freeze([
       ...getBrickViews(world.bricks, false),

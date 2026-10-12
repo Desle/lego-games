@@ -185,7 +185,16 @@ export type AttachmentView = {
   readonly elapsedMilliseconds: number
 }
 
+// A camera-facing picture an effect draws (the cannon ball is one): its material, centre and size in the world.
+export type SpriteView = {
+  readonly materialName: string
+  readonly position: Vector3
+  readonly width: number
+  readonly height: number
+}
+
 export type EffectViews = {
+  readonly sprites: readonly SpriteView[]
   readonly attachments: readonly AttachmentView[]
   readonly bricks: readonly BrickView[]
   readonly spinAngle: number

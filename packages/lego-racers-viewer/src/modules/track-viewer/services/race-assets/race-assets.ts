@@ -166,8 +166,19 @@ const getWarpTextureScroll = (archive: JamArchive): readonly [number, number] =>
   return [values?.[0] ?? 0, values?.[1] ?? 0]
 }
 
+const getEffectMaterials = (archive: JamArchive): Scene =>
+  loadModelScene(archive, {
+    directory: RACER_FILE_DIRECTORY,
+    textureNames: EFFECT_TEXTURE_LIBRARIES,
+    materialNames: EFFECT_MATERIAL_LIBRARIES,
+    meshNames: [],
+    skeletonName: null,
+    animationName: null,
+  }).scene
+
 const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
   Object.freeze({
+    materials: getEffectMaterials(archive),
     rocket: loadEffectModel(archive, 'DMISSILE', true),
     rocketAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('DMISSILE', 'ADB'))),
     barrel: loadEffectModel(archive, 'BARREL', false),
