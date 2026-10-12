@@ -1,0 +1,54 @@
+# LDraw render styles (remastered layer)
+
+How LEGO and LDraw models are drawn in genuinely different styles, and which of those fit the remastered `?hd` layer: real-time WebGL 2 with three.js, on the phone pixel budget of PR #122 (no extra full-screen pass, no extra render target, a few texture taps per fragment at most). Classic is never touched; the styles change only the LDraw plastic and its edge lines (`ldraw-car/ldraw-look.ts`, `ldraw-look-shader.ts`, `ldraw-plastic.ts`).
+
+The earlier presets (Manual, Studio, Photo, LEGO Movie) all moved along one axis, gloss: more clear coat, sharper reflections, then wear on top. The styles below each change a different axis: the shading model, the edge treatment, the colour handling or the output.
+
+## Survey
+
+| Renderer or style | Edges | Shading model | Colour | Lights | Stud logos, bevels, AO | Real time on a phone? |
+| --- | --- | --- | --- | --- | --- | --- |
+| **LDView** (and LPub3D's default renderer) | LDraw type 2 lines plus conditional (type 5) lines, i.e. silhouettes of curved parts; optional edge colours | Gouraud, one light, optional specular; type 5 lines smooth curved surfaces | LDConfig colours as is | one directional light, optional "subdued" | primitive substitution gives true curves; logos optional (`stud-logo`) | Yes: this is what the three.js LDraw loader already does |
+| **three.js `LDrawLoader`** example | lines and `LDrawConditionalLineMaterial` (a line drawn only when it is on the silhouette) | `MeshStandardMaterial` per LDConfig colour, smooth normals from conditional lines | sRGB colours | an environment map | none | Yes (our base) |
+| **Modern LEGO instructions** (booklets since about 2010, LEGO Builder app) | thin outline on every part edge; dark parts get a lighter edge (LDConfig `EDGE`: black `#595959`, most colours `#333333`) | nearly flat colour with a soft gradient, no shadows, no specular | bright, saturated, colours kept readable | soft key from the top left | no logos in print, no AO | Yes: a ramp in the fragment shader and the existing lines |
+| **Old LEGO instructions** (1980s/90s) | studs with black sides, black parts in greys by face angle, black tyres with white outlines | faceted | flat | none | none | Yes (not built) |
+| **BrickLink Studio Photoreal (Eyesight)** | none | path traced (a repackaged Cycles), clear plastic | linear workflow | preset rigs (Building: four equal lights above; Mechanic: four of mixed size) or an HDRI | bevels, logos, AO from the path tracer | No: needs path tracing; a cube map and baked AO approximate it (the old Studio/Photo looks) |
+| **Mecabricks** (and its Blender export) | none | PBR plastic, roughness about 0.2, subsurface in the paid materials | linear | HDRI or studio | bevelled parts, logos, scratches and fingerprints (paid tier) | Partly; the shading is what Manual already is |
+| **Blender ImportLDraw / ExportLDraw** | realistic mode: none (bevel modifier); **instructions mode**: Freestyle outlines, flat colours | Principled BSDF with a bevel node (Cycles only), or flat in instructions mode | colour managed so black looks black | user's own lights / HDRI | optional bevels (logo studs break them), gaps between parts | Instructions mode yes, bevels no |
+| **POV-Ray with LGEO** (LPub3D, Studio's POV-Ray option) | none | ray traced, LGEO parts carry true bevelled edges where a replacement exists | as LDConfig | area lights | bevels only for parts LGEO has | No |
+| **The LEGO Movie** (Animal Logic, Glimpse path tracer) | none | physically based plastic with subsurface scattering (dipole plus single scatter), ray-traced glossy reflections | linear P3-D60 with ACES output | photographic, depth of field and bokeh done like a macro lens | over 2,000 subdivision bricks with true bevels, fingerprints, dust, scratches via ptex, jittered brick placement | No; the old "LEGO Movie" look was a pale imitation and was withdrawn |
+| **TT Games LEGO games** (Star Wars to Skywalker Saga) | none | stylised physically based plastic; strong rim and fill so characters read against busy scenes | saturated | a key plus a rim; bright ambient | studs with logos on hero objects | Yes: a wrap ramp and a Fresnel rim are a few instructions |
+| **Toon / cel** (TF2's illustrative rendering is the classic real-time reference) | ink outlines: inverted hull, screen-space Sobel on depth and normals, or authored lines | 2 or 3 hard bands from N . L, a hard highlight | flat fills | one key | none | Yes with the LDraw lines as the ink (a Sobel pass needs a full-screen pass and a normal buffer; an inverted hull doubles the casters' draws) |
+| **Clay render** | none | matte Lambert, strong ambient occlusion, a big soft sky | one neutral clay colour (or tinted) | a soft sky, a weak key | AO carries the form | Yes with the baked AO grid we already have (seven 3D taps) |
+| **Retro 1999** (LEGO Racers itself, low-poly PC games of the time) | none | vertex or flat lit, one directional plus ambient, no specular | 16-bit colour (RGB 565) with dither on many cards | the game's prelit track, a simple car light | none | Yes: flat normals from derivatives and a 4 x 4 Bayer dither |
+| **Blueprint** | white lines on blue | none (lines only) | monochrome | none | none | Yes, but the cars become unreadable in a race; not built |
+| **Pixel art / low resolution** | none | flat | palette | none | none | Needs a low-resolution target and an upscale pass; not built |
+
+## What was built
+
+Every style keeps `MeshPhysicalMaterial` as the material class (the drivers' skin colours and the pickup glow find the plastic by that class), keeps the emissive term (the pickup bricks' glow, the faces' room light) and replaces only the lighting at the end of the fragment shader (`opaque_fragment`), by reading three.js's directional-light uniforms and its ambient and hemisphere result. Every style still casts real shadows: the shadow pass draws the casters with its own depth material, so the plastic's shader is not involved. No style adds a pass, a render target or a draw call.
+
+- **Manual** (default, unchanged): glossy plastic with a clear coat, a small studio cube map, dimmed edge lines.
+- **Instructions**: the modern LEGO building-instructions page. Colour almost flat with a soft half-Lambert gradient, no specular, no reflections, the LDraw lines at full strength in the LDConfig edge colour (a black part gets the grey edge, as in the booklets).
+- **Toon**: three hard bands from N . L (anti-aliased with `fwidth`), a hard white highlight, solid black ink from the LDraw lines and conditional lines (the silhouettes of studs, tyres and heads).
+- **Game**: TT Games-like. Saturated colour, a soft wrapped ramp so the shadow side never goes black, a broad soft highlight, and a Fresnel rim light that outlines the car against the track; no lines.
+- **Clay**: a matte clay render. Colours washed toward a warm clay grey (enough left to tell the racers apart), Lambert only, the baked ambient occlusion at full strength, no lines.
+- **Retro**: the 1999 look, so the LDraw cars sit in the Classic track. Faceted (flat) normals, one Lambert light plus ambient, no specular, no lines, and the output quantised to 16-bit colour (RGB 565) with a 4 x 4 ordered dither, as the original's 16-bit modes showed it.
+
+Dropped: **Studio** and **Photo** (both only glossier Manuals), the withdrawn **LEGO Movie** look, and the photographic shader features that only they used (roughness variation, wear, the filmic grade). A realistic "toy photo" style was not built: what makes it different from Manual is path-traced light (bevel highlights, subsurface, soft shadows between parts) that a phone cannot draw; anything cheaper reads as Manual with more gloss, which is the complaint.
+
+## Sources
+
+- LDView screenshots and features (lighting, edge lines, primitive substitution, type 5 smoothing): https://ldview.sourceforge.net/Screenshots.html
+- LDraw colour definition (`!COLOUR ... EDGE`): https://www.ldraw.org/article/299; black's `#595959` edge: https://forums.ldraw.org/post-34120.html
+- Old-style instructions (black stud sides, greys by angle): https://forums.ldraw.org/post-13382.html
+- three.js LDraw example and conditional lines: https://threejs.org/examples/webgl_loader_ldraw, https://threejs.org/docs/pages/LDrawConditionalLineMaterial.html
+- BrickLink Studio Photoreal (Eyesight path tracer, light presets): https://studiohelp.bricklink.com/hc/en-us/articles/6505772624023; lighting guide: https://bricknerd.com/home/hacking-studio-how-to-get-better-lighting-in-bricklink-studio-renders-5-22-23; comparison of LEGO render tools: https://www.bartneck.de/?p=4035
+- Mecabricks render farm (scratches and fingerprints as paid effects): https://brickset.com/article/52611/mecabricks-the-render-farm
+- Blender ImportLDraw (realistic and instructions modes, colour management) and ExportLDraw (bevel, Freestyle): https://forums.ldraw.org/post-28399.html, https://github.com/cuddlyogre/ExportLdraw; LeoCAD-to-Blender plastic (roughness 0.2, bevel node): https://blog.habrador.com/2022/03/make-leocad-lego-look-good-in-blender.html
+- POV-Ray and LGEO bevelled parts: https://f-lohmueller.de/pov_tut/lego/lg2pov280e.htm, https://forums.ldraw.org/post-24212.html
+- The LEGO Movie: Glimpse, subsurface, ACES/P3-D60, lens effects: https://www.fxguide.com/?p=184504; "Bricks, bricks and more bricks" (SIGGRAPH talk): https://history.siggraph.org/learning/the-lego-movie-bricks-bricks-and-more-bricks-by-smith-heckenberg-and-leblanc; fingerprints with ptex, oxidation: https://www.animationmentor.com/?p=3062
+- TT Games lighting work: https://www.awn.com/blog/force-remains-strong-lego-star-wars-iii-clone-wars; illustrative real-time rendering (rim light, ramps): https://www.advances.realtimerendering.com/s2007/Mitchell-IllustrativeRenderingInTF2(Siggraph07%20Course%20Notes).pdf
+- Outline techniques (inverted hull misses creases; Sobel needs depth and normal buffers): https://discussions.unity.com/t/toon-outline-for-selected-edges-in-vr/858814, https://www.speckle.systems/blog/speckle-generates-outlines-from-geometry-data-view-modes
+
+**Hypothesis**: the TT Games description (rim plus wrap ramp) is read off the games' look, not from a published talk; no source describes their shader.
