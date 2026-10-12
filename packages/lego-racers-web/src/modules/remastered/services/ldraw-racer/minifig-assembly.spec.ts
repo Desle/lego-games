@@ -1,16 +1,18 @@
 import { Vector3 } from 'three'
-import { LDRAW_HATS } from './ldraw-minifig-hats.ts'
+import { LDRAW_HATS, LDRAW_LEGS } from './ldraw-minifig-parts.ts'
 import { createMinifigPartPlans, getDirectColor } from './minifig-assembly.ts'
 import { MinifigPartKey, MinifigPosture } from './minifig-assembly.types.ts'
 import type { MinifigSpec } from './minifig-spec.types.ts'
 
-const HAT_COUNT = 36
+const PEG_LEGS_INDEX = 10
 
 const createSpec = (overrides: Partial<MinifigSpec> = {}): MinifigSpec => ({
   partBytes: [1, 0, 0, 0, 0],
-  hat: LDRAW_HATS[1] ?? null,
+  hats: LDRAW_HATS[1]?.hats ?? [],
+  face: null,
+  torso: null,
+  legs: null,
   isHookTorso: false,
-  isPegLegs: false,
   surfaces: {
     skinColor: 0xffdf00,
     torsoColor: 0xda1f1f,
@@ -34,16 +36,6 @@ const getHangingDirection = (key: MinifigPartKey, posture: MinifigPosture): Vect
   if (plan === undefined) throw new Error(`The figure has no ${key}`)
   return new Vector3(0, 1, 0).transformDirection(plan.matrix)
 }
-
-describe('LDRAW_HATS', () => {
-  it('has a place for each hat of the catalogue, the first being no hat', () => {
-    // Arrange / Act
-    const hats = LDRAW_HATS
-
-    // Assert
-    expect([hats.length, hats[0]]).toEqual([HAT_COUNT, null])
-  })
-})
 
 describe('getDirectColor', () => {
   it('writes a colour as the library reads a direct one', () => {
@@ -77,7 +69,7 @@ describe('createMinifigPartPlans', () => {
 
   it('leaves the hat out for a driver without one', () => {
     // Arrange / Act
-    const parts = getPlanParts(createSpec({ hat: null }), MinifigPosture.STANDING)
+    const parts = getPlanParts(createSpec({ hats: [] }), MinifigPosture.STANDING)
 
     // Assert
     expect(parts.filter((part) => part.startsWith('head:'))).toEqual(['head:3626b'])
@@ -86,7 +78,7 @@ describe('createMinifigPartPlans', () => {
   it('gives a hook torso a hook for its left hand and peg legs a wooden right leg', () => {
     // Arrange / Act
     const parts = getPlanParts(
-      createSpec({ isHookTorso: true, isPegLegs: true }),
+      createSpec({ isHookTorso: true, legs: LDRAW_LEGS[PEG_LEGS_INDEX] ?? null }),
       MinifigPosture.STANDING
     )
 
@@ -94,6 +86,32 @@ describe('createMinifigPartPlans', () => {
     expect([parts.includes('left_hand:2531'), parts.includes('right_leg:2532')]).toEqual([
       true,
       true,
+    ])
+  })
+
+  it('puts a printed head, torso and legs of the library in place of the plain parts, in the library colours', () => {
+    // Arrange
+    const spec = createSpec({
+      face: { part: '3626bp3k', colorCode: 14 },
+      torso: { part: '973p3h', torsoColorCode: 14, armColorCode: 14, handColorCode: 4 },
+      legs: LDRAW_LEGS[13] ?? null,
+    })
+
+    // Act
+    const plans = createMinifigPartPlans(spec, MinifigPosture.STANDING)
+
+    // Assert
+    expect(plans.map((plan) => `${plan.key}:${plan.part}:${String(plan.color)}`)).toEqual([
+      'hips:3815b:2',
+      'left_leg:3817cp3j:14',
+      'right_leg:3816cp3j:14',
+      'torso:973p3h:14',
+      'head:3626bp3k:14',
+      'head:3842a:0',
+      'left_arm:3819:14',
+      'left_hand:3820:4',
+      'right_arm:3818:14',
+      'right_hand:3820:4',
     ])
   })
 
