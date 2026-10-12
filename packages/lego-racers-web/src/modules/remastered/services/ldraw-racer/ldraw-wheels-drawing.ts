@@ -21,7 +21,9 @@ const LDRAW_UNITS_PER_RAW_UNIT = LDRAW_UNITS_PER_STUD / RAW_UNITS_PER_STUD
 const TYRE_COLOR_CODE = 0
 const DEFAULT_RIM_COLOR_CODE = 72
 const DIRECT_COLOR_PREFIX = '0x2'
-const MAXIMUM_COPY_COUNT = 4
+const MAXIMUM_WIDTH_SCALE = 4
+// A wheel this much wider than the set's tyre is a drum (two wheels fused in the original's model).
+const DRUM_WIDTH_RATIO = 1.5
 const IDENTITY_ROTATION = '1 0 0 0 1 0 0 0 1'
 
 const getPartLine = (colorCode: number | string, part: string): string =>
@@ -88,15 +90,13 @@ export const createLDrawWheelsDrawing = (
     object.add(holder)
     const set = getWheelSet(kind, wheel.radius * 2 * LDRAW_UNITS_PER_RAW_UNIT)
     const scale = (wheel.radius * 2) / set.diameter
-    const copyCount = Math.min(
-      Math.max(Math.round(wheel.width / (set.width * scale)), 1),
-      MAXIMUM_COPY_COUNT
-    )
+    const widthRatio = wheel.width / (set.width * scale)
+    const widthScale = widthRatio < DRUM_WIDTH_RATIO ? 1 : Math.min(widthRatio, MAXIMUM_WIDTH_SCALE)
     const local = new Matrix4()
       .makeTranslation(wheel.centre[0] ?? 0, wheel.centre[1] ?? 0, wheel.centre[2] ?? 0)
       .multiply(getAxisRotation(wheel.axisIndex, getIsOutwardPositive(wheel, wheels)))
       .multiply(new Matrix4().makeScale(scale, scale, scale))
-    return { wheel, holder, set, local, copyCount }
+    return { wheel, holder, set, local, widthScale }
   })
   const loadedGroups: Group[] = []
   let isDisposed = false
@@ -111,12 +111,10 @@ export const createLDrawWheelsDrawing = (
         applyPlasticLook(model)
         loadedGroups.push(model)
         for (const placement of placements.filter((candidate) => candidate.set === set)) {
-          // A drum as wide as several tyres (two wheels fused in the original's model) is several tyres side by side.
-          for (let copy = 0; copy < placement.copyCount; copy += 1) {
-            const clone = model.clone()
-            clone.position.z = (copy - (placement.copyCount - 1) / 2) * set.width
-            placement.holder.add(clone)
-          }
+          // A drum is one tyre stretched along its axle to the drum's width, not tyres side by side (eight wheels on a car).
+          const clone = model.clone()
+          clone.scale.z = placement.widthScale
+          placement.holder.add(clone)
         }
       },
       (error: unknown) => console.error('The LDraw library could not build the wheels', error)
