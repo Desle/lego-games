@@ -23,7 +23,7 @@ Ported in `packages/lego-racers/src/modules/race` (and the modules it uses). Eve
 
 ## collideRacers and the registry
 
-- Pass 4 (`0x0043d180`): the real `createCollideRacers` runs racer against racer, then the registry sphere overlap tests (`0x0043d270`). Registry objects: main and environment triggers (fire `touchTrigger`) and bricks (`0x00453af0`, collect). Brick spheres have radius 0 (`0x004539b0`); extents are refreshed each frame.
+- Pass 4 (`0x0043d180`): the real `createCollideRacers` runs racer against racer, then the registry sphere overlap tests (`0x0043d270`). Registry objects: main and environment triggers (fire `touchTrigger`), bricks (`0x00453af0`, collect), the power-up objects and the track hazards that registered in their Begin (`touchHazard`: ghost, lava, capture, rock, crane). Brick spheres have radius 0 (`0x004539b0`); extents are refreshed each frame.
 - Bounding radius: the display figure's (racer `+0x5c`, the car builder's wheels figure) model bounds, `getFigureBounds(figures.wheels).radius`, the same value the original reads through `0x00411ca0`.
 
 ## Race end
@@ -44,4 +44,4 @@ Ported in `packages/lego-racers/src/modules/race` (and the modules it uses). Eve
 
 ## Still open
 
-`updateVehicle` (owned by the car builder), probe height (a constant bounds radius, not the current clip), hazards, emitters and sky, fades, sounds and force feedback (presentation, skipped).
+`updateVehicle` (owned by the car builder), probe height (a constant bounds radius, not the current clip), emitters and sky, fades, sounds and force feedback (presentation, skipped).

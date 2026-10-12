@@ -85,3 +85,10 @@ export type CollisionWorld = {
   readonly objects: readonly CollisionObject[]
   readonly names: readonly string[]
 }
+
+// What the skeleton instances' models give a world: the scale (model +0x38) and the bounding radius (+0x34) of each
+// model of the world's list.
+export type MeshMeasures = {
+  readonly scales: readonly number[]
+  readonly radii: readonly number[]
+}

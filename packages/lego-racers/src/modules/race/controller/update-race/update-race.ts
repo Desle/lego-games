@@ -188,13 +188,17 @@ export const updateRace = (
     )
   )
   const tagged = updateTaggedPositions(projected, stepMilliseconds)
-  const powered = changeTrackLogic(counted.context, tagged, (trackLogic, trackContext) =>
-    updateTrackLogicFrame(
-      trackLogic,
-      trackContext,
-      stepMilliseconds,
-      tagged.racers.length,
-      surfaceSignals
+  // The hazards the events began register at once (their Begin calls 0x0042fb50).
+  const powered = getRacerSetWithProjectileRegistry(
+    arithmetic,
+    changeTrackLogic(counted.context, tagged, (trackLogic, trackContext) =>
+      updateTrackLogicFrame(
+        trackLogic,
+        trackContext,
+        stepMilliseconds,
+        tagged.racers.length,
+        surfaceSignals
+      )
     )
   )
   const launched = getRacerSetWithLauncherWarps(

@@ -43,6 +43,7 @@ const createInstance = (overrides: Partial<SkeletonInstanceRuntime>): SkeletonIn
   skeleton: null,
   rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
   scale: 1,
+  boundsRadius: 0,
   clip: createSkeletonAnimationState(animation, 0),
   isAnimated: true,
   otherFlags: 0,

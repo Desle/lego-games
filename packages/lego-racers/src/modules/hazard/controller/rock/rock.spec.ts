@@ -88,4 +88,16 @@ describe('the rock', () => {
       [-1, -1, -1],
     ])
   })
+
+  it('registers a sphere of radius 350 at the "off" mesh while it is active', () => {
+    // Arrange
+    const { test, loaded } = createLoaded()
+
+    // Act
+    const begun = ROCK.begin(loaded, test.session, null)
+
+    // Assert
+    expect(ROCK.getRegisteredSphere(loaded)).toBeNull()
+    expect(ROCK.getRegisteredSphere(begun)).toEqual({ centre: [0, 0, 0], radius: 350 })
+  })
 })

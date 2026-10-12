@@ -1,4 +1,7 @@
+import { HazardLifecycle } from '../../../hazard/index.ts'
 import { getRacer } from '../../../racer/index.ts'
+import { EMPTY_WORLD_ANIMATION } from '../../../world-animation/index.ts'
+import type { SkeletonInstanceRuntime } from '../../../world-animation/index.ts'
 import type { Checkpoint } from '../../../checkpoint/index.ts'
 import { RacePhase } from '../../types/race-phase/race-phase.ts'
 import type { RaceInputs, RaceState } from '../../types/race.types.ts'
@@ -125,5 +128,84 @@ describe('the collision registry (0x0043d270)', () => {
 
     // Assert
     expect(step.raceState.racerSet.racers.every((racer) => racer.heldPowerUp === 0)).toBe(true)
+  })
+})
+
+describe('the track hazards in the collision registry', () => {
+  const FLOAT_MAXIMUM = 3.4028234663852886e38
+  const SPINNING_FLAG = 0x2
+  // A lava monster whose model reaches every racer.
+  const lavaInstance: SkeletonInstanceRuntime = {
+    name: 'mmlavbl',
+    animation: null,
+    rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    scale: 1,
+    boundsRadius: 100_000,
+    skeleton: null,
+    clip: null,
+    isAnimated: false,
+    otherFlags: 0,
+    position: [0, 0, 0],
+    levelSquaredDistances: [FLOAT_MAXIMUM, FLOAT_MAXIMUM, FLOAT_MAXIMUM],
+  }
+
+  const createLavaState = (lifecycle: number): RaceState => {
+    const base = createRace({
+      ...createFixtureDefinition(),
+      hazards: { hazards: [{ keyword: 0x2c }], readByteCount: 0 },
+      worlds: {
+        track: { ...EMPTY_WORLD_ANIMATION, skeletonInstances: [lavaInstance] },
+        blended: EMPTY_WORLD_ANIMATION,
+        local: EMPTY_WORLD_ANIMATION,
+      },
+    })
+    const [lava] = base.trackLogic.hazards.instances
+    if (lava === undefined) throw new Error('The lava monster did not load')
+    return {
+      ...base,
+      phase: RacePhase.RACING,
+      trackLogic: { ...base.trackLogic, hazards: { instances: [{ ...lava, lifecycle }] } },
+    }
+  }
+
+  const getSpinningCount = (state: RaceState): number =>
+    state.racerSet.racers.filter((racer) => (racer.carBody.rigidBody.flags & SPINNING_FLAG) !== 0)
+      .length
+
+  it('registers a hazard that began and ends the entry of one that finished', () => {
+    // Arrange
+    const active = createLavaState(HazardLifecycle.ACTIVE)
+
+    // Act
+    const registered = stepRace(active, inputsWith({}), 33).raceState
+    const [lava] = registered.trackLogic.hazards.instances
+    const idle = {
+      ...registered,
+      trackLogic: {
+        ...registered.trackLogic,
+        hazards: {
+          instances: lava === undefined ? [] : [{ ...lava, lifecycle: HazardLifecycle.IDLE }],
+        },
+      },
+    }
+    const ended = stepRace(idle, inputsWith({}), 33).raceState
+
+    // Assert
+    expect(registered.registryObjects).toContainEqual({ type: 'hazard', index: 0 })
+    expect(ended.racerSet.registryEntries.filter((entry) => entry.isActive)).toHaveLength(0)
+  })
+
+  it('spins the racers that touch it once a frame has registered it', () => {
+    // Arrange
+    const active = createLavaState(HazardLifecycle.ACTIVE)
+    const idle = createLavaState(HazardLifecycle.IDLE)
+
+    // Act
+    const touched = stepFrames(active, 90).raceState
+    const untouched = stepFrames(idle, 90).raceState
+
+    // Assert
+    expect(getSpinningCount(touched)).toBeGreaterThan(0)
+    expect(getSpinningCount(untouched)).toBe(0)
   })
 })

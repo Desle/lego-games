@@ -1,6 +1,6 @@
 import type { BallisticFlight } from '../../projectiles/index.ts'
 import type { Vector3 } from './hazard.types.ts'
-import type { InstanceReference } from './hazard-runtime.types.ts'
+import type { HazardSphere, InstanceReference } from './hazard-runtime.types.ts'
 
 // What a hazard class keeps besides its identifier and lifecycle state; offsets are in the class's object. The
 // `keyword` tags tell the classes apart.
@@ -86,6 +86,8 @@ export type RockData = {
   readonly collisionObjectName: string
   // +0x58: 0 asks the next update to swap the meshes.
   readonly flag: number
+  // +0x10..: the shape, set once at load (the "mmrocof" mesh instance's position, radius 350).
+  readonly sphere: HazardSphere
 }
 
 // 0x2f (0x0048e980): the snow that falls around the player.
@@ -181,6 +183,10 @@ export type GhostData = {
   readonly isSoundHeld: boolean
   // +0x68: the pitch offset the last draw made.
   readonly pitchOffset: number
+  // +0x38: the "ghostly" skeleton instance.
+  readonly instance: InstanceReference | null
+  // +0x10..: the shape; its centre follows the instance's second bone.
+  readonly sphere: HazardSphere
 }
 
 // 0x2c (0x0048d7f0): the lava monster.
@@ -188,6 +194,10 @@ export type LavaData = {
   readonly keyword: 0x2c
   // +0x48: the looped sound exists.
   readonly isSoundHeld: boolean
+  // +0x38: the "mmlavbl" skeleton instance.
+  readonly instance: InstanceReference | null
+  // +0x10..: the shape; its centre follows the instance's first bone.
+  readonly sphere: HazardSphere
 }
 
 // 0x48 (0x0048dd20): a hazard that holds a racer for a moment.
@@ -195,10 +205,14 @@ export type CaptureData = {
   readonly keyword: 0x48
   // +0x38
   readonly instance: InstanceReference | null
-  // +0x48 and +0x4c: between these clip times it lets go; +0x50: the third float of the file.
+  // +0x48 and +0x4c: between these clip times it lets go.
   readonly releaseWindow: readonly [number, number]
   // +0x44: the racer it holds.
   readonly capturedRacer: number | null
+  // +0x50: the first float of the file, the strength of the pull.
+  readonly pullStrength: number
+  // +0x10..: the shape; its centre follows the instance's first bone.
+  readonly sphere: HazardSphere
   // +0x54: milliseconds until it lets the racer go; +0x58: 0 idle, 1 holding, 2 resting; +0x5c: the phase timer.
   readonly holdMilliseconds: number
   readonly phase: number
@@ -212,6 +226,8 @@ export type CraneData = {
   readonly instance: InstanceReference | null
   // +0x178 bit 1: armed to announce its signal.
   readonly flags: number
+  // +0x10..: the shape; its centre is the origin of the instance's fourth bone, radius 3.
+  readonly sphere: HazardSphere
 }
 
 // A class that is registered but whose behaviour is not ported yet.
