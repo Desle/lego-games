@@ -189,6 +189,8 @@ export type RaceState = {
   readonly musicTuneCount: number
   // The introduction camera's instance while its clip has not finished (see RaceDefinition); null afterwards.
   readonly introductionCameraObject: string | null
+  // Race_LoadTrackContent's argument, kept for the camera lock (see RaceDefinition).
+  readonly isMirrored: boolean
   readonly tuneIndex: number | null
   // Race +0x3330: how many racers have been given a final place.
   readonly finishedRacerCount: number
