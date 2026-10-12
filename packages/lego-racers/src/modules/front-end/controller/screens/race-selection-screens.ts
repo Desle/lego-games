@@ -1,4 +1,6 @@
 import type { Circuit } from '../../../circuit-database/index.ts'
+import { formatHudTime } from '../../../race-hud/index.ts'
+import { BestTimeKind, getBestTime } from '../../../save-data/index.ts'
 import type { RaceCatalogEntry } from '../../../race-catalog/index.ts'
 import type { RaceSelectionKind } from '../../types/front-end-screen.types.ts'
 import type {
@@ -252,6 +254,47 @@ const getCircuitRaceWidgets = (runtime: ScreenRuntime): readonly FrontEndWidget[
   ]
 }
 
+// FUN_004881a0 (0x00488150 every 2,500 ms): the lap time shows first, then the race time, from the profile's tables at the
+// race's position in the catalog (0x00436930, 0x0042f290); a time that was never set shows NONE as its holder and no time.
+// Not exact: the original restarts the 2,500 ms countdown when the race on show changes, the port counts from the screen's opening.
+const BEST_TIME_SWAP_MILLISECONDS = 2500
+
+const getBestTimeWidgets = (
+  runtime: ScreenRuntime,
+  raceEntry: RaceCatalogEntry | undefined
+): readonly FrontEndWidget[] => {
+  const { resources, settings, screenMilliseconds } = runtime
+  const isLapShown = Math.floor(screenMilliseconds / BEST_TIME_SWAP_MILLISECONDS) % 2 === 0
+  const raceIndex =
+    raceEntry === undefined
+      ? -1
+      : resources.races.entries.findIndex((entry) => entry.name === raceEntry.name)
+  const bestTime =
+    settings.saveFile === null || raceIndex < 0
+      ? null
+      : getBestTime(
+          settings.saveFile.profile,
+          raceIndex,
+          isLapShown ? BestTimeKind.LAP : BestTimeKind.RACE
+        )
+  const isSet = bestTime !== null && bestTime.milliseconds !== 0
+  const text = (itemName: string, value: string): FrontEndWidget => ({
+    kind: 'text',
+    itemName,
+    text: value,
+    styleName: 'tinyfont',
+    alignment: 'left',
+  })
+  return [
+    text(
+      'besttype',
+      resources.getMenuText(isLapShown ? FrontEndText.BEST_LAP_TIME : FrontEndText.BEST_TOTAL_TIME)
+    ),
+    text('bestname', isSet ? bestTime.holderName : resources.getMenuText(FrontEndText.NONE)),
+    text('besttime', isSet ? formatHudTime(bestTime.milliseconds) : ''),
+  ]
+}
+
 const getSingleRaceWidgets =
   (kind: RaceSelectionKind) =>
   (runtime: ScreenRuntime): readonly FrontEndWidget[] => {
@@ -267,26 +310,7 @@ const getSingleRaceWidgets =
       styleName: 'menufont',
       alignment: 'center',
     })
-    if (kind === 'time_trial') {
-      const none = resources.getMenuText(FrontEndText.NONE)
-      widgets.push(
-        {
-          kind: 'text',
-          itemName: 'besttype',
-          text: resources.getMenuText(FrontEndText.BEST_LAP_TIME),
-          styleName: 'tinyfont',
-          alignment: 'left',
-        },
-        {
-          kind: 'text',
-          itemName: 'bestname',
-          text: none,
-          styleName: 'tinyfont',
-          alignment: 'left',
-        },
-        { kind: 'text', itemName: 'besttime', text: none, styleName: 'tinyfont', alignment: 'left' }
-      )
-    }
+    if (kind === 'time_trial') widgets.push(...getBestTimeWidgets(runtime, raceEntry))
     return widgets
   }
 

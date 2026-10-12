@@ -4,7 +4,14 @@ import {
 } from '../../../../shared/testing/original-files.ts'
 import { openJamArchive } from '../../../jam-archive/index.ts'
 import { writeSaveBlocks } from '../save-blocks/save-blocks.ts'
-import { createDefaultProfile } from '../profile-updates/profile-updates.ts'
+import {
+  createDefaultProfile,
+  getBestTime,
+  markGhostBeaten,
+  recordBestTime,
+  setTrophyFlags,
+} from '../profile-updates/profile-updates.ts'
+import { BestTimeKind } from '../../types/progression-flags/progression-flags.ts'
 import { serializeSaveFile } from '../serialize-save-file/serialize-save-file.ts'
 import { SaveFileError, SaveFileFailure } from '../../types/save-errors/save-errors.ts'
 import { parseSaveFile } from './parse-save-file.ts'
@@ -30,6 +37,33 @@ describe('parseSaveFile', () => {
 
     // Assert
     expect(parsed).toEqual(saveFile)
+  })
+
+  it('keeps the best times, the beaten champions and the trophies of a time trial', () => {
+    // Arrange
+    const timed = recordBestTime(createDefaultProfile(0), 5, BestTimeKind.RACE, 91234, 'ASH')
+    const lapped = recordBestTime(timed.profile, 5, BestTimeKind.LAP, 29876, 'ASH')
+    const beaten = markGhostBeaten(lapped.profile, 5)
+    const profile = setTrophyFlags(beaten.profile, 0x80)
+    const racer = {
+      name: 'ASH',
+      colorBytes: [1, 2, 3, 4, 0x85],
+      chassisName: 'dachas0',
+      designBytes: [],
+      circuitRanks: 0,
+    }
+
+    // Act
+    const parsed = parseSaveFile(serializeSaveFile({ profile, racers: [racer] }))
+
+    // Assert
+    expect(getBestTime(parsed.profile, 5, BestTimeKind.RACE)).toEqual({
+      milliseconds: 91234,
+      holderName: 'ASH',
+    })
+    expect(getBestTime(parsed.profile, 5, BestTimeKind.LAP).milliseconds).toBe(29876)
+    expect(parsed.profile.ghostBeatenFlags).toBe(1 << 5)
+    expect(parsed.profile.trophyFlags & 0x80).toBe(0x80)
   })
 
   it('rejects a file that does not start with LR', () => {

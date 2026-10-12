@@ -46,6 +46,7 @@ import { getRacerControls } from '@lego-games/lego-racers/race-input'
 import {
   createRacePresentation,
   getEffectViews,
+  getGhostCars,
   getPauseMenuCommands,
   getRacerPoses,
   stepRacePresentation,
@@ -393,7 +394,8 @@ export const useRaceController = (): RaceController => {
           { controls: [controls], contacts: NO_RACE_CONTACTS, menu: menuInput.read() },
           advance.frameMilliseconds
         )
-        raceState = step.raceState
+        const ghostStep = getGhostCars(step.raceState)
+        raceState = ghostStep.raceState
         if (sessionReference.current !== null) {
           sessionReference.current = recordRaceStep(sessionReference.current, step)
         }
@@ -413,7 +415,8 @@ export const useRaceController = (): RaceController => {
           getRacerPoses(raceState),
           frame.cameraView,
           getEffectViews(raceState),
-          frame.warpView
+          frame.warpView,
+          ghostStep.cars
         )
         viewport.showHazards(raceState.trackLogic.worlds.track, [
           raceState.racerSet.emitters.common,

@@ -12,7 +12,10 @@ import {
   getCircuitRank,
   getHasCircuitTrophy,
   getIsCircuitUnlocked,
+  createInMemorySaveStorage,
   markGhostBeaten,
+  parseSaveFile,
+  serializeSaveFile,
 } from '../../../save-data/index.ts'
 import type { SaveFile, SaveRacer } from '../../../save-data/index.ts'
 import { loadGameResources } from '../../services/load-game-resources/load-game-resources.ts'
@@ -24,7 +27,11 @@ import {
 } from '../create-game-session/create-game-session.ts'
 import { playScriptedRace } from '../play-scripted-race/play-scripted-race.ts'
 import { finishRace, startNextRace } from '../session-flow/session-flow.ts'
-import { applyCircuitResultToSave, applySessionTimesToProfile } from './session-outcome.ts'
+import {
+  applyCircuitResultToSave,
+  applySessionOutcomeToSave,
+  applySessionTimesToProfile,
+} from './session-outcome.ts'
 
 const isGamePresent = getIsOriginalJamPresent() && getIsOriginalExecutablePresent()
 const FRAME_MILLISECONDS = 100
@@ -171,6 +178,30 @@ describe('what a time trial writes to the profile', () => {
       expect(result.isChampionBeaten).toBe(true)
       expect(result.profile.ghostBeatenFlags).toBe(1 << RACE_INDEX_OF_RKR)
       expect(result.resultScreen).toBeNull()
+    },
+    60_000
+  )
+
+  it.skipIf(!isGamePresent)(
+    'puts the times and the beaten champion into the save file the storage keeps',
+    async () => {
+      // Arrange
+      const session = getTrial(29000)
+      const storage = createInMemorySaveStorage()
+
+      // Act
+      const outcome = applySessionOutcomeToSave(session, getSaveFile(), 0)
+      await storage.writeSlot(0, serializeSaveFile(outcome.saveFile))
+      const stored = parseSaveFile((await storage.readSlot(0)) ?? new Uint8Array())
+
+      // Assert
+      expect(
+        getBestTime(stored.profile, RACE_INDEX_OF_RKR, BestTimeKind.LAP).milliseconds
+      ).toBeGreaterThan(28000)
+      expect(getBestTime(stored.profile, RACE_INDEX_OF_RKR, BestTimeKind.RACE).holderName).toBe(
+        'ASH'
+      )
+      expect(stored.profile.ghostBeatenFlags).toBe(1 << RACE_INDEX_OF_RKR)
     },
     60_000
   )
