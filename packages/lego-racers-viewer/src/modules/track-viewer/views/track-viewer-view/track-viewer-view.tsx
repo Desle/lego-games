@@ -11,19 +11,21 @@ import RaceView from '../race-view/race-view.tsx'
 
 const TrackViewerView = () => {
   const viewer = useTrackViewer()
-  const [isRaceMode, setIsRaceMode] = useState(false)
+  const [isRaceMode, setIsRaceMode] = useState(true)
   const isBusy =
     viewer.status === ViewerStatus.READING_ARCHIVE || viewer.status === ViewerStatus.LOADING_SCENE
   return (
-    <div className="relative flex h-screen bg-slate-900 text-slate-100">
-      <button
-        type="button"
-        className="absolute top-2 right-2 z-10 rounded bg-slate-700 px-3 py-1 text-xs hover:bg-slate-600"
-        aria-pressed={isRaceMode}
-        onClick={() => setIsRaceMode((isPreviousRaceMode) => !isPreviousRaceMode)}
-      >
-        {isRaceMode ? 'Track viewer' : 'Race'}
-      </button>
+    <div className="relative flex h-dvh bg-slate-900 text-slate-100">
+      {import.meta.env.DEV && (
+        <button
+          type="button"
+          className="absolute top-2 right-2 z-10 rounded bg-slate-700 px-3 py-1 text-xs hover:bg-slate-600"
+          aria-pressed={isRaceMode}
+          onClick={() => setIsRaceMode((isPreviousRaceMode) => !isPreviousRaceMode)}
+        >
+          {isRaceMode ? 'Track viewer' : 'Race'}
+        </button>
+      )}
       {isRaceMode ? (
         <RaceView />
       ) : (
