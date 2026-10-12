@@ -9,6 +9,7 @@ export type TextureLine = {
   readonly bitsPerPixel: number
   readonly masks: readonly number[]
   readonly pixels: string
+  readonly colorKey?: readonly [number, number] | null
 }
 
 export type ViewportLine = {

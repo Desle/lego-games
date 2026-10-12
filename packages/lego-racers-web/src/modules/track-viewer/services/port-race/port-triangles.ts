@@ -43,6 +43,8 @@ const getDrawState = (renderState: SceneRenderState, material: Material): DrawSt
     addressing: renderState.addressing,
     isDepthTestEnabled: material.depthTest,
     isDepthWriteEnabled: material.depthWrite,
+    // The viewer's alpha test stands in for the colour key (render-trace.md).
+    isColorKeyEnabled: false,
   })
 
 const getTextureKey = (
