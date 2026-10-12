@@ -32,7 +32,7 @@ Ported in `packages/lego-racers/src/modules/race` (and the modules it uses). Eve
 - States 3 to 5 (`0x00434c80`, `0x00434eb0`, `0x00435180`): results hold 5 s when a points record exists; then `exit` = FINISHED and `race.ended` carries it.
 - Points record (`race +0x18`): 30, 20, 10, 3, 2, 1 by place (`0x004b0b58`); `0x004402c0` record, `0x00440330` ticker (restarts at 400), `0x00440860` clear.
 - Pause menu (`+0x30c0`): `0x00436010` enter, `0x00436160` resume, blink timer wraps at 500 ms; restart and quit ask for a confirmation. A demonstration ends at any key. `RaceExit`: NONE, FINISHED, QUIT, RESTART, LEFT, DEMONSTRATION_INTERRUPTED.
-- **Hypotheses:** the in-place restart `0x004362e0` is exposed as `RaceExit.RESTART`; `+0x30a0 == 2` is set on confirm (its writer is unknown); `+0x7c4` is treated as 0.
+- **Hypotheses:** the in-place restart `0x004362e0` is exposed as `RaceExit.RESTART`; `+0x30a0 == 2` is set when the confirm key goes up after it went down (`0x004278c0`, see [pause-menu.md](pause-menu.md)); `+0x7c4` is treated as 0.
 
 ## Headless runs
 
