@@ -1,5 +1,7 @@
 import {
   getActiveCinemaActions,
+  getActiveCinemaColourShifts,
+  parseCinemaEvents,
   getCinemaFrame,
   getCinemaLoopMilliseconds,
   parseCinemaDatabase,
@@ -8,6 +10,7 @@ import type {
   Cinema,
   CinemaAction,
   CinemaDatabase,
+  CinemaEvents,
   CinemaLight,
 } from '@lego-games/lego-racers/cinema'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
@@ -31,6 +34,16 @@ const CINEMA_DATABASE_PATH = 'MENUDATA\\SINGRACE\\PST.CDB'
 // The champion's figure plays the clips of `MENUDATA\SINGRACE\GUY1.ADB` (one per cinema, the action's flag).
 const FIGURE_ANIMATION_NAME = 'SINGRACE\\GUY1'
 const FIGURE_INSTANCE_NAME = 'guy1'
+
+const CINEMA_EVENTS_PATH = 'MENUDATA\\SINGRACE\\PST.CEB'
+
+const readCinemaEvents = (archive: JamArchive): CinemaEvents | null => {
+  try {
+    return parseCinemaEvents(archive.readFile(CINEMA_EVENTS_PATH))
+  } catch {
+    return null
+  }
+}
 
 const readCinemaDatabase = (archive: JamArchive): CinemaDatabase | null => {
   try {
@@ -111,6 +124,8 @@ export const createCinemaStage = (
   worldObject: SceneObject
 ): CinemaStage => {
   const database = readCinemaDatabase(archive)
+  const events = readCinemaEvents(archive)
+  let shiftedInstanceNames: readonly string[] = []
   const figureSlot = createModelSlot(three)
   const particles = createRaceParticles(scene)
   three.add(particles.group)
@@ -164,7 +179,7 @@ export const createCinemaStage = (
   }
 
   return Object.freeze({
-    show: (view) => {
+    show: (view, surfaceHeightPixels) => {
       const cinema = getCinema(database, view.cinemaName)
       const actions = cinema === null ? [] : getActiveCinemaActions(cinema, view.milliseconds)
       const loopMilliseconds =
@@ -188,13 +203,31 @@ export const createCinemaStage = (
         }
         if (action.kind === 2) setSkeletonClip(action, loopMilliseconds)
       }
+      const shifts =
+        cinema === null || events === null
+          ? []
+          : getActiveCinemaColourShifts(cinema, events, view.milliseconds)
+      for (const name of shiftedInstanceNames) {
+        if (!shifts.some((shift) => shift.instanceName === name))
+          worldObject.setInstanceColourShift(name, null)
+      }
+      for (const shift of shifts) {
+        worldObject.setInstanceColourShift(shift.instanceName, {
+          shifts: shift.shifts,
+          biases: shift.biases,
+        })
+      }
+      shiftedInstanceNames = shifts.map((shift) => shift.instanceName)
       particles.update(
         view.emitterPool === null || camera === undefined ? [] : [view.emitterPool],
         {
           position: camera?.position ?? { x: 0, y: 0, z: 0 },
           forward: getUnit(camera?.forward ?? { x: 1, y: 0, z: 0 }),
           up: getUnit(camera?.up ?? { x: 0, y: 0, z: 1 }),
-        }
+        },
+        camera === undefined
+          ? null
+          : surfaceHeightPixels / (2 * Math.tan((camera.fieldOfViewDegrees * Math.PI) / 360))
       )
       showFigure(
         view.partBytes,

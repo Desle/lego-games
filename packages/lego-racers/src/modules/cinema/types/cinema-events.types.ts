@@ -6,12 +6,23 @@ export type CinemaEmitterEvent = {
   readonly emitterName: string
 }
 
-// A vertex colour effect on a material (`0x2b` entry): three integers (`0x2d`) and the material's name (`0x5e`).
-// Hypothesis: the flash of the space cinema's sky.
+// A vertex colour effect on a model instance (`0x2b` entry, FUN_004a4be0): the shifts (`0x2c`, three integers), the biases it
+// starts with (`0x2d`, three integers) and the model instance it acts on (`0x5e`, FUN_004a3230). Starting it gives the model's
+// vertex colours `(channel >> shift) + bias` (GolDP.dll 0x10017050, `FUN_004a4ca0`); stopping it takes that off
+// (`FUN_004a4cf0`). The rates (`0x2e`, three floats) change the biases every frame (`FUN_004a4d10`); no shipped file sets them.
 export type CinemaVertexEffect = {
   readonly name: string
-  readonly integers: readonly number[]
-  readonly materialName: string
+  readonly shifts: readonly number[]
+  readonly biases: readonly number[]
+  readonly rates: readonly number[]
+  readonly instanceName: string
+}
+
+// What a vertex effect does to an instance while it is on.
+export type CinemaColourShift = {
+  readonly instanceName: string
+  readonly shifts: readonly number[]
+  readonly biases: readonly number[]
 }
 
 // The keywords of a list of reactions (`0x50`..`0x57`): an entry of the timeline's section (`0x56`/`0x57`: a dummy) that
