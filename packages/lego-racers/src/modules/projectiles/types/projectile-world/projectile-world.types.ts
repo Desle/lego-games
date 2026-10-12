@@ -41,6 +41,10 @@ export type GrappleMotion = {
 export type WandMotion = {
   readonly kind: 'wand'
   readonly beam: WandBeam
+  // The jitter of the rings (four segments of five) the beam was laid with, and the jitter the first ring took: the last
+  // segment's first, which the previous beam left in the shared array 0x004c7608 (null for the first beam).
+  readonly jitter: readonly (readonly Vector3[])[]
+  readonly initialJitter: Vector3 | null
 }
 
 // The rocket (0x004568f0): its launch animation, then its homing body.

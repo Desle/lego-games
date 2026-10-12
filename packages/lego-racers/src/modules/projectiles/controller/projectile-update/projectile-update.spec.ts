@@ -16,6 +16,7 @@ import { createRandomTable } from '../../../random-table/index.ts'
 import { createFloatArithmetic, FpuPrecision } from '../../../simulation-math/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
 import { BallisticFlightState } from '../../types/ballistic-flight/ballistic-flight.ts'
+import { ROPE_START_HEIGHT } from '../../types/grapple-hook/grapple-hook.ts'
 import { createProjectileWorld, getMotion } from '../../types/projectile-world/projectile-world.ts'
 import type {
   ProjectileContext,
@@ -441,9 +442,9 @@ describe('updatePowerUpsWithProjectiles: the grapple', () => {
   })
 
   it('lets go when the rope meets the track after a second (0x00444938)', () => {
-    // Arrange: the track blocks the rope between the owner and the hook.
+    // Arrange: the track blocks the rope between the owner and the hook; the rope starts 3 above the owner (0x00453cd0).
     const blocked: LineProbe = (start) =>
-      start.x === 0 && start.y === 0 && start.z === 0
+      start.x === 0 && start.y === 0 && start.z === ROPE_START_HEIGHT
         ? { point: { x: 1, y: 2, z: 3 }, normal: { x: 0, y: 0, z: 1 } }
         : null
     const contexts = getContexts(blocked)

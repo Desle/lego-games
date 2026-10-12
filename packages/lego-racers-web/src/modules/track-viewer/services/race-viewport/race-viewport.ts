@@ -7,6 +7,7 @@ import type {
   WarpView,
 } from '@lego-games/lego-racers/race-presentation'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
+import type { RibbonView } from '@lego-games/lego-racers/ribbon'
 import type { Scene } from '@lego-games/lego-racers/scene'
 import type { Mesh, MeshBasicMaterial } from 'three'
 import {
@@ -179,6 +180,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   }
   let lastCameraView: CameraView | null = null
   let lastSprites: readonly SpriteView[] = []
+  let lastRibbons: readonly RibbonView[] = []
   const update = (
     allPoses: readonly RacerPose[],
     allCameraView: CameraView,
@@ -202,10 +204,19 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     const cameraView = warpView === null ? allCameraView : warpView.cameraView
     lastCameraView = cameraView
     lastSprites = warpView === null ? effectViews.sprites : []
+    lastRibbons = warpView === null ? effectViews.ribbons : []
     effects.update(
       warpView === null
         ? effectViews
-        : { ...effectViews, effects: [], bricks: [], explosions: [], attachments: [], sprites: [] },
+        : {
+            ...effectViews,
+            effects: [],
+            bricks: [],
+            explosions: [],
+            attachments: [],
+            sprites: [],
+            ribbons: [],
+          },
       cameraView.position,
       poses
     )
@@ -299,7 +310,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     for (const instance of trackWorld.skeletonInstances) {
       if (instance.clip !== null) shown.track.setSkeletonState(instance.name, instance.clip)
     }
-    if (lastCameraView !== null) particles.update(pools, lastCameraView, lastSprites)
+    if (lastCameraView !== null) particles.update(pools, lastCameraView, lastSprites, lastRibbons)
   }
 
   return Object.freeze({

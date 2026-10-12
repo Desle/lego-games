@@ -9,6 +9,7 @@ import {
   createGrappleHook,
   getPointMovedToward,
   getRetractingHook,
+  ROPE_START_HEIGHT,
 } from './grapple-hook.ts'
 
 const SINGLE = createFloatArithmetic(FpuPrecision.SINGLE)
@@ -97,12 +98,50 @@ describe('advanceGrappleHook', () => {
 
     // Act
     const first = advanceGrappleHook(SINGLE, NO_HIT, hook, ORIGIN, null, 200)
-    const second = advanceGrappleHook(SINGLE, NO_HIT, first.hook, ORIGIN, null, 200)
+    const second = advanceGrappleHook(SINGLE, NO_HIT, first.hook, ORIGIN, null, 300)
 
-    // Assert
-    expect(first.hook.hookTarget).toEqual({ x: 0, y: 50, z: 0 })
+    // Assert: the hook flies to the point 3 above the owner (0x00453cd0), 50 units along the line in 200 ms.
+    expect(first.hook.hookTarget.y).toBeCloseTo(
+      100 - 50 * (100 / Math.hypot(100, ROPE_START_HEIGHT)),
+      3
+    )
+    expect(first.hook.hookTarget.z).toBeCloseTo(
+      50 * (ROPE_START_HEIGHT / Math.hypot(100, ROPE_START_HEIGHT)),
+      3
+    )
     expect(first.result).toBe(BallisticFlightState.FLYING)
     expect(second.result).toBe(BallisticFlightState.ENDED)
     expect(second.hook.isRetracting).toBe(false)
+  })
+
+  it('slackens the rope as the hook comes back, down to nothing (0x00444690)', () => {
+    // Arrange
+    const hook = Object.freeze({
+      ...getRetractingHook(createGrappleHook(createBallisticFlight()), { x: 0, y: 1000, z: 0 }),
+      tension: f(0.3),
+    })
+
+    // Act
+    const first = advanceGrappleHook(SINGLE, NO_HIT, hook, ORIGIN, null, 100)
+    const second = advanceGrappleHook(SINGLE, NO_HIT, first.hook, ORIGIN, null, 500)
+
+    // Assert
+    expect(first.hook.tension).toBeCloseTo(0.2, 5)
+    expect(second.hook.tension).toBe(0)
+  })
+
+  it('keeps the owner position the rope was laid from (0x00444540)', () => {
+    // Arrange / Act
+    const advance = advanceGrappleHook(
+      SINGLE,
+      NO_HIT,
+      createGrappleHook(createBallisticFlight()),
+      { x: 1, y: 2, z: 3 },
+      null,
+      16
+    )
+
+    // Assert
+    expect(advance.hook.ropeOwnerPosition).toEqual({ x: 1, y: 2, z: 3 })
   })
 })

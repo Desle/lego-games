@@ -53,8 +53,13 @@ export type {
   ExplosionParameters,
   ExplosionPool,
 } from './types/explosion/explosion.types.ts'
-export { advanceGrappleHook, getPointMovedToward } from './types/grapple-hook/grapple-hook.ts'
+export {
+  advanceGrappleHook,
+  getPointMovedToward,
+  ROPE_START_HEIGHT,
+} from './types/grapple-hook/grapple-hook.ts'
 export type { GrappleHook } from './types/grapple-hook/grapple-hook.types.ts'
+export { getJitterValue, getWandJitter } from './types/wand-jitter/wand-jitter.ts'
 export { advanceHomingFlight, retargetHomingFlight } from './types/homing-flight/homing-flight.ts'
 export type { HomingFlight, HomingTarget } from './types/homing-flight/homing-flight.types.ts'
 export { getIsWithinMagnetCaptureRange, getMagnetPull } from './types/magnet-pull/magnet-pull.ts'

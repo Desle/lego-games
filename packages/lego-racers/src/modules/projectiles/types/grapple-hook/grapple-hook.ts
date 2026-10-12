@@ -22,8 +22,8 @@ const RETRACT_SPEED = 250
 // 0x004b0c9c: the tension grows by this per second; the probe starts at 1.
 const TENSION_PER_SECOND = 1
 const FULL_TENSION = 1
-// 0x004b0c90 etc. read through +0x218 (the rope's start height above the owner).
-const ROPE_START_HEIGHT = 0
+// +0x218 (0x00444340 copies it from the block 0x00453cd0 builds, 3.0): the rope starts this high above the owner.
+export const ROPE_START_HEIGHT = 3
 
 export const createGrappleHook = (flight: BallisticFlight): GrappleHook =>
   Object.freeze({
@@ -32,6 +32,7 @@ export const createGrappleHook = (flight: BallisticFlight): GrappleHook =>
     isRetracting: false,
     isHookArrived: false,
     tension: 0,
+    ropeOwnerPosition: ZERO_VECTOR3,
   })
 
 // 0x00449a90 (cdecl: target, position, arrival distance squared, speed, seconds): moves the position towards the
@@ -107,8 +108,16 @@ const advanceRetractingHook = (
       result: BallisticFlightState.ENDED,
     })
   }
+  // The rope slackens as the hook comes back: the tension falls by 1 a second and stops at 0.
+  const slackened = arithmetic.storeFloat(
+    arithmetic.subtract(hook.tension, arithmetic.multiply(TENSION_PER_SECOND, seconds))
+  )
   return Object.freeze({
-    hook: Object.freeze({ ...hook, hookTarget: moved.position }),
+    hook: Object.freeze({
+      ...hook,
+      hookTarget: moved.position,
+      tension: arithmetic.getIsBelow(slackened, 0) ? 0 : slackened,
+    }),
     result: BallisticFlightState.FLYING,
   })
 }
@@ -178,7 +187,7 @@ const advanceLatchedHook = (
 }
 
 // 0x00444490 (the grapple body's advance): retracting, latched on a racer, or flying as a ballistic flight.
-export const advanceGrappleHook = (
+const advanceHookBody = (
   arithmetic: FloatArithmetic,
   probe: LineProbe,
   hook: GrappleHook,
@@ -202,6 +211,30 @@ export const advanceGrappleHook = (
   const advance = advanceBallisticFlight(arithmetic, probe, hook.flight, stepMilliseconds)
   return Object.freeze({
     hook: Object.freeze({ ...hook, flight: advance.flight }),
+    result: advance.result,
+  })
+}
+
+// The advance, and the owner's position it ran with: the rope is laid from there when the hook updates, before the
+// racers move on (0x00444540, 0x00444690, 0x00444820 read the owner's frame position).
+export const advanceGrappleHook = (
+  arithmetic: FloatArithmetic,
+  probe: LineProbe,
+  hook: GrappleHook,
+  ownerPosition: Vector3,
+  latchedPosition: Vector3 | null,
+  stepMilliseconds: number
+): GrappleAdvance => {
+  const advance = advanceHookBody(
+    arithmetic,
+    probe,
+    hook,
+    ownerPosition,
+    latchedPosition,
+    stepMilliseconds
+  )
+  return Object.freeze({
+    hook: Object.freeze({ ...advance.hook, ropeOwnerPosition: ownerPosition }),
     result: advance.result,
   })
 }

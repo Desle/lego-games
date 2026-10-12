@@ -233,4 +233,18 @@ describe('getStepWithInitialWandDraws', () => {
     // Assert
     expect(drawn.world.random.position - step.world.random.position).toBe(40)
   })
+
+  it('keeps the 20 values in the wand ring, the first draw in slot 0 (0x00454b90)', () => {
+    // Arrange
+    const step = createActivated({ category: BrickKind.HAZARD, level: 0 })
+
+    // Act
+    const drawn = getStepWithInitialWandDraws(step)
+
+    // Assert
+    const wands = drawn.world.effects.effects.filter((effect) => effect.kind === 'wand')
+    expect(wands[0]?.jitterDraws).toHaveLength(20)
+    expect(wands[0]?.jitterIndex).toBe(0)
+    expect(wands[1]?.jitterDraws).toHaveLength(20)
+  })
 })

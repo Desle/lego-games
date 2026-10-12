@@ -55,6 +55,20 @@ const RENDER_CASES: readonly TraceScenarioRequest[] = [
   { name: 'RACEC0R3', raceFolder: 'RACEC0R3', recordFrames: RECORD_FRAMES },
   { name: 'RACEC1R0', raceFolder: 'RACEC1R0', recordFrames: RECORD_FRAMES },
   { name: 'RACEC3R0', raceFolder: 'RACEC3R0', recordFrames: RECORD_FRAMES },
+  // The barrel (oil 4/1) explodes at frame 387 into the spiked explosion, and a computer racer's brick debris flies at
+  // 491 to 521 (a warp case, nothing in these cases touches that racer).
+  {
+    name: 'Royal Knights, barrel explosion',
+    raceFolder: 'RACEC0R0',
+    recordFrames: [388, 392, 400, 410, 430],
+    powerUp: { kind: 4, level: 1, grantFrame: 300, useFrame: 305, frameCount: 440 },
+  },
+  {
+    name: 'Royal Knights, debris',
+    raceFolder: 'RACEC0R0',
+    recordFrames: [492, 496, 502, 510, 520],
+    powerUp: { kind: 3, level: 3, grantFrame: 300, useFrame: 305, frameCount: 530 },
+  },
   ...POWER_UP_CASES,
 ]
 
