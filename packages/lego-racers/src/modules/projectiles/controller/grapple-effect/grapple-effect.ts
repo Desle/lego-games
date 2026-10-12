@@ -3,10 +3,11 @@ import {
   EffectState,
   getEffect,
   getStepWithEffect,
+  getStepWithEvents,
   hitRacerWithProjectile,
   updatePowerUpEffect,
 } from '../../../power-ups/index.ts'
-import type { PowerUpEffect, PowerUpStep } from '../../../power-ups/index.ts'
+import type { PowerUpEffect, PowerUpEvent, PowerUpStep } from '../../../power-ups/index.ts'
 import {
   getDotProduct,
   getRotationFromFrameAxes,
@@ -16,7 +17,6 @@ import {
   ZERO_VECTOR3,
 } from '../../../simulation-math/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
-import type { ProjectileEvent } from '../../types/projectile-event/projectile-event.types.ts'
 import { BallisticFlightState } from '../../types/ballistic-flight/ballistic-flight.ts'
 import {
   advanceGrappleHook,
@@ -26,7 +26,6 @@ import {
 import type { GrappleHook } from '../../types/grapple-hook/grapple-hook.types.ts'
 import {
   getMotion,
-  getWorldWithEvents,
   getWorldWithHookFramePosition,
   getWorldWithHookFrameRotation,
   getWorldWithMotion,
@@ -156,16 +155,16 @@ const getPulled = (
     y: storeFloat(multiply(direction.y, PULL_STRENGTH)),
     z: storeFloat(multiply(direction.z, PULL_STRENGTH)),
   })
-  const events: readonly ProjectileEvent[] = [
-    { type: 'projectiles.racer_towed', racer: owner, vector: tow, isOwner: true },
+  const events: readonly PowerUpEvent[] = [
+    { type: 'power_ups.racer_towed', racer: owner, vector: tow, isOwner: true },
     {
-      type: 'projectiles.racer_towed',
+      type: 'power_ups.racer_towed',
       racer: victim,
       vector: Object.freeze({ x: -tow.x, y: -tow.y, z: -tow.z }),
       isOwner: false,
     },
   ]
-  return Object.freeze({ step: current.step, world: getWorldWithEvents(current.world, events) })
+  return Object.freeze({ step: getStepWithEvents(current.step, events), world: current.world })
 }
 
 // What the effect does with the hook's result after the hit (0x00453ef0, the switch on the effect's state).

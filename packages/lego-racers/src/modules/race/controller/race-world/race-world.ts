@@ -375,16 +375,6 @@ export const getRacerAfterProjectileEvent = (
         ...racer,
         carBody: startCarBodyFlip(arithmetic, racer.carBody, event.factor, event.milliseconds),
       })
-    case 'projectiles.racer_towed':
-      return Object.freeze({
-        ...racer,
-        carBody: setCarBodyPush(
-          arithmetic,
-          racer.carBody,
-          event.isOwner ? 'extraForceB' : 'extraForceA',
-          event.vector
-        ),
-      })
     case 'projectiles.racer_tow_ended':
       return Object.freeze({
         ...racer,

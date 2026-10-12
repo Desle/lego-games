@@ -417,9 +417,9 @@ describe('updatePowerUpsWithProjectiles: the grapple', () => {
       timerMilliseconds: 4000,
       targetRacer: 1,
     })
-    expect(hit.world.events).toMatchObject([
-      { type: 'projectiles.racer_towed', racer: 0, vector: { x: 180 }, isOwner: true },
-      { type: 'projectiles.racer_towed', racer: 1, vector: { x: -180 }, isOwner: false },
+    expect(hit.step.events).toMatchObject([
+      { type: 'power_ups.racer_towed', racer: 0, vector: { x: 180 }, isOwner: true },
+      { type: 'power_ups.racer_towed', racer: 1, vector: { x: -180 }, isOwner: false },
     ])
   })
 

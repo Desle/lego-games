@@ -459,6 +459,16 @@ export const getRacerAfterPowerUpEvent = (
   switch (event.type) {
     case 'power_ups.racer_turbo_started':
       return getRacerAfterTurboStart(arithmetic, racer, event.boostMilliseconds, event.level)
+    case 'power_ups.racer_towed':
+      return Object.freeze({
+        ...racer,
+        carBody: setCarBodyPush(
+          arithmetic,
+          racer.carBody,
+          event.isOwner ? 'extraForceB' : 'extraForceA',
+          event.vector
+        ),
+      })
     case 'power_ups.racer_turbo_ended':
       return getRacerAfterTurboEnd(arithmetic, racer)
     case 'power_ups.racer_shield_raised':
