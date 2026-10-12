@@ -21,7 +21,10 @@ import {
   WebGLRenderer,
 } from 'three'
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
-import { getSkeletonInstanceSphere } from '@lego-games/lego-racers/world-animation'
+import {
+  getMaterialSlotWrites,
+  getSkeletonInstanceSphere,
+} from '@lego-games/lego-racers/world-animation'
 import type { RaceWorlds } from '@lego-games/lego-racers/world-animation'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-racers/simulation-math'
 import { getWorldSpriteQuads } from '@lego-games/lego-racers/world-sprite'
@@ -450,6 +453,14 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
           sphere: null,
         })
       }
+    }
+    for (const write of getMaterialSlotWrites(worlds.track)) {
+      shown.track.setMaterialSlot(
+        write.instanceName,
+        write.levelIndex,
+        write.slot,
+        write.materialName
+      )
     }
     if (lastCameraView !== null) {
       const worldSpriteQuads = getWorldSpriteQuads(

@@ -60,7 +60,13 @@ describe('getAdvancedMaterialPlayback', () => {
     const advanced = getAdvancedMaterialPlayback(definition, 0, playing, 60)
 
     // Assert
-    expect(advanced).toEqual({ isPlaying: false, isLooping: false, time: 0, tableIndex: null })
+    expect(advanced).toEqual({
+      isPlaying: false,
+      isLooping: false,
+      time: 0,
+      tableIndex: null,
+      target: null,
+    })
   })
 })
 

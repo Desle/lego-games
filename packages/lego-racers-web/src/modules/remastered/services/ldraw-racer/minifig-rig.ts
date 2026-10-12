@@ -1,28 +1,67 @@
-import { MinifigPartKey, MinifigPosture } from './minifig-assembly.types.ts'
-import type { MinifigAttachment, MinifigRig } from './minifig-rig.types.ts'
+import { MinifigPosture } from './minifig-assembly.types.ts'
+import type { MinifigSide } from './minifig-geometry.types.ts'
+import type {
+  MinifigLimbAttachment,
+  MinifigRig,
+  MinifigWristAttachment,
+} from './minifig-rig.types.ts'
 
 const SEATED_BONE_COUNT = 6
-// A figure's torso spans y -24 to 8 in its own frame; the bind pose's torso spans these heights (raw model units): the seated skeleton's
-// torso bone to its head bone, the standing skeleton's waist to its neck. A minifigure is 3.2 raw units to an LDraw unit (a stud is 64 and 20).
-const SEATED_HIPS_HEIGHT = 75.9
-const STANDING_HIPS_HEIGHT = 58
+const RAW_UNITS_PER_LDRAW_UNIT = 3.2
+// The race driver's seated pelvis block reaches down to z -0.9; a seated figure's legs lie 22 below the top of its hips (12 to the hip
+// axle and half a leg), so the hips' top is that much above the block's bottom: the legs sit where the original's do.
+const SEATED_HIPS_HEIGHT = -0.9 + 22 * RAW_UNITS_PER_LDRAW_UNIT
+// The menu figure's hip block reaches up to z 32.8, its feet down to -95.2: 40 LDraw units (the hips' top to the soles) below.
+const STANDING_HIPS_HEIGHT = 32.8
+// The race driver's arms (`arm_l`, `arm_r`) reach forward and 14 degrees below the horizontal: the principal axis of their vertices.
+const SEATED_ARM_DROP = (14 * Math.PI) / 180
+const SEATED_ARM_DIRECTION = Object.freeze([
+  0,
+  Math.sin(SEATED_ARM_DROP),
+  -Math.cos(SEATED_ARM_DROP),
+] as const)
+// The race driver's legs are the pelvis's box, reaching forward.
+const SEATED_LEG_DIRECTION = Object.freeze([0, 0, -1] as const)
+const SIDE_PREFIXES: Readonly<Record<MinifigSide, string>> = Object.freeze({
+  left: 'l_',
+  right: 'r_',
+})
 
-const getBone = (boneIndex: number): MinifigAttachment => ({ kind: 'bone', boneIndex })
+const getBone = (
+  boneIndex: number,
+  bindDirection: readonly [number, number, number]
+): MinifigLimbAttachment => Object.freeze({ kind: 'bone', boneIndex, bindDirection })
 
 const findBone = (boneNames: readonly string[], pattern: RegExp): number =>
   boneNames.findIndex((name) => pattern.test(name))
 
-const getChordOrBone = (
+const findSideBone = (boneNames: readonly string[], side: MinifigSide, stem: string): number =>
+  boneNames.findIndex((name) => name.startsWith(`${SIDE_PREFIXES[side]}${stem}`))
+
+// A rigid limb along the line from one bone to another; straight down (a hanging limb) when the skeleton lacks either.
+const getChord = (
   boneNames: readonly string[],
-  startPattern: RegExp,
-  endPattern: RegExp,
-  outwardSign = 0
-): MinifigAttachment => {
-  const startIndex = findBone(boneNames, startPattern)
-  const endIndex = findBone(boneNames, endPattern)
+  side: MinifigSide,
+  startStem: string,
+  endStem: string
+): MinifigLimbAttachment => {
+  const startIndex = findSideBone(boneNames, side, startStem)
+  const endIndex = findSideBone(boneNames, side, endStem)
   return startIndex < 0 || endIndex < 0
-    ? getBone(Math.max(startIndex, 0))
-    : { kind: 'chord', startIndex, endIndex, outwardSign }
+    ? getBone(0, [0, 1, 0])
+    : Object.freeze({ kind: 'chord', startIndex, endIndex })
+}
+
+const getWrist = (
+  boneNames: readonly string[],
+  side: MinifigSide
+): MinifigWristAttachment | null => {
+  const forearmIndex = findSideBone(boneNames, side, 'el')
+  const wristIndex = findSideBone(boneNames, side, 'wr')
+  const handIndex = findSideBone(boneNames, side, 'hand')
+  return forearmIndex < 0 || wristIndex < 0 || handIndex < 0
+    ? null
+    : Object.freeze({ forearmIndex, wristIndex, handIndex })
 }
 
 // The skeleton of the race driver and the figure builder's drivers: pelvis, torso, two arms, a dummy that carries the hat and head, a head.
@@ -30,39 +69,47 @@ const getSeatedRig = (): MinifigRig =>
   Object.freeze({
     posture: MinifigPosture.SEATED,
     hipsHeight: SEATED_HIPS_HEIGHT,
-    attachments: Object.freeze({
-      [MinifigPartKey.HIPS]: getBone(0),
-      [MinifigPartKey.LEFT_LEG]: getBone(0),
-      [MinifigPartKey.RIGHT_LEG]: getBone(0),
-      [MinifigPartKey.TORSO]: getBone(1),
-      [MinifigPartKey.HEAD]: getBone(4),
-      [MinifigPartKey.LEFT_ARM]: getBone(2),
-      [MinifigPartKey.RIGHT_ARM]: getBone(3),
-      [MinifigPartKey.LEFT_HAND]: getBone(2),
-      [MinifigPartKey.RIGHT_HAND]: getBone(3),
+    pelvisIndex: 0,
+    torsoIndex: 1,
+    headIndex: 4,
+    limbs: Object.freeze({
+      legs: Object.freeze({
+        left: getBone(0, SEATED_LEG_DIRECTION),
+        right: getBone(0, SEATED_LEG_DIRECTION),
+      }),
+      arms: Object.freeze({
+        left: getBone(2, SEATED_ARM_DIRECTION),
+        right: getBone(3, SEATED_ARM_DIRECTION),
+      }),
     }),
+    wrists: null,
   })
 
 // The skeleton of the menus' figures (`rr`, `hr`, `rp`, `hp`: thigh, knee, ankle, foot and toe chains, waist, chest, neck, head, and a
 // shoulder, elbow, wrist and hand for each arm), whose bind pose has the arms out sideways.
 const getStandingRig = (boneNames: readonly string[]): MinifigRig => {
-  const leftArm = getChordOrBone(boneNames, /^l_sh/, /^l_wr/, 1)
-  const rightArm = getChordOrBone(boneNames, /^r_sh/, /^r_wr/, -1)
+  const leftWrist = getWrist(boneNames, 'left')
+  const rightWrist = getWrist(boneNames, 'right')
   return Object.freeze({
     posture: MinifigPosture.STANDING,
     hipsHeight: STANDING_HIPS_HEIGHT,
-    attachments: Object.freeze({
-      [MinifigPartKey.HIPS]: getBone(0),
-      [MinifigPartKey.LEFT_LEG]: getChordOrBone(boneNames, /^l_th/, /^l_an/),
-      [MinifigPartKey.RIGHT_LEG]: getChordOrBone(boneNames, /^r_th/, /^r_an/),
-      [MinifigPartKey.TORSO]: getBone(Math.max(findBone(boneNames, /^chest/), 0)),
-      [MinifigPartKey.HEAD]: getBone(Math.max(findBone(boneNames, /^head/), 0)),
-      [MinifigPartKey.LEFT_ARM]: leftArm,
-      [MinifigPartKey.RIGHT_ARM]: rightArm,
-      // The hand is the end of the arm, so it follows the arm's line (one rigid piece does not meet a hand that turns on its own).
-      [MinifigPartKey.LEFT_HAND]: leftArm,
-      [MinifigPartKey.RIGHT_HAND]: rightArm,
+    pelvisIndex: 0,
+    torsoIndex: Math.max(findBone(boneNames, /^chest/), 0),
+    headIndex: Math.max(findBone(boneNames, /^head/), 0),
+    limbs: Object.freeze({
+      legs: Object.freeze({
+        left: getChord(boneNames, 'left', 'th', 'an'),
+        right: getChord(boneNames, 'right', 'th', 'an'),
+      }),
+      arms: Object.freeze({
+        left: getChord(boneNames, 'left', 'sh', 'wr'),
+        right: getChord(boneNames, 'right', 'sh', 'wr'),
+      }),
     }),
+    wrists:
+      leftWrist === null || rightWrist === null
+        ? null
+        : Object.freeze({ left: leftWrist, right: rightWrist }),
   })
 }
 
