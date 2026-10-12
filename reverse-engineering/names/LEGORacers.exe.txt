@@ -944,3 +944,8 @@
 00427e80 Camera_UpdateFieldOfView
 004047b0 CameraObject_ApplyAnimationLock
 00404780 CameraObject_LockToAnimation
+0040d550 Figure_Bind
+0040da30 Figure_SetLevel
+0042f240 Profile_GetGhostBeatenFlags
+00488010 RaceSelectScreen_ShowRace
+00487b50 RaceSelectScreen_CreateWidgets

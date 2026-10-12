@@ -1,5 +1,6 @@
 import type { RaceState } from '@lego-games/lego-racers/race'
 import type {
+  GhostCar,
   RacePresentation,
   RacePresentationFrame,
 } from '@lego-games/lego-racers/race-presentation'
@@ -11,6 +12,8 @@ export type PortRaceFrame = {
   readonly milliseconds: number
   readonly raceState: RaceState
   readonly presentation: RacePresentationFrame
+  // The ghost cars of a time trial as the draw's update (0x00435a00) leaves them; none in any other race.
+  readonly ghostCars: readonly GhostCar[]
 }
 
 // The start of a headless race: the state before the first step and the introduction music.

@@ -61,7 +61,7 @@ export const runPixelTrace = async (request: PixelTraceRequest): Promise<PixelTr
   const assets = loadRaceAssets(
     jam,
     { executable, tunes: new Map() },
-    getScenarioRaceOptions(request.race)
+    getScenarioRaceOptions(request.race, jam)
   )
   const size = { width: request.width, height: request.height }
   const container = document.createElement('div')
@@ -76,13 +76,13 @@ export const runPixelTrace = async (request: PixelTraceRequest): Promise<PixelTr
     assets,
     size,
     request.frames,
-    ({ frame, raceState, presentation, milliseconds }) => {
+    ({ frame, raceState, presentation, milliseconds, ghostCars }) => {
       viewport.update(
         getRacerPoses(raceState),
         presentation.cameraView,
         getEffectViews(raceState),
         presentation.warpView,
-        [],
+        ghostCars,
         presentation.screenFades,
         presentation.fieldOfViewDegrees
       )

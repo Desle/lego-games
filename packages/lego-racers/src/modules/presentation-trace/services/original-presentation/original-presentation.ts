@@ -48,6 +48,7 @@ const getScenarioForEmulator = (scenario: PresentationScenario) => ({
   localPlayerCount: scenario.localPlayerCount,
   circuit: scenario.circuitName,
   isMirrored: scenario.isMirrored,
+  isTimeTrial: scenario.isTimeTrial ?? false,
   recordFrames: scenario.recordFrames,
   isRenderRecorded: scenario.isRenderRecorded,
   isDecalRecorded: scenario.isDecalRecorded ?? false,

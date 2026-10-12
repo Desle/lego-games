@@ -10,6 +10,8 @@ import {
 } from '../../../simulation-math/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
 import type { GhostCar, GhostCarsStep } from '../../types/race-presentation.types.ts'
+import { getFigureAnimationState } from '../get-figure-animation-state/get-figure-animation-state.ts'
+import type { SkeletonAnimationState } from '../../../skeletal-animation/index.ts'
 
 // Ghost_Initialize 0x00422420 writes the champion car's seat point (`this + 0x3a0`) from the constants 0xc0086d76, 0x3c37fe09 and
 // 0x3fcdd2f2; the session's best run takes the seat point of the player's racer (0x00422eb0 copies racer +0x64..+0x6c).
@@ -30,6 +32,19 @@ export const getGhostCars = (raceState: RaceState): GhostCarsStep => {
   const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
   const playback = stepGhostPlayback(arithmetic, ghost)
   const playerRacer = raceState.racerSet.racers[raceState.playerRacerIndices[0] ?? 0]
+  const { bestCar, championCar } = playback.session
+  const animations: Readonly<
+    Record<
+      GhostRunSelection,
+      readonly [SkeletonAnimationState | null, SkeletonAnimationState | null]
+    >
+  > = {
+    best:
+      bestCar === null
+        ? [null, null]
+        : [getFigureAnimationState(bestCar.wheels), getFigureAnimationState(bestCar.driver)],
+    champion: [championCar?.wheels.clip ?? null, championCar?.driver.clip ?? null],
+  }
   const getCar = (
     kind: GhostRunSelection,
     pose: GhostPlaybackPose | null,
@@ -48,6 +63,8 @@ export const getGhostCars = (raceState: RaceState): GhostCarsStep => {
           seatPoint
         ),
         speed: pose.speed,
+        wheelAnimation: animations[kind][0],
+        driverAnimation: animations[kind][1],
       }),
     ])
   }

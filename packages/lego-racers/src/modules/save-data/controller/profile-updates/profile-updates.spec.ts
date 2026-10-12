@@ -10,6 +10,7 @@ import {
   getAreAllGhostsBeaten,
   getBestTime,
   getBestTimeTrackIndex,
+  getIsGhostBeaten,
   getIsCircuitUnlocked,
   getIsPartUnlocked,
   getUnlockedCircuitRunLength,
@@ -140,4 +141,15 @@ describe('profile updates', () => {
       expect(shipped.optionBytes.slice(0, 5)).toEqual(created.optionBytes.slice(0, 5))
     }
   )
+
+  it('reads the beaten bit of a race as a 16-bit word (FUN_004881a0)', () => {
+    // Arrange
+    const profile = markGhostBeaten(createDefaultProfile(0), 5).profile
+
+    // Act
+    const results = [4, 5, 6, 16, -1].map((race) => getIsGhostBeaten(profile, race))
+
+    // Assert
+    expect(results).toEqual([false, true, false, false, false])
+  })
 })

@@ -9,5 +9,5 @@ export const loadScenarioAssets = (jam: Uint8Array, scenario: PresentationScenar
   loadRaceAssets(
     jam,
     { executable: readOriginalExecutable(), tunes: new Map() },
-    getScenarioRaceOptions(scenario)
+    getScenarioRaceOptions(scenario, jam)
   )

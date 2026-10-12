@@ -19,10 +19,12 @@ const getPresentationScenario = (
   recordFrames: readonly number[] | null,
   isRenderRecorded: boolean,
   isDecalRecorded: boolean,
-  powerUpGrants: NonNullable<PresentationScenario['powerUpGrants']>
+  powerUpGrants: NonNullable<PresentationScenario['powerUpGrants']>,
+  isTimeTrial: boolean
 ): PresentationScenario =>
   Object.freeze({
     name: golden.name,
+    isTimeTrial,
     raceFolder: golden.raceFolder,
     racerCodes: golden.racerCodes,
     racerCount: golden.racerCount,
@@ -69,6 +71,8 @@ export const createPresentationScenario = (
     name: request.name,
     raceFolder: request.raceFolder,
     racerCodes: getCircuitRacerCodes(archive.readFile, request.raceFolder),
+    // FUN_00487f90: a time trial has no opponents.
+    ...(request.isTimeTrial === true ? { racerCount: 1 } : {}),
     isMirrored: request.isMirrored ?? false,
     frames: getRequestFrames(request),
   })
@@ -86,6 +90,7 @@ export const createPresentationScenario = (
             kind: request.powerUp.kind,
             level: request.powerUp.level,
           },
-        ]
+        ],
+    request.isTimeTrial ?? false
   )
 }
