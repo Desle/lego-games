@@ -51,6 +51,8 @@ The bug reports checked: "some races misaligned versus the rendered map" is find
 
 - Race cinemas (single race and circuit race screens): the champion's figure on `guy1` matches the port's bones within 3 cm over time; see menu-backdrops.md.
 
+The render trace proves the data; [pixel-trace.md](pixel-trace.md) compares the pixels the viewer puts on the screen.
+
 ## Adding a scenario
 
 Add a `TraceScenarioRequest` to `RENDER_CASES` in `render-trace.trace.spec.ts` (the frames to record go in `recordFrames`; the race idles through the introduction and the countdown unless `isSteering`). A front-end case is a list of tapped scan codes in `front-end-render-trace.trace.spec.ts`.

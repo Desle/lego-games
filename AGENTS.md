@@ -34,6 +34,7 @@ Each package has its own `AGENTS.md` with its layout, commands and definition of
 
 1. `pnpm run ci` is green at the repository root.
 2. Every changed package meets the definition of done in its own `AGENTS.md`.
+3. A change to what the viewer draws is done only when its `pnpm run pixel-trace` case passes (`.docs/reverse-engineering/pixel-trace.md`).
 
 ## Repository notes
 

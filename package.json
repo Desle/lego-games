@@ -19,6 +19,7 @@
     "differential": "sh reverse-engineering/emulator/setup.sh && pnpm --filter @lego-games/lego-racers exec vitest run differential",
     "golden-trace": "sh reverse-engineering/emulator/setup.sh && pnpm --filter @lego-games/lego-racers run golden-trace",
     "render-trace": "sh reverse-engineering/emulator/setup.sh && pnpm --filter @lego-games/lego-racers-web run render-trace",
+    "pixel-trace": "sh reverse-engineering/emulator/setup.sh && pnpm --filter @lego-games/lego-racers-web run pixel-trace",
     "audio-trace": "sh reverse-engineering/emulator/setup.sh && pnpm --filter @lego-games/lego-racers-web run audio-trace",
     "dev": "pnpm --filter @lego-games/lego-racers-web run dev"
   },

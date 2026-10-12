@@ -67,3 +67,15 @@ export type {
   PresentationFrameInput,
   PresentationScenario,
 } from './types/presentation-trace.types.ts'
+export { comparePixels } from './controller/pixel-trace/compare-pixels/compare-pixels.ts'
+export { rasteriseFrame } from './controller/pixel-trace/rasterise-frame/rasterise-frame.ts'
+export type {
+  PixelComparison,
+  PixelComparisonInput,
+  PixelImage,
+  PixelRegion,
+  PixelTolerance,
+  RasterisedFrame,
+  RasteriseOptions,
+  TextureCoverage,
+} from './controller/pixel-trace/pixel-trace.types.ts'

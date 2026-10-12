@@ -37,7 +37,8 @@ export const createDecalMaterial = (scene: Scene, material: SceneMaterial): Mate
   const three = createSceneMaterial(
     { ...material, renderState: { ...material.renderState, isAlphaTestEnabled: false } },
     scene.textures,
-    new Map()
+    new Map(),
+    true
   )
   three.depthWrite = true
   three.depthFunc = LessEqualDepth
