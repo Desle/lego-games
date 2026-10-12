@@ -61,3 +61,5 @@ export type CinemaDatabase = {
   readonly cinemas: readonly Cinema[]
   readonly readByteCount: number
 }
+
+export type CinemaOrientation = { readonly forward: FloatTriple; readonly up: FloatTriple }

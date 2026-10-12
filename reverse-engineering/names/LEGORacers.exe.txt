@@ -871,3 +871,9 @@
 00484d90 PickRacerScreen_CreateWidgets
 00484f40 PickRacerScreen_OnButton
 004864a0 RacerShowcase_ShowNextRacer
+00466d90 Cinema_Update
+00466d00 Cinema_Switch
+00406390 CinemaTimeline_Update
+004065d0 CinemaTimeline_ProcessFrames
+00406330 CinemaTimeline_Reset
+00488b40 RaceSelect_SetChampionFigure

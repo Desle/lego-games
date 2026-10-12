@@ -2,6 +2,7 @@ import { createTokenReader, readFloatTriple } from '../../../token-reader/index.
 import type { FloatTriple, TokenReader } from '../../../token-reader/index.ts'
 import { CinemaKeyword } from '../../types/cinema-keyword/cinema-keyword.ts'
 import type {
+  CinemaOrientation,
   Cinema,
   CinemaAction,
   CinemaDatabase,
@@ -19,9 +20,7 @@ const ORIGIN: FloatTriple = Object.freeze([0, 0, 0])
 const FORWARD: FloatTriple = Object.freeze([1, 0, 0])
 const UP: FloatTriple = Object.freeze([0, 0, 1])
 
-type Orientation = { readonly forward: FloatTriple; readonly up: FloatTriple }
-
-const readOrientation = (reader: TokenReader): Orientation => {
+const readOrientation = (reader: TokenReader): CinemaOrientation => {
   const forward = readFloatTriple(reader)
   const up = readFloatTriple(reader)
   return Object.freeze({ forward, up })

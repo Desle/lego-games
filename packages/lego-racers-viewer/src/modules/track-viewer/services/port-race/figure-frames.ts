@@ -27,6 +27,14 @@ const FIGURE_SCALE = 1 / 64
 const SCALE_LIMIT = 0.1
 const DUPLICATE_TOLERANCE = 0.001
 
+const getBoneTranslation = (
+  matrices: Float32Array,
+  bone: number
+): readonly [number, number, number] => {
+  const at = (offset: number): number => (matrices[bone * MATRIX_SIZE + offset] ?? 0) * FIGURE_SCALE
+  return [at(12), at(13), at(14)]
+}
+
 export const multiply = (left: readonly number[], right: readonly number[]): number[] => {
   const product = Array.from({ length: MATRIX_SIZE }, () => 0)
   for (let row = 0; row < 4; row += 1)
@@ -102,9 +110,7 @@ export const getPortBonePositions = (
   )
   const angle = Math.atan2(figure.forward[1] ?? 0, figure.forward[0] ?? 1)
   return Array.from({ length: matrices.length / MATRIX_SIZE }, (_, bone) => {
-    const x = (matrices[bone * MATRIX_SIZE + 12] ?? 0) * FIGURE_SCALE
-    const y = (matrices[bone * MATRIX_SIZE + 13] ?? 0) * FIGURE_SCALE
-    const z = (matrices[bone * MATRIX_SIZE + 14] ?? 0) * FIGURE_SCALE
+    const [x, y, z] = getBoneTranslation(matrices, bone)
     return [
       (figure.position[0] ?? 0) + x * Math.cos(angle) - y * Math.sin(angle),
       (figure.position[1] ?? 0) + x * Math.sin(angle) + y * Math.cos(angle),
@@ -142,21 +148,19 @@ export const getCinemaBonePositions = (
     skeleton,
     getSkeletonPose(getRestPose(skeleton), animation, state)
   )
-  const [forwardX = 0, forwardY = 0, forwardZ = 0] = action.forward
-  const [upX = 0, upY = 0, upZ = 0] = action.up
-  const side = [
+  const [forwardX, forwardY, forwardZ] = action.forward
+  const [upX, upY, upZ] = action.up
+  const [sideX, sideY, sideZ] = [
     upY * forwardZ - upZ * forwardY,
     upZ * forwardX - upX * forwardZ,
     upX * forwardY - upY * forwardX,
-  ]
+  ] as const
   return Array.from({ length: matrices.length / MATRIX_SIZE }, (_, bone) => {
-    const x = (matrices[bone * MATRIX_SIZE + 12] ?? 0) * FIGURE_SCALE
-    const y = (matrices[bone * MATRIX_SIZE + 13] ?? 0) * FIGURE_SCALE
-    const z = (matrices[bone * MATRIX_SIZE + 14] ?? 0) * FIGURE_SCALE
+    const [x, y, z] = getBoneTranslation(matrices, bone)
     return [
-      (action.position[0] ?? 0) + x * forwardX + y * (side[0] ?? 0) + z * upX,
-      (action.position[1] ?? 0) + x * forwardY + y * (side[1] ?? 0) + z * upY,
-      (action.position[2] ?? 0) + x * forwardZ + y * (side[2] ?? 0) + z * upZ,
+      action.position[0] + x * forwardX + y * sideX + z * upX,
+      action.position[1] + x * forwardY + y * sideY + z * upY,
+      action.position[2] + x * forwardZ + y * sideZ + z * upZ,
     ]
   })
 }
