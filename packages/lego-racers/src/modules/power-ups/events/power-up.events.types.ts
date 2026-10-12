@@ -121,6 +121,19 @@ export type PowerUpEvent =
   // A sound the power-up code plays through the race's sound player (0x00443b50, 0x00443b80); `address` is the return
   // address of the call.
   | { readonly type: 'power_ups.sound_played'; readonly soundId: number; readonly address: string }
+  // A looped sound object a power-up effect starts (RaceSounds_Get 0x00443bd0, then slot +4 with 1) and the end of
+  // it; `key` names the effect.
+  | {
+      readonly type: 'power_ups.looped_sound_started'
+      readonly key: string
+      readonly soundId: number
+      readonly address: string
+    }
+  | {
+      readonly type: 'power_ups.looped_sound_stopped'
+      readonly key: string
+      readonly address: string
+    }
   // 0x00439240: a driver voice.
   | { readonly type: 'power_ups.voice'; readonly racer: number; readonly sound: number }
   // 0x00439c90 (Racer_Taunt): using with nothing held plays sound racer +0xd23 and notifies the event system.

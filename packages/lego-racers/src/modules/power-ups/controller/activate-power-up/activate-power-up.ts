@@ -288,10 +288,14 @@ export const activateLauncherWarp = (
 const activateRockets = (step: PowerUpStep, racer: number): PowerUpStep =>
   Array.from({ length: ROCKETS_PER_USE }, (_, rocketIndex) => rocketIndex).reduce(
     (current, rocketIndex) =>
-      startEffect(current, PowerUpEffectKind.ROCKET, {
-        ...getPlainStart(racer, 3, 3000, null),
-        rocketIndex,
-      }),
+      // 0x00456560 (each rocket's set-up) ends with sound 0x33.
+      getStepWithEvents(
+        startEffect(current, PowerUpEffectKind.ROCKET, {
+          ...getPlainStart(racer, 3, 3000, null),
+          rocketIndex,
+        }),
+        [{ type: 'power_ups.sound_played', soundId: 0x33, address: '0x00456668' }]
+      ),
     step
   )
 
@@ -349,7 +353,19 @@ const activateHazard = (
     step,
     kind,
     getPlainStart(racer, level, timerMilliseconds, null),
-    (started) => started
+    (started, effectId) =>
+      kind === PowerUpEffectKind.MAGNET
+        ? getStepWithEvents(started, [
+            // 0x004560b0 (the magnet's placing): sound 0x21, and sound 0x22 loops while it lasts.
+            { type: 'power_ups.sound_played', soundId: 0x21, address: '0x0045622a' },
+            {
+              type: 'power_ups.looped_sound_started',
+              key: `magnet:${String(effectId)}`,
+              soundId: 0x22,
+              address: '0x0045623d',
+            },
+          ])
+        : started
   )
 }
 

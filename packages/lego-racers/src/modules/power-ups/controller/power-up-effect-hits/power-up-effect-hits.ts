@@ -1,5 +1,5 @@
 import type { Vector3 } from '../../../simulation-math/index.ts'
-import type { CurseFigureFrame } from '../../events/power-up.events.types.ts'
+import type { CurseFigureFrame, PowerUpEvent } from '../../events/power-up.events.types.ts'
 import {
   EffectState,
   PowerUpEffectKind,
@@ -308,6 +308,31 @@ export const touchHazardEffect = (
   return getStepWithEffect(struck, { ...getEffect(struck, effectId), state: EffectState.FINISHED })
 }
 
+// The sound of the end of a flight: the cannon's (0x00451b50) and the barrel's (0x00452ff0, which also stops its hum)
+// is sound 5, the rocket's (0x004568f0) sound 0x32.
+const getProjectileEndSounds = (
+  effect: PowerUpEffect,
+  effectId: number
+): readonly PowerUpEvent[] => {
+  switch (effect.kind) {
+    case PowerUpEffectKind.CANNON:
+      return [{ type: 'power_ups.sound_played', soundId: 5, address: '0x00451c55' }]
+    case PowerUpEffectKind.BARREL:
+      return [
+        { type: 'power_ups.sound_played', soundId: 5, address: '0x004530ad' },
+        {
+          type: 'power_ups.looped_sound_stopped',
+          key: `barrel:${String(effectId)}`,
+          address: '0x00452ff0',
+        },
+      ]
+    case PowerUpEffectKind.ROCKET:
+      return [{ type: 'power_ups.sound_played', soundId: 0x32, address: '0x00456a6e' }]
+    default:
+      return []
+  }
+}
+
 // A cannon, rocket or barrel that ended its flight without hitting a racer (0x00451b50, 0x004568f0, 0x00452ff0).
 export const endProjectileFlight = (
   step: PowerUpStep,
@@ -317,12 +342,7 @@ export const endProjectileFlight = (
 ): PowerUpStep => {
   const effect = getEffect(step, effectId)
   const isBarrel = effect.kind === PowerUpEffectKind.BARREL
-  const sounded =
-    effect.kind === PowerUpEffectKind.CANNON
-      ? getStepWithEvents(step, [
-          { type: 'power_ups.sound_played', soundId: 5, address: '0x00451c55' },
-        ])
-      : step
+  const sounded = getStepWithEvents(step, getProjectileEndSounds(effect, effectId))
   const exploded = getStepWithEvents(sounded, [
     {
       type: 'power_ups.explosion',
