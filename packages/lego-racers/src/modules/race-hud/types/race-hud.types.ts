@@ -91,7 +91,39 @@ export type HudFillCommand = {
   readonly color: number
 }
 
-export type HudCommand = HudTextCommand | HudImageCommand | HudFillCommand
+// A part of an image drawn into a rectangle (the vtable +0x7c blit with a source rectangle): the minimap's dots.
+export type HudImagePartCommand = {
+  readonly kind: 'image_part'
+  readonly imageIndex: number
+  readonly imageName: string
+  readonly x: number
+  readonly y: number
+  readonly width: number
+  readonly height: number
+  // The part of the image: left, top, right, bottom, in the image's own pixels.
+  readonly source: readonly [number, number, number, number]
+}
+
+export type HudVertex = {
+  readonly x: number
+  readonly y: number
+  // The texture coordinates (v = 0 is the picture's bottom edge); unused without an image.
+  readonly u: number
+  readonly v: number
+  // 0xAARRGGBB.
+  readonly color: number
+}
+
+// A triangle the minimap draws (0x00423fc0 clips it to the screen, then draws it): textured with an image of the world
+// (the map) or plain (the arrow).
+export type HudPolygonCommand = {
+  readonly kind: 'polygon'
+  readonly imageName: string | null
+  readonly vertices: readonly [HudVertex, HudVertex, HudVertex]
+}
+
+export type HudCommand =
+  HudTextCommand | HudImageCommand | HudFillCommand | HudImagePartCommand | HudPolygonCommand
 
 // What the HUD object remembers between frames.
 export type HudState = {
@@ -136,7 +168,34 @@ export type HudRacerView = {
   readonly heldPowerUp: HudHeldPowerUp
 }
 
+export type HudMapPoint = {
+  readonly x: number
+  readonly y: number
+}
+
+// A racer on the minimap: its display frame's position, and whether a computer drives it (racer +0xd08 = 2).
+export type HudMapRacer = {
+  readonly position: HudMapPoint
+  readonly isComputer: boolean
+}
+
+// What 0x004249b0 (the minimap, HUD display mode 1) reads: the race description's display bounds (keyword 0x46, file
+// order, given to 0x00426280), the mirrored flag, the map image of the world, and the racers.
+export type HudMinimap = {
+  readonly displayBounds: readonly [number, number, number, number]
+  readonly isMirrored: boolean
+  // The image database name of the map picture, or null when the world has none (the map is then not drawn).
+  readonly mapImageName: string | null
+  // In the race's racer order.
+  readonly racers: readonly HudMapRacer[]
+  readonly ownIndex: number
+  // The first row of the own display frame's rotation (+0x28, +0x2c): the way the car points.
+  readonly ownHeading: HudMapPoint
+}
+
 export type HudInput = {
+  // Null when the race has no display bounds.
+  readonly minimap: HudMinimap | null
   readonly frameMilliseconds: number
   readonly layout: HudLayout
   readonly racer: HudRacerView

@@ -2,6 +2,7 @@ import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-race
 import { layoutText } from '@lego-games/lego-racers/font-rendering'
 import { useEffect, useMemo, useRef } from 'react'
 import { createBitmapFontPainter } from '../../controller/bitmap-font-painter/bitmap-font-painter.ts'
+import { paintHudPolygon } from './hud-polygon.ts'
 import type { RaceHudOverlayProps } from './race-hud-overlay.types.ts'
 
 // 0xAARRGGBB; null is the font's own white.
@@ -22,6 +23,18 @@ const RaceHudOverlay = ({
 }: RaceHudOverlayProps) => {
   const canvasReference = useRef<HTMLCanvasElement | null>(null)
   const painter = useMemo(() => createBitmapFontPainter(), [])
+  // The images the canvas draws parts and triangles of (the minimap), loaded once from their data URLs.
+  const loadedImages = useMemo(
+    () =>
+      new Map(
+        [...imageUrls].map(([name, url]) => {
+          const image = new Image()
+          image.src = url
+          return [name, image] as const
+        })
+      ),
+    [imageUrls]
+  )
   useEffect(() => {
     const context = canvasReference.current?.getContext('2d') ?? null
     if (context === null) return
@@ -34,6 +47,31 @@ const RaceHudOverlay = ({
       if (command.kind === 'fill') {
         context.fillStyle = getCssColor(command.color)
         context.fillRect(command.x, command.y, command.width, command.height)
+        continue
+      }
+      if (command.kind === 'image_part') {
+        const image = loadedImages.get(command.imageName.toUpperCase())
+        if (image === undefined || !image.complete) continue
+        const [sourceLeft, sourceTop, sourceRight, sourceBottom] = command.source
+        context.drawImage(
+          image,
+          sourceLeft,
+          sourceTop,
+          sourceRight - sourceLeft,
+          sourceBottom - sourceTop,
+          command.x,
+          command.y,
+          command.width,
+          command.height
+        )
+        continue
+      }
+      if (command.kind === 'polygon') {
+        paintHudPolygon(
+          context,
+          command,
+          command.imageName === null ? null : (loadedImages.get(command.imageName) ?? null)
+        )
         continue
       }
       if (command.kind !== 'text') continue
@@ -54,7 +92,7 @@ const RaceHudOverlay = ({
       })
       painter.drawGlyphs(context, hudFont.image, glyphs, command.color ?? WHITE)
     }
-  }, [commands, fonts, height, painter, width])
+  }, [commands, fonts, height, loadedImages, painter, width])
   return (
     <div className="pointer-events-none absolute inset-0" data-testid="race-hud">
       <canvas
@@ -66,7 +104,13 @@ const RaceHudOverlay = ({
       />
       {commands.map((command, index) => {
         const key = `${String(index)}-${command.kind}`
-        if (command.kind === 'fill') return null
+        if (
+          command.kind === 'fill' ||
+          command.kind === 'image_part' ||
+          command.kind === 'polygon'
+        ) {
+          return null
+        }
         if (command.kind === 'text') {
           return (
             <span key={key} className="sr-only">

@@ -1,6 +1,8 @@
 import { decodeBitmap } from '../../../bitmap/index.ts'
 import { loadBuilderCatalog, loadSavedCars } from '../../../car-builder/index.ts'
 import type { BuilderCatalog, SavedCar } from '../../../car-builder/index.ts'
+import { RACER_SHOWCASE_IDLE_STRING_IDS } from '../../types/racer-showcase/racer-showcase.ts'
+import type { RacerShowcaseAnimation } from '../../types/racer-showcase/racer-showcase.types.ts'
 import { parseAnimation } from '../../../animation/index.ts'
 import { getSkeletalAnimation } from '../../../skeletal-animation/index.ts'
 import type { SkeletalAnimation } from '../../../skeletal-animation/index.ts'
@@ -29,6 +31,7 @@ import type {
 
 const MENU_DIRECTORY = 'MENUDATA'
 const DEFAULT_SAVE_PATH = 'MENUDATA\\DEFAULT.LRS'
+const RACER_SHOWCASE_ANIMATION_PATH = 'MENUDATA\\RSANIM.ADB'
 const MENU_FIGURE_ANIMATION_PATH = 'MENUDATA\\LEGOMAN.ADB'
 const DRIVER_DATABASE_PATH = 'MENUDATA\\PARTDB\\DRIVERS.DDB'
 const BODY_PART_CATALOG_PATH = 'MENUDATA\\PARTDB\\BODYPART.PCB'
@@ -173,10 +176,29 @@ export const loadFrontEndResources = (
     return menuFigureAnimation
   }
 
+  let racerShowcaseAnimation: RacerShowcaseAnimation | null = null
+  const getRacerShowcaseAnimation = (): RacerShowcaseAnimation => {
+    if (racerShowcaseAnimation === null) {
+      const animation = getSkeletalAnimation(
+        parseAnimation(archive.readFile(RACER_SHOWCASE_ANIMATION_PATH))
+      )
+      const clipNames = animation.clips.map((clip) => clip.name.toLowerCase())
+      const menuNames = getStrings(readTable(getPath(MENU_DIRECTORY, 'MENUNAME.SRF')))
+      racerShowcaseAnimation = {
+        animation,
+        idleClipIndices: RACER_SHOWCASE_IDLE_STRING_IDS.map((id) =>
+          clipNames.indexOf((menuNames[id] ?? '').toLowerCase())
+        ),
+      }
+    }
+    return racerShowcaseAnimation
+  }
+
   return Object.freeze({
     getBuilderCatalog,
     getDriverDatabase,
     getMenuFigureAnimation,
+    getRacerShowcaseAnimation,
     getRacerTemplate,
     getDefaultCar,
     getDriverCatalog,

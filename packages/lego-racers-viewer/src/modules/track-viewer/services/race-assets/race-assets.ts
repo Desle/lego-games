@@ -15,6 +15,7 @@ import type {
 } from '@lego-games/lego-racers/race'
 import {
   loadBuiltCarScene,
+  getRacerModelFiles,
   loadBuiltDriverScene,
   RACER_FILE_DIRECTORY,
 } from '@lego-games/lego-racers/racer-appearance'
@@ -58,18 +59,7 @@ const COLOR_KEY_FLAG = 0x20
 const createModelLoader = (archive: JamArchive, raceScene: Scene): ModelLoader => {
   let container = raceScene
   return (names) => {
-    const model = loadModelScene(
-      archive,
-      {
-        directory: RACER_FILE_DIRECTORY,
-        textureNames: [names.textureDatabaseName.toUpperCase()],
-        materialNames: [names.materialLibraryName.toUpperCase()],
-        meshNames: [names.modelName.toUpperCase()],
-        skeletonName: names.skeletonName === '' ? null : names.skeletonName.toUpperCase(),
-        animationName: names.animationName === '' ? null : names.animationName.toUpperCase(),
-      },
-      container
-    )
+    const model = loadModelScene(archive, getRacerModelFiles(names), container)
     container = model.scene
     return model
   }
@@ -237,6 +227,26 @@ const loadHudFonts = (archive: JamArchive): HudFonts => {
 
 // Everything a race of Royal Knights Raceway needs from the player's files: the race definition, the worlds with
 // the sky and the background, the racers' models, the HUD's strings and images, the sound banks and the music.
+// The minimap's picture is a texture of the track's worlds (`igd_map`, 128 x 128), which the HUD draws as an image.
+export const MAP_IMAGE_NAME = 'IGD_MAP'
+const getMapImage = (scene: Scene): readonly (readonly [string, HudImage])[] => {
+  const texture = scene.textures.find((candidate) => candidate.name === 'igd_map')
+  const bitmap = texture?.bitmap ?? null
+  return bitmap === null
+    ? []
+    : [
+        [
+          MAP_IMAGE_NAME,
+          {
+            name: MAP_IMAGE_NAME,
+            width: bitmap.width,
+            height: bitmap.height,
+            colors: bitmap.colors,
+          },
+        ] as const,
+      ]
+}
+
 export const loadRaceAssets = (
   jam: Uint8Array,
   files: RaceGameFiles,
@@ -281,12 +291,14 @@ export const loadRaceAssets = (
     getString: (stringId: number) => getString(table, stringId) ?? '',
     imageNames: Object.freeze(imageDatabase.images.map((image) => image.name.toUpperCase())),
     hudFonts: loadHudFonts(archive),
-    hudImages: new Map(
-      imageDatabase.images.flatMap((image) => {
+    displayBounds: description.displayBounds,
+    hudImages: new Map([
+      ...imageDatabase.images.flatMap((image) => {
         const hudImage = getHudImage(archive, image)
         return hudImage === null ? [] : [[image.name.toUpperCase(), hudImage] as const]
-      })
-    ),
+      }),
+      ...getMapImage(scene),
+    ]),
     generalSounds: readBank(archive, `${COMMON_DIRECTORY}\\GENERAL.SBK`),
     trackSounds: readBank(archive, `${raceDirectory}\\${trackBankName.toUpperCase()}.SBK`),
     trackSoundDirectory: raceDirectory,

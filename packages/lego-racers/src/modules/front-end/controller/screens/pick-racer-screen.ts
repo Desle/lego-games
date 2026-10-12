@@ -1,3 +1,4 @@
+import { getRacerShowcaseView } from '../racer-showcase/racer-showcase.ts'
 import type { FrontEndInput } from '../../types/front-end.types.ts'
 import type { FrontEndWidget } from '../../types/front-end-widget.types.ts'
 import { FrontEndScreen, FrontEndText } from '../../types/front-end-screen/front-end-screen.ts'
@@ -60,7 +61,7 @@ const getWidgets = (runtime: ScreenRuntime): readonly FrontEndWidget[] => {
       styleName: 'menufont',
       alignment: 'center',
     },
-    { kind: 'viewport', itemName: 'showcase' },
+    { kind: 'viewport', itemName: 'showcase', showcase: getRacerShowcaseView(runtime.showcase) },
     {
       kind: 'button',
       itemName: 'control',
