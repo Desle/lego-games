@@ -14,6 +14,7 @@ export {
   stepRacePresentation,
 } from './controller/race-presentation/race-presentation.ts'
 export type {
+  AttachmentState,
   AttachmentView,
   BrickView,
   EffectView,

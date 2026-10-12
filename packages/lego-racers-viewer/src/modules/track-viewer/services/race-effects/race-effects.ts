@@ -1,7 +1,9 @@
 import type { EffectViews, EffectView, RacerPose } from '@lego-games/lego-racers/race-presentation'
+import type { Matrix3 } from '@lego-games/lego-racers/simulation-math'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import type { Scene as ThreeScene } from 'three'
 import { Matrix4 } from 'three'
+import type { Mesh, MeshBasicMaterial } from 'three'
 import { BRICK_LEVEL_DISTANCE } from '@lego-games/lego-racers/race-presentation'
 import type { FigureAnimation } from '@lego-games/lego-racers/racer'
 import type { Vector3Like } from '../race-viewport/race-viewport.types.ts'
@@ -60,6 +62,29 @@ const getRocketLaunchMilliseconds = (
   return animation === undefined ? 0 : Math.trunc((animation.frameCount - 1) / animation.rate)
 }
 
+// 0x0045cf90: a turbo's figures sit 2 units behind the display figure's position and 3 above it, in its frame.
+const TURBO_BEHIND = 2
+const TURBO_ABOVE = 3
+const getTurboPosition = (pose: RacerPose): Vector3Like => {
+  const [forwardX, forwardY, forwardZ, , , , upX, upY, upZ] = pose.rotation
+  return {
+    x: pose.position.x - forwardX * TURBO_BEHIND + upX * TURBO_ABOVE,
+    y: pose.position.y - forwardY * TURBO_BEHIND + upY * TURBO_ABOVE,
+    z: pose.position.z - forwardZ * TURBO_BEHIND + upZ * TURBO_ABOVE,
+  }
+}
+
+const MILLISECONDS_PER_SECOND = 1000
+// The scroll the original adds stays below 1 (it wraps).
+const getWrappedFraction = (value: number): number => value - Math.floor(value)
+
+// 0x0045cf90 sets the figures' orientation (slot 0x40, 0x00410900) from the display figure's second row and third row: the
+// first row of the turbo's frame is the car's side, the second its backwards axis.
+const getTurboRotation = (pose: RacerPose): Matrix3 => {
+  const [forwardX, forwardY, forwardZ, sideX, sideY, sideZ, upX, upY, upZ] = pose.rotation
+  return [sideX, sideY, sideZ, -forwardX, -forwardY, -forwardZ, upX, upY, upZ]
+}
+
 // A growing pool of one model: `use` shows the next free copy, `reset` hides them all.
 const createPool = (scene: ThreeScene, model: ModelScene) => {
   const copies: ModelObject[] = []
@@ -102,10 +127,20 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
     spikedExplosion: createPool(scene, models.spikedExplosion),
     enhancementBrick: createPool(scene, models.enhancementBrick),
   }
+  const portalPool = createPool(scene, models.warpPortal)
   const shieldPools = models.shields.map((model) => createPool(scene, model))
+  const turboPools = models.turbos.map((figures) =>
+    figures.map(({ model }) => createPool(scene, model))
+  )
   return Object.freeze({
     update: (views: EffectViews, eye: Vector3Like, poses: readonly RacerPose[]) => {
-      for (const pool of [...Object.values(pools), ...brickPools.values(), ...shieldPools])
+      for (const pool of [
+        ...Object.values(pools),
+        ...brickPools.values(),
+        ...shieldPools,
+        ...turboPools.flat(),
+        portalPool,
+      ])
         pool.reset()
       for (const view of views.effects) {
         const pool =
@@ -163,6 +198,51 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
           })
         )
       }
+      for (const attachment of views.attachments) {
+        if (attachment.kind !== 'warp') continue
+        const pose = poses.find((candidate) => candidate.racerIndex === attachment.racerIndex)
+        if (pose === undefined) continue
+        const portal = portalPool.use()
+        portal.group.matrix
+          .copy(getFrameMatrix(pose.rotation, pose.position))
+          .multiply(new Matrix4().makeScale(attachment.scale, attachment.scale, attachment.scale))
+        const [scrollU, scrollV] = models.warpPortalScroll
+        portal.group.traverse((object) => {
+          if (object.type !== 'Mesh') return
+          const { map } = (object as Mesh).material as MeshBasicMaterial
+          map?.offset.set(
+            getWrappedFraction(
+              (scrollU * attachment.elapsedMilliseconds) / MILLISECONDS_PER_SECOND
+            ),
+            getWrappedFraction((scrollV * attachment.elapsedMilliseconds) / MILLISECONDS_PER_SECOND)
+          )
+        })
+      }
+      for (const attachment of views.attachments) {
+        const pose = poses.find((candidate) => candidate.racerIndex === attachment.racerIndex)
+        const figures = turboPools[attachment.level]
+        const figureModels = models.turbos[attachment.level]
+        if (pose === undefined || figures === undefined || figureModels === undefined) continue
+        if (attachment.kind !== 'turbo') continue
+        figures.forEach((pool, figureIndex) => {
+          const isFlame = figureIndex > 0
+          // 0x0045d150: the flames are drawn with alpha 0 until the last 50 ms of the starting state.
+          if (isFlame && attachment.state === 'starting' && attachment.timerMilliseconds > 50)
+            return
+          const copy = pool.use()
+          copy.group.matrix.copy(getFrameMatrix(getTurboRotation(pose), getTurboPosition(pose)))
+          const animations = figureModels[figureIndex]?.animations
+          if (animations !== undefined && attachment.state !== 'starting') {
+            copy.object.setAnimationState(
+              getEffectFigureState(animations, {
+                animationId: attachment.state === 'active' ? 1 : 2,
+                isLooping: true,
+                elapsedMilliseconds: attachment.elapsedMilliseconds,
+              })
+            )
+          }
+        })
+      }
       for (const explosion of views.explosions) {
         if (!explosion.isSpiked) continue
         const copy = pools.spikedExplosion.use()
@@ -172,7 +252,13 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
       }
     },
     dispose: () => {
-      for (const pool of [...Object.values(pools), ...brickPools.values(), ...shieldPools])
+      for (const pool of [
+        ...Object.values(pools),
+        ...brickPools.values(),
+        ...shieldPools,
+        ...turboPools.flat(),
+        portalPool,
+      ])
         pool.dispose()
     },
   })

@@ -2,8 +2,10 @@ import { BrickState, EffectState, PowerUpEffectKind } from '../../../power-ups/i
 import type { PowerUpEffect } from '../../../power-ups/index.ts'
 import { BallisticFlightState, ExplosionState } from '../../../projectiles/index.ts'
 import type { EffectMotion, ExplosionPool } from '../../../projectiles/index.ts'
+import { getWarpFadeScale } from '../../../racer/index.ts'
 import type { RaceState } from '../../../race/index.ts'
 import type {
+  AttachmentState,
   AttachmentView,
   BrickView,
   DrawnBrick,
@@ -81,20 +83,70 @@ const getMotionView = (effect: PowerUpEffect, motion: EffectMotion | null): Effe
 
 // 0x0045bd30: a shield of level 0..3 lasts this many milliseconds; 0x0045c2a0 gives it 1000 more while it ends.
 const SHIELD_MILLISECONDS: readonly number[] = [4000, 6000, 8000, 10000]
-const ENDING_MILLISECONDS = 1000
+const SHIELD_ENDING_MILLISECONDS = 1000
+// 0x0045c8f0 starts a turbo for 400 ms; 0x0045d200 gives it 1000, 1500 or 5000 and then 700 to end.
+const TURBO_STARTING_MILLISECONDS = 400
+const TURBO_MILLISECONDS: readonly number[] = [1000, 1500, 5000]
+const TURBO_ENDING_MILLISECONDS = 700
+// 0x0045d560: the warp's first phase lasts 500 ms.
+const WARP_STARTING_MILLISECONDS = 500
 
-const getAttachmentView = (effect: PowerUpEffect): AttachmentView | null => {
-  if (effect.kind !== PowerUpEffectKind.SHIELD || effect.ownerRacer === null) return null
-  const isEnding = effect.state === EffectState.ENDING
-  const total = SHIELD_MILLISECONDS[effect.level] ?? 0
+const getAttachmentState = (state: PowerUpEffect['state']): AttachmentState | null => {
+  switch (state) {
+    case EffectState.STARTING:
+      return 'starting'
+    case EffectState.ACTIVE:
+      return 'active'
+    case EffectState.ENDING:
+      return 'ending'
+    default:
+      return null
+  }
+}
+
+const getAttachmentElapsed = (effect: PowerUpEffect, state: AttachmentState): number => {
+  if (effect.kind === PowerUpEffectKind.SHIELD) {
+    const total = SHIELD_MILLISECONDS[effect.level] ?? 0
+    return state === 'ending'
+      ? total + SHIELD_ENDING_MILLISECONDS - effect.timerMilliseconds
+      : total - effect.timerMilliseconds
+  }
+  if (state === 'starting') return TURBO_STARTING_MILLISECONDS - effect.timerMilliseconds
+  if (state === 'ending') return TURBO_ENDING_MILLISECONDS - effect.timerMilliseconds
+  return (TURBO_MILLISECONDS[effect.level] ?? 0) - effect.timerMilliseconds
+}
+
+const getAttachmentView = (raceState: RaceState, effect: PowerUpEffect): AttachmentView | null => {
+  const isAttached =
+    effect.kind === PowerUpEffectKind.SHIELD || effect.kind === PowerUpEffectKind.TURBO
+  const state = getAttachmentState(effect.state)
+  if (effect.ownerRacer === null || state === null) return null
+  // 0x0045dbe0: the warp's portal is drawn in its first phase (state 2) at the scale the fade table gives.
+  if (effect.kind === PowerUpEffectKind.WARP) {
+    if (state !== 'starting') return null
+    return {
+      kind: effect.kind,
+      level: effect.level,
+      racerIndex: effect.ownerRacer,
+      state,
+      timerMilliseconds: effect.timerMilliseconds,
+      elapsedMilliseconds: WARP_STARTING_MILLISECONDS - effect.timerMilliseconds,
+      scale: getWarpFadeScale(
+        raceState.context.arithmetic,
+        raceState.context.tables,
+        effect.timerMilliseconds
+      ),
+    }
+  }
+  if (!isAttached) return null
   return {
+    scale: 1,
     kind: effect.kind,
     level: effect.level,
     racerIndex: effect.ownerRacer,
-    isEnding,
-    elapsedMilliseconds: isEnding
-      ? total + ENDING_MILLISECONDS - effect.timerMilliseconds
-      : total - effect.timerMilliseconds,
+    state,
+    timerMilliseconds: effect.timerMilliseconds,
+    elapsedMilliseconds: getAttachmentElapsed(effect, state),
   }
 }
 
@@ -152,7 +204,7 @@ export const getEffectViews = (raceState: RaceState): EffectViews => {
     const view =
       effect === undefined || !DRAWN_STATES.includes(effect.state)
         ? null
-        : getAttachmentView(effect)
+        : getAttachmentView(raceState, effect)
     return view === null ? [] : [view]
   })
   const sprites = activeEffectIds.flatMap((effectId) => {

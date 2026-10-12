@@ -175,15 +175,20 @@ export type BrickView = {
 // What the drawing of a brick reads of either brick class.
 export type DrawnBrick = BrickBase & { readonly kind?: string }
 
-// A shield or turbo effect hanging on a racer: its kind and level, the racer, whether it is ending (state 4) and the
-// milliseconds its figure's animation has run (the figure advances with every update of the effect).
+// A shield or turbo effect hanging on a racer: its kind and level, the racer, its state (2, 3 or 4) with the milliseconds
+// left in it, and the milliseconds its figures' animation has run in that state.
 export type AttachmentView = {
   readonly kind: string
   readonly level: number
   readonly racerIndex: number
-  readonly isEnding: boolean
+  readonly state: AttachmentState
+  readonly timerMilliseconds: number
   readonly elapsedMilliseconds: number
+  // The figure's scale (+0x58): 1, except the warp portal's, which follows the fade table (0x0045dbe0).
+  readonly scale: number
 }
+
+export type AttachmentState = 'starting' | 'active' | 'ending'
 
 // A camera-facing picture an effect draws (the cannon ball is one): its material, centre and size in the world.
 export type SpriteView = {

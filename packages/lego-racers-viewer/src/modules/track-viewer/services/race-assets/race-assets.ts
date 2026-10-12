@@ -101,8 +101,31 @@ const getRacerModels = (
 }
 
 // The effect models name materials the power-up libraries hold (GAMEDATA\COMMON POWERUP, GRAPPLE, BARREL, DBRICKS).
-const EFFECT_TEXTURE_LIBRARIES = ['POWERUP', 'BARREL', 'DBRICKS', 'DTUBE']
-const EFFECT_MATERIAL_LIBRARIES = ['POWERUP', 'GRAPPLE', 'BARREL', 'DBRICKS', 'DTUBE']
+const EFFECT_TEXTURE_LIBRARIES = [
+  'DTURBO0',
+  'DTURBO1',
+  'DTURBO2',
+  'POWERUP',
+  'CURSE',
+  'BARREL',
+  'WARPHOLE',
+  'CGREEN',
+  'DBRICKS',
+  'DTUBE',
+]
+const EFFECT_MATERIAL_LIBRARIES = [
+  'DTURBO0',
+  'DTURBO1',
+  'DTURBO2',
+  'POWERUP',
+  'GRAPPLE',
+  'WARPHOLE',
+  'CURSE',
+  'BARREL',
+  'CGREEN',
+  'DBRICKS',
+  'DTUBE',
+]
 
 const loadEffectModel = (
   archive: JamArchive,
@@ -118,6 +141,13 @@ const loadEffectModel = (
     skeletonName: isSkeletal ? skeletonName : null,
     animationName: isSkeletal ? skeletonName : null,
   })
+
+// POWERUP.WDB lists a turbo's instances TurboL0..2 (dt0burn, dt1burn, dt2cburn) and turb0f1, turb0f2 .. turb2f2.
+const TURBO_MODEL_NAMES = [
+  ['DT0BURN', 'DT0FLA1', 'DT0FLA2'],
+  ['DT1BURN', 'DT1FLA1', 'DT1FLA2'],
+  ['DT2CBURN', 'DT2CFLA1', 'DT2CFLA2'],
+]
 
 // POWERUP.WDB lists the four shields (instances shield0..3) on one skeleton and animation, the one of SHEOUT0.
 const SHIELD_MODEL_NAMES = ['SHEOUT0', 'SHEOUT1', 'SHEOUT2', 'SHEOUT3']
@@ -166,6 +196,14 @@ const getWarpTextureScroll = (archive: JamArchive): readonly [number, number] =>
   return [values?.[0] ?? 0, values?.[1] ?? 0]
 }
 
+// The scroll per second of the portal's texture: keyword 0x3f of the instance warpprt in POWERUP.WDB.
+const getPortalTextureScroll = (archive: JamArchive): readonly [number, number] => {
+  const values = readWorld(archive.readFile(`${COMMON_DIRECTORY}\\POWERUP.WDB`)).meshInstances.find(
+    (instance) => instance.name === 'warpprt'
+  )?.keyword3fValues
+  return [values?.[0] ?? 0, values?.[1] ?? 0]
+}
+
 const getEffectMaterials = (archive: JamArchive): Scene =>
   loadModelScene(archive, {
     directory: RACER_FILE_DIRECTORY,
@@ -184,6 +222,14 @@ const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
     barrel: loadEffectModel(archive, 'BARREL', false),
     magnet: loadEffectModel(archive, 'MAGNET04', true),
     spikedExplosion: loadEffectModel(archive, 'SPIKEXP', false),
+    warpPortal: loadEffectModel(archive, 'WARPHOLE', false),
+    warpPortalScroll: getPortalTextureScroll(archive),
+    turbos: TURBO_MODEL_NAMES.map((names) =>
+      names.map((name) => ({
+        model: loadEffectModel(archive, name, true),
+        animations: getFigureAnimations(archive.readFile(getRacerFilePath(name, 'ADB'))),
+      }))
+    ),
     shields: SHIELD_MODEL_NAMES.map((name) => loadEffectModel(archive, name, true, 'SHEOUT0')),
     shieldAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('SHEOUT0', 'ADB'))),
     powerUpBricks: Object.freeze(
