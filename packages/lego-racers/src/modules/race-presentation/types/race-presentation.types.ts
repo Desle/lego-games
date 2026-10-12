@@ -179,6 +179,8 @@ export type ExplosionView = {
   readonly isSpiked: boolean
   readonly position: Vector3
   readonly scale: number
+  // The growth progress (+0x248), 0.05 to 1: the figure's scale and opacity follow it (0x00421850).
+  readonly progress: number
   // Whether it is a ground burst's scar fading rather than the blast growing.
   readonly isFading: boolean
 }

@@ -262,6 +262,7 @@ const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
     rocketAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('DMISSILE', 'ADB'))),
     barrel: loadEffectModel(archive, 'BARREL', false),
     magnet: loadEffectModel(archive, 'MAGNET04', true),
+    plainExplosion: loadEffectModel(archive, 'HEDRA01', false),
     spikedExplosion: loadEffectModel(archive, 'SPIKEXP', false),
     warpPortal: loadEffectModel(archive, 'WARPHOLE', false),
     warpPortalScroll: getInstanceTextureScroll(archive, 'warpprt'),

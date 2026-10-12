@@ -103,6 +103,22 @@ const getTurboFlameAlpha = (attachment: AttachmentView): number | null => {
   return Math.trunc(Math.fround(fade * TURBO_ENDING_ALPHA_SCALE) * TURBO_ENDING_ALPHA_PEAK)
 }
 
+// 0x00421850: the figure's scale grows from 0.05 (0x004b0148) to the explosion's end scale of 1 with the growth progress
+// (never past 1) and its opacity falls from 255 to 0 with it.
+const EXPLOSION_FIGURE_START_SCALE = 0.05
+const EXPLOSION_FIGURE_END_SCALE = 1
+const EXPLOSION_ALPHA_MAXIMUM = 255
+const getExplosionFigureScale = (progress: number): number =>
+  Math.min(
+    Math.fround(
+      Math.fround(EXPLOSION_FIGURE_END_SCALE - EXPLOSION_FIGURE_START_SCALE) * progress +
+        EXPLOSION_FIGURE_START_SCALE
+    ),
+    1
+  )
+const getExplosionFigureAlpha = (progress: number): number =>
+  Math.trunc(Math.max(Math.fround((1 - progress) * EXPLOSION_ALPHA_MAXIMUM), 0))
+
 const MILLISECONDS_PER_SECOND = 1000
 // Hypothesis, measured against the render trace (turbo levels 0 to 2): once the turbo is active its figures have advanced one
 // frame more than the effect's timer shows, and their texture scroll runs about two frames behind it.
@@ -172,6 +188,7 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
     rocket: createPool(scene, models.rocket),
     barrel: createPool(scene, models.barrel),
     magnet: createPool(scene, models.magnet),
+    plainExplosion: createPool(scene, models.plainExplosion),
     spikedExplosion: createPool(scene, models.spikedExplosion),
     enhancementBrick: createPool(scene, models.enhancementBrick),
   }
@@ -296,11 +313,14 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
         })
       }
       for (const explosion of views.explosions) {
-        if (!explosion.isSpiked) continue
-        const copy = pools.spikedExplosion.use()
+        // 0x00421ae0: only a growing explosion draws its figure; a fading one leaves its scar (a decal).
+        if (explosion.isFading) continue
+        const copy = (explosion.isSpiked ? pools.spikedExplosion : pools.plainExplosion).use()
+        const scale = getExplosionFigureScale(explosion.progress)
         copy.group.matrix
           .copy(getHeadingMatrix(null, explosion.position))
-          .multiply(new Matrix4().makeScale(explosion.scale, explosion.scale, explosion.scale))
+          .multiply(new Matrix4().makeScale(scale, scale, scale))
+        setAlphaOverride(copy.group, getExplosionFigureAlpha(explosion.progress))
       }
     },
     dispose: () => {
