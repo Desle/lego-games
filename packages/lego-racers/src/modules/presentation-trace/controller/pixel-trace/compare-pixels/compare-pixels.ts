@@ -5,11 +5,11 @@ import type {
   TextureCoverage,
 } from '../pixel-trace.types.ts'
 
-const CHANNEL_COUNT = 4
-const RGB_CHANNEL_COUNT = 3
-const CELL_SIZE = 16
+const CHANNEL_COUNT = 4 // @check-allow traced-constants: comparison parameter of the pixel trace, not original behaviour
+const RGB_CHANNEL_COUNT = 3 // @check-allow traced-constants: comparison parameter of the pixel trace, not original behaviour
+const CELL_SIZE = 16 // @check-allow traced-constants: comparison parameter of the pixel trace, not original behaviour
 // A cell joins a region when this many of its pixels differ.
-const MINIMUM_DIFFERING_PER_CELL = 12
+const MINIMUM_DIFFERING_PER_CELL = 12 // @check-allow traced-constants: comparison parameter of the pixel trace, not original behaviour
 const UNTEXTURED_LABEL = 'untextured'
 const NEIGHBOUR_OFFSETS = [-1, 0, 1] as const
 
@@ -120,7 +120,7 @@ const getRegion = (
     dominantTextures: [...textureCounts]
       .map(([label, count]) => Object.freeze({ label, count }))
       .sort((first, second) => second.count - first.count)
-      .slice(0, 4),
+      .slice(0, 4), // @check-allow traced-constants: comparison parameter of the pixel trace, not original behaviour
   })
 }
 

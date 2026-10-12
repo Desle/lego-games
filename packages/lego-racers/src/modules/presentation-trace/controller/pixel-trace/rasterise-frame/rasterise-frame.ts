@@ -19,12 +19,14 @@ import { decodeTexture } from '../decode-texture.ts'
 import type { DecodedTexture, RasterisedFrame, RasteriseOptions } from '../pixel-trace.types.ts'
 import type { Corner, DrawContext, Scratch, Target } from './rasterise-frame.types.ts'
 
-const CHANNEL_COUNT = 4
-const CHANNEL_MAXIMUM = 255
+const VERTICES_PER_TRIANGLE = 3 // @check-allow traced-constants: a triangle has three corners
+const RGB_CHANNEL_COUNT = 3 // @check-allow traced-constants: red, green and blue
+const CHANNEL_COUNT = 4 // @check-allow traced-constants: software rasteriser geometry (pixel centre, triangle vertices, channels); hypothesis of the original hardware, not traced
+const CHANNEL_MAXIMUM = 255 // @check-allow traced-constants: software rasteriser geometry (pixel centre, triangle vertices, channels); hypothesis of the original hardware, not traced
 const BYTE_MASK = 0xff
-const TRIANGLE_LIST = 4
-const TRIANGLE_STRIP = 5
-const TRIANGLE_FAN = 6
+const TRIANGLE_LIST = 4 // @check-allow traced-constants: Direct3D D3DPT value of the recorded draw (DrawIndexedPrimitive primitive type, render-trace.md)
+const TRIANGLE_STRIP = 5 // @check-allow traced-constants: Direct3D D3DPT value of the recorded draw (DrawIndexedPrimitive primitive type, render-trace.md)
+const TRIANGLE_FAN = 6 // @check-allow traced-constants: Direct3D D3DPT value of the recorded draw (DrawIndexedPrimitive primitive type, render-trace.md)
 const NO_TEXTURE = -1
 
 // Direct3D hands the draw a diffuse colour as ARGB.
@@ -45,11 +47,14 @@ const getCorner = (vertex: OriginalVertex): Corner =>
 const getTriangleIndices = (draw: OriginalDraw): readonly (readonly [number, number, number])[] => {
   const order = draw.indices ?? draw.vertices.map((_vertex, index) => index)
   if (draw.primitive === TRIANGLE_LIST) {
-    return Array.from({ length: Math.floor(order.length / 3) }, (_, triangle) => [
-      order[triangle * 3] ?? 0,
-      order[triangle * 3 + 1] ?? 0,
-      order[triangle * 3 + 2] ?? 0,
-    ])
+    return Array.from(
+      { length: Math.floor(order.length / VERTICES_PER_TRIANGLE) },
+      (_, triangle) => [
+        order[triangle * 3] ?? 0, // @check-allow traced-constants: software rasteriser geometry (pixel centre, triangle vertices, channels); hypothesis of the original hardware, not traced
+        order[triangle * 3 + 1] ?? 0, // @check-allow traced-constants: software rasteriser geometry (pixel centre, triangle vertices, channels); hypothesis of the original hardware, not traced
+        order[triangle * 3 + 2] ?? 0, // @check-allow traced-constants: software rasteriser geometry (pixel centre, triangle vertices, channels); hypothesis of the original hardware, not traced
+      ]
+    )
   }
   if (draw.primitive === TRIANGLE_STRIP) {
     return Array.from({ length: Math.max(0, order.length - 2) }, (_, triangle) =>
@@ -181,10 +186,10 @@ const sampleTexture = (
       )
       continue
     }
-    const left = Math.floor(scaledU - 0.5)
-    const top = Math.floor(scaledV - 0.5)
-    const fractionX = scaledU - 0.5 - left
-    const fractionY = scaledV - 0.5 - top
+    const left = Math.floor(scaledU - 0.5) // @check-allow traced-constants: software rasteriser geometry (pixel centre, triangle vertices, channels); hypothesis of the original hardware, not traced
+    const top = Math.floor(scaledV - 0.5) // @check-allow traced-constants: software rasteriser geometry (pixel centre, triangle vertices, channels); hypothesis of the original hardware, not traced
+    const fractionX = scaledU - 0.5 - left // @check-allow traced-constants: software rasteriser geometry (pixel centre, triangle vertices, channels); hypothesis of the original hardware, not traced
+    const fractionY = scaledV - 0.5 - top // @check-allow traced-constants: software rasteriser geometry (pixel centre, triangle vertices, channels); hypothesis of the original hardware, not traced
     const upper =
       getTexel(texture, left, top, state.addressing, channel) * (1 - fractionX) +
       getTexel(texture, left + 1, top, state.addressing, channel) * fractionX
@@ -249,12 +254,12 @@ const writeFragment = (target: Target, offset: number, context: DrawContext, scr
   ) {
     return false
   }
-  for (let channel = 0; channel < 3; channel++) {
+  for (let channel = 0; channel < RGB_CHANNEL_COUNT; channel++) {
     const stored = (target.colors[offset * CHANNEL_COUNT + channel] ?? 0) / CHANNEL_MAXIMUM
     scratch.destination[channel] = stored
   }
-  scratch.destination[3] = 1
-  for (let channel = 0; channel < 3; channel++) {
+  scratch.destination[RGB_CHANNEL_COUNT] = 1
+  for (let channel = 0; channel < RGB_CHANNEL_COUNT; channel++) {
     const source = scratch.source[channel] ?? 0
     const color = state.isBlendEnabled
       ? source * getBlendFactor(state.sourceBlend, scratch.source, scratch.destination, channel) +
@@ -296,8 +301,8 @@ const rasteriseTriangle = (
   const bottom = Math.min(target.height - 1, Math.ceil(Math.max(first.y, second.y, third.y)))
   for (let row = top; row <= bottom; row++) {
     for (let column = left; column <= right; column++) {
-      const pointX = column + 0.5
-      const pointY = row + 0.5
+      const pointX = column + 0.5 // @check-allow traced-constants: software rasteriser geometry (pixel centre, triangle vertices, channels); hypothesis of the original hardware, not traced
+      const pointY = row + 0.5 // @check-allow traced-constants: software rasteriser geometry (pixel centre, triangle vertices, channels); hypothesis of the original hardware, not traced
       const edgeFirst = getEdge(second.x, second.y, third.x, third.y, pointX, pointY)
       const edgeSecond = getEdge(third.x, third.y, first.x, first.y, pointX, pointY)
       const edgeThird = getEdge(first.x, first.y, second.x, second.y, pointX, pointY)
