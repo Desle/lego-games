@@ -7,20 +7,26 @@ import {
   NO_RACE_CONTACTS,
   stepRace,
 } from '../../../race/index.ts'
-import type { RaceDefinition } from '../../../race/index.ts'
+import type { LoadRaceOptions, RaceDefinition } from '../../../race/index.ts'
+import { PauseMenuMode } from '../../../race/index.ts'
 import { getRacerControls } from '../../../race-input/index.ts'
 import type { SessionRecording } from '../../../session-recording/index.ts'
 import { getReplayLoadOptions } from '../../../session-recording/index.ts'
 import type { PortReplay } from './replay-port.types.ts'
 
-// The race the recording started, loaded the way the session loaded it.
+// The race the recording started, loaded the way the session loaded it (`overrides` change what the comparison with the
+// emulator needs: the champion car, no racing tune).
 export const loadReplayDefinition = (
   recording: SessionRecording,
   jam: Uint8Array,
-  executable: Uint8Array
+  executable: Uint8Array,
+  overrides: Partial<LoadRaceOptions> = {}
 ): RaceDefinition =>
   Object.freeze({
-    ...loadRaceDefinition(jam, executable, getReplayLoadOptions(recording.header, jam)),
+    ...loadRaceDefinition(jam, executable, {
+      ...getReplayLoadOptions(recording.header, jam),
+      ...overrides,
+    }),
     isCountdownSkipped: recording.header.isCountdownSkipped,
   })
 
@@ -29,9 +35,11 @@ export const loadReplayDefinition = (
 export const replayOnPort = (
   recording: SessionRecording,
   jam: Uint8Array,
-  executable: Uint8Array
+  executable: Uint8Array,
+  overrides: Partial<LoadRaceOptions> = {}
 ): PortReplay => {
-  let raceState = createRace(loadReplayDefinition(recording, jam, executable))
+  let raceState = createRace(loadReplayDefinition(recording, jam, executable, overrides))
+  const menuOpenFrames: boolean[] = []
   const frames = recording.frames.map((frame, index) => {
     const granted =
       frame.grant === null
@@ -46,11 +54,12 @@ export const replayOnPort = (
       },
       frame.milliseconds
     ).raceState
+    menuOpenFrames.push(raceState.pauseMenu.mode !== PauseMenuMode.NONE)
     return {
       frame: index,
       milliseconds: frame.milliseconds,
       fields: getTraceFields(raceState, recording.header.localPlayerCount),
     }
   })
-  return { raceState, frames }
+  return { raceState, frames, menuOpenFrames }
 }

@@ -28,6 +28,21 @@ def write_float(machine, address: int, value: float) -> None:
     machine.write_bytes(address, struct.pack("<f", value))
 
 
+JOYSTICK_KIND = 4
+GAMEPAD_SUB_TYPE = 4
+STEERING_AXIS_CODES = (0x40000001, 0x40000000)
+JOYSTICK_BUTTON_CODE = 0x30000000
+
+
+def fill_joystick_controls(machine, base: int) -> None:
+    """The slot Controls_SetDefaults (0x0042e960) makes for a gamepad: the kind, its sub type, the device index, the two steering
+    axes and buttons 0 to 6 for the other bindings."""
+    machine.write_bytes(base, bytes([JOYSTICK_KIND, GAMEPAD_SUB_TYPE, 0]))
+    codes = list(STEERING_AXIS_CODES) + [JOYSTICK_BUTTON_CODE | button for button in range(7)]
+    for binding, code in enumerate(codes):
+        machine.write_u32(base + 4 + 4 * binding, code)
+
+
 def fill_settings(machine, scenario: dict) -> None:
     local_players = scenario.get("localPlayerCount", 1)
     codes = scenario["racerCodes"]
@@ -50,6 +65,9 @@ def fill_settings(machine, scenario: dict) -> None:
     for player in range(local_players):
         base = SETTINGS + CONTROL_BASE + CONTROL_STRIDE * player
         machine.write_bytes(base, bytes(CONTROL_STRIDE))
+        if scenario.get("controller", "keyboard") == "joystick" and player == 0:
+            fill_joystick_controls(machine, base)
+            continue
         machine.write_bytes(base, bytes([3]))
         for binding in range(9):
             machine.write_u32(base + 4 + 4 * binding, machine.read_u32(DEFAULT_BINDING_TABLE + 4 * binding))

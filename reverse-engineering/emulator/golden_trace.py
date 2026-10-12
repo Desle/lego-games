@@ -3,7 +3,8 @@
 Usage: golden_trace.py <scenario.json>   (or the scenario on stdin when no path is given)
 
 A scenario is {"raceFolder", "racerCodes", "racerCount", "localPlayerCount", "randomPosition", "isMirrored", "raceModeFlags",
-"fpu": "auto" | "single" | "double", "frames": [{"dt": milliseconds, "keys": [scan codes held]}, ...]}.
+"controller": "keyboard" | "joystick", "fpu": "auto" | "single" | "double",
+"frames": [{"dt": milliseconds, "keys": [scan codes held], "menuKeys": [scan codes tapped], "joystick": {"axes": [-1000..1000], "buttons": [indices]}}, ...]}.
 One JSON object per line goes to stdout: {"frame": n, "dt": ..., "fields": {name: [32-bit words]}} and a final {"done": true}.
 """
 
@@ -17,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from unicorn.x86_const import UC_X86_REG_FPCW  # noqa: E402
 
 import boot  # noqa: E402
+import com_stubs  # noqa: E402
 import computer_trace  # noqa: E402
 import power_up_trace  # noqa: E402
 import race_session  # noqa: E402
@@ -209,6 +211,11 @@ class TraceRun:
         for code in sorted(self.held_keys - wanted):
             machine.com.send_key(code, False)
         self.held_keys = wanted
+        for code in frame.get("menuKeys", []):
+            machine.com.send_key(code, True)
+            machine.com.send_key(code, False)
+        joystick = frame.get("joystick")
+        machine.com.joystick_state = com_stubs.joystick_state_of(joystick["axes"], joystick["buttons"]) if joystick else com_stubs.neutral_joystick_state()
         if index == 0:
             machine.write_u32(APPLICATION_BASE + LAST_TIME_OFFSET, os_state.now_milliseconds)
         os_state.now_milliseconds = machine.read_u32(APPLICATION_BASE + LAST_TIME_OFFSET) + frame["dt"]

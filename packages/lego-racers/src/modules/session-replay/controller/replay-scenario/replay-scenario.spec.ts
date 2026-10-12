@@ -1,6 +1,6 @@
 import { REPLAY_FORMAT, REPLAY_VERSION } from '../../../session-recording/index.ts'
 import type { ReplayFrame, ReplayHeader } from '../../../session-recording/index.ts'
-import { getReplayScenarioSplit } from './replay-scenario.ts'
+import { getReplayScenario, getReplayScenarioSplit } from './replay-scenario.ts'
 
 const HEADER: ReplayHeader = {
   format: REPLAY_FORMAT,
@@ -29,7 +29,7 @@ const getFrame = (overrides: Partial<ReplayFrame> = {}): ReplayFrame => ({
 })
 
 describe('the frames the original can be fed', () => {
-  it('stops at the first menu key, gamepad frame or grant', () => {
+  it('stops at the first developer grant', () => {
     // Arrange
     const recording = {
       header: HEADER,
@@ -40,7 +40,10 @@ describe('the frames the original can be fed', () => {
     const split = getReplayScenarioSplit(recording)
 
     // Assert
-    expect(split).toEqual({ supportedFrameCount: 2, stopReason: 'a developer power-up grant' })
+    expect(split).toMatchObject({
+      supportedFrameCount: 2,
+      stopReason: 'a developer power-up grant',
+    })
   })
 
   it('feeds every frame of a plain keyboard session', () => {
@@ -51,6 +54,65 @@ describe('the frames the original can be fed', () => {
     const split = getReplayScenarioSplit(recording)
 
     // Assert
-    expect(split).toEqual({ supportedFrameCount: 2, stopReason: null })
+    expect(split).toEqual({
+      supportedFrameCount: 2,
+      stopReason: null,
+      controller: 'keyboard',
+      menuKeyFrameCount: 0,
+      gamepadFrameCount: 0,
+    })
+  })
+
+  it('feeds pause-menu keys as taps and a gamepad in use as the joystick', () => {
+    // Arrange
+    const pad = { axes: [-0.4237], pressedButtonIndices: [0, 9] }
+    const recording = {
+      header: { ...HEADER, racerCodes: ['aa', 'bb'] },
+      frames: [
+        getFrame({ input: { pressedKeyCodes: new Set(), gamepad: pad } }),
+        getFrame({
+          input: { pressedKeyCodes: new Set(), gamepad: pad },
+          menu: {
+            isPausePressed: true,
+            selectionChange: 0,
+            isConfirmPressed: false,
+            isAnyInputPressed: true,
+          },
+        }),
+      ],
+    }
+
+    // Act
+    const split = getReplayScenarioSplit(recording)
+    const scenario = getReplayScenario(recording, new Uint8Array(), 'pad', [])
+
+    // Assert
+    expect(split).toMatchObject({
+      controller: 'joystick',
+      menuKeyFrameCount: 1,
+      gamepadFrameCount: 2,
+    })
+    expect(scenario.frames[1]).toMatchObject({
+      tappedScanCodes: [0x01],
+      joystick: { axes: [-424, 0], buttonIndices: [0] },
+    })
+  })
+
+  it('stops where a keyboard drives a gamepad session outside the menu', () => {
+    // Arrange
+    const pad = { axes: [0.5], pressedButtonIndices: [] }
+    const recording = {
+      header: HEADER,
+      frames: [getFrame({ input: { pressedKeyCodes: new Set(), gamepad: pad } }), getFrame()],
+    }
+
+    // Act
+    const split = getReplayScenarioSplit(recording)
+
+    // Assert
+    expect(split).toMatchObject({
+      supportedFrameCount: 1,
+      stopReason: 'a keyboard key driving a gamepad session',
+    })
   })
 })
