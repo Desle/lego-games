@@ -29,6 +29,7 @@ export type RacerModels = {
 // the files that give them their look are not traced (projectiles.md).
 export type EffectModels = {
   readonly rocket: ModelScene
+  readonly rocketAnimations: readonly FigureAnimation[]
   readonly barrel: ModelScene
   readonly magnet: ModelScene
   readonly spikedExplosion: ModelScene

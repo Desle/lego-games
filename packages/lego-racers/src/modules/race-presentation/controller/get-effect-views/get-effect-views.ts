@@ -46,21 +46,32 @@ const getBrickViews = (
 
 const getMotionView = (effect: PowerUpEffect, motion: EffectMotion | null): EffectView | null => {
   if (motion === null) return null
+  const base = {
+    kind: effect.kind,
+    rotation: null,
+    rocketIndex: 0,
+    isLaunching: false,
+    launchMilliseconds: 0,
+  }
   switch (motion.kind) {
     case 'ballistic':
       return motion.flight.state === BallisticFlightState.IDLE
         ? null
-        : { kind: effect.kind, position: motion.flight.framePosition, heading: null }
+        : { ...base, position: motion.flight.framePosition, heading: null }
     case 'rocket':
       return {
-        kind: effect.kind,
+        ...base,
         position: motion.homing?.flight.framePosition ?? motion.framePosition,
         heading: motion.homing?.heading ?? null,
+        rotation: motion.frameRotation,
+        rocketIndex: motion.rocketIndex,
+        isLaunching: motion.homing === null,
+        launchMilliseconds: motion.launchElapsedMilliseconds,
       }
     case 'magnet':
-      return { kind: effect.kind, position: motion.position, heading: null }
+      return { ...base, position: motion.position, heading: null }
     case 'grapple':
-      return { kind: effect.kind, position: motion.hook.flight.framePosition, heading: null }
+      return { ...base, position: motion.hook.flight.framePosition, heading: null }
     case 'wand':
     case 'hazard':
       return null

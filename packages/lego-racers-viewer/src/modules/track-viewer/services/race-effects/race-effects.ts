@@ -3,6 +3,7 @@ import type { ModelScene } from '@lego-games/lego-racers/scene'
 import type { Scene as ThreeScene } from 'three'
 import { Matrix4 } from 'three'
 import { BRICK_LEVEL_DISTANCE } from '@lego-games/lego-racers/race-presentation'
+import type { FigureAnimation } from '@lego-games/lego-racers/racer'
 import type { Vector3Like } from '../race-viewport/race-viewport.types.ts'
 import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
 import { getEffectFigureState } from '@lego-games/lego-racers/race-presentation'
@@ -50,6 +51,15 @@ const getHeadingMatrix = (
 // 0x0045c160: the shield sits two units above the racer's position.
 const SHIELD_HEIGHT = 2
 
+// 0x00456db0: rocket k holds state 2 for (frames - 1) / rate milliseconds of clip k.
+const getRocketLaunchMilliseconds = (
+  animations: readonly FigureAnimation[],
+  rocketIndex: number
+): number => {
+  const animation = animations[rocketIndex]
+  return animation === undefined ? 0 : Math.trunc((animation.frameCount - 1) / animation.rate)
+}
+
 // A growing pool of one model: `use` shows the next free copy, `reset` hides them all.
 const createPool = (scene: ThreeScene, model: ModelScene) => {
   const copies: ModelObject[] = []
@@ -95,7 +105,8 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
   const shieldPools = models.shields.map((model) => createPool(scene, model))
   return Object.freeze({
     update: (views: EffectViews, eye: Vector3Like, poses: readonly RacerPose[]) => {
-      for (const pool of [...Object.values(pools), ...brickPools.values(), ...shieldPools]) pool.reset()
+      for (const pool of [...Object.values(pools), ...brickPools.values(), ...shieldPools])
+        pool.reset()
       for (const view of views.effects) {
         const pool =
           view.kind === 'rocket'
@@ -106,7 +117,22 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
                 ? pools.magnet
                 : null
         if (pool === null) continue
-        pool.use().group.matrix.copy(getHeadingMatrix(view.heading, view.position))
+        const copy = pool.use()
+        copy.group.matrix.copy(getHeadingMatrix(view.heading, view.position))
+        if (view.kind === 'rocket' && view.rotation !== null) {
+          copy.group.matrix.copy(getFrameMatrix(view.rotation, view.position))
+        }
+        if (view.kind === 'rocket') {
+          copy.object.setAnimationState(
+            getEffectFigureState(models.rocketAnimations, {
+              animationId: view.rocketIndex,
+              isLooping: false,
+              elapsedMilliseconds: view.isLaunching
+                ? view.launchMilliseconds
+                : getRocketLaunchMilliseconds(models.rocketAnimations, view.rocketIndex) + 1000,
+            })
+          )
+        }
       }
       for (const brick of views.bricks) {
         if (!getIsWithinLevelDistance(brick.position, eye, BRICK_LEVEL_DISTANCE)) continue
@@ -130,7 +156,11 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
           )
         )
         copy.object.setAnimationState(
-          getEffectFigureState(models.shieldAnimations, attachment.elapsedMilliseconds)
+          getEffectFigureState(models.shieldAnimations, {
+            animationId: 0,
+            isLooping: true,
+            elapsedMilliseconds: attachment.elapsedMilliseconds,
+          })
         )
       }
       for (const explosion of views.explosions) {

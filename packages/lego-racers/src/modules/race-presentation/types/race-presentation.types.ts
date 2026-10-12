@@ -145,6 +145,12 @@ export type EffectView = {
   readonly kind: string
   readonly position: Vector3
   readonly heading: Vector3 | null
+  // The missile figure's frame (0x00456db0, 0x004568f0) and its clip: the rocket's number (0 to 2) is the clip of its
+  // launch animation, which has played `launchMilliseconds` while `isLaunching`. Null, 0, false and 0 for the others.
+  readonly rotation: Matrix3 | null
+  readonly rocketIndex: number
+  readonly isLaunching: boolean
+  readonly launchMilliseconds: number
 }
 
 // An explosion pool member that is growing or fading: where, and the frame scale the engine gives it (0x00410f10).

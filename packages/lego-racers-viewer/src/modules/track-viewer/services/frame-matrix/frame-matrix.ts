@@ -30,12 +30,20 @@ export const getFrameMatrix = (rotation: Matrix3, position: Vector3Like): Matrix
 // as the third; the second row is their cross product.
 export const getUprightRotation = (forward: Vector3Like): Matrix3 => {
   const length = Math.hypot(forward.x, forward.y, forward.z)
-  const [forwardX, forwardY, forwardZ] = [forward.x / length, forward.y / length, forward.z / length]
+  const [forwardX, forwardY, forwardZ] = [
+    forward.x / length,
+    forward.y / length,
+    forward.z / length,
+  ]
   const upProjection = forwardZ
-  const rawUp = [-forwardX * upProjection, -forwardY * upProjection, 1 - forwardZ * upProjection] as const
+  const rawUp = [
+    -forwardX * upProjection,
+    -forwardY * upProjection,
+    1 - forwardZ * upProjection,
+  ] as const
   const upLength = Math.hypot(...rawUp)
   const [upX, upY, upZ] = [rawUp[0] / upLength, rawUp[1] / upLength, rawUp[2] / upLength]
-  return Object.freeze([
+  return Object.freeze<Matrix3>([
     forwardX,
     forwardY,
     forwardZ,
@@ -45,5 +53,5 @@ export const getUprightRotation = (forward: Vector3Like): Matrix3 => {
     upX,
     upY,
     upZ,
-  ]) as Matrix3
+  ])
 }

@@ -169,13 +169,12 @@ const getWarpTextureScroll = (archive: JamArchive): readonly [number, number] =>
 const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
   Object.freeze({
     rocket: loadEffectModel(archive, 'DMISSILE', true),
+    rocketAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('DMISSILE', 'ADB'))),
     barrel: loadEffectModel(archive, 'BARREL', false),
     magnet: loadEffectModel(archive, 'MAGNET04', true),
     spikedExplosion: loadEffectModel(archive, 'SPIKEXP', false),
     shields: SHIELD_MODEL_NAMES.map((name) => loadEffectModel(archive, name, true, 'SHEOUT0')),
-    shieldAnimations: getFigureAnimations(
-      archive.readFile(getRacerFilePath('SHEOUT0', 'ADB'))
-    ),
+    shieldAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('SHEOUT0', 'ADB'))),
     powerUpBricks: Object.freeze(
       Object.fromEntries(
         Object.entries(BRICK_MATERIALS).map(([kind, materialName]) => [
