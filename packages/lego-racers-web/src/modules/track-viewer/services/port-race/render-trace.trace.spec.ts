@@ -14,7 +14,7 @@ const RECORD_FRAMES = [5, 100, 170, 250, 320]
 const POWER_UP_KIND_NAMES = ['cannon', 'shield', 'turbo', 'oil'] as const
 const POWER_UP_LEVELS = [0, 1, 2, 3] as const
 // Fired at frame 305: flight, hit, explosion and aftermath.
-const POWER_UP_RECORD_FRAMES = [307, 312, 320, 335, 355, 385]
+const POWER_UP_RECORD_FRAMES = [307, 312, 320, 326, 335, 355, 385]
 const POWER_UP_CASES: readonly TraceScenarioRequest[] = POWER_UP_KIND_NAMES.flatMap(
   (kindName, kindIndex) =>
     POWER_UP_LEVELS.map((level): TraceScenarioRequest => ({
