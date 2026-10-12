@@ -185,4 +185,37 @@ describe('collideRacers, the registry 0x0043d270', () => {
     expect(untouched.registryContacts).toEqual([])
     expect(untouched.registryEntries).toEqual([entry])
   })
+
+  it('answers a racer that meets a registered body, whichever comes first in the list, and only the racer moves', () => {
+    // Arrange
+    const body = {
+      owner: 0,
+      isActive: true,
+      body: {
+        sphere: { centre: { x: 0.5, y: 0, z: 0 }, radius: 1 },
+        box: {
+          rotation: IDENTITY_MATRIX3,
+          centre: { x: 0.5, y: 0, z: 0 },
+          dimensions: { x: 1, y: 1, z: 1 },
+          scale: 1,
+        },
+        linearVelocity: { x: 0, y: 0, z: 0 },
+        inverseMass: 0.00005,
+      },
+    }
+    const base = createRacerSet([createCarAt(0, 1)], 0, 0)
+
+    // Act
+    const racerSet = collideRacers(
+      createTestContext(),
+      { ...base, collisionBodies: [body], collisionOrder: [1, 0] },
+      16,
+      RACER_COLLISION_DEPENDENCIES_NOT_YET_PORTED
+    )
+
+    // Assert
+    expect(racerSet.collisionOrder).toEqual([0, 1])
+    expect(getRacer(racerSet, 0).carBody.rigidBody.linearVelocity.x).toBeLessThan(1)
+    expect(getRacer(racerSet, 0).flags & CONTACT_FLAG).toBe(0)
+  })
 })

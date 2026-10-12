@@ -40,14 +40,19 @@ export const getGuidePosition = (raceState: RaceState): Vector3 => {
 export const getDistance = (left: Vector3, right: Vector3): number =>
   Math.hypot(left.x - right.x, left.y - right.y)
 
-// Which way to steer to reach `target` from `pose`: the sign of the heading's cross product with the aim. In the
-// original's steering, positive steering (the left arrow) turns to the left.
-const getSteeringBinding = (pose: DrivingPose, target: Vector3): RaceBindingValue[] => {
+// The sign of the heading's cross product with the aim to `target` from `pose` (positive: the target is on the left),
+// divided by the aim's length; 0 when the target is where the player is.
+export const getAimCross = (pose: DrivingPose, target: Vector3): number => {
   const aimX = target.x - pose.position.x
   const aimY = target.y - pose.position.y
   const length = Math.hypot(aimX, aimY)
-  if (length === 0) return []
-  const cross = (pose.forward.x * aimY - pose.forward.y * aimX) / length
+  return length === 0 ? 0 : (pose.forward.x * aimY - pose.forward.y * aimX) / length
+}
+
+// Which way to steer to reach `target` from `pose`. In the original's steering, positive steering (the left arrow)
+// turns to the left; this one presses the opposite key for the target's side, which steers away from the aim.
+const getSteeringBinding = (pose: DrivingPose, target: Vector3): RaceBindingValue[] => {
+  const cross = getAimCross(pose, target)
   if (cross > STEERING_DEAD_ZONE) return [RaceBinding.STEER_NEGATIVE]
   if (cross < -STEERING_DEAD_ZONE) return [RaceBinding.STEER_POSITIVE]
   return []

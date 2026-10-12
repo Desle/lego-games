@@ -7,7 +7,7 @@ import {
 } from '../../types/racer-fixtures/racer-fixtures.ts'
 import { createRacer, createRacerSet, getRacer } from '../../types/racer-state/racer-state.ts'
 import type { Racer, RacerCollisionDependencies, RacerSet } from '../../types/racer.types.ts'
-import { endRacerKick, respondToRacerContact } from './racer-contact.ts'
+import { endRacerKick, respondToBodyContact, respondToRacerContact } from './racer-contact.ts'
 
 const CONTACT_FLAG = 0x10000000
 const ATTACKING_FLAG = 0x1
@@ -212,5 +212,60 @@ describe('endRacerKick, the 750 ms timer event', () => {
     expect(ended.reactionKind).toBe(0)
     expect(ended.contactTimerMilliseconds).toBeNull()
     expect(ended.carBody.rigidBody.flags & CarRigidBodyFlag.EXTRA_FORCE_A).toBe(0)
+  })
+})
+
+describe('respondToBodyContact, 0x00438560 type 3 without a second racer', () => {
+  const body = Object.freeze({
+    sphere: { centre: { x: 2, y: 0, z: 0 }, radius: 1 },
+    box: {
+      rotation: IDENTITY_MATRIX3,
+      centre: { x: 2, y: 0, z: 0 },
+      dimensions: { x: 1, y: 1, z: 1 },
+      scale: 1,
+    },
+    linearVelocity: { x: 0, y: 0, z: 0 },
+    inverseMass: 0.00005,
+  })
+
+  it('moves the racer out and bounces it off the body alone, without a contact flag, a voice or a random draw', () => {
+    // Arrange
+    const racerSet = createRacerSet([createCar(0, 1, 1)], 0, 0)
+
+    // Act
+    const result = respondToBodyContact(
+      createTestContext(),
+      racerSet,
+      0,
+      body,
+      CONTACT,
+      createDependencies([])
+    )
+
+    // Assert
+    const racer = getRacer(result, 0)
+    expect(racer.carBody.rigidBody.displayFrame.position.x).toBe(-0.10000000149011612)
+    expect(racer.carBody.rigidBody.linearVelocity.x).toBeLessThan(0)
+    expect(racer.flags & CONTACT_FLAG).toBe(0)
+    expect(racer.voiceMilliseconds).toBe(0)
+    expect(result.randomPosition).toBe(0)
+  })
+
+  it('does nothing for a disabled racer', () => {
+    // Arrange
+    const racerSet = createRacerSet([createCar(0, 1, 1, { flags: 0x10 })], 0, 0)
+
+    // Act
+    const result = respondToBodyContact(
+      createTestContext(),
+      racerSet,
+      0,
+      body,
+      CONTACT,
+      createDependencies([])
+    )
+
+    // Assert
+    expect(result).toBe(racerSet)
   })
 })

@@ -626,3 +626,6 @@ export type RacerPassDependencies = RacerCollisionDependencies & {
     entry: RegistryEntry
   ) => boolean
 }
+
+// What the impulse reads of the second shape: its velocity (+0x8), its centre of mass (+0x20) and its inverse mass (+0xcc).
+export type ImpulseBody = Pick<CarRigidBody, 'linearVelocity' | 'inverseMass' | 'worldCentreOfMass'>

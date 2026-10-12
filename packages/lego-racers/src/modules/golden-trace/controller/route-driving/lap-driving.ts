@@ -9,6 +9,7 @@ import { holdBindings } from '../trace-scenarios/trace-scenarios.ts'
 import {
   FRAME_MILLISECONDS,
   FRAMES_BEFORE_THROTTLE,
+  getAimCross,
   getDistance,
   getGuidePosition,
   getPlayerPose,
@@ -21,7 +22,7 @@ const GUIDE_FRAME_LIMIT = 2400
 // How many points of the lap, from the one nearest the player, the search for the nearest point looks at.
 const NEAREST_WINDOW = 60
 // The player aims at the first point of the lap ahead of it that is at least this far away.
-const AIM_DISTANCE = 40
+const AIM_DISTANCE = 42
 const STEERING_DEAD_ZONE = 0.1
 
 // The guide's positions from the moment the race lets it go to the end of its first lap.
@@ -40,11 +41,7 @@ const getGuideLap = (definition: RaceDefinition): readonly Vector3[] => {
 // Which way to steer to reach `target` from `pose`: the sign of the heading's cross product with the aim, positive
 // when the target is on the left, which positive steering (the left arrow) turns towards.
 const getSteeringBindings = (pose: DrivingPose, target: Vector3): RaceBindingValue[] => {
-  const aimX = target.x - pose.position.x
-  const aimY = target.y - pose.position.y
-  const length = Math.hypot(aimX, aimY)
-  if (length === 0) return []
-  const cross = (pose.forward.x * aimY - pose.forward.y * aimX) / length
+  const cross = getAimCross(pose, target)
   if (cross > STEERING_DEAD_ZONE) return [RaceBinding.STEER_POSITIVE]
   if (cross < -STEERING_DEAD_ZONE) return [RaceBinding.STEER_NEGATIVE]
   return []
@@ -57,8 +54,7 @@ const getSteeringBindings = (pose: DrivingPose, target: Vector3): RaceBindingVal
 export const getLapDrivingFrames = (
   definition: RaceDefinition,
   frameCount: number,
-  isReversed: boolean,
-  aimDistance = AIM_DISTANCE
+  isReversed: boolean
 ): readonly TraceFrameInput[] => {
   const lap = getGuideLap(definition)
   const path = isReversed ? [...lap].reverse() : lap
@@ -86,7 +82,7 @@ export const getLapDrivingFrames = (
       }
     }
     const aheadIndex = path.findIndex(
-      (point, index) => index > nearestIndex && getDistance(point, pose.position) >= aimDistance
+      (point, index) => index > nearestIndex && getDistance(point, pose.position) >= AIM_DISTANCE
     )
     const target = path[aheadIndex === -1 ? path.length - 1 : aheadIndex]
     const bindings = [

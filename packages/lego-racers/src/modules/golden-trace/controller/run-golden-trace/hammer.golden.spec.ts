@@ -15,8 +15,10 @@ import { formatDivergence, runGoldenTrace } from './run-golden-trace.ts'
 const TRACE_TIMEOUT_MILLISECONDS = 1_800_000
 const ROYAL_KNIGHTS_RACEWAY = 'RACEC0R0'
 // The player drives the lap backwards (the start line is 175 frames in, the hammer's trigger is reached about 400
-// frames later) and meets the swinging hammer, which only starts for a human racer, near frame 640.
-const DRIVING_FRAME_COUNT = 560
+// frames later) and meets the swinging hammer, which only starts for a human racer, near frame 645. The trace stops
+// before frame 697, where the original stops posing the hammer's bones (the pose is made when the instance is drawn
+// and the player has left the camera's view): the port keeps following the clip.
+const DRIVING_FRAME_COUNT = 515
 
 const getIsGamePresent = (): boolean =>
   getIsOriginalJamPresent() && getIsOriginalExecutablePresent() && getIsOriginalTraceAvailable()

@@ -20,14 +20,12 @@ import {
   setRandomPosition,
 } from '../../types/racer-state/racer-state.ts'
 import type {
+  ImpulseBody,
   Racer,
   RacerCollisionDependencies,
   RacerSet,
   RacerSetContext,
 } from '../../types/racer.types.ts'
-
-// What the impulse reads of the second shape: its velocity (+0x8), its centre of mass (+0x20) and its inverse mass (+0xcc).
-type ImpulseBody = Pick<CarRigidBody, 'linearVelocity' | 'inverseMass' | 'worldCentreOfMass'>
 
 const RESTITUTION = getFloatFromBits(0x3f400000) // 0x004b0970, 0.75
 const UNIT = getFloatFromBits(0x3f800000) // 0x004af388

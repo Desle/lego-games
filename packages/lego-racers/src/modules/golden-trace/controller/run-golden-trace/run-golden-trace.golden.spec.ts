@@ -105,9 +105,9 @@ const getCases = (): readonly ScenarioCase[] => {
         precision: FpuPrecision.DOUBLE,
       }),
       // The double-precision mode the game never runs: the world animation modules (skeleton clips, material
-      // animations) compute in the race's single precision whatever the race is given, so the introduction camera's
+      // animations, instance rotations) compute in the race's single precision whatever the race is given, so the hammer's instance rotation differs at frame 0 and the introduction camera's
       // clip time differs from frame 4 on. Computers' bodies differ by one unit in the last place from frame 160.
-      expected: { frame: 4, field: 'track.world.track.skeletons' },
+      expected: { frame: 0, field: 'track.hammers' },
     },
     ...OTHER_TRACKS.map(({ folder, expected }) => ({
       scenario: createTraceScenario({

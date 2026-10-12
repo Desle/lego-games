@@ -7,7 +7,6 @@ import type { RaceRacerSet } from '../../types/race.types.ts'
 // that began since the last call goes to the head of `collisionOrder`, one that ended leaves it, and each live node
 // takes the pose its hazard's last update gave it.
 export const getRacerSetWithCollisionBodies = (racerSet: RaceRacerSet): RaceRacerSet => {
-  if (process.env['NO_HAMMER_BODY'] !== undefined) return racerSet
   const { hazards } = racerSet.trackLogic
   const racerCount = racerSet.racers.length
   let bodies = racerSet.collisionBodies

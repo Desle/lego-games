@@ -99,7 +99,11 @@ export const getSkeletonInstanceChainAxes = (
         const chainRotation = pose.bones[chainIndex]?.rotation
         return chainRotation === undefined
           ? turned
-          : getFrameRotatedVector(arithmetic, { rotation: chainRotation, position: ZERO_VECTOR3 }, turned)
+          : getFrameRotatedVector(
+              arithmetic,
+              { rotation: chainRotation, position: ZERO_VECTOR3 },
+              turned
+            )
       }, row)
     )
   return Object.freeze({ first: getTurned(getRow(0)), third: getTurned(getRow(6)) })

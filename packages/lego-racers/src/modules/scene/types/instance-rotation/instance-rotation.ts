@@ -1,28 +1,15 @@
-import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
+import {
+  createFloatArithmetic,
+  getNormalizedVector3,
+  RACE_FPU_PRECISION,
+} from '../../../simulation-math/index.ts'
 import type { SceneRotation, SceneVector } from '../scene.types.ts'
 
 const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
-const { add, subtract, multiply, divide, getSquareRoot, storeFloat } = arithmetic
+const { add, subtract, multiply, storeFloat } = arithmetic
 
-const ZERO_VECTOR: SceneVector = Object.freeze({ x: 0, y: 0, z: 0 })
-
-// GolDP.dll 0x1002f530: scales to unit length, `1 / sqrt((x² + y²) + z²)` kept on the FPU stack and each product
-// stored; a zero (or NaN) length leaves a zero vector.
-const getNormalized = (vector: SceneVector): SceneVector => {
-  const length = getSquareRoot(
-    add(
-      add(multiply(vector.x, vector.x), multiply(vector.y, vector.y)),
-      multiply(vector.z, vector.z)
-    )
-  )
-  if (length === 0 || Number.isNaN(length)) return ZERO_VECTOR
-  const inverseLength = divide(1, length)
-  return Object.freeze({
-    x: storeFloat(multiply(inverseLength, vector.x)),
-    y: storeFloat(multiply(inverseLength, vector.y)),
-    z: storeFloat(multiply(inverseLength, vector.z)),
-  })
-}
+// 0x1002f530 normalises as 0x004492d0 does: `1 / sqrt((x² + y²) + z²)` kept on the FPU stack and each product stored.
+const getNormalized = (vector: SceneVector): SceneVector => getNormalizedVector3(arithmetic, vector)
 
 // GolDP.dll 0x10026b50 (instance vtable +0x40): forward is normalised, up made orthogonal to it and
 // normalised; the rows are forward, up × forward, up. The dot product `(u.y·f.y + f.z·u.z) + f.x·u.x` stays on the
