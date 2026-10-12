@@ -1,6 +1,6 @@
 import type { CinemaEvents } from '../../types/cinema-events.types.ts'
 import type { Cinema, CinemaDummy } from '../../types/cinema.types.ts'
-import { getActiveCinemaColourShifts, getCinemaFrame } from './get-cinema-playback.ts'
+import { getActiveCinemaVertexEffects, getCinemaFrame } from './get-cinema-playback.ts'
 
 const flash: CinemaDummy = {
   name: 'MM_FLSH',
@@ -41,19 +41,19 @@ const events: CinemaEvents = {
   ],
 }
 
-describe('getActiveCinemaColourShifts', () => {
-  it('shifts the sky red for the one frame the flash dummy is on', () => {
+describe('getActiveCinemaVertexEffects', () => {
+  it('starts the sky effect for the one frame the flash dummy is on', () => {
     // Arrange
     const flashMilliseconds = 495
 
     // Act
-    const during = getActiveCinemaColourShifts(cinema, events, flashMilliseconds)
-    const after = getActiveCinemaColourShifts(cinema, events, flashMilliseconds + 33)
+    const during = getActiveCinemaVertexEffects(cinema, events, flashMilliseconds)
+    const after = getActiveCinemaVertexEffects(cinema, events, flashMilliseconds + 33)
 
     // Assert
     expect(getCinemaFrame(cinema, flashMilliseconds)).toBe(14)
-    expect(during).toEqual([
-      { instanceName: 'mm_sky', shifts: [0, 0, 0, 0], biases: [64, 0, 0, 0] },
+    expect(during.map((active) => [active.dummyIndex, active.effect.instanceName])).toEqual([
+      [0, 'mm_sky'],
     ])
     expect(after).toEqual([])
   })

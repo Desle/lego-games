@@ -1,8 +1,4 @@
-import {
-  getBillboardAxes,
-  getEmitterQuads,
-  getIsEmitterQuadDrawn,
-} from '@lego-games/lego-racers/emitter'
+import { getBillboardAxes, getEmitterQuads } from '@lego-games/lego-racers/emitter'
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
 import type { SceneCamera } from '@lego-games/lego-racers/scene'
 import type { ScreenRectangle } from './cinema-emitter-points.types.ts'
@@ -24,7 +20,7 @@ const normalize = (vector: readonly number[]): number[] => {
   return vector.map((value) => value / length)
 }
 
-// The screen positions (pixels of the menu surface) of the corners of the pool's particle quads seen from the world camera
+// The screen positions (pixels of the menu surface) of the corners of the pool's particle quads that are not wholly outside the viewport seen from the world camera
 // through the item's rectangle: a pinhole camera with the camera's vertical field of view and the rectangle's aspect.
 export const getEmitterScreenPoints = (
   pool: EmitterPool,
@@ -46,28 +42,22 @@ export const getEmitterScreenPoints = (
     getEmitterQuads(arithmetic, instance.system, pool.animation, {
       position: camera.position,
       axes,
-    })
-      .filter((quad) =>
-        getIsEmitterQuadDrawn(
-          quad,
-          {
-            position: camera.position,
-            forward: { x: forward[0] ?? 0, y: forward[1] ?? 0, z: forward[2] ?? 0 },
-          },
-          rectangle.height / (2 * halfHeight)
-        )
-      )
-      .flatMap((quad) => {
-        const corners = quad.corners.map((corner) => {
-          const relative = subtract([corner.x, corner.y, corner.z], position)
-          const depth = dot(relative, forward)
-          return [
-            rectangle.left +
-              (0.5 + dot(relative, right) / (depth * 2 * halfWidth)) * rectangle.width,
-            rectangle.top + (0.5 - dot(relative, up) / (depth * 2 * halfHeight)) * rectangle.height,
-          ]
-        })
-        return corners
+    }).flatMap((quad) => {
+      const corners = quad.corners.map((corner) => {
+        const relative = subtract([corner.x, corner.y, corner.z], position)
+        const depth = dot(relative, forward)
+        return [
+          rectangle.left + (0.5 + dot(relative, right) / (depth * 2 * halfWidth)) * rectangle.width,
+          rectangle.top + (0.5 - dot(relative, up) / (depth * 2 * halfHeight)) * rectangle.height,
+        ]
       })
+      // The engine drops a triangle whose vertices all lie outside the same edge of the viewport (0x1000edf0).
+      const isOutside =
+        corners.every((corner) => (corner[0] ?? 0) < rectangle.left) ||
+        corners.every((corner) => (corner[0] ?? 0) > rectangle.left + rectangle.width) ||
+        corners.every((corner) => (corner[1] ?? 0) < rectangle.top) ||
+        corners.every((corner) => (corner[1] ?? 0) > rectangle.top + rectangle.height)
+      return isOutside ? [] : corners
+    })
   )
 }

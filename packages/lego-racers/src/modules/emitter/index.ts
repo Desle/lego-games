@@ -22,10 +22,7 @@ export {
 } from './controller/emitter-pool/emitter-pool.ts'
 export {
   getBillboardAxes,
-  getEmitterQuadPixelArea,
   getEmitterQuads,
-  getIsEmitterQuadDrawn,
-  MINIMUM_QUAD_PIXEL_AREA,
   QUAD_TRIANGLE_CORNERS,
 } from './controller/emitter-quads/emitter-quads.ts'
 export { PARTICLE_CAPACITY } from './controller/emitter-system/emitter-system.ts'
@@ -45,10 +42,5 @@ export type {
   EmitterUpdate,
   Particle,
 } from './types/emitter-pool.types.ts'
-export type {
-  BillboardAxes,
-  EmitterQuad,
-  EmitterQuadCorner,
-  EmitterQuadView,
-} from './types/emitter-quad.types.ts'
+export type { BillboardAxes, EmitterQuad, EmitterQuadCorner } from './types/emitter-quad.types.ts'
 export type { Emitter, EmitterList, Vector3 } from './types/emitter.types.ts'
