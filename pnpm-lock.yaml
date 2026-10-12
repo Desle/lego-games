@@ -36,7 +36,7 @@ importers:
         specifier: workspace:*
         version: link:../tooling
 
-  packages/lego-racers-viewer:
+  packages/lego-racers-web:
     dependencies:
       '@lego-games/lego-racers':
         specifier: workspace:*
