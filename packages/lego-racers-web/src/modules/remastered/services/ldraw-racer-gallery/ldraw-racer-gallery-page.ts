@@ -26,8 +26,8 @@ import {
   WebGLRenderer,
 } from 'three'
 import { DEVELOPMENT_JAM_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
-import { RacerPartKind } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
-import type { RacerPartDrawingRequest } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
+import { RacerPartKind } from '../ldraw-racer/ldraw-racer-drawing.types.ts'
+import type { RacerPartDrawingRequest } from '../ldraw-racer/ldraw-racer-drawing.types.ts'
 import { createLDrawDriverDrawing } from '../ldraw-racer/ldraw-driver-drawing.ts'
 import { createLDrawWheelsDrawing } from '../ldraw-racer/ldraw-wheels-drawing.ts'
 import { ensureStudioLights } from '../ldraw-racer/studio-scene-lights.ts'

@@ -1,12 +1,17 @@
 import type { CarDesign } from '@lego-games/lego-racers/car-builder'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
-import type { ModelResourceNames } from '@lego-games/lego-racers/racer-appearance'
 import type { HudCommand } from '@lego-games/lego-racers/race-hud'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
-import type { DataTexture, Group, Object3D, PerspectiveCamera, Scene, WebGLRenderer } from 'three'
-import { createEnum } from '../types/enum.types.ts'
-import type { EnumValues } from '../types/enum.types.ts'
+import type {
+  DataTexture,
+  Group,
+  Matrix4,
+  Object3D,
+  PerspectiveCamera,
+  Scene,
+  WebGLRenderer,
+} from 'three'
 
 export type TexturePixels = {
   readonly colors: Uint8Array
@@ -53,12 +58,6 @@ export type RaceDisplay = {
   readonly getHudCommands: (commands: readonly HudCommand[]) => readonly HudCommand[]
 }
 
-// A car built from bricks that the race is about to draw.
-export type BuiltCarDrawingRequest = {
-  readonly archive: JamArchive
-  readonly design: CarDesign
-}
-
 // The race's drawing as a layer may add to it before each frame is rendered.
 export type RaceRenderRequest = {
   readonly renderer: WebGLRenderer
@@ -76,12 +75,6 @@ export type RaceRenderPass = {
   readonly dispose: () => void
 }
 
-// A car body model of the original (a champion's, which no brick list builds) that the race is about to draw.
-export type CarBodyDrawingRequest = {
-  readonly archive: JamArchive
-  readonly names: ModelResourceNames
-}
-
 // An effect the race draws from a model of the original's (a power-up brick on the track, say).
 export type EffectModelDrawingRequest = {
   readonly modelName: string
@@ -89,17 +82,8 @@ export type EffectModelDrawingRequest = {
   readonly variant: string | null
 }
 
-export const RacerPartKind = createEnum({
-  WHEELS: 'wheels',
-  DRIVER: 'driver',
-})
-export type RacerPartKind = EnumValues<typeof RacerPartKind>
-
-// A part of a racer the viewer is about to draw from the original's skeleton model: the wheels of the car or its driver.
-export type RacerPartDrawingRequest = {
-  readonly kind: RacerPartKind
-  readonly archive: JamArchive
-  // The original's model of the part: the skeleton and the animation set that the poses are given for.
+// A skeleton model of the original's and what names it to a layer: the wheels of a chassis or a driver.
+export type RacerDrawingPart = {
   readonly model: ModelScene
   // The name of the original's model (the chassis's wheel model, the driver's model), null for a driver built from part bytes.
   readonly modelName: string | null
@@ -107,13 +91,53 @@ export type RacerPartDrawingRequest = {
   readonly partBytes: readonly number[] | null
 }
 
-// What a layer draws in place of a racer's part. Its object is in the original model's frame before the model's scale, so it
-// follows the group the viewer moves, leans and scales; the poses reach it through the two functions.
-export type RacerPartDrawing = {
+// A car the viewer is about to draw, with its wheels: a champion's by the code of its body model (such as RRCM), or a design built
+// from bricks, which names its chassis. Its driver is asked for apart.
+export type CarDrawingRequest = {
+  readonly archive: JamArchive
+  readonly carCode: string | null
+  readonly design: CarDesign | null
+  readonly wheels: RacerDrawingPart
+}
+
+// A driver the viewer is about to draw, alone or seated in a car.
+export type DriverDrawingRequest = {
+  readonly archive: JamArchive
+  readonly driver: RacerDrawingPart
+}
+
+// Where one part of a racer is now, as the viewer has computed it: the part's matrix (frame, position, lean and part scale), whether
+// the viewer draws it, and the state the original poses its skeleton with (null: the part has none or rests).
+export type RacerPartPose = {
+  readonly matrix: Matrix4
+  readonly isVisible: boolean
+  readonly animationState: SkeletonAnimationState | null
+}
+
+export type CarDrawingPose = {
+  readonly body: RacerPartPose | null
+  readonly wheels: RacerPartPose
+  // 1 for a solid car; below 1 for a ghost.
+  readonly opacity: number
+}
+
+export type DriverDrawingPose = RacerPartPose & {
+  readonly opacity: number
+}
+
+// What a layer draws in place of a whole car (body, chassis and wheels). Its object stands in the scene the car is in; the viewer calls
+// `applyPose` with what it computes for the original's meshes whenever that changes.
+export type CarDrawing = {
   readonly object: Object3D
-  // The viewer posed the part from this animation state (what the original poses its skeleton with).
-  readonly setAnimationState: (state: SkeletonAnimationState) => void
-  // The viewer advanced the part's own animation by whole milliseconds.
+  readonly applyPose: (pose: CarDrawingPose) => void
+  readonly dispose: () => void
+}
+
+// What a layer draws in place of a driver. `animate` advances the figure's own clock by whole milliseconds when the viewer does not
+// pose the skeleton itself.
+export type DriverDrawing = {
+  readonly object: Object3D
+  readonly applyPose: (pose: DriverDrawingPose) => void
   readonly animate: (deltaMilliseconds: number) => void
   readonly dispose: () => void
 }
@@ -138,16 +162,14 @@ export type ViewerExtension = {
     archivePath: string
   ) => Promise<AudioBuffer | null>
   readonly getRaceDisplay: (window: WindowMetrics) => RaceDisplay | null
-  // Something to draw in place of the mesh the original builds for a car built from bricks, in that mesh's frame; null keeps the original's.
-  readonly getBuiltCarDrawing: (request: BuiltCarDrawingRequest) => Object3D | null
+  // Something to draw in place of a car, complete (never mixed with the original's meshes); null keeps the original's.
+  readonly getCarDrawing: (request: CarDrawingRequest) => CarDrawing | null
+  // Something to draw in place of a driver, complete; null keeps the original's.
+  readonly getDriverDrawing: (request: DriverDrawingRequest) => DriverDrawing | null
   // Something to run before each frame of this race is rendered; null adds nothing.
   readonly getRaceRenderPass: (request: RaceRenderRequest) => RaceRenderPass | null
-  // Something to draw in place of the car body model with these names, in that model's frame (its vertices times its scale); null keeps the original's.
-  readonly getCarBodyDrawing: (request: CarBodyDrawingRequest) => Object3D | null
   // Something to draw in place of the model the original draws for an effect, in that model's frame (the original's units, its scale applied); null keeps the original's.
   readonly getEffectModelDrawing: (request: EffectModelDrawingRequest) => Object3D | null
-  // Something to draw in place of a racer's wheels or driver, posed by the viewer; null keeps the original's.
-  readonly getRacerPartDrawing: (request: RacerPartDrawingRequest) => RacerPartDrawing | null
   // The selections the layer runs with (texture pack, audio pack, bricks), for the notes of a recording.
   readonly getSelections: () => readonly string[]
 }

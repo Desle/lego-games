@@ -1,8 +1,5 @@
-import type { CarDesign } from '@lego-games/lego-racers/car-builder'
-import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import { Mesh } from 'three'
 import type { Material, Object3D } from 'three'
-import { getBuiltCarDrawing } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
 
 const getIsMesh = (object: Object3D): object is Mesh => object instanceof Mesh
@@ -34,15 +31,4 @@ export const showDrawingInPlaceOfModel = (model: ModelObject, drawing: Object3D)
       },
     },
   }
-}
-
-// A car built from bricks, in place of the mesh the original builds when a viewer extension has a drawing for it; the model itself
-// otherwise.
-export const showBuiltCarDrawing = (
-  model: ModelObject,
-  archive: JamArchive,
-  design: CarDesign
-): ModelObject => {
-  const drawing = getBuiltCarDrawing({ archive, design })
-  return drawing === null ? model : showDrawingInPlaceOfModel(model, drawing)
 }

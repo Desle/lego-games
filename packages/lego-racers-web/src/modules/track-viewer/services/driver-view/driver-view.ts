@@ -6,8 +6,7 @@ import type { Scene as ThreeScene } from 'three'
 import { createModelObject } from '../model-object/model-object.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
 import { createModelSlot } from '../model-slot/model-slot.ts'
-import { showRacerPartDrawing } from '../racer-part-drawing/racer-part-drawing.ts'
-import { RacerPartKind } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
+import { showDriverDrawing } from '../racer-drawing/racer-drawing.ts'
 import type { DriverView } from './driver-view.types.ts'
 
 // The figure of a menu (`FUN_0047df90`): the figure builder's menu-mode model of the five part bytes on the body's skeleton
@@ -21,13 +20,10 @@ export const createDriverView = (archive: JamArchive, scene: ThreeScene): Driver
     show: (preview: DriverPreview) => {
       shown = slot.show(`${preview.animationName}/${preview.partBytes.join(':')}`, () => {
         const scene = loadMenuDriverScene(archive, preview.partBytes, preview.animationName)
-        return showRacerPartDrawing(
-          createModelObject(scene),
-          scene,
+        return showDriverDrawing(createModelObject(scene), {
           archive,
-          RacerPartKind.DRIVER,
-          { modelName: null, partBytes: preview.partBytes }
-        )
+          driver: { model: scene, modelName: null, partBytes: preview.partBytes },
+        })
       })
       const [x, y, z] = preview.position
       shown.group.matrix

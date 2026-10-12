@@ -68,6 +68,8 @@ export type RacerRig = {
   readonly wheels: ModelObject
   readonly body: ModelObject | null
   readonly driver: ModelObject | null
+  // Hands the drawings of a viewer extension, if there are any, where the parts above are now.
+  readonly sync: (opacity: number) => void
   readonly objects: readonly SceneObject[]
 }
 
@@ -81,3 +83,6 @@ export type RaceStage = Pick<RaceViewport, 'update' | 'showHazards' | 'animate' 
   readonly camera: PerspectiveCamera
   readonly racerRigs: readonly RacerRig[]
 }
+
+// The model objects a racer's rig is made of, before a drawing of a viewer extension takes any of them over.
+export type RacerModelObjects = Pick<RacerRig, 'wheels' | 'body' | 'driver'>

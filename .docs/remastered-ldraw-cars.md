@@ -10,7 +10,7 @@ Download the official library (CC BY 2.0, `complete.zip` from <https://library.l
 
 ## How it works
 
-- Neutral extension point: `ViewerExtension.getBuiltCarDrawing` (optional). `race-viewport` asks it for each racer with a built design (`RaceDefinition.racers[i].savedCar.design`); an answer is added to the car body's group in the mesh's own frame and the original body mesh is hidden. With no extension registered nothing changes.
+- Neutral extension point: `ViewerExtension.getCarDrawing` (optional). `race-viewport` asks it for each racer (a built design or a champion's body code); the answer follows the body and wheels groups through `applyPose` and the original meshes are hidden. With no extension registered nothing changes.
 - `getCarOrigin` (`car-builder`, previously the private `getOrigin`) is exported so the drawing uses the same origin offset as `buildCarGeometry` (`0x0049b340`, `0x0049b740`).
 - `createLDrawCarDocument` writes the design as an LDraw model: one type 1 line per brick, in LDraw axes. The game's frame is x, y, z up in studs (a stud is 1, a plate 0.4); LDraw is 20 units to a stud, 8 to a plate, y down. A brick's matrix is `LDraw<-game * place(x, y, base) * turn(orientation about the footprint corner) * part-in-brick-frame * game<-LDraw`, the orientation turns being those of `0x0049a450`. The root group applies `LDraw -> game` and 1/20.
 - Bricks with no LDraw part are drawn from the game's own faces (`getBrickFaces`), in the LDraw colour, so a car is always complete.
@@ -47,7 +47,7 @@ The fallback draws the game's faces double-sided in the plastic and also the dec
 
 Wheels: the game's own wheels keep their animation; LDraw wheels were not mapped (the chassis is the game's, and the wheels sit on its axles; the wheels are separate GDB models, not bricks). Done since: see [remastered-ldraw-racers.md](remastered-ldraw-racers.md) (wheels and drivers).
 
-Where the LDraw car is drawn: the race, the build-a-car screen (as bricks are placed; the placeholder is the game's mesh in the same plastic until the parts arrive), and the Racer Select showcase, all through `showBuiltCarDrawing` (`track-viewer/services/built-car-drawing`), which asks `getBuiltCarDrawing` and does nothing without an extension. Computer racers and champions are the game's model files (`*cm` GDB models from `CHAMPS.CCB`), not brick lists, so they are not touched: only the cars built from bricks (the player's own and the `DEFAULT.LRS` racers) have designs.
+Where the LDraw car is drawn: the race, the build-a-car screen (as bricks are placed; the placeholder is the game's mesh in the same plastic until the parts arrive), and the Racer Select showcase, all through `showCarDrawing` (`track-viewer/services/racer-drawing`), which asks `getCarDrawing` and does nothing without an extension. The builder shows the LDraw wheels too.
 
 ## The look
 
@@ -60,14 +60,9 @@ Where the LDraw car is drawn: the race, the build-a-car screen (as bricks are pl
 
 `/ldraw-gallery.html` on the dev server is a page that exposes `renderCar(savePath, index, mode, view, width, height)`, `renderPieceSheet(names, columns, cellSize)` and `getDesignCount(savePath)` on `window` (modes `ldraw`, `game`, `overlay`; views `front`, `rear`, `top`), for a headless browser to call and save the canvas. The page is not part of the build (`vite build` only builds `index.html`).
 
-## Champion and opponent cars (`opponent-car/`)
+## Champion cars and chassis recipes
 
-The champions' cars are the game's body models (`CHAMPS.CCB`, e.g. `VVCM`), not brick lists. With `?hd` and Bricks = LDraw they are drawn from a brick design fitted to each model, through a second neutral extension point, `ViewerExtension.getCarBodyDrawing` (the race asks it for each racer whose appearance names a body model; no extension, no change; the original body is hidden when it answers). The drawing is in the model's own frame (vertices times scale), so the Classic pose is kept.
-
-- **Fitting** (`pnpm --filter @lego-games/lego-racers-web run opponent-cars` rewrites `opponent-car-designs.ts`): the body's triangles are shot with rays on an eighth-of-a-stud lattice (the models are skins without undersides: a surface that faces up starts solid, one that faces down ends it, a ray that never leaves the body is solid to the floor), counted into cells of a stud by a plate (0.4 stud), for 4 x 4 x 8 grid offsets. Templates are the game's own catalogue pieces that have an LDraw part (boxes, slopes, wedges; their cells come from the game's own mesh) plus plain LDraw bricks and plates (`opponent-box-parts.ts`). A greedy cover places the template with the best gain (cells at least half filled gain, empty cells lose, a split in colours and a fixed brick cost take off); the best offset wins. Colours are the brick colour (hue and brightness) of the model's vertex colours, voted per cell with tops counted three times.
-- **Hybrid, like the built cars' chassis**: the Racers chassis frames, arches and thin fittings are special moulds, so the triangles the bricks do not stand in for (`coveredTriangles`) stay the game's mesh in the LDraw colours; the printed decals (shields, logos, numbers: textured materials that are not studs) are drawn from the game's textures, colour key cut out.
-- **Quality**: measured in the 20 notes of `opponent-car-notes.ts` (one per car) and the gallery sheets (`renderOpponentSheet(modelName, cellSize)`: rows front, rear, top; columns game, LDraw, both). Good: `VVCM`, `RRCM`, `KKCM`, `BVBCM`, `GMCM`. Fair: `ACM`, `GBCM`, `BHCM`, `SSCM`, `TCCM`, `JTCM`, `BBCM`. Hand work: `BKCM`, `RKCM`, `RHCM`, `CCCM`, `PHCM`, `NHCM`, `APCM`, `CRCM` (open frames; a few bricks). The bricks cover 5 to 46 % of the surface by area.
-- **Not done**: the champion ghost's body (`ghostb2`, a different model), the best-run ghost of a time trial (the player's built car, not drawn as LDraw), cinemas and racer select show no champion car bodies (they show the player's built car, which already goes through `getBuiltCarDrawing`). A race with a champion was not run in the browser; the gallery draws the same frame.
+The voxel-fitted opponent designs (PR #120: bricks covering 5 to 46 % of a champion's body, the original mesh left mixed in) were removed. A champion's car is the original's until a complete LDraw model exists for it: `~/ldraw-models/<CODE>.ldr` (see [remastered-ldraw-racers.md](remastered-ldraw-racers.md)). A garage car draws as LDraw only when its chassis has a recipe (`~/ldraw-models/chassis/<CHASSIS>.ldr`, the chassis brick becomes a reference to it) or when the developer panel's "Chassis without a recipe" fallback (`?hd&chassis=game`) converts the game's geometry to an unofficial part; otherwise it is the original's. The two hooks are `getCarDrawing` and `getDriverDrawing`; `getBuiltCarDrawing` and `getCarBodyDrawing` are gone.
 
 ## Composite S bricks (`ldraw-composite-mappings.ts`)
 

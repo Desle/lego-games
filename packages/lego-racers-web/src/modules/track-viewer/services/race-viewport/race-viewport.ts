@@ -32,21 +32,26 @@ import { createScreenFadeOverlay } from '../screen-fade-overlay/screen-fade-over
 import { setAlphaOverride } from '../scene-object/alpha-override.ts'
 import { createSceneObject } from '../scene-object/scene-object.ts'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
-import {
-  getBuiltCarDrawing,
-  getRaceRenderPasses,
-  getCarBodyDrawing,
-} from '../../../../shared/viewer-extensions/viewer-extensions.ts'
+import { getRaceRenderPasses } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
 import { createModelObject } from '../model-object/model-object.ts'
-import { showRacerPartDrawing } from '../racer-part-drawing/racer-part-drawing.ts'
-import { RacerPartKind } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
+import { attachCarDrawing, attachDriverDrawing } from '../racer-drawing/racer-drawing.ts'
+import type {
+  CarDrawingRequest,
+  DriverDrawingRequest,
+} from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import { getDriverPartBytes } from '@lego-games/lego-racers/car-builder'
 import { GHOST_WORLD_PATH, WARP_WORLD_PATH } from '../race-assets/race-assets.ts'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import { showSceneObjects } from '../scene-viewport/scene-viewport.ts'
 import type { ShownScene } from '../scene-viewport/scene-viewport.types.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
-import type { RaceStage, RaceStageSize, RaceViewport, RacerRig } from './race-viewport.types.ts'
+import type {
+  RaceStage,
+  RaceStageSize,
+  RaceViewport,
+  RacerModelObjects,
+  RacerRig,
+} from './race-viewport.types.ts'
 
 const BACKGROUND_COLOR = 0x101820
 const MILLISECONDS_PER_SECOND = 1000
@@ -57,15 +62,87 @@ const FAR_PLANE = 20000
 // Race_Render's update (0x00435a00) draws the ghost cars between the device's alpha override (0x00422960 calls slot 0xb8
 // with 0x7f and 0, slot 0xbc afterwards): every vertex of both cars takes alpha 127 and blends over the picture.
 const GHOST_ALPHA = 0x7f
+const GHOST_OPACITY = GHOST_ALPHA / 0xff
 
-const createGhostRig = (parts: Pick<RacerRig, 'wheels' | 'body' | 'driver'>): RacerRig => {
-  const { wheels, body, driver } = parts
-  const present = [wheels, body, driver].filter((part): part is ModelObject => part !== null)
+// What a viewer extension is asked to draw for a racer's car: the champion's body model by its code, or the player's built design,
+// with the wheels the race made from the racer's appearance.
+const getCarRequest = (assets: RaceAssets, racerIndex: number): CarDrawingRequest | null => {
+  const racer = assets.definition.racers[racerIndex]
+  const models = assets.racerModels[racerIndex]
+  if (racer === undefined || models === undefined) return null
+  const design = racer.savedCar?.design ?? null
+  return {
+    archive: assets.archive,
+    carCode: design === null ? (racer.appearance.bodyModel?.modelName.toUpperCase() ?? null) : null,
+    design,
+    wheels: {
+      model: models.wheels,
+      modelName: racer.appearance.wheelModel.modelName,
+      partBytes: null,
+    },
+  }
+}
+
+const getDriverRequest = (assets: RaceAssets, racerIndex: number): DriverDrawingRequest | null => {
+  const racer = assets.definition.racers[racerIndex]
+  const model = assets.racerModels[racerIndex]?.driver
+  if (racer === undefined || model === undefined || model === null) return null
+  return {
+    archive: assets.archive,
+    driver: {
+      model,
+      modelName: racer.appearance.driverModel?.modelName ?? null,
+      partBytes: racer.savedCar == null ? null : getDriverPartBytes(racer.savedCar.record),
+    },
+  }
+}
+
+// A racer's rig: the model objects, with the drawings a viewer extension has for the racer's car and driver (each complete or not
+// at all) following them. A racer index of null is a car the extensions know nothing about.
+const createRacerRig = (
+  assets: RaceAssets,
+  racerIndex: number | null,
+  parts: RacerModelObjects,
+  host: ThreeScene
+): RacerRig => {
+  const carRequest = racerIndex === null ? null : getCarRequest(assets, racerIndex)
+  const driverRequest = racerIndex === null ? null : getDriverRequest(assets, racerIndex)
+  const carLink = carRequest === null ? null : attachCarDrawing(parts, carRequest, host)
+  const driverLink =
+    driverRequest === null || parts.driver === null
+      ? null
+      : attachDriverDrawing(parts.driver, driverRequest, host)
+  const wheels = carLink?.wheels ?? parts.wheels
+  const body = carLink === null ? parts.body : carLink.body
+  const driver = driverLink?.driver ?? parts.driver
+  return {
+    wheels,
+    body,
+    driver,
+    sync: (opacity) => {
+      carLink?.sync(opacity)
+      driverLink?.sync(opacity)
+    },
+    objects: [wheels, body, driver]
+      .filter((part): part is ModelObject => part !== null)
+      .map((part) => part.object),
+  }
+}
+
+const createGhostRig = (
+  assets: RaceAssets,
+  racerIndex: number | null,
+  parts: RacerModelObjects,
+  host: ThreeScene
+): RacerRig => {
+  const present = [parts.wheels, parts.body, parts.driver].filter(
+    (part): part is ModelObject => part !== null
+  )
   for (const part of present) {
     part.group.visible = false
     setAlphaOverride(part.group, GHOST_ALPHA)
   }
-  return { wheels, body, driver, objects: present.map((part) => part.object) }
+  return createRacerRig(assets, racerIndex, parts, host)
 }
 
 // The race's three.js scene graphs and camera, without a renderer: the sky and the backdrop first without the depth
@@ -93,47 +170,20 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   if (shown.backdrop !== null) backgroundScene.add(shown.backdrop.group)
   if (shown.sky !== null) backgroundScene.add(shown.sky.mesh)
   const racerRigs = assets.racerModels.map((models, racerIndex): RacerRig => {
-    const racer = assets.definition.racers[racerIndex]
-    const wheels = showRacerPartDrawing(
-      createModelObject(models.wheels),
-      models.wheels,
-      assets.archive,
-      RacerPartKind.WHEELS,
-      { modelName: racer?.appearance.wheelModel.modelName ?? null, partBytes: null }
+    const rig = createRacerRig(
+      assets,
+      racerIndex,
+      {
+        wheels: createModelObject(models.wheels),
+        body: models.body === null ? null : createModelObject(models.body),
+        driver: models.driver === null ? null : createModelObject(models.driver),
+      },
+      trackScene
     )
-    const body = models.body === null ? null : createModelObject(models.body)
-    const design = assets.definition.racers[racerIndex]?.savedCar?.design ?? null
-    const bodyModelNames = assets.definition.racers[racerIndex]?.appearance.bodyModel ?? null
-    const builtCarDrawing =
-      body === null
-        ? null
-        : design === null
-          ? bodyModelNames === null
-            ? null
-            : getCarBodyDrawing({ archive: assets.archive, names: bodyModelNames })
-          : getBuiltCarDrawing({ archive: assets.archive, design })
-    if (body !== null && builtCarDrawing !== null) {
-      body.object.group.visible = false
-      body.group.add(builtCarDrawing)
+    for (const part of [rig.wheels, rig.body, rig.driver]) {
+      if (part !== null) trackScene.add(part.group)
     }
-    const driver =
-      models.driver === null
-        ? null
-        : showRacerPartDrawing(
-            createModelObject(models.driver),
-            models.driver,
-            assets.archive,
-            RacerPartKind.DRIVER,
-            {
-              modelName: racer?.appearance.driverModel?.modelName ?? null,
-              partBytes: racer?.savedCar == null ? null : getDriverPartBytes(racer.savedCar.record),
-            }
-          )
-    const parts = [wheels, body, driver].filter((part): part is ModelObject => part !== null)
-    for (const part of parts) {
-      trackScene.add(part.group)
-    }
-    return { wheels, body, driver, objects: parts.map((part) => part.object) }
+    return rig
   })
 
   // The ghost cars of a time trial: the champion's from GHOST.WDB, the session's best run with the player's own car models.
@@ -156,19 +206,29 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     champion:
       assets.ghostScene === null
         ? null
-        : createGhostRig({
-            wheels: getGhostPart(assets.ghostScene, 'ghost2'),
-            body: getGhostPart(assets.ghostScene, 'ghostb2'),
-            driver: getGhostPart(assets.ghostScene, 'ghostdr'),
-          }),
+        : createGhostRig(
+            assets,
+            null,
+            {
+              wheels: getGhostPart(assets.ghostScene, 'ghost2'),
+              body: getGhostPart(assets.ghostScene, 'ghostb2'),
+              driver: getGhostPart(assets.ghostScene, 'ghostdr'),
+            },
+            trackScene
+          ),
     best:
       assets.ghostScene === null || playerModels === undefined
         ? null
-        : createGhostRig({
-            wheels: createModelObject(playerModels.wheels),
-            body: playerModels.body === null ? null : createModelObject(playerModels.body),
-            driver: playerModels.driver === null ? null : createModelObject(playerModels.driver),
-          }),
+        : createGhostRig(
+            assets,
+            0,
+            {
+              wheels: createModelObject(playerModels.wheels),
+              body: playerModels.body === null ? null : createModelObject(playerModels.body),
+              driver: playerModels.driver === null ? null : createModelObject(playerModels.driver),
+            },
+            trackScene
+          ),
   }
   for (const rig of Object.values(ghostRigs)) {
     if (rig === null) continue
@@ -313,6 +373,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
         racerRig.driver.group.matrixWorldNeedsUpdate = true
         racerRig.driver.object.setAnimationState(pose.driverAnimation)
       }
+      racerRig.sync(1)
     }
     for (const kind of ['champion', 'best'] as const) {
       const rig = ghostRigs[kind]
@@ -334,6 +395,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
         rig.driver.group.matrixWorldNeedsUpdate = true
         if (car.driverAnimation !== null) rig.driver.object.setAnimationState(car.driverAnimation)
       }
+      rig.sync(GHOST_OPACITY)
     }
     const { position, forward, up } = cameraView
     camera.fov = warpView === null ? fieldOfViewDegrees : warpView.fieldOfViewDegrees

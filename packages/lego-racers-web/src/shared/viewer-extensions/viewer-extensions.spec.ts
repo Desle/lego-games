@@ -1,16 +1,14 @@
-import { createBuildGrid } from '@lego-games/lego-racers/car-builder'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import { DataTexture, Group } from 'three'
-import { RacerPartKind } from './viewer-extensions.types.ts'
 import {
   clearViewerExtensions,
   emitTextureCreated,
-  getBuiltCarDrawing,
   getEffectModelDrawing,
   getMenuSurfaceScale,
+  getCarDrawing,
+  getDriverDrawing,
   getRaceRenderPasses,
-  getRacerPartDrawing,
   getSoundReplacement,
   getIsClassic,
   NEUTRAL_EXTENSION,
@@ -78,20 +76,6 @@ describe('viewer extensions', () => {
     expect(replacement).toBe(buffer)
   })
 
-  it('draws a built car as the original does until an extension offers a drawing', () => {
-    // Arrange
-    const request = { archive: {} as JamArchive, design: { bricks: [], grid: createBuildGrid() } }
-    const drawing = new Group()
-    registerViewerExtension(NEUTRAL_EXTENSION)
-    const isOriginalKept = getBuiltCarDrawing(request) === null
-
-    // Act
-    registerViewerExtension({ ...NEUTRAL_EXTENSION, getBuiltCarDrawing: () => drawing })
-
-    // Assert
-    expect([isOriginalKept, getBuiltCarDrawing(request)]).toEqual([true, drawing])
-  })
-
   it('adds no render pass to a race with no extension, and takes the ones extensions have', () => {
     // Arrange
     const request = {} as Parameters<typeof getRaceRenderPasses>[0]
@@ -121,28 +105,28 @@ describe('viewer extensions', () => {
     expect([isOriginalKept, getEffectModelDrawing(request)]).toEqual([true, drawing])
   })
 
-  it('draws a racer part as the original does until an extension offers a drawing', () => {
+  it('draws a car and a driver as the original does until an extension offers a drawing', () => {
     // Arrange
-    const request = {
-      kind: RacerPartKind.WHEELS,
-      archive: {} as JamArchive,
-      model: {} as ModelScene,
-      modelName: 'dajmw',
-      partBytes: null,
-    }
-    const drawing = {
-      object: new Group(),
-      setAnimationState: () => undefined,
-      animate: () => undefined,
-      dispose: () => undefined,
-    }
+    const part = { model: {} as ModelScene, modelName: 'rrjmw', partBytes: null }
+    const carRequest = { archive: {} as JamArchive, carCode: 'RRCM', design: null, wheels: part }
+    const driverRequest = { archive: {} as JamArchive, driver: part }
+    const carDrawing = { object: new Group(), applyPose: () => undefined, dispose: () => undefined }
+    const driverDrawing = { ...carDrawing, animate: () => undefined }
     registerViewerExtension(NEUTRAL_EXTENSION)
-    const isOriginalKept = getRacerPartDrawing(request) === null
+    const originals = [getCarDrawing(carRequest), getDriverDrawing(driverRequest)]
 
     // Act
-    registerViewerExtension({ ...NEUTRAL_EXTENSION, getRacerPartDrawing: () => drawing })
+    registerViewerExtension({
+      ...NEUTRAL_EXTENSION,
+      getCarDrawing: () => carDrawing,
+      getDriverDrawing: () => driverDrawing,
+    })
 
     // Assert
-    expect([isOriginalKept, getRacerPartDrawing(request)]).toEqual([true, drawing])
+    expect([originals, getCarDrawing(carRequest), getDriverDrawing(driverRequest)]).toEqual([
+      [null, null],
+      carDrawing,
+      driverDrawing,
+    ])
   })
 })
