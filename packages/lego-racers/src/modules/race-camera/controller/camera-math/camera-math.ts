@@ -4,6 +4,7 @@ import {
   RACE_FPU_PRECISION,
 } from '../../../simulation-math/index.ts'
 import type { Matrix3, Vector3 } from '../../../simulation-math/index.ts'
+import type { CameraNodeOrientation } from '../../types/race-camera.types.ts'
 
 export const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
 
@@ -66,10 +67,7 @@ export const getRow = (matrix: Matrix3, row: number): Vector3 =>
 // The camera node's orientation slot (GolDP.dll 0x10002a30, vtable +0x24) keeps forward normalized and up made orthogonal
 // to it and normalized; its getter (0x100029d0, vtable +0x1c) hands both back. Race_UpdateState1 0x004349a0 reads them
 // when the introduction camera is released.
-export const getNodeOrientation = (
-  forward: Vector3,
-  up: Vector3
-): { readonly forward: Vector3; readonly up: Vector3 } => {
+export const getNodeOrientation = (forward: Vector3, up: Vector3): CameraNodeOrientation => {
   const { add, subtract, multiply, storeFloat } = arithmetic
   const unitForward = getNormalizedVector3(arithmetic, forward)
   const alongForward = add(

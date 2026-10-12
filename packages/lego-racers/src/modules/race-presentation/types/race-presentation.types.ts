@@ -1,5 +1,5 @@
 import type { BrickBase } from '../../power-ups/index.ts'
-import type { CameraState, CameraView } from '../../race-camera/index.ts'
+import type { CameraState, CameraUpdate, CameraView } from '../../race-camera/index.ts'
 import type {
   EngineLoop,
   EngineSoundState,
@@ -89,6 +89,11 @@ export type RacerEngineLoops = {
   readonly position: Vector3
   readonly velocity: Vector3
   readonly loops: readonly EngineLoop[]
+}
+
+// The player camera after a frame's updates and the node pose of the introduction clip while it still holds the camera.
+export type CameraFrameUpdate = CameraUpdate & {
+  readonly introductionView: CameraView | null
 }
 
 export type RacePresentationFrame = {

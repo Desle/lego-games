@@ -16,7 +16,7 @@ import {
   setCameraPreset,
   updateCamera,
 } from '../../../race-camera/index.ts'
-import type { CameraState, CameraUpdate, CameraView } from '../../../race-camera/index.ts'
+import type { CameraState } from '../../../race-camera/index.ts'
 import {
   getCountdownSound,
   getIntroductionMusic,
@@ -40,6 +40,7 @@ import type { RaceState, RaceStepResult } from '../../../race/index.ts'
 import { getRacer } from '../../../racer/index.ts'
 import type { Racer, RacerControls } from '../../../racer/index.ts'
 import type {
+  CameraFrameUpdate,
   HudContext,
   PresentationEdits,
   RacePresentation,
@@ -235,7 +236,7 @@ const getUpdatedCamera = (
   raceState: RaceState,
   presentation: RacePresentation,
   frameMilliseconds: number
-): CameraUpdate & { readonly introductionView: CameraView | null } => {
+): CameraFrameUpdate => {
   const introductionView = getIntroductionCameraView(raceState)
   if (introductionView !== null) return { camera, view: introductionView, introductionView }
   const released =

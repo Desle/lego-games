@@ -26,8 +26,10 @@ import { getIdleFrames, holdBindings } from '../trace-scenarios/trace-scenarios.
 import { CAMERA_TRACE_FIELDS, getPortCameraTrace } from './camera-trace.ts'
 
 const TRACE_TIMEOUT_MILLISECONDS = 3_600_000
-const DEMONSTRATION_FRAME_COUNT = Number(process.env['CAMERA_TRACE_DEMONSTRATION_FRAMES'] ?? 700)
-const FINISH_FRAME_COUNT = Number(process.env['CAMERA_TRACE_FINISH_FRAMES'] ?? 9000)
+// The longest introduction (141 frames of 33 ms) and its 2,000 ms ease into the chase camera, then the countdown.
+const DEMONSTRATION_FRAME_COUNT = 260
+// A whole demonstration race: the player's racer finishes (frame 4,217 on RACEC1R0) and the finish camera takes over.
+const FINISH_FRAME_COUNT = Number(process.env['CAMERA_TRACE_FINISH_FRAMES'] ?? 4500)
 const SELECTED_RACES = (process.env['CAMERA_TRACE_RACES'] ?? '').split(',').filter(Boolean)
 const SELECTED_MODES = (process.env['CAMERA_TRACE_MODES'] ?? '').split(',').filter(Boolean)
 const MIRRORING = process.env['CAMERA_TRACE_MIRRORING'] ?? 'both'
@@ -56,7 +58,8 @@ const TRACKS = Object.keys(RACE_CIRCUITS)
 // LEGORACE.RCB lists no mirrored pass of the final race, but the settings flag (+0x3c) mirrors it all the same.
 const MIRRORED_TRACKS = TRACKS
 
-// The player drives past the start, cycles through the four cameras (binding 5) and looks behind (binding 8).
+// The player drives past the start, cycles through the four cameras (binding 5: the chase rows 1 and 2, the cockpit, the
+// chase row 0 again) and looks behind (binding 8).
 const getPlayerFrames = (): readonly TraceFrameInput[] => {
   const drive = [RaceBinding.ACCELERATE]
   const cycle = Array.from({ length: 4 }, () => [
@@ -78,15 +81,29 @@ type ModeSpecification = {
   readonly getFrames: () => readonly TraceFrameInput[]
 }
 
+// The demonstration (the attract mode: computers drive, the camera follows racer 0) covers the introduction fly-by, the
+// countdown and the chase camera; the player covers every chase row, the cockpit and the look behind; the finish runs a
+// whole demonstration race.
 const MODES: Readonly<Record<string, ModeSpecification>> = {
   demonstration: {
     localPlayerCount: 0,
     getFrames: () => getIdleFrames(DEMONSTRATION_FRAME_COUNT),
   },
   player: { localPlayerCount: 1, getFrames: getPlayerFrames },
-  // A whole demonstration race: the player's racer finishes and the finish camera takes over.
   finish: { localPlayerCount: 0, getFrames: () => getIdleFrames(FINISH_FRAME_COUNT) },
 }
+const DEFAULT_MODES = ['demonstration', 'player']
+
+// Camera differences not traced to their cause yet, by scenario name.
+const KNOWN_CAMERA_DIVERGENCES: Readonly<Record<string, string>> = Object.freeze({
+  // The node orientation of the introduction clip is one unit in the last place off in places (position matches): the
+  // original mirrors the animation keys (0x004015e0, 0x0040ea20), the port flips y of the finished vectors.
+  'racec0r0-mirrored-demonstration': 'camera0.node.orientation',
+  'racec0r0-mirrored-player': 'camera0.node.orientation',
+})
+
+// What the camera reads from its racer: when the port's racer differs, the camera is judged only before that frame.
+const RACER_FIELD = 'camera0.racer'
 
 const getScenario = (
   raceFolder: string,
@@ -113,6 +130,9 @@ const getScenario = (
   }
 }
 
+const getIsGamePresent = (): boolean =>
+  getIsOriginalJamPresent() && getIsOriginalExecutablePresent() && getIsOriginalTraceAvailable()
+
 // The frames the original's camera changes mode in, as "mode@frame".
 const getModeTimeline = (frames: readonly TraceFrame[]): string =>
   frames
@@ -123,78 +143,104 @@ const getModeTimeline = (frames: readonly TraceFrame[]): string =>
     })
     .join(' ')
 
-const getIsGamePresent = (): boolean =>
-  getIsOriginalJamPresent() && getIsOriginalExecutablePresent() && getIsOriginalTraceAvailable()
+const getFirstFrame = (divergences: readonly FieldDivergence[]): number =>
+  divergences.reduce((first, divergence) => Math.min(first, divergence.frame), Infinity)
+
+type CameraRun = { readonly track: string; readonly isMirrored: boolean }
+
+// Runs the original and the port through each run in each mode and compares the cameras; the result maps each scenario to
+// the camera fields that differ before the racer does (empty: a match), with a report for the failure message.
+const judgeCameras = async (runs: readonly CameraRun[], modes: readonly string[]) => {
+  const jam = readOriginalJam()
+  const executable = readOriginalExecutable()
+  const reports: string[] = []
+  const early: Record<string, string> = {}
+  for (const { track, isMirrored } of runs) {
+    for (const mode of modes) {
+      const scenario = getScenario(track, isMirrored, mode)
+      const original = await readOriginalTrace(scenario)
+      const definition = loadRaceDefinition(jam, executable, {
+        raceFolder: scenario.raceFolder,
+        racerCodes: scenario.racerCodes,
+        racerCount: scenario.racerCount,
+        localPlayerCount: scenario.localPlayerCount,
+        randomPosition: 0,
+        isMirrored,
+        fpuPrecision: FpuPrecision.SINGLE,
+        isPlayerChampionCar: true,
+        musicTuneCount: 0,
+      })
+      const port = getPortCameraTrace(scenario, definition)
+      if (DUMP_FRAMES.length > 0 && REPORT_PATH !== '') {
+        const pick = (frames: readonly TraceFrame[]) =>
+          DUMP_FRAMES.map((frame) => ({ frame, fields: frames[frame]?.fields ?? {} }))
+        writeFileSync(
+          `${REPORT_PATH}.${scenario.name}.json`,
+          JSON.stringify({ original: pick(original.frames), port: pick(port) }, null, 1)
+        )
+      }
+      const { divergenceByField } = compareTraces(original.frames, port, CAMERA_TRACE_FIELDS)
+      const cutoff = getFirstFrame(
+        divergenceByField.filter((divergence) => divergence.field === RACER_FIELD)
+      )
+      const differing = divergenceByField.filter(
+        (divergence) => divergence.field !== RACER_FIELD && divergence.frame < cutoff
+      )
+      early[scenario.name] = [...new Set(differing.map((divergence) => divergence.field))]
+        .sort()
+        .join(',')
+      reports.push(
+        `${scenario.name}: ${differing.length === 0 ? 'match' : `${String(differing.length)} fields differ`}, judged up to frame ${String(Math.min(cutoff, original.frames.length))}`,
+        `  camera modes (mode@frame): ${getModeTimeline(original.frames)}`,
+        ...differing.map((divergence) => `  ${formatDivergence(divergence)}`)
+      )
+    }
+  }
+  if (REPORT_PATH !== '') {
+    mkdirSync(dirname(REPORT_PATH), { recursive: true })
+    writeFileSync(REPORT_PATH, reports.join('\n'))
+  }
+  const expected = Object.fromEntries(
+    Object.keys(early).map((name) => [name, KNOWN_CAMERA_DIVERGENCES[name] ?? ''])
+  )
+  return { early, expected, report: reports.join('\n') }
+}
 
 describe('race cameras: the original and the port, frame for frame', () => {
   it.skipIf(!getIsGamePresent())(
-    'reports every camera field that differs',
+    'matches the original in every camera field of every race until the racer it follows differs',
     async () => {
       // Arrange
-      const jam = readOriginalJam()
-      const executable = readOriginalExecutable()
       const runs = [
         ...(MIRRORING === 'mirrored' ? [] : TRACKS.map((track) => ({ track, isMirrored: false }))),
         ...(MIRRORING === 'forward'
           ? []
           : MIRRORED_TRACKS.map((track) => ({ track, isMirrored: true }))),
       ].filter(({ track }) => SELECTED_RACES.length === 0 || SELECTED_RACES.includes(track))
-      const modes = Object.keys(MODES).filter(
-        (mode) => SELECTED_MODES.length === 0 || SELECTED_MODES.includes(mode)
+      const modes = (SELECTED_MODES.length === 0 ? DEFAULT_MODES : SELECTED_MODES).filter(
+        (mode) => mode in MODES
       )
-      const report: Record<string, readonly FieldDivergence[]> = {}
-      const timelines: Record<string, string> = {}
 
       // Act
-      for (const { track, isMirrored } of runs) {
-        for (const mode of modes) {
-          const scenario = getScenario(track, isMirrored, mode)
-          const original = await readOriginalTrace(scenario)
-          const definition = loadRaceDefinition(jam, executable, {
-            raceFolder: scenario.raceFolder,
-            racerCodes: scenario.racerCodes,
-            racerCount: scenario.racerCount,
-            localPlayerCount: scenario.localPlayerCount,
-            randomPosition: 0,
-            isMirrored,
-            fpuPrecision: FpuPrecision.SINGLE,
-            isPlayerChampionCar: true,
-            musicTuneCount: 0,
-          })
-          const port = getPortCameraTrace(scenario, definition)
-          if (DUMP_FRAMES.length > 0 && REPORT_PATH !== '') {
-            const pick = (frames: readonly TraceFrame[]) =>
-              DUMP_FRAMES.map((frame) => ({
-                frame,
-                fields: Object.fromEntries(
-                  Object.entries(frames[frame]?.fields ?? {}).map(([name, words]) => [name, words])
-                ),
-              }))
-            writeFileSync(
-              `${REPORT_PATH}.${scenario.name}.json`,
-              JSON.stringify({ original: pick(original.frames), port: pick(port) }, null, 1)
-            )
-          }
-          timelines[scenario.name] = getModeTimeline(original.frames)
-          report[scenario.name] = compareTraces(
-            original.frames,
-            port,
-            CAMERA_TRACE_FIELDS
-          ).divergenceByField
-        }
-      }
+      const { early, expected, report } = await judgeCameras(runs, modes)
 
       // Assert
-      const lines = Object.entries(report).flatMap(([name, divergences]) => [
-        `${name}: ${divergences.length === 0 ? 'match' : `${String(divergences.length)} fields differ`}`,
-        `  camera modes (mode@frame): ${timelines[name] ?? ''}`,
-        ...divergences.map((divergence) => `  ${formatDivergence(divergence)}`),
-      ])
-      if (REPORT_PATH !== '') {
-        mkdirSync(dirname(REPORT_PATH), { recursive: true })
-        writeFileSync(REPORT_PATH, lines.join('\n'))
-      }
-      expect(Object.keys(report).length).toBeGreaterThan(0)
+      expect(early, report).toEqual(expected)
+    },
+    TRACE_TIMEOUT_MILLISECONDS
+  )
+
+  it.skipIf(!getIsGamePresent() || SELECTED_MODES.length > 0)(
+    'matches the original in the finish camera of a whole demonstration race',
+    async () => {
+      // Arrange
+      const runs = [{ track: 'RACEC1R0', isMirrored: false }]
+
+      // Act
+      const { early, expected, report } = await judgeCameras(runs, ['finish'])
+
+      // Assert
+      expect(early, report).toEqual(expected)
     },
     TRACE_TIMEOUT_MILLISECONDS
   )

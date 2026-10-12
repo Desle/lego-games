@@ -129,3 +129,5 @@
 10023ef0 SkeletonInstance_UpdateBoundingSphere
 100240b0 SkeletonInstance_GetVisibility
 1002bc20 Frustum_TestSphere
+10002a30 CameraNode_SetOrientation
+100029d0 CameraNode_GetForwardUp
