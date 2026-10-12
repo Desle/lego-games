@@ -1,10 +1,6 @@
+import { getNodeTestOptions } from '@lego-games/tooling/vitest'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  test: {
-    globals: true,
-    environment: 'node',
-    include: ['src/**/*.spec.ts'],
-    exclude: ['**/node_modules/**'],
-  },
+  test: { ...getNodeTestOptions(import.meta.dirname + '/../..'), exclude: ['**/node_modules/**'] },
 })
