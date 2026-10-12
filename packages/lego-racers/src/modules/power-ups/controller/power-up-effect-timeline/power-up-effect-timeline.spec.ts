@@ -198,11 +198,11 @@ describe('updatePowerUpEffects', () => {
     const charging = runFor(step, context, [120])
     const active = runFor(charging, context, [380])
 
-    // Assert: 120 ms gives two jitter draws (20 ms left); then 400 ms gives seven, the wand turns active
-    // in the same frame and its first spark draws twice.
+    // Assert: 120 ms give two jitter draws (20 ms left); the charge ends exactly with the next step, so nothing is
+    // left for the jitter or the first spark (0x00454d70 passes on only what the countdown did not use).
     expect(charging.world.random.position).toBe(42)
     expect(getHead(active).state).toBe(EffectState.ACTIVE)
-    expect(active.world.random.position).toBe(42 + 9)
+    expect(active.world.random.position).toBe(42)
   })
 
   it('draws twice per frame for a landed oil slick (0x004572a0)', () => {
