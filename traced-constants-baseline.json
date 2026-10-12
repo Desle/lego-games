@@ -10160,12 +10160,6 @@
     },
     {
       "path": "packages/lego-racers/src/modules/racer/types/colour-shift-override/colour-shift-override.ts",
-      "scope": "POWER_UP_EFFECT_FIGURE_DISTANCE",
-      "literal": "0x50000000",
-      "count": 1
-    },
-    {
-      "path": "packages/lego-racers/src/modules/racer/types/colour-shift-override/colour-shift-override.ts",
       "scope": "WAND_COLOUR_SHIFT_MILLISECONDS",
       "literal": "100",
       "count": 1

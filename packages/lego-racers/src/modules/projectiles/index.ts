@@ -92,3 +92,6 @@ export type { ProbeSurface } from './types/track-line-probe/track-line-probe.typ
 export { getIsSpeedNearZero } from './types/turbo-early-end/turbo-early-end.ts'
 export { getRaySphereHit, getWandBeam } from './types/wand-beam/wand-beam.ts'
 export type { WandBeam, WandBeamRequest, WandBounds } from './types/wand-beam/wand-beam.types.ts'
+
+export { getCurseTrackFrame } from './types/curse-frame/curse-frame.ts'
+export type { CurseTrackFrame } from './types/curse-frame/curse-frame.types.ts'

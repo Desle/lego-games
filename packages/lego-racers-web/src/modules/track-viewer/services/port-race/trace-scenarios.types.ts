@@ -39,6 +39,8 @@ export type TraceScenarioRequest = {
     readonly grantFrame: number
     readonly useFrame: number
     readonly frameCount: number
+    // The racers handed the brick at the grant frame (the player only when omitted); computers use theirs by themselves.
+    readonly grantedRacers?: readonly number[]
   }
 }
 

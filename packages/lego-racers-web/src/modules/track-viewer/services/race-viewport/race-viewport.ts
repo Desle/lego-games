@@ -318,8 +318,6 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
           )
     const cameraView = warpView === null ? allCameraView : warpView.cameraView
     lastCameraView = cameraView
-    lastSprites = warpView === null ? effectViews.sprites : []
-    lastRibbons = warpView === null ? effectViews.ribbons : []
     const { position, forward, up } = cameraView
     camera.fov = warpView === null ? fieldOfViewDegrees : warpView.fieldOfViewDegrees
     camera.updateProjectionMatrix()
@@ -328,11 +326,14 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     camera.up.set(-up.x, -up.y, -up.z)
     camera.lookAt(position.x + forward.x, position.y + forward.y, position.z + forward.z)
     const frustum = getCameraFrustum(camera)
+    lastSprites = warpView === null ? effectViews.sprites : []
+    lastRibbons = warpView === null ? effectViews.ribbons : []
     effects.update(
       warpView === null
         ? effectViews
         : {
             ...effectViews,
+            curses: [],
             effects: [],
             bricks: [],
             explosions: [],
