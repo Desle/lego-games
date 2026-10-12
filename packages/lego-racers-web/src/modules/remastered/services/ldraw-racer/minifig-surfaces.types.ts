@@ -31,3 +31,15 @@ export type MinifigSurfaces = {
   readonly face: PictureSource | null
   readonly torso: PictureSource | null
 }
+
+// A triangle of the model's mesh with the class of the bone that carries it and the x of its normal (positive faces forward).
+export type SurfaceTriangle = {
+  readonly boneClass: BoneClass
+  readonly vertices: readonly number[]
+  readonly normalX: number
+}
+
+export type SurfaceSize = {
+  readonly width: number
+  readonly height: number
+}

@@ -1,5 +1,5 @@
 import type { ModelScene, SceneBitmap } from '@lego-games/lego-racers/scene'
-import type { BatchSurface, BitmapRegion, ColorShare } from './model-surface.types.ts'
+import type { BatchSurface, BitmapRegion, ColorBin, ColorShare } from './model-surface.types.ts'
 
 const COLOR_CHANNELS = 3
 const RGBA_STRIDE = 4
@@ -67,7 +67,7 @@ export const getAverageColor = (
 
 // The colours of a bitmap's opaque pixels, grouped by the top five bits of each channel, most common first.
 export const getColorShares = (bitmap: SceneBitmap): readonly ColorShare[] => {
-  const bins = new Map<number, { count: number; sums: number[] }>()
+  const bins = new Map<number, ColorBin>()
   let total = 0
   for (let pixel = 0; pixel < bitmap.width * bitmap.height; pixel += 1) {
     if (!getIsOpaque(bitmap, pixel)) continue
@@ -111,3 +111,9 @@ export const getDominantColor = (
   }
   return getColorShares(part)[0]?.color ?? null
 }
+
+// The most common colour of a bitmap's opaque pixels that is not darker than the threshold (a hub on a dark tyre), null when there is none.
+export const getDominantBrightColor = (bitmap: SceneBitmap, minimumBrightness: number): number | null =>
+  getColorShares(bitmap).find(
+    ({ color }) => Math.max(color >> 16, (color >> 8) & 0xff, color & 0xff) >= minimumBrightness
+  )?.color ?? null

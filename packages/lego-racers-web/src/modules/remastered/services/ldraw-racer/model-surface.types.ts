@@ -20,3 +20,9 @@ export type ColorShare = {
   readonly color: number
   readonly share: number
 }
+
+// The pixels of one quantization bin: how many, and the sums of their channels.
+export type ColorBin = {
+  count: number
+  readonly sums: number[]
+}

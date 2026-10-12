@@ -4,7 +4,7 @@ import type { RacerPartDrawingRequest } from '../../../../shared/viewer-extensio
 import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
 import { applyPlasticLook } from '../ldraw-car/ldraw-plastic.ts'
 import { disposeObject } from './dispose-object.ts'
-import { getAverageColor, getBatchSurfaces } from './model-surface.ts'
+import { getBatchSurfaces, getDominantBrightColor } from './model-surface.ts'
 import { createSkeletonPoseSampler } from './skeleton-pose.ts'
 import { getWheelSet } from './ldraw-wheel-sets.ts'
 import { ensureStudioLights } from './studio-scene-lights.ts'
@@ -20,18 +20,19 @@ const TYRE_COLOR_CODE = 0
 const DEFAULT_RIM_COLOR_CODE = 15
 const MINIMUM_RIM_BRIGHTNESS = 90
 const DIRECT_COLOR_PREFIX = '0x2'
+const MAXIMUM_COPY_COUNT = 4
 const IDENTITY_ROTATION = '1 0 0 0 1 0 0 0 1'
 
 const getPartLine = (colorCode: number | string, part: string): string =>
   `1 ${String(colorCode)} 0 0 0 ${IDENTITY_ROTATION} ${part}.dat`
 
-// The rim is drawn in the colour the original paints its wheel's hub: the average of the texture's pixels that are not dark.
+// The rim is drawn in the colour the original paints its wheel's hub: the most common colour of the texture's pixels that are not dark.
 const getRimColorCode = (request: RacerPartDrawingRequest): number | string => {
   const [surface] = getBatchSurfaces(request.model)
   const color =
     surface?.bitmap === null || surface === undefined
       ? null
-      : getAverageColor(surface.bitmap, MINIMUM_RIM_BRIGHTNESS)
+      : getDominantBrightColor(surface.bitmap, MINIMUM_RIM_BRIGHTNESS)
   return color === null
     ? DEFAULT_RIM_COLOR_CODE
     : `${DIRECT_COLOR_PREFIX}${color.toString(16).padStart(6, '0').toUpperCase()}`
@@ -80,11 +81,15 @@ export const createLDrawWheelsDrawing = (
     object.add(holder)
     const set = getWheelSet(wheel.radius * 2 * LDRAW_UNITS_PER_RAW_UNIT)
     const scale = (wheel.radius * 2) / set.diameter
+    const copyCount = Math.min(
+      Math.max(Math.round(wheel.width / (set.width * scale)), 1),
+      MAXIMUM_COPY_COUNT
+    )
     const local = new Matrix4()
       .makeTranslation(wheel.centre[0] ?? 0, wheel.centre[1] ?? 0, wheel.centre[2] ?? 0)
       .multiply(getAxisRotation(wheel.axisIndex, getIsOutwardPositive(wheel, wheels)))
       .multiply(new Matrix4().makeScale(scale, scale, scale))
-    return { wheel, holder, set, local }
+    return { wheel, holder, set, local, copyCount }
   })
   const loadedGroups: Group[] = []
   let isDisposed = false
@@ -99,7 +104,12 @@ export const createLDrawWheelsDrawing = (
         applyPlasticLook(model)
         loadedGroups.push(model)
         for (const placement of placements.filter((candidate) => candidate.set === set)) {
-          placement.holder.add(model.clone())
+          // A drum as wide as several tyres (two wheels fused in the original's model) is several tyres side by side.
+          for (let copy = 0; copy < placement.copyCount; copy += 1) {
+            const clone = model.clone()
+            clone.position.z = (copy - (placement.copyCount - 1) / 2) * set.width
+            placement.holder.add(clone)
+          }
         }
       },
       (error: unknown) => console.error('The LDraw library could not build the wheels', error)

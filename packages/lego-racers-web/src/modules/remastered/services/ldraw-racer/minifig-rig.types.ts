@@ -4,7 +4,13 @@ import type { MinifigPartKey, MinifigPosture } from './minifig-assembly.types.ts
 // and ends where the next one starts, so bending the elbow or the knee moves it to the hand or the ankle).
 export type MinifigAttachment =
   | { readonly kind: 'bone'; readonly boneIndex: number }
-  | { readonly kind: 'chord'; readonly startIndex: number; readonly endIndex: number }
+  | {
+      readonly kind: 'chord'
+      readonly startIndex: number
+      readonly endIndex: number
+      // 1 or -1 for an arm that splays outward (to the left or right) as it hangs, as the library's own arms do; 0 for none.
+      readonly outwardSign: number
+    }
 
 export type MinifigRig = {
   readonly posture: MinifigPosture

@@ -17,6 +17,7 @@ import type { SkeletonPoseSampler } from './skeleton-pose.types.ts'
 import { ensureStudioLights } from './studio-scene-lights.ts'
 
 const RAW_UNITS_PER_LDRAW_UNIT = 3.2
+const ARM_SPLAY = (9.78 * Math.PI) / 180
 const IDENTITY_ROTATION = '1 0 0 0 1 0 0 0 1'
 const HEAD_ORIGIN_Y = -48
 const TORSO_ORIGIN_Y = -24
@@ -43,10 +44,14 @@ const getFigureFrame = (rig: MinifigRig): Matrix4 =>
     1
   )
 
-const getPosition = (matrix: Matrix4): Vector3 => new Vector3().setFromMatrixPosition(matrix)
+const getBonePosition = (matrices: readonly Matrix4[], boneIndex: number): Vector3 => {
+  const matrix = matrices[boneIndex]
+  return matrix === undefined ? new Vector3() : new Vector3().setFromMatrixPosition(matrix)
+}
 
 // What carries a part now, as a change of the bind pose: a bone's matrix with the bind pose's undone, or the turn that takes the chord
-// between two bones from its bind direction to its present one, about the first bone's present place.
+// between two bones from its bind direction to its present one, about the first bone's present place. An arm splays outward as it
+// hangs, the more the lower it hangs, as the library's own arms do.
 const getAttachmentMatrix = (
   attachment: MinifigAttachment,
   rest: readonly Matrix4[],
@@ -59,37 +64,20 @@ const getAttachmentMatrix = (
       ? new Matrix4()
       : poseMatrix.clone().multiply(restMatrix.clone().invert())
   }
-  const [restStart, restEnd, poseStart, poseEnd] = [
-    rest[attachment.startIndex],
-    rest[attachment.endIndex],
-    pose[attachment.startIndex],
-    pose[attachment.endIndex],
-  ].map((matrix) => (matrix === undefined ? new Vector3() : getPosition(matrix)))
-  const bindDirection = (restEnd ?? new Vector3())
-    .clone()
-    .sub(restStart ?? new Vector3())
-    .normalize()
-  const direction = (poseEnd ?? new Vector3())
-    .clone()
-    .sub(poseStart ?? new Vector3())
-    .normalize()
+  const { startIndex, endIndex, outwardSign } = attachment
+  const restStart = getBonePosition(rest, startIndex)
+  const poseStart = getBonePosition(pose, startIndex)
+  const bindDirection = getBonePosition(rest, endIndex).sub(restStart).normalize()
+  const direction = getBonePosition(pose, endIndex).sub(poseStart).normalize()
+  const hangingShare = Math.max(0, -direction.z)
+  direction.y += outwardSign * Math.tan(ARM_SPLAY) * hangingShare
   const turn = new Matrix4().makeRotationFromQuaternion(
-    new Quaternion().setFromUnitVectors(bindDirection, direction)
+    new Quaternion().setFromUnitVectors(bindDirection, direction.normalize())
   )
   return new Matrix4()
-    .makeTranslation(
-      (poseStart ?? new Vector3()).x,
-      (poseStart ?? new Vector3()).y,
-      (poseStart ?? new Vector3()).z
-    )
+    .makeTranslation(poseStart.x, poseStart.y, poseStart.z)
     .multiply(turn)
-    .multiply(
-      new Matrix4().makeTranslation(
-        -(restStart ?? new Vector3()).x,
-        -(restStart ?? new Vector3()).y,
-        -(restStart ?? new Vector3()).z
-      )
-    )
+    .multiply(new Matrix4().makeTranslation(-restStart.x, -restStart.y, -restStart.z))
 }
 
 const getPartText = (plan: MinifigPartPlan): string =>

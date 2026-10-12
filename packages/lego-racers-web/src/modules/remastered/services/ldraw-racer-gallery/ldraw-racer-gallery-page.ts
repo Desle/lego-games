@@ -2,10 +2,13 @@ import { parseChassisDatabase } from '@lego-games/lego-racers/chassis-database'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import {
+  getChampionRacerAppearance,
   getRacerModelFiles,
   loadBuiltDriverScene,
   loadMenuDriverScene,
 } from '@lego-games/lego-racers/racer-appearance'
+import { parseDriverDatabase } from '@lego-games/lego-racers/driver-database'
+import { readRacerDatabases } from '@lego-games/lego-racers/race'
 import { loadModelScene } from '@lego-games/lego-racers/scene'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import {
@@ -32,6 +35,7 @@ import type { LDrawRacerPartDrawing } from '../ldraw-racer/ldraw-racer-drawing.t
 import type {
   GalleryCatalogueSlot,
   GalleryFigure,
+  GalleryDriver,
   GalleryFocus,
   GalleryView,
 } from './ldraw-racer-gallery-page.types.ts'
@@ -190,7 +194,7 @@ const createDriver = async (
   partBytes: readonly number[],
   clipIndex: number,
   milliseconds: number
-): Promise<{ readonly scene: Scene; readonly drawing: LDrawRacerPartDrawing } | null> => {
+): Promise<GalleryDriver | null> => {
   const archive = await getArchive()
   const model = loadFigureModel(archive, figure, partBytes)
   const drawing = createLDrawDriverDrawing(
@@ -271,4 +275,150 @@ const renderCatalogueSheet = async (
   return indices.length
 }
 
-Object.assign(window, { renderWheels, renderDriver, renderCatalogueSheet })
+const DRIVER_DATABASE_PATH = 'GAMEDATA\\COMMON\\DRIVERS.DDB'
+const RACE_DRIVER_CLIP = 9
+
+const getDriverNames = async (): Promise<readonly string[]> => {
+  const archive = await getArchive()
+  return parseDriverDatabase(archive.readFile(DRIVER_DATABASE_PATH)).drivers.map(
+    (driver) => driver.name
+  )
+}
+
+// A driver of the race's database as the race draws him: the fixed model of his name on the pelvis skeleton, in the clip he sits in.
+const createRaceDriver = async (
+  driverName: string
+): Promise<GalleryDriver | null> => {
+  const archive = await getArchive()
+  const appearance = getChampionRacerAppearance(readRacerDatabases(archive.readFile), driverName, 0)
+  if (appearance.driverModel === null) return null
+  const model = loadModelScene(archive, getRacerModelFiles(appearance.driverModel))
+  const drawing = createLDrawDriverDrawing(
+    getRequest(archive, RacerPartKind.DRIVER, model, appearance.driverModel.modelName, null),
+    '?hd'
+  )
+  const animation = model.scene.animations[0]?.animation
+  if (drawing === null || animation === undefined) return null
+  drawing.setAnimationState(
+    advanceSkeletonAnimation(createSkeletonAnimationState(animation, RACE_DRIVER_CLIP), animation, 0)
+  )
+  await drawing.settled
+  return { scene: createSceneOf(model, drawing, false), drawing }
+}
+
+// A driver of the database as the race draws him, or as the menus' standing figure of his part bytes.
+const createDriverOfName = async (
+  driverName: string,
+  figure: GalleryFigure
+): Promise<GalleryDriver | null> => {
+  if (figure === 'race') return createRaceDriver(driverName)
+  const archive = await getArchive()
+  const driver = parseDriverDatabase(archive.readFile(DRIVER_DATABASE_PATH)).drivers.find(
+    (candidate) => candidate.name === driverName
+  )
+  return driver === undefined ? null : createDriver('menu', driver.unreadBytes, 0, 0)
+}
+
+// A sheet of the drivers of the race's database, each as the race draws him (the order of `getDriverNames`).
+const renderDriverSheet = async (
+  columns: number,
+  cell: number,
+  view: GalleryView,
+  figure: GalleryFigure
+): Promise<readonly string[]> => {
+  const names = await getDriverNames()
+  const rows = Math.ceil(names.length / columns)
+  renderer.setSize(columns * cell, rows * cell, false)
+  renderer.setScissorTest(true)
+  renderer.setViewport(0, 0, columns * cell, rows * cell)
+  renderer.setScissor(0, 0, columns * cell, rows * cell)
+  renderer.clear()
+  for (const [position, name] of names.entries()) {
+    const driver = await createDriverOfName(name, figure)
+    if (driver === null) continue
+    drawIn(
+      driver.scene,
+      getFramedCamera(driver.scene, VIEW_DIRECTIONS[view], 1, null),
+      (position % columns) * cell,
+      (rows - 1 - Math.floor(position / columns)) * cell,
+      cell,
+      cell
+    )
+    driver.drawing.dispose()
+  }
+  return names
+}
+
+// A champion's wheels (his chassis's) on the left and his driver on the right, as the race draws them.
+const renderChampion = async (
+  driverName: string,
+  view: GalleryView,
+  width: number,
+  height: number
+): Promise<boolean> => {
+  const archive = await getArchive()
+  const appearance = getChampionRacerAppearance(readRacerDatabases(archive.readFile), driverName, 0)
+  const wheelModel = loadModelScene(archive, getRacerModelFiles(appearance.wheelModel))
+  const wheels = createLDrawWheelsDrawing(
+    getRequest(archive, RacerPartKind.WHEELS, wheelModel, appearance.wheelModel.modelName, null)
+  )
+  const driver = await createRaceDriver(driverName)
+  if (wheels === null || driver === null) return false
+  await wheels.settled
+  renderer.setSize(width, height, false)
+  renderer.setScissorTest(true)
+  renderer.setViewport(0, 0, width, height)
+  renderer.setScissor(0, 0, width, height)
+  renderer.clear()
+  const wheelScene = createSceneOf(wheelModel, wheels, false)
+  drawIn(wheelScene, getFramedCamera(wheelScene, VIEW_DIRECTIONS[view], width / 2 / height, null), 0, 0, width / 2, height)
+  drawIn(driver.scene, getFramedCamera(driver.scene, VIEW_DIRECTIONS[view], width / 2 / height, null), width / 2, 0, width / 2, height)
+  return true
+}
+
+// The wheels of every chassis of the race's database in a sheet (the order of the database).
+const renderWheelSheet = async (
+  columns: number,
+  cell: number,
+  view: GalleryView
+): Promise<readonly string[]> => {
+  const archive = await getArchive()
+  const chassisList = parseChassisDatabase(archive.readFile(CHASSIS_DATABASE_PATH)).chassis
+  const rows = Math.ceil(chassisList.length / columns)
+  renderer.setSize(columns * cell, rows * cell, false)
+  renderer.setScissorTest(true)
+  renderer.setViewport(0, 0, columns * cell, rows * cell)
+  renderer.setScissor(0, 0, columns * cell, rows * cell)
+  renderer.clear()
+  for (const [position, chassis] of chassisList.entries()) {
+    const names = chassis.variants[0]
+    if (names === undefined) continue
+    const model = loadModelScene(archive, getRacerModelFiles(names))
+    const drawing = createLDrawWheelsDrawing(
+      getRequest(archive, RacerPartKind.WHEELS, model, names.modelName, null)
+    )
+    if (drawing === null) continue
+    await drawing.settled
+    const scene = createSceneOf(model, drawing, false)
+    drawIn(
+      scene,
+      getFramedCamera(scene, VIEW_DIRECTIONS[view], 1, null),
+      (position % columns) * cell,
+      (rows - 1 - Math.floor(position / columns)) * cell,
+      cell,
+      cell
+    )
+    drawing.dispose()
+  }
+  return chassisList.map((chassis) => chassis.name)
+}
+
+Object.assign(window, {
+  renderWheelSheet,
+  renderWheels,
+  renderDriver,
+  renderCatalogueSheet,
+  getDriverNames,
+  renderDriverSheet,
+  renderChampion,
+})

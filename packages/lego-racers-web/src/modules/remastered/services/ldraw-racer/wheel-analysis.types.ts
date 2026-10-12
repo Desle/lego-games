@@ -8,3 +8,11 @@ export type WheelShape = {
   readonly width: number
   readonly pointCount: number
 }
+
+// A connected piece of a model's triangles: the bone that moves it, its bounds in that bone's frame and how many points it has.
+export type Piece = {
+  readonly boneIndex: number
+  readonly minimum: number[]
+  readonly maximum: number[]
+  pointCount: number
+}

@@ -1,5 +1,5 @@
 import type { SceneMesh } from '@lego-games/lego-racers/scene'
-import type { WheelShape } from './wheel-analysis.types.ts'
+import type { Piece, WheelShape } from './wheel-analysis.types.ts'
 
 const AXIS_COUNT = 3
 const CIRCULAR_TOLERANCE = 0.15
@@ -16,13 +16,6 @@ const getPositionKey = (mesh: SceneMesh, boneIndex: number, vertex: number): str
       (mesh.positions[vertex * AXIS_COUNT + axis] ?? 0).toFixed(POSITION_PRECISION)
     ),
   ].join(',')
-
-type Piece = {
-  readonly boneIndex: number
-  readonly minimum: number[]
-  readonly maximum: number[]
-  pointCount: number
-}
 
 const getRoot = (parents: number[], index: number): number => {
   let root = index

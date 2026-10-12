@@ -15,13 +15,14 @@ const findBone = (boneNames: readonly string[], pattern: RegExp): number =>
 const getChordOrBone = (
   boneNames: readonly string[],
   startPattern: RegExp,
-  endPattern: RegExp
+  endPattern: RegExp,
+  outwardSign = 0
 ): MinifigAttachment => {
   const startIndex = findBone(boneNames, startPattern)
   const endIndex = findBone(boneNames, endPattern)
   return startIndex < 0 || endIndex < 0
     ? getBone(Math.max(startIndex, 0))
-    : { kind: 'chord', startIndex, endIndex }
+    : { kind: 'chord', startIndex, endIndex, outwardSign }
 }
 
 // The skeleton of the race driver and the figure builder's drivers: pelvis, torso, two arms, a dummy that carries the hat and head, a head.
@@ -44,8 +45,10 @@ const getSeatedRig = (): MinifigRig =>
 
 // The skeleton of the menus' figures (`rr`, `hr`, `rp`, `hp`: thigh, knee, ankle, foot and toe chains, waist, chest, neck, head, and a
 // shoulder, elbow, wrist and hand for each arm), whose bind pose has the arms out sideways.
-const getStandingRig = (boneNames: readonly string[]): MinifigRig =>
-  Object.freeze({
+const getStandingRig = (boneNames: readonly string[]): MinifigRig => {
+  const leftArm = getChordOrBone(boneNames, /^l_sh/, /^l_wr/, 1)
+  const rightArm = getChordOrBone(boneNames, /^r_sh/, /^r_wr/, -1)
+  return Object.freeze({
     posture: MinifigPosture.STANDING,
     hipsHeight: STANDING_HIPS_HEIGHT,
     attachments: Object.freeze({
@@ -54,12 +57,14 @@ const getStandingRig = (boneNames: readonly string[]): MinifigRig =>
       [MinifigPartKey.RIGHT_LEG]: getChordOrBone(boneNames, /^r_th/, /^r_an/),
       [MinifigPartKey.TORSO]: getBone(Math.max(findBone(boneNames, /^chest/), 0)),
       [MinifigPartKey.HEAD]: getBone(Math.max(findBone(boneNames, /^head/), 0)),
-      [MinifigPartKey.LEFT_ARM]: getChordOrBone(boneNames, /^l_sh/, /^l_wr/),
-      [MinifigPartKey.RIGHT_ARM]: getChordOrBone(boneNames, /^r_sh/, /^r_wr/),
-      [MinifigPartKey.LEFT_HAND]: getBone(Math.max(findBone(boneNames, /^(l_hand|hook)/), 0)),
-      [MinifigPartKey.RIGHT_HAND]: getBone(Math.max(findBone(boneNames, /^r_hand/), 0)),
+      [MinifigPartKey.LEFT_ARM]: leftArm,
+      [MinifigPartKey.RIGHT_ARM]: rightArm,
+      // The hand is the end of the arm, so it follows the arm's line (one rigid piece does not meet a hand that turns on its own).
+      [MinifigPartKey.LEFT_HAND]: leftArm,
+      [MinifigPartKey.RIGHT_HAND]: rightArm,
     }),
   })
+}
 
 // How a minifigure's parts follow a driver's skeleton: the seated or the standing one, told apart by their bones; null for a skeleton
 // that is neither.

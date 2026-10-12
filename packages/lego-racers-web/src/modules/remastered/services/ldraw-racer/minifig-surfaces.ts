@@ -5,13 +5,13 @@ import type {
   BoneClass,
   MinifigSurfaces,
   PictureSource,
+  SurfaceSize,
+  SurfaceTriangle,
   UvRectangle,
 } from './minifig-surfaces.types.ts'
 
 const FRONT_NORMAL_X = 0.5
 const FALLBACK_COLOR = 0xf2cd37
-// The corner of a face's picture is the skin the card is printed on.
-const SKIN_CORNER: BitmapRegion = Object.freeze({ left: 0, top: 0, right: 0.05, bottom: 0.05 })
 // The face card of `ICB_CHAR.GCB`'s `heads` (four triangles on the face bone) shows this part of the 64 x 64 face picture, and is 32 raw
 // units wide and 20 high: the same on all 30 faces (read off their triangles).
 const FACE_RECTANGLE: UvRectangle = Object.freeze({ left: 0.27, right: 0.722, bottom: 0.375, top: 0.688 })
@@ -22,12 +22,6 @@ const TWO_TONE_PATCH_SHARE = 0.03
 
 // The bones of the figure builder's driver model (`pelvis`, `torso`, `arm_l`, `arm_r`, `dummy01`, `head`) by what they carry.
 const BONE_CLASSES: readonly BoneClass[] = Object.freeze(['legs', 'torso', 'arm', 'arm', 'head'])
-
-type SurfaceTriangle = {
-  readonly boneClass: BoneClass
-  readonly vertices: readonly number[]
-  readonly normalX: number
-}
 
 const getTriangles = (mesh: SceneMesh, batchIndex: number): readonly SurfaceTriangle[] => {
   const batch = mesh.drawBatches[batchIndex]
@@ -68,7 +62,7 @@ const getUvRectangle = (
 const getSurfaceSize = (
   mesh: SceneMesh,
   triangles: readonly SurfaceTriangle[]
-): { readonly width: number; readonly height: number } => {
+): SurfaceSize => {
   const vertices = triangles.flatMap((triangle) => triangle.vertices)
   const [low, high] = getBounds(vertices.map((vertex) => mesh.positions[vertex * 3 + 1] ?? 0))
   const [bottom, top] = getBounds(vertices.map((vertex) => mesh.positions[vertex * 3 + 2] ?? 0))
@@ -102,8 +96,8 @@ const getPicture = (
 const findBatchIndex = (surfaces: readonly BatchSurface[], pattern: RegExp): number =>
   surfaces.findIndex((surface) => pattern.test(surface.materialName))
 
-// The colours and pictures the figure builder's model of a driver (`loadBuiltDriverScene`) gives his parts: the skin is the corner of the
-// face's picture, the torso and the arms the dominant colours of the parts of the chest picture they use, and the legs the common
+// The colours and pictures the figure builder's model of a driver (`loadBuiltDriverScene`) gives his parts: the skin is the colour the face card is mostly
+// printed on, the torso and the arms the dominant colours of the parts of the chest picture they use, and the legs the common
 // colours of their picture (a patch of another colour is the hips).
 export const readMinifigSurfaces = (model: ModelScene): MinifigSurfaces => {
   const mesh = model.scene.meshes[model.scene.instances[0]?.levels[0]?.meshIndex ?? -1]
@@ -115,7 +109,9 @@ export const readMinifigSurfaces = (model: ModelScene): MinifigSurfaces => {
   const chest = surfaces[chestIndex]
   const legs = surfaces[legsIndex]
   const skinColor =
-    (face?.bitmap == null ? null : getDominantColor(face.bitmap, SKIN_CORNER)) ?? FALLBACK_COLOR
+    (face?.bitmap == null
+      ? null
+      : getDominantColor(face.bitmap, getBitmapRegion(FACE_RECTANGLE))) ?? FALLBACK_COLOR
   const chestTriangles = mesh === undefined ? [] : getTriangles(mesh, chestIndex)
   const torsoTriangles = chestTriangles.filter((triangle) => triangle.boneClass === 'torso')
   const getChestColor = (triangles: readonly SurfaceTriangle[]): number | null => {

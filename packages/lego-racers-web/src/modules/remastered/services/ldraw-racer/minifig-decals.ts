@@ -16,6 +16,9 @@ import type { MinifigDecal } from './minifig-decals.types.ts'
 const RAW_UNITS_PER_LDRAW_UNIT = 3.2
 const HEAD_RADIUS = 13.15
 const FACE_CENTRE_Y = 10.5
+// The original's face card is 30 % of its head's width; a minifigure's printed face is about half of its head's, and a card that small
+// does not read at race distance.
+const FACE_SCALE = 1.5
 const FACE_WIDTH_LIMITS = [8, 22] as const
 const FACE_HEIGHT_LIMITS = [6, 14] as const
 const ARC_SEGMENTS = 16
@@ -102,8 +105,8 @@ const createDecal = (
 // The face: a patch of the head's front, as wide and as tall as the original's face surface (in the figure's units, within
 // the limits of the head), showing the face's picture.
 export const createFaceDecal = (picture: PictureSource, search: string): MinifigDecal | null => {
-  const width = clamp(picture.width / RAW_UNITS_PER_LDRAW_UNIT, FACE_WIDTH_LIMITS)
-  const height = clamp(picture.height / RAW_UNITS_PER_LDRAW_UNIT, FACE_HEIGHT_LIMITS)
+  const width = clamp((picture.width * FACE_SCALE) / RAW_UNITS_PER_LDRAW_UNIT, FACE_WIDTH_LIMITS)
+  const height = clamp((picture.height * FACE_SCALE) / RAW_UNITS_PER_LDRAW_UNIT, FACE_HEIGHT_LIMITS)
   const arc = width / HEAD_RADIUS
   const geometry = new CylinderGeometry(
     HEAD_RADIUS,

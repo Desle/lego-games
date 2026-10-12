@@ -12,6 +12,8 @@ const DRIVER_DATABASE_PATH = 'GAMEDATA\\COMMON\\DRIVERS.DDB'
 const PART_BYTE_COUNT = 5
 const HOOK_TORSO_TYPE = 1
 const PEG_LEGS_TYPE = 1
+// A hat that is a whole helmet takes the face out of the model; the model without a hat has the face, the torso and the legs.
+const NO_HAT = 0
 
 const catalogs = new WeakMap<JamArchive, BodyPartCatalog>()
 
@@ -47,6 +49,6 @@ export const createMinifigSpec = (
     hat: LDRAW_HATS[partBytes[0] ?? 0] ?? null,
     isHookTorso: catalog.torsos.entries[partBytes[2] ?? 0]?.type === HOOK_TORSO_TYPE,
     isPegLegs: catalog.legs.entries[partBytes[3] ?? 0]?.type === PEG_LEGS_TYPE,
-    surfaces: readMinifigSurfaces(loadBuiltDriverScene(archive, partBytes)),
+    surfaces: readMinifigSurfaces(loadBuiltDriverScene(archive, [NO_HAT, ...partBytes.slice(1)])),
   })
 }
