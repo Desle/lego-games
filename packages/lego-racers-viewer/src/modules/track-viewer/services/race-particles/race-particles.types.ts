@@ -1,11 +1,17 @@
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
+import type { SpriteView } from '@lego-games/lego-racers/race-presentation'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type { Group, Mesh } from 'three'
 
 export type RaceParticles = {
   readonly group: Group
   // Builds the quads of the live particles of the pools for the camera.
-  readonly update: (pools: readonly (EmitterPool | null)[], cameraView: CameraView) => void
+  // The sprites the effects draw are camera-facing quads of the same kind.
+  readonly update: (
+    pools: readonly (EmitterPool | null)[],
+    cameraView: CameraView,
+    sprites?: readonly SpriteView[]
+  ) => void
   readonly dispose: () => void
 }
 

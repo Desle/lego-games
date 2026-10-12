@@ -54,6 +54,8 @@ export type RacePresentation = {
   readonly isCameraSwitchEnabled: boolean
   readonly previousPhase: RacePhaseValue
   readonly isChangeCameraHeld: boolean
+  // The last frame drew the warp (0x0045d940 sets the camera's snap flag, 0x0043a3e0, on every such draw).
+  readonly isWarpDrawn: boolean
   readonly isPlayerPowerSliding: boolean
   // Racer +0xd24..+0xd30 and the loops' playing flags (0x00437d40), one per racer.
   readonly engineSounds: readonly EngineSoundState[]
@@ -161,6 +163,12 @@ export type EffectView = {
   readonly kind: string
   readonly position: Vector3
   readonly heading: Vector3 | null
+  // The missile figure's frame (0x00456db0, 0x004568f0) and its clip: the rocket's number (0 to 2) is the clip of its
+  // launch animation, which has played `launchMilliseconds` while `isLaunching`. Null, 0, false and 0 for the others.
+  readonly rotation: Matrix3 | null
+  readonly rocketIndex: number
+  readonly isLaunching: boolean
+  readonly launchMilliseconds: number
 }
 
 // An explosion pool member that is growing or fading: where, and the frame scale the engine gives it (0x00410f10).
@@ -185,7 +193,32 @@ export type BrickView = {
 // What the drawing of a brick reads of either brick class.
 export type DrawnBrick = BrickBase & { readonly kind?: string }
 
+// A shield or turbo effect hanging on a racer: its kind and level, the racer, its state (2, 3 or 4) with the milliseconds
+// left in it, and the milliseconds its figures' animation has run in that state.
+export type AttachmentView = {
+  readonly kind: string
+  readonly level: number
+  readonly racerIndex: number
+  readonly state: AttachmentState
+  readonly timerMilliseconds: number
+  readonly elapsedMilliseconds: number
+  // The figure's scale (+0x58): 1, except the warp portal's, which follows the fade table (0x0045dbe0).
+  readonly scale: number
+}
+
+export type AttachmentState = 'starting' | 'active' | 'ending'
+
+// A camera-facing picture an effect draws (the cannon ball is one): its material, centre and size in the world.
+export type SpriteView = {
+  readonly materialName: string
+  readonly position: Vector3
+  readonly width: number
+  readonly height: number
+}
+
 export type EffectViews = {
+  readonly sprites: readonly SpriteView[]
+  readonly attachments: readonly AttachmentView[]
   readonly bricks: readonly BrickView[]
   readonly spinAngle: number
   readonly effects: readonly EffectView[]
