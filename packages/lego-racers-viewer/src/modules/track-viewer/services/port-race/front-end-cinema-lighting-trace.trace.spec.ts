@@ -28,12 +28,21 @@ const FRAME_MILLISECONDS = 33
 const MENU_OPENED_FRAME = 154
 const MATCHED_SHARE = 0.9
 const COLOR_TOLERANCE = 1
-const KEYS: readonly (readonly [number, FrontEndInput, number])[] = [
+type ScenarioKeys = readonly (readonly [number, FrontEndInput, number])[]
+// Two downs and enter open the single race screen; down and enter the circuit race screen, whose third race (frames 392 to
+// 452) is the space cinema.
+const SINGLE_KEYS: ScenarioKeys = [
   [240, 'down', 208],
   [250, 'down', 208],
   [270, 'accept', 28],
 ]
-const WATCHED_FRAMES = [300, 400, 700]
+const CIRCUIT_KEYS: ScenarioKeys = [
+  [250, 'down', 208],
+  [270, 'accept', 28],
+]
+const SINGLE_FRAMES = [300, 400, 700]
+// The figure's colours change a little with every frame (its pose moves under the light).
+const CONSECUTIVE_FRAMES = Array.from({ length: 11 }, (_, index) => 405 + index)
 
 const archive = openJamArchive(readOriginalJam())
 const resources = loadFrontEndResources(archive)
@@ -58,47 +67,56 @@ const getIsNear = (left: number, right: number): boolean =>
     (shift) => Math.abs(((left >> shift) & 0xff) - ((right >> shift) & 0xff)) <= COLOR_TOLERANCE
   )
 
+const getShares = async (keys: ScenarioKeys, watchedFrames: readonly number[]) => {
+  const lastFrame = Math.max(...watchedFrames)
+  const original = await readOriginalFrontEnd({
+    name: 'race cinema lighting',
+    frames: Array.from({ length: lastFrame + 1 }, (_, frame) => {
+      const key = keys.find(([keyFrame]) => keyFrame === frame)
+      return { milliseconds: FRAME_MILLISECONDS, scanCodes: key === undefined ? [] : [key[2]] }
+    }),
+    recordFrames: watchedFrames,
+    isRenderRecorded: true,
+  })
+  let state: FrontEndState = createFrontEnd(resources, environment)
+  let steps = 0
+  return watchedFrames.map((watchedFrame) => {
+    while (steps < watchedFrame - MENU_OPENED_FRAME) {
+      steps += 1
+      const input =
+        keys.find(([keyFrame]) => keyFrame === MENU_OPENED_FRAME + steps - 1)?.[1] ?? null
+      state = stepFrontEnd(state, resources, environment, input, FRAME_MILLISECONDS).state
+    }
+    const view = getCinemaView(state)
+    const draws =
+      original.renderFrames.find((candidate) => candidate.frame === watchedFrame)?.draws ?? []
+    const originalColors = new Set(
+      getOriginalFigureDraws(draws).flatMap((draw) =>
+        draw.vertices.map((vertex) => vertex.diffuse & 0xffffff)
+      )
+    )
+    const portColors = view === null ? new Set<number>() : getCinemaFigureColors(archive, view)
+    const matched = [...originalColors].filter((color) =>
+      [...portColors].some((portColor) => getIsNear(color, portColor))
+    )
+    return matched.length / Math.max(1, originalColors.size)
+  })
+}
+
 describe.skipIf(!(getIsOriginalGamePresent() && getIsOriginalPresentationAvailable()))(
   'front end race cinema lighting',
   () => {
-    // eslint-disable-next-line no-restricted-syntax -- the test body is a block of steps
     it('lights the champion like the original (vertex colours of the figure draws)', async () => {
-      // Arrange
-      const lastFrame = Math.max(...WATCHED_FRAMES)
-      const original = await readOriginalFrontEnd({
-        name: 'race cinema lighting',
-        frames: Array.from({ length: lastFrame + 1 }, (_, frame) => {
-          const key = KEYS.find(([keyFrame]) => keyFrame === frame)
-          return { milliseconds: FRAME_MILLISECONDS, scanCodes: key === undefined ? [] : [key[2]] }
-        }),
-        recordFrames: WATCHED_FRAMES,
-        isRenderRecorded: true,
-      })
-      let state: FrontEndState = createFrontEnd(resources, environment)
-      let steps = 0
+      // Arrange / Act
+      const shares = await getShares(SINGLE_KEYS, SINGLE_FRAMES)
 
-      // Act
-      const shares = WATCHED_FRAMES.map((watchedFrame) => {
-        while (steps < watchedFrame - MENU_OPENED_FRAME) {
-          steps += 1
-          const input =
-            KEYS.find(([keyFrame]) => keyFrame === MENU_OPENED_FRAME + steps - 1)?.[1] ?? null
-          state = stepFrontEnd(state, resources, environment, input, FRAME_MILLISECONDS).state
-        }
-        const view = getCinemaView(state)
-        const draws =
-          original.renderFrames.find((candidate) => candidate.frame === watchedFrame)?.draws ?? []
-        const originalColors = new Set(
-          getOriginalFigureDraws(draws).flatMap((draw) =>
-            draw.vertices.map((vertex) => vertex.diffuse & 0xffffff)
-          )
-        )
-        const portColors = view === null ? new Set<number>() : getCinemaFigureColors(archive, view)
-        const matched = [...originalColors].filter((color) =>
-          [...portColors].some((portColor) => getIsNear(color, portColor))
-        )
-        return matched.length / Math.max(1, originalColors.size)
-      })
+      // Assert
+      expect(Math.min(...shares)).toBeGreaterThan(MATCHED_SHARE)
+    })
+
+    it('follows the figure frame by frame (the colours that change with its pose)', async () => {
+      // Arrange / Act
+      const shares = await getShares(CIRCUIT_KEYS, CONSECUTIVE_FRAMES)
 
       // Assert
       expect(Math.min(...shares)).toBeGreaterThan(MATCHED_SHARE)
