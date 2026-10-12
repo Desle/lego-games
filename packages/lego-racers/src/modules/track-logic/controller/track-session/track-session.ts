@@ -25,6 +25,8 @@ import { drawRandomScaledRange, drawRandomValue } from '../../../random-table/in
 import {
   advanceWorldAnimation,
   findSkeletonInstanceIndex,
+  getSkeletonInstanceBoneAxes,
+  getSkeletonInstanceBoneTranslation,
   getSkeletonInstanceChainPosition,
   getSkeletonInstanceClipIndex,
   getSkeletonInstanceFlags,
@@ -39,6 +41,7 @@ import {
   TrackEventState,
 } from '../../types/track-event-state/track-event-state.ts'
 import type {
+  TrackBoneFrame,
   TrackEffect,
   TrackEvent,
   TrackLogicContext,
@@ -463,6 +466,24 @@ export const createTrackSession = (
       : getSkeletonInstanceChainPosition(context.arithmetic, instance, boneIndex, instance.scale)
   }
 
+  const getObjectBoneFrame = (
+    reference: ObjectReference,
+    boneIndex: number
+  ): TrackBoneFrame | null => {
+    const found = getObjectInstance(reference)
+    const instance = found === null ? undefined : worlds[found.key].skeletonInstances[found.index]
+    if (instance === undefined) return null
+    const position = getSkeletonInstanceBoneTranslation(context.arithmetic, instance, boneIndex)
+    const axes = getSkeletonInstanceBoneAxes(context.arithmetic, instance, boneIndex)
+    if (position === null || axes === null) return null
+    const { first, third } = axes
+    return Object.freeze({
+      position,
+      forward: Object.freeze([first.x, first.y, first.z] as const),
+      up: Object.freeze([third.x, third.y, third.z] as const),
+    })
+  }
+
   const setEventEmitterPosition = (handle: EmitterReference, position: Vector3): void => {
     const pool = handle.isCommonPool ? emitters.common : emitters.track
     if (pool === null) return
@@ -506,6 +527,7 @@ export const createTrackSession = (
     context,
     getObject,
     getObjectBonePosition,
+    getObjectBoneFrame,
     setEmitterPosition: setEventEmitterPosition,
     requestObjectAnimation,
     drawRandomValue: () => {

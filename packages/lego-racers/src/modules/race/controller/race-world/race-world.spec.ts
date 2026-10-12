@@ -1,8 +1,10 @@
+import type { CollisionObject } from '../../../collision/index.ts'
 import { getRacer } from '../../../racer/index.ts'
 import { createFixtureRace } from '../race-fixtures/race-fixtures.ts'
 import type { RaceRacerSet } from '../../types/race.types.ts'
 import {
   changeTrackLogic,
+  getContextWithMovedCollisionObjects,
   getFlightRacer,
   getRaceRacerSet,
   getRacerSetAfterProjectileEvents,
@@ -257,5 +259,66 @@ describe('barrier hazards (0x0048f030, 0x0048e5a0, 0x0048e600)', () => {
 
     // Assert
     expect(changed.surfaces).toBe(racerSet.surfaces)
+  })
+})
+
+const createStillObject = (): CollisionObject =>
+  Object.freeze({
+    frame: Object.freeze({
+      rotation: Object.freeze([1, 0, 0, 0, 1, 0, 0, 0, 1] as const),
+      position: Object.freeze({ x: 0, y: 0, z: 0 }),
+    }),
+    // The volume is never read by the move.
+    volume: Object.freeze({}) as unknown as CollisionObject['volume'],
+    materialNames: undefined,
+  })
+
+describe('collision objects that follow a bone (0x004639d0)', () => {
+  it('moves the named instance to the frame the effect carries and leaves the others', () => {
+    // Arrange
+    const race = createFixtureRace()
+    const context = {
+      ...race.context,
+      collisionObjects: [createStillObject(), createStillObject()],
+    }
+    const names = ['object0', 'object1']
+    const effect = {
+      type: 'track.collision_object_moved',
+      name: 'object0',
+      frame: {
+        position: [1, 2, 3],
+        forward: [0, 1, 0],
+        up: [0, 0, 1],
+      },
+    } as const
+
+    // Act
+    const moved = getContextWithMovedCollisionObjects(context, names, [effect])
+
+    // Assert
+    expect(moved.collisionObjects[0]?.frame.position).toEqual({ x: 1, y: 2, z: 3 })
+    expect(moved.collisionObjects[0]?.frame.rotation).toEqual([0, 1, 0, -1, 0, 0, 0, 0, 1])
+    expect(moved.collisionObjects.slice(1)).toEqual(context.collisionObjects.slice(1))
+  })
+
+  it('keeps the context when no instance carries the name', () => {
+    // Arrange
+    const race = createFixtureRace()
+
+    // Act
+    const moved = getContextWithMovedCollisionObjects(
+      race.context,
+      [],
+      [
+        {
+          type: 'track.collision_object_moved',
+          name: 'absent',
+          frame: { position: [0, 0, 0], forward: [1, 0, 0], up: [0, 0, 1] },
+        },
+      ]
+    )
+
+    // Assert
+    expect(moved).toBe(race.context)
   })
 })

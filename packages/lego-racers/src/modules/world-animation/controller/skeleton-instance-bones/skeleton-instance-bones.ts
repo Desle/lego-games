@@ -113,6 +113,14 @@ const getChainTurnedAxes = (
   return Object.freeze({ first: getTurned(getRow(0)), third: getTurned(getRow(6)) })
 }
 
+// 0x004639d0 (the 52 event): rows 0 and 2 of the bone's own rotation (bone slots +0x30 and +0x38), turned only by the
+// instance's rotation (instance slot +0x34).
+export const getSkeletonInstanceBoneAxes = (
+  arithmetic: FloatArithmetic,
+  instance: SkeletonInstanceRuntime,
+  boneIndex: number
+): FrameAxes | null => getChainTurnedAxes(arithmetic, instance, boneIndex, () => [])
+
 // 0x0048be70 for a hammer whose name starts with "rk": the bone's own rotation turns its rows first, then each parent's
 // up to the root.
 export const getSkeletonInstanceChainAxes = (

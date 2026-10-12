@@ -216,13 +216,31 @@ export const HANDLERS_4B: TrackEventHandlers = Object.freeze({
   },
 })
 
-// 0x00463990, 0x004639b0, 0x004639d0: follows an object (not ported).
+// 0x004639d0: while the event is not inactive, the collision world instance it names takes the frame of the bone of
+// the object it follows.
+const followBone = (event: TrackEvent, session: TrackSession): void => {
+  if (event.kind !== TrackEventKind.KIND_52) return
+  const { objectReference, secondObjectName, keyword54Integer } = event.record
+  if (objectReference === null || secondObjectName === null) return
+  const frame = session.getObjectBoneFrame(objectReference, keyword54Integer)
+  if (frame !== null) {
+    session.emit({ type: 'track.collision_object_moved', name: secondObjectName, frame })
+  }
+}
+
+// 0x00463990 (begin), 0x004639b0 (end), 0x004639d0 (update): a collision object that follows an object's bone.
 export const HANDLERS_52: TrackEventHandlers = Object.freeze({
   ...IDLE_HANDLERS,
   begin: (event, session) =>
     announceAndSet(session, event, TrackEventState.INACTIVE, FIRST_SIGNAL, TrackEventState.RUNNING),
   end: (event, session) =>
     announceAndSet(session, event, event.state, NO_SIGNAL_PHASE, TrackEventState.INACTIVE),
+  update: (event, session) => {
+    if (event.state === TrackEventState.INACTIVE) return event
+    const base = endIfRequested(event, session)
+    followBone(base, session)
+    return base
+  },
 })
 
 // 0x004637c0, 0x00463800: switches three values of an object (not ported).
