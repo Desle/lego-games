@@ -32,7 +32,7 @@ Verification: every saved design (`DEFAULT.LRS`, `QBUILD.LRS`: 28 cars) was draw
 - `S00xxx` / `s000xx`: sequential special pieces, no number to look up.
 - `s`/`S` plus a theme word (`sLance`, `sTorch`, `sFlag`, `Spear`, `Sbat`, `sspider`...): composite models, a base brick with the accessory moulded on (the flag stands on a plate, the torch on a brick), not catalogued parts. The 12 chassis (10 x 6 footprint) have no Rebrickable or LDraw equivalent either (no 4 x 10/6 x 10 racer base has the arches and cut-outs).
 
-So the only source that can draw them is composition: the LDraw base brick plus the LDraw minifigure accessory (lance, sword, flag, torch, ...) placed in the brick's frame; not done. A candidate list (name rule, then shape rank) was rerun with a corrected quad triangulation of the game meshes (the quad's vertices are in strip order); it added `L304900` (the 2 x 2 double slope 3049, error 0.67 plates, mirrored).
+So the only source that can draw them is composition: the LDraw base brick plus the LDraw minifigure accessory (lance, sword, flag, ...) placed in the brick's frame; done for 24 pieces (next section). A candidate list (name rule, then shape rank) was rerun with a corrected quad triangulation of the game meshes (the quad's vertices are in strip order); it added `L304900` (the 2 x 2 double slope 3049, error 0.67 plates, mirrored).
 
 ### Bricks with no good LDraw match (drawn from the game's own mesh)
 
@@ -59,3 +59,15 @@ Where the LDraw car is drawn: the race, the build-a-car screen (as bricks are pl
 ## The gallery
 
 `/ldraw-gallery.html` on the dev server is a page that exposes `renderCar(savePath, index, mode, view, width, height)`, `renderPieceSheet(names, columns, cellSize)` and `getDesignCount(savePath)` on `window` (modes `ldraw`, `game`, `overlay`; views `front`, `rear`, `top`), for a headless browser to call and save the canvas. The page is not part of the build (`vite build` only builds `index.html`).
+
+## Composite S bricks (`ldraw-composite-mappings.ts`)
+
+`LDRAW_COMPOSITE_MAPPINGS`: game brick name to a list of LDraw parts, each with a 3 x 3 matrix and translation from the part (LDraw axes and units) into the brick frame, and an LDraw colour (null: the colour the player placed). The document writer emits one line per part. Generated like the single-part table: the game mesh's surface is sampled, the accessory part (a short list of candidates chosen by the piece's theme) is fitted over all 48 axis-aligned orientations and a translation search against a distance field of the mesh (precision of the part's surface on the mesh), the mesh points it explains are removed and the leftover is fitted with a plain brick, plate or tile (upright only, snapped to the stud grid). Every pair was then checked on a sheet of the game mesh beside the result (`~/ldraw-gallery/pickups/composites-*.png`).
+
+Mapped (25 names, 24 distinct pieces drawn): the lances `sLance`, `sLance01` (3849), swords `sSWORD`, `sSWORD01`, `sprtswd`, `sprtswd2`, rifles `sprtgun`, `sprtgun2`, `srifle1`, `srifle02` (30141), pickaxes `sdsrtax1`, `sdsrtax2` (3841), the wand `SWand`, shields `sa0010`, `sa0011`, `Sshield1`, `Sshield2` (3846), the barrel `l248900` (2489, open top as the part is), flags `s395700`, `sFlag`, `sadm_flg`, `sprt_flg`, `sVvflg` (antenna 3957a as the pole plus a flag part and a base) and the jungle gem `Sjungem`. The flags' printed pictures and the shields' crests are not drawn (plain colour). Tried and dropped as not matching: torch, lamp, spider, round shield, spears, oars, axes, bat, rocket noses, the chest (the part is larger), the crossbow.
+
+## Bricks on the track (`ldraw-pickup/`)
+
+`getEffectModelDrawing` is asked by `race-effects` for each pool of the power-up bricks (`PUBRICKY`, by kind) and the enhancement brick (`ENHABRIK`). The models are bricks: `PUBRICKY` a 1 x 3 brick (2.34 units a stud), `ENHABRIK` a 1 x 2, turned in the mesh (24 vertices; the studs lie on the face toward (0, -0.71, 0.71)). Their drawing is LDraw 3622 and 3004 under a matrix fitted to those vertices, so the pose, spin and scale come from the Classic group matrix unchanged. Colours: projectile red, shield blue, turbo green, hazard yellow, enhancement white. **No printed symbol**: the original's textures (`pupred2` ...) hold only shaded studs; the symbols are HUD pictures, so there is no decal to carry over. The part has no lights of its own (dozens on a track): it takes its look from the studio reflections with a small glow.
+
+Not replaced: the debris bricks (`brick1..4`, `2BRK02`) are not drawn by the port at all (power-up-visuals.md), the cannon ball is a sprite, the rocket `DMISSILE` is a skeletal figure, the grapple hook has no model here, and the barrel `BARREL` is an octagonal drum with a fuse that no LDraw barrel (round, no fuse) matches.
