@@ -7,7 +7,10 @@ import {
   ZERO_VECTOR3,
 } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, FrameAxes } from '../../../simulation-math/index.ts'
-import type { SkeletonInstanceRuntime } from '../../types/world-animation.types.ts'
+import type {
+  SkeletonInstanceCameraView,
+  SkeletonInstanceRuntime,
+} from '../../types/world-animation.types.ts'
 
 // The pose the instance's bones hold now (GolDP.dll 0x10023580 poses them when the instance advances): the clip's
 // sample, or the rest pose without a clip. Null for an instance without a skeleton or an animation.
@@ -73,13 +76,13 @@ const getBoneChain = (skeleton: Skeleton, boneIndex: number): readonly number[] 
   return parentIndex === null ? [boneIndex] : [boneIndex, ...getBoneChain(skeleton, parentIndex)]
 }
 
-// 0x0048be70 for a hammer whose name starts with "rk": the bone's rows 0 and 2 (bone slot +0x20) are turned by the
-// rotation of each bone of the chain, the bone's own first and the root's last (bone slot +0xc), and then by the
-// instance's rotation (instance slot +0x34, 0x10026d10).
-export const getSkeletonInstanceChainAxes = (
+// The rows 0 and 2 of a bone's rotation (bone slot +0x20) turned by the rotation of each bone of `chain` in order
+// (bone slot +0xc) and then by the instance's rotation (instance slot +0x34, 0x10026d10).
+const getChainTurnedAxes = (
   arithmetic: FloatArithmetic,
   instance: SkeletonInstanceRuntime,
-  boneIndex: number
+  boneIndex: number,
+  getChain: (skeleton: Skeleton) => readonly number[]
 ): FrameAxes | null => {
   const { skeleton } = instance
   const pose = getInstancePose(instance)
@@ -95,7 +98,7 @@ export const getSkeletonInstanceChainAxes = (
     getFrameRotatedVector(
       arithmetic,
       { rotation: instance.rotation, position: ZERO_VECTOR3 },
-      getBoneChain(skeleton, boneIndex).reduce((turned, chainIndex) => {
+      getChain(skeleton).reduce((turned, chainIndex) => {
         const chainRotation = pose.bones[chainIndex]?.rotation
         return chainRotation === undefined
           ? turned
@@ -108,4 +111,38 @@ export const getSkeletonInstanceChainAxes = (
     )
   // @check-allow traced-constants: 6 is the offset of the third row in a 3×3 rotation matrix
   return Object.freeze({ first: getTurned(getRow(0)), third: getTurned(getRow(6)) })
+}
+
+// 0x0048be70 for a hammer whose name starts with "rk": the bone's own rotation turns its rows first, then each parent's
+// up to the root.
+export const getSkeletonInstanceChainAxes = (
+  arithmetic: FloatArithmetic,
+  instance: SkeletonInstanceRuntime,
+  boneIndex: number
+): FrameAxes | null =>
+  getChainTurnedAxes(arithmetic, instance, boneIndex, (skeleton) =>
+    getBoneChain(skeleton, boneIndex)
+  )
+
+// 0x004047b0 (the camera lock, from Camera_Update 0x00428540 and the world update 0x00416090): the locked camera takes
+// the bone's origin through its parents (the bone's translation first, then each parent's transform: slot +0x4),
+// scaled and carried by the instance's frame (slot +0x2c), as the position; forward is the bone's row 0 and up the
+// negated row 2, each turned by the parents' rotations from the bone's parent up (slot +0xc) and the instance's
+// (slot +0x34). Hypothesis: the camera node's orientation slot (+0x24) takes (forward, up) in that order.
+export const getSkeletonInstanceCameraView = (
+  arithmetic: FloatArithmetic,
+  instance: SkeletonInstanceRuntime,
+  boneIndex: number
+): SkeletonInstanceCameraView | null => {
+  const position = getSkeletonInstanceChainPosition(arithmetic, instance, boneIndex, instance.scale)
+  const axes = getChainTurnedAxes(arithmetic, instance, boneIndex, (skeleton) =>
+    getBoneChain(skeleton, boneIndex).slice(1)
+  )
+  if (position === null || axes === null) return null
+  const [x, y, z] = position
+  return Object.freeze({
+    position: Object.freeze({ x, y, z }),
+    forward: axes.first,
+    up: Object.freeze({ x: -axes.third.x, y: -axes.third.y, z: -axes.third.z }),
+  })
 }
