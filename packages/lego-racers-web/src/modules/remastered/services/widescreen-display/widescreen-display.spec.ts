@@ -1,6 +1,6 @@
 import type { HudCommand } from '@lego-games/lego-racers/race-hud'
 import { HudFont } from '@lego-games/lego-racers/race-hud'
-import { getWidescreenDisplay } from './widescreen-display.ts'
+import { getBudgetedPixelRatio, getWidescreenDisplay } from './widescreen-display.ts'
 
 const WINDOW = { innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 2 }
 const text = (x: number, y: number): HudCommand => ({
@@ -15,13 +15,13 @@ const text = (x: number, y: number): HudCommand => ({
 })
 
 describe('getWidescreenDisplay', () => {
-  it('fills the window at the device resolution and lays the HUD out in 4:3', () => {
+  it('fills the window within the pixel budget and lays the HUD out in 4:3', () => {
     // Arrange / Act
     const display = getWidescreenDisplay(WINDOW)
 
     // Assert
     expect(display.stageSize).toEqual({ width: 1920, height: 1080 })
-    expect(display.pixelRatio).toBe(2)
+    expect(display.pixelRatio).toBeCloseTo(Math.sqrt((2560 * 1440) / (1920 * 1080)))
     expect(display.hudDesignSize).toEqual({ width: 1440, height: 1080 })
     expect(display.isFullWindow).toBe(true)
   })
@@ -63,5 +63,21 @@ describe('getWidescreenDisplay', () => {
     // Assert
     expect(bottomText).toEqual(text(10, 1100))
     expect(stretched).toEqual({ ...dimmer, height: 1200 })
+  })
+})
+
+describe('getBudgetedPixelRatio', () => {
+  it('keeps a desktop at its device ratio and lowers a phone to the budget', () => {
+    // Arrange
+    const desktop = { innerWidth: 1440, innerHeight: 900, devicePixelRatio: 1 }
+    const phone = { innerWidth: 430, innerHeight: 932, devicePixelRatio: 3 }
+    const budget = 1_000_000
+
+    // Act
+    const ratios = [getBudgetedPixelRatio(desktop, 4_000_000), getBudgetedPixelRatio(phone, budget)]
+
+    // Assert
+    expect(ratios[0]).toBe(1)
+    expect(ratios[1]).toBeCloseTo(Math.sqrt(budget / (430 * 932)))
   })
 })
