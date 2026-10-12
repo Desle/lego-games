@@ -22,7 +22,7 @@ describe('getLitVertexColor', () => {
 
   it('brightens a vertex that faces the light and keeps one that faces away at the ambient', () => {
     // Arrange
-    const light = { color: [200, 200, 200], direction: [0, 0, -1] } as const
+    const light = { color: [50, 50, 50], direction: [0, 0, -1] } as const
     const base = {
       ambient: [100, 100, 100],
       materialAmbient: [256, 256, 256],
@@ -35,7 +35,7 @@ describe('getLitVertexColor', () => {
     const away = getLitVertexColor({ ...base, normal: [0, 0, -1] })
 
     // Assert
-    expect(facing).toEqual([199, 199, 199])
+    expect(facing).toEqual([150, 150, 150])
     expect(away).toEqual([100, 100, 100])
   })
 })
