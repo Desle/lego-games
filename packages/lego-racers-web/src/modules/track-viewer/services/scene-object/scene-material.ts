@@ -16,6 +16,7 @@ import {
   DataTexture,
   FrontSide,
   LinearFilter,
+  LinearMipmapLinearFilter,
   MeshBasicMaterial,
   NearestFilter,
   NoColorSpace,
@@ -38,6 +39,10 @@ import {
   ZeroFactor,
 } from 'three'
 import type { BlendingParameters, TextureCache } from './scene-object.types.ts'
+import {
+  getIsHighDefinitionEnabled,
+  loadHighDefinitionPixels,
+} from './high-definition-texture/high-definition-texture.ts'
 
 // D3DBLEND → WebGL; SRCALPHASAT is only valid as a source factor in both APIs.
 const BLEND_FACTORS: Readonly<Record<BlendFactorValue, BlendingSrcFactor>> = {
@@ -117,6 +122,27 @@ const getTexture = (
   texture.name = textures[textureIndex]?.name ?? ''
   texture.colorSpace = NoColorSpace
   texture.needsUpdate = true
+  const sceneTexture = textures[textureIndex]
+  if (sceneTexture !== undefined && getIsHighDefinitionEnabled(globalThis.location.search)) {
+    void loadHighDefinitionPixels(sceneTexture.bitmapPath, bitmap).then((pixels) => {
+      if (pixels === null) return
+      // The GPU copy was allocated at the original's size (immutable storage); release it so the larger picture
+      // is uploaded into a new one.
+      texture.dispose()
+      texture.image = {
+        data: isRowOrderKept
+          ? pixels.colors
+          : getRowsReversed(pixels.colors, pixels.width, pixels.height),
+        width: pixels.width,
+        height: pixels.height,
+      }
+      if (filter === LinearFilter) {
+        texture.minFilter = LinearMipmapLinearFilter
+        texture.generateMipmaps = true
+      }
+      texture.needsUpdate = true
+    })
+  }
   cache.set(key, texture)
   return texture
 }
