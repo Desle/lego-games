@@ -1,10 +1,12 @@
-import type { EffectViews, EffectView } from '@lego-games/lego-racers/race-presentation'
+import type { EffectViews, EffectView, RacerPose } from '@lego-games/lego-racers/race-presentation'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import type { Scene as ThreeScene } from 'three'
 import { Matrix4 } from 'three'
 import { BRICK_LEVEL_DISTANCE } from '@lego-games/lego-racers/race-presentation'
 import type { Vector3Like } from '../race-viewport/race-viewport.types.ts'
 import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
+import { getEffectFigureState } from '@lego-games/lego-racers/race-presentation'
+import { getFrameMatrix, getUprightRotation } from '../frame-matrix/frame-matrix.ts'
 import { createModelObject } from '../model-object/model-object.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
 import type { EffectModels } from '../race-assets/race-assets.types.ts'
@@ -44,6 +46,9 @@ const getHeadingMatrix = (
     1
   )
 }
+
+// 0x0045c160: the shield sits two units above the racer's position.
+const SHIELD_HEIGHT = 2
 
 // A growing pool of one model: `use` shows the next free copy, `reset` hides them all.
 const createPool = (scene: ThreeScene, model: ModelScene) => {
@@ -87,9 +92,10 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
     spikedExplosion: createPool(scene, models.spikedExplosion),
     enhancementBrick: createPool(scene, models.enhancementBrick),
   }
+  const shieldPools = models.shields.map((model) => createPool(scene, model))
   return Object.freeze({
-    update: (views: EffectViews, eye: Vector3Like) => {
-      for (const pool of [...Object.values(pools), ...brickPools.values()]) pool.reset()
+    update: (views: EffectViews, eye: Vector3Like, poses: readonly RacerPose[]) => {
+      for (const pool of [...Object.values(pools), ...brickPools.values(), ...shieldPools]) pool.reset()
       for (const view of views.effects) {
         const pool =
           view.kind === 'rocket'
@@ -112,6 +118,21 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
           .multiply(new Matrix4().makeRotationZ(views.spinAngle))
           .multiply(new Matrix4().makeScale(brick.scale, brick.scale, brick.scale))
       }
+      for (const attachment of views.attachments) {
+        const pose = poses.find((candidate) => candidate.racerIndex === attachment.racerIndex)
+        const pool = shieldPools[attachment.level]
+        if (pose === undefined || pool === undefined || attachment.kind !== 'shield') continue
+        const copy = pool.use()
+        copy.group.matrix.copy(
+          getFrameMatrix(
+            getUprightRotation({ x: pose.rotation[0], y: pose.rotation[1], z: pose.rotation[2] }),
+            { x: pose.position.x, y: pose.position.y, z: pose.position.z + SHIELD_HEIGHT }
+          )
+        )
+        copy.object.setAnimationState(
+          getEffectFigureState(models.shieldAnimations, attachment.elapsedMilliseconds)
+        )
+      }
       for (const explosion of views.explosions) {
         if (!explosion.isSpiked) continue
         const copy = pools.spikedExplosion.use()
@@ -121,7 +142,8 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
       }
     },
     dispose: () => {
-      for (const pool of [...Object.values(pools), ...brickPools.values()]) pool.dispose()
+      for (const pool of [...Object.values(pools), ...brickPools.values(), ...shieldPools])
+        pool.dispose()
     },
   })
 }

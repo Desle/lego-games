@@ -6,6 +6,7 @@ export { getRacerModelFiles } from './controller/get-racer-model-files/get-racer
 export { loadBuiltDriverScene } from './controller/load-built-driver-scene/load-built-driver-scene.ts'
 export { loadMenuDriverScene } from './controller/load-menu-driver-scene/load-menu-driver-scene.ts'
 export { loadBuiltCarScene } from './controller/load-built-car-scene/load-built-car-scene.ts'
+export { getFigureAnimations } from './controller/get-figure-animations/get-figure-animations.ts'
 export { createRacerFigures } from './controller/create-racer-figures/create-racer-figures.ts'
 export {
   getRacerFilePath,

@@ -1,12 +1,10 @@
 import type { EffectViews, RacerPose, WarpView } from '@lego-games/lego-racers/race-presentation'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
-import type { Matrix3 } from '@lego-games/lego-racers/simulation-math'
 import type { Mesh, MeshBasicMaterial } from 'three'
 import {
   Color,
   Group,
   LinearSRGBColorSpace,
-  Matrix4,
   PerspectiveCamera,
   Scene as ThreeScene,
   WebGLRenderer,
@@ -17,6 +15,7 @@ import { getCameraFrustum, ORIGINAL_FIELD_OF_VIEW_DEGREES } from './camera-frust
 import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
 import { createRaceDecals } from '../race-decals/race-decals.ts'
 import { createRaceParticles } from '../race-particles/race-particles.ts'
+import { getFrameMatrix } from '../frame-matrix/frame-matrix.ts'
 import { createRaceEffects } from '../race-effects/race-effects.ts'
 import { createSceneObject } from '../scene-object/scene-object.ts'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
@@ -31,7 +30,6 @@ import type {
   RaceStageSize,
   RaceViewport,
   RacerRig,
-  Vector3Like,
 } from './race-viewport.types.ts'
 
 const BACKGROUND_COLOR = 0x101820
@@ -40,30 +38,6 @@ const MILLISECONDS_PER_SECOND = 1000
 const getWrappedFraction = (value: number): number => value - Math.floor(value)
 const NEAR_PLANE = 0.5
 const FAR_PLANE = 20000
-// Rows of a frame's rotation are the images of the model's axes; three.js takes them as columns.
-const getFrameMatrix = (rotation: Matrix3, position: Vector3Like): Matrix4 => {
-  const [forwardX, forwardY, forwardZ, sideX, sideY, sideZ, upX, upY, upZ] = rotation
-  const { x, y, z } = position
-  return new Matrix4().set(
-    forwardX,
-    sideX,
-    upX,
-    x,
-    forwardY,
-    sideY,
-    upY,
-    y,
-    forwardZ,
-    sideZ,
-    upZ,
-    z,
-    0,
-    0,
-    0,
-    1
-  )
-}
-
 // The race's three.js scene graphs and camera, without a renderer: the sky and the backdrop first without the depth
 // test, then the track and the cars, from the player's chase camera. The render trace reads this directly.
 export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceStage => {
@@ -162,8 +136,11 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     const cameraView = warpView === null ? allCameraView : warpView.cameraView
     lastCameraView = cameraView
     effects.update(
-      warpView === null ? effectViews : { ...effectViews, effects: [], bricks: [], explosions: [] },
-      cameraView.position
+      warpView === null
+        ? effectViews
+        : { ...effectViews, effects: [], bricks: [], explosions: [], attachments: [] },
+      cameraView.position,
+      poses
     )
     for (const rig of racerRigs) {
       const isShown = warpView === null || rig === racerRigs[warpView.pose.racerIndex]

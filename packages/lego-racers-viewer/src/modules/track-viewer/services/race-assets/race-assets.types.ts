@@ -1,4 +1,5 @@
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
+import type { FigureAnimation } from '@lego-games/lego-racers/racer'
 import type { ModelResourceNames } from '@lego-games/lego-racers/racer-appearance'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import type { RaceDefinition } from '@lego-games/lego-racers/race'
@@ -31,6 +32,10 @@ export type EffectModels = {
   readonly barrel: ModelScene
   readonly magnet: ModelScene
   readonly spikedExplosion: ModelScene
+  // The shield around a racer by level (0 to 3).
+  readonly shields: readonly ModelScene[]
+  // The animation set the four shields share (SHEOUT0.ADB), for the figure that plays it.
+  readonly shieldAnimations: readonly FigureAnimation[]
   // The power-up brick in the colour of each kind (projectile, shield, turbo, hazard).
   readonly powerUpBricks: Readonly<Record<string, ModelScene>>
   readonly enhancementBrick: ModelScene

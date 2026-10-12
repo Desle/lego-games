@@ -167,7 +167,18 @@ export type BrickView = {
 // What the drawing of a brick reads of either brick class.
 export type DrawnBrick = BrickBase & { readonly kind?: string }
 
+// A shield or turbo effect hanging on a racer: its kind and level, the racer, whether it is ending (state 4) and the
+// milliseconds its figure's animation has run (the figure advances with every update of the effect).
+export type AttachmentView = {
+  readonly kind: string
+  readonly level: number
+  readonly racerIndex: number
+  readonly isEnding: boolean
+  readonly elapsedMilliseconds: number
+}
+
 export type EffectViews = {
+  readonly attachments: readonly AttachmentView[]
   readonly bricks: readonly BrickView[]
   readonly spinAngle: number
   readonly effects: readonly EffectView[]

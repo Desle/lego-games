@@ -14,6 +14,8 @@ import type {
   RaceRacerDefinition,
 } from '@lego-games/lego-racers/race'
 import {
+  getFigureAnimations,
+  getRacerFilePath,
   loadBuiltCarScene,
   getRacerModelFiles,
   loadBuiltDriverScene,
@@ -102,15 +104,23 @@ const getRacerModels = (
 const EFFECT_TEXTURE_LIBRARIES = ['POWERUP', 'BARREL', 'DBRICKS', 'DTUBE']
 const EFFECT_MATERIAL_LIBRARIES = ['POWERUP', 'GRAPPLE', 'BARREL', 'DBRICKS', 'DTUBE']
 
-const loadEffectModel = (archive: JamArchive, name: string, isSkeletal: boolean): ModelScene =>
+const loadEffectModel = (
+  archive: JamArchive,
+  name: string,
+  isSkeletal: boolean,
+  skeletonName: string = name
+): ModelScene =>
   loadModelScene(archive, {
     directory: RACER_FILE_DIRECTORY,
     textureNames: EFFECT_TEXTURE_LIBRARIES,
     materialNames: EFFECT_MATERIAL_LIBRARIES,
     meshNames: [name],
-    skeletonName: isSkeletal ? name : null,
-    animationName: isSkeletal ? name : null,
+    skeletonName: isSkeletal ? skeletonName : null,
+    animationName: isSkeletal ? skeletonName : null,
   })
+
+// POWERUP.WDB lists the four shields (instances shield0..3) on one skeleton and animation, the one of SHEOUT0.
+const SHIELD_MODEL_NAMES = ['SHEOUT0', 'SHEOUT1', 'SHEOUT2', 'SHEOUT3']
 
 // LEGORacers.exe 0x00458a80 looks up the materials pbrickP, pbrickM, pbrickS and pbrickT; 0x0045ba90 gives a brick of
 // kind 1 to 4 the models P, S, T and M: red, blue, green and yellow. The brick mesh itself names the yellow ptrailM.
@@ -162,6 +172,10 @@ const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
     barrel: loadEffectModel(archive, 'BARREL', false),
     magnet: loadEffectModel(archive, 'MAGNET04', true),
     spikedExplosion: loadEffectModel(archive, 'SPIKEXP', false),
+    shields: SHIELD_MODEL_NAMES.map((name) => loadEffectModel(archive, name, true, 'SHEOUT0')),
+    shieldAnimations: getFigureAnimations(
+      archive.readFile(getRacerFilePath('SHEOUT0', 'ADB'))
+    ),
     powerUpBricks: Object.freeze(
       Object.fromEntries(
         Object.entries(BRICK_MATERIALS).map(([kind, materialName]) => [

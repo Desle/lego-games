@@ -1,9 +1,10 @@
-import { BrickState, EffectState } from '../../../power-ups/index.ts'
+import { BrickState, EffectState, PowerUpEffectKind } from '../../../power-ups/index.ts'
 import type { PowerUpEffect } from '../../../power-ups/index.ts'
 import { BallisticFlightState, ExplosionState } from '../../../projectiles/index.ts'
 import type { EffectMotion, ExplosionPool } from '../../../projectiles/index.ts'
 import type { RaceState } from '../../../race/index.ts'
 import type {
+  AttachmentView,
   BrickView,
   DrawnBrick,
   EffectView,
@@ -66,6 +67,25 @@ const getMotionView = (effect: PowerUpEffect, motion: EffectMotion | null): Effe
   }
 }
 
+// 0x0045bd30: a shield of level 0..3 lasts this many milliseconds; 0x0045c2a0 gives it 1000 more while it ends.
+const SHIELD_MILLISECONDS: readonly number[] = [4000, 6000, 8000, 10000]
+const ENDING_MILLISECONDS = 1000
+
+const getAttachmentView = (effect: PowerUpEffect): AttachmentView | null => {
+  if (effect.kind !== PowerUpEffectKind.SHIELD || effect.ownerRacer === null) return null
+  const isEnding = effect.state === EffectState.ENDING
+  const total = SHIELD_MILLISECONDS[effect.level] ?? 0
+  return {
+    kind: effect.kind,
+    level: effect.level,
+    racerIndex: effect.ownerRacer,
+    isEnding,
+    elapsedMilliseconds: isEnding
+      ? total + ENDING_MILLISECONDS - effect.timerMilliseconds
+      : total - effect.timerMilliseconds,
+  }
+}
+
 const getExplosionViews = (pool: ExplosionPool, isSpiked: boolean): readonly ExplosionView[] =>
   pool.activeIndices.flatMap((index) => {
     const explosion = pool.explosions[index]
@@ -92,7 +112,14 @@ export const getEffectViews = (raceState: RaceState): EffectViews => {
     return view === null ? [] : [view]
   })
   const { world } = raceState.powerUpStep
+  const attachments = activeEffectIds.flatMap((effectId) => {
+    const effect = effects[effectId]
+    const view =
+      effect === undefined || !DRAWN_STATES.includes(effect.state) ? null : getAttachmentView(effect)
+    return view === null ? [] : [view]
+  })
   return Object.freeze({
+    attachments: Object.freeze(attachments),
     bricks: Object.freeze([
       ...getBrickViews(world.bricks, false),
       ...getBrickViews(world.enhancementBricks, true),
