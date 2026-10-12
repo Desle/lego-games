@@ -168,7 +168,11 @@ const getOilLandingEvents = (effect: PowerUpEffect): readonly PowerUpEvent[] => 
 const getOwnerEvent = (effect: PowerUpEffect, type: OwnerEventType): readonly OwnerEvent[] =>
   effect.ownerRacer === null ? [] : [{ type, racer: effect.ownerRacer }]
 
-const advanceShieldOrWarp = (step: PowerUpStep, effect: PowerUpEffect): PowerUpStep => {
+const advanceShieldOrWarp = (
+  step: PowerUpStep,
+  context: PowerUpContext,
+  effect: PowerUpEffect
+): PowerUpStep => {
   if (effect.kind === PowerUpEffectKind.SHIELD) {
     if (effect.state === EffectState.ACTIVE)
       return getWithState(step, effect, EffectState.ENDING, 1000)
@@ -182,9 +186,10 @@ const advanceShieldOrWarp = (step: PowerUpStep, effect: PowerUpEffect): PowerUpS
       ]
     )
   }
-  // 0x0045dc90: a warp of the racer's own (no launcher destination) starts with sound 0x27 and ends with 0x29; every
-  // warp starts with sound 0x41 at the racer.
-  const isOwnWarp = effect.warpDestination === null
+  // 0x0045dc90: a human racer's warp (+0xe0 is set for a computer, 0x0045d560) starts with sound 0x27 and ends with
+  // 0x29; every warp starts with sound 0x41 at the racer.
+  const isOwnWarp =
+    effect.ownerRacer === null || context.racers[effect.ownerRacer]?.isComputer !== true
   if (effect.state === EffectState.STARTING) {
     return getStepWithEvents(getWithState(step, effect, EffectState.ACTIVE, 1500), [
       ...getOwnerEvent(effect, 'power_ups.racer_warp_started'),
@@ -252,6 +257,15 @@ const advanceProjectile = (
       ? advanced
       : getStepWithEvents(releaseEffectEmitter(advanced, effect.id, false), [
           { type: 'power_ups.sound_played', soundId: 0x42, address: '0x004550c3' },
+          ...(effect.ownerRacer === null
+            ? []
+            : [
+                {
+                  type: 'power_ups.looped_sound_stopped' as const,
+                  key: `wand:${String(effect.ownerRacer)}`,
+                  address: '0x00455060',
+                },
+              ]),
         ])
   }
   // Cannon 0x00451f50 (3000 ms flight, with its smoke) and rocket 0x00456db0 (5500 ms).
@@ -342,14 +356,35 @@ export const advancePowerUpEffect = (
         : getStepWithEvents(getWithState(step, effect, EffectState.ENDING, 1000), [
             { type: 'power_ups.sound_played', soundId: 0x4a, address: '0x00455fa9' },
           ])
-    case PowerUpEffectKind.CURSE:
-      // 0x00452ae0.
-      return advanceThreeStages(step, effect, 15000, 1000)
+    case PowerUpEffectKind.CURSE: {
+      // 0x00452ae0: the curse figure loops sound 9 while it stands.
+      const advanced = advanceThreeStages(step, effect, 15000, 1000)
+      if (effect.state === EffectState.STARTING) {
+        return getStepWithEvents(advanced, [
+          {
+            type: 'power_ups.looped_sound_started',
+            key: `curse:${String(effect.id)}`,
+            soundId: 9,
+            address: '0x00452d13',
+            ownerRacer: null,
+          },
+        ])
+      }
+      return effect.state === EffectState.ACTIVE || effect.state === EffectState.ENDING
+        ? advanced
+        : getStepWithEvents(advanced, [
+            {
+              type: 'power_ups.looped_sound_stopped',
+              key: `curse:${String(effect.id)}`,
+              address: '0x00452ae0',
+            },
+          ])
+    }
     case PowerUpEffectKind.TURBO:
       return advanceTurbo(step, context, effect)
     default:
       // Shield 0x0045c2a0, warp 0x0045dc90.
-      return advanceShieldOrWarp(step, effect)
+      return advanceShieldOrWarp(step, context, effect)
   }
 }
 

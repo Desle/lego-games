@@ -378,15 +378,27 @@ export const respondToRacerContact = (
       hitSecondRacer.collisionSoundMilliseconds === 0
     ) {
       const draw = drawRandomValue(context.tables.randomTable, current.randomPosition)
-      current = setRandomPosition(
-        updateRacer(
-          updateRacer(current, firstIndex, (racer) =>
-            Object.freeze({ ...racer, collisionSoundMilliseconds: CONTACT_SOUND_MILLISECONDS })
-          ),
-          secondIndex,
-          (racer) =>
-            Object.freeze({ ...racer, collisionSoundMilliseconds: CONTACT_SOUND_MILLISECONDS })
+      const waited = updateRacer(
+        updateRacer(current, firstIndex, (racer) =>
+          Object.freeze({ ...racer, collisionSoundMilliseconds: CONTACT_SOUND_MILLISECONDS })
         ),
+        secondIndex,
+        (racer) =>
+          Object.freeze({ ...racer, collisionSoundMilliseconds: CONTACT_SOUND_MILLISECONDS })
+      )
+      // 0x00438b9f: the draw's low bit picks sound 0x37 (set) or 0x18, played at the contact.
+      current = setRandomPosition(
+        Object.freeze({
+          ...waited,
+          sounds: Object.freeze([
+            ...waited.sounds,
+            {
+              soundId: (draw.value & 1) === 0 ? 0x18 : 0x37,
+              address: '0x00438bb3',
+              racerIndex: firstIndex,
+            },
+          ]),
+        }),
         draw.position
       )
     }

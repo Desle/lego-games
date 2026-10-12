@@ -320,7 +320,19 @@ const activateProjectile = (
     })
   }
   if (level === 2) {
-    return startEffect(step, PowerUpEffectKind.WAND, getPlainStart(racer, 2, 500, null))
+    // 0x00454cb0 (Wand_Start) plays the wand's hum (sound 0x44, made with the effect) in a loop.
+    return getStepWithEvents(
+      startEffect(step, PowerUpEffectKind.WAND, getPlainStart(racer, 2, 500, null)),
+      [
+        {
+          type: 'power_ups.looped_sound_started',
+          key: `wand:${String(racer)}`,
+          soundId: 0x44,
+          address: '0x00454d03',
+          ownerRacer: racer,
+        },
+      ]
+    )
   }
   return level === 3 ? activateRockets(step, racer) : step
 }

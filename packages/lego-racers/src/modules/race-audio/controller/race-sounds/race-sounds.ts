@@ -235,6 +235,7 @@ const SHIELD_LOOP_SOUNDS = Object.freeze([0x4c, 0x35, 0x4d, 0x4e])
 // Racer_UpdateLoopedSounds 0x00437be0: the turbo hum of its level (0 to 2) and the warp's.
 const TURBO_LOOP_SOUND_BASE = 0x2a
 const WARP_LOOP_SOUND = 0x2d
+const CURSE_RACER_LOOP_SOUND = 8
 const TURBO_LOOP_LEVEL_COUNT = 3
 
 const getRacerSource = (
@@ -290,6 +291,29 @@ const getPowerUpEventLoops = (
       ]
     case 'power_ups.racer_shield_lowered':
       return [createLoopRequest(false, `shield:${String(event.racer)}`, 0, '0x0045c2fc')]
+    // 0x00439900: a cursed racer loops sound 8 at the curse's figure until the curse ends (0x00439b00).
+    case 'power_ups.racer_cursed': {
+      const figure = event.figureFrame
+      return [
+        createLoopRequest(
+          true,
+          `racer-curse:${String(event.racer)}`,
+          CURSE_RACER_LOOP_SOUND,
+          '0x00439a54',
+          figure === null
+            ? getRacerSource(event.racer, context)
+            : Object.freeze({
+                position: figure.position,
+                minimumDistance: DEFAULT_MINIMUM_DISTANCE,
+                maximumDistance: DEFAULT_MAXIMUM_DISTANCE,
+                volume: 1,
+                pitch: 1,
+              })
+        ),
+      ]
+    }
+    case 'power_ups.racer_curse_lifted':
+      return [createLoopRequest(false, `racer-curse:${String(event.racer)}`, 0, '0x00439b00')]
     // 0x00437be0: a racer in a turbo of level 0 to 2 hums with it, one in a warp with the warp's sound.
     case 'power_ups.racer_turbo_started':
       return event.level < TURBO_LOOP_LEVEL_COUNT && context.getHasSoundObjects(event.racer)
