@@ -3,6 +3,7 @@ import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import { loadBuiltCarScene } from '@lego-games/lego-racers/racer-appearance'
 import type { Scene as ThreeScene } from 'three'
 import { getCarDesignKey } from '../car-design-key/car-design-key.ts'
+import { showBuiltCarDrawing } from '../built-car-drawing/built-car-drawing.ts'
 import { createModelObject } from '../model-object/model-object.ts'
 import { createModelSlot } from '../model-slot/model-slot.ts'
 import type { BuilderCarView } from './builder-car-view.types.ts'
@@ -14,7 +15,11 @@ export const createBuilderCarView = (archive: JamArchive, scene: ThreeScene): Bu
   return Object.freeze({
     show: (preview: BuilderPreview) =>
       slot.show(getCarDesignKey(preview.design), () =>
-        createModelObject(loadBuiltCarScene(archive, preview.design))
+        showBuiltCarDrawing(
+          createModelObject(loadBuiltCarScene(archive, preview.design)),
+          archive,
+          preview.design
+        )
       ),
     dispose: slot.dispose,
   })

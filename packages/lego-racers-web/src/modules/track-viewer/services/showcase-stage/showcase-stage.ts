@@ -21,6 +21,7 @@ import { Matrix4 } from 'three'
 import type { Scene as ThreeScene } from 'three'
 import type { DriverView } from '../driver-view/driver-view.types.ts'
 import { getCarDesignKey } from '../car-design-key/car-design-key.ts'
+import { showBuiltCarDrawing } from '../built-car-drawing/built-car-drawing.ts'
 import { createModelObject } from '../model-object/model-object.ts'
 import { createModelSlot } from '../model-slot/model-slot.ts'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
@@ -93,7 +94,11 @@ export const createShowcaseStage = (
       if (view.design !== null) {
         const design = view.design
         const car = carSlot.show(getCarDesignKey(design), () =>
-          createModelObject(loadBuiltCarScene(archive, design))
+          showBuiltCarDrawing(
+            createModelObject(loadBuiltCarScene(archive, design)),
+            archive,
+            design
+          )
         )
         const [x, y, z] = RACER_SHOWCASE_CAR_POSITION
         car.group.matrix

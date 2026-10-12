@@ -409,6 +409,13 @@ export const LDRAW_BRICK_MAPPINGS: Readonly<Record<string, LDrawBrickMapping>> =
     offset: Object.freeze([20, 20, 10] as const),
     heightError: 1.0,
   }),
+  s243200: Object.freeze({
+    partNumber: '3245c',
+    quarterTurns: 0,
+    isMirrored: false,
+    offset: Object.freeze([20, 10, 48] as const),
+    heightError: 0.6,
+  }),
   srrwndw: Object.freeze({
     partNumber: '6152b',
     quarterTurns: 1,
@@ -468,6 +475,8 @@ export const UNMAPPED_BRICK_REASONS: Readonly<Record<string, string>> = Object.f
   KKCHAS0: 'no LDraw part with this shape (closest: 24248, mean height error 3.25 plates)',
   l248900: 'no LDraw part with this shape (closest: 30361a, mean height error 0.63 plates)',
   L304900: 'no LDraw part with this shape (closest: 41732, mean height error 0.87 plates)',
+  S243201:
+    'no LDraw part with this shape (closest: 21, mean height error 0.81 plates; the brick is a thin angled pane, the part a block)',
   RRchas0: 'no LDraw part with this shape (closest: 30497, mean height error 1.87 plates)',
   s00003: 'no LDraw part with this shape (closest: 2434, mean height error 0.55 plates)',
   S00007: 'no LDraw part with this shape (closest: 44137, mean height error 3.54 plates)',
@@ -481,8 +490,6 @@ export const UNMAPPED_BRICK_REASONS: Readonly<Record<string, string>> = Object.f
   S00029: 'no LDraw part with this shape (closest: 14736, mean height error 2.70 plates)',
   S00031: 'no LDraw part with this shape (closest: 68382, mean height error 0.50 plates)',
   S00032: 'no LDraw part with this shape (closest: 69754, mean height error 0.96 plates)',
-  s243200: 'no LDraw part with this shape (closest: 15429, mean height error 1.33 plates)',
-  S243201: 'no LDraw part with this shape (closest: 21, mean height error 0.81 plates)',
   s395700: 'no LDraw part with this shape (closest: 637, mean height error 8.18 plates)',
   sa0010: 'no LDraw part with this shape (closest: 2342, mean height error 1.62 plates)',
   sa0011: 'no LDraw part with this shape (closest: 2342, mean height error 1.62 plates)',

@@ -76,7 +76,7 @@ const createDesignScene = async (
   if (mode === GalleryMode.OVERLAY) {
     const database = parseBrickDatabase(archive.readFile(BRICK_DATABASE_PATH))
     const origin = drawing.origin
-    const outline = createGameBrickMeshes(database, design.bricks, origin)
+    const outline = createGameBrickMeshes(archive, database, design.bricks, origin)
     for (const child of outline.children) {
       if (child instanceof Mesh)
         child.material = new MeshBasicMaterial({ color: OVERLAY_COLOR, wireframe: true })
