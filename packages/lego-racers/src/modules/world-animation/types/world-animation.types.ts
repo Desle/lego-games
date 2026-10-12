@@ -4,6 +4,7 @@ import type {
   SkeletonAnimationState,
   Vector3,
 } from '../../skeletal-animation/index.ts'
+import type { Skeleton } from '../../skeleton/index.ts'
 import type { World } from '../../world/index.ts'
 
 // A skeleton instance of a world as the race moves it (GolDP.dll class 0x10023420, 0xf4 bytes).
@@ -11,6 +12,8 @@ export type SkeletonInstanceRuntime = {
   readonly name: string
   // Instance +0xa8: the animation of the nearest level; null for a camera's skeleton without one.
   readonly animation: SkeletalAnimation | null
+  // The skeleton of the nearest level; null for a camera's skeleton without one.
+  readonly skeleton: Skeleton | null
   // +0xb4..+0xf0; null while the instance has no clip.
   readonly clip: SkeletonAnimationState | null
   // Flag 0x10000 of +0x5c: the update advances the clip.
@@ -70,6 +73,8 @@ export type WorldAnimationInput = {
   readonly world: World
   // In the order of `world.animations`.
   readonly animations: readonly SkeletalAnimation[]
+  // In the order of `world.skeletons`.
+  readonly skeletons?: readonly Skeleton[]
   // In the order of `world.materialAnimations`.
   readonly materialAnimations: readonly MaterialAnimation[]
   // A mirrored race (Race_LoadTrackContent's flag): 0x00416140 negates the y of every instance's position (0x00411040).
@@ -83,5 +88,6 @@ export type PositionedInstance = {
 
 export type InstanceLevel = {
   readonly animationIndex: number
+  readonly skeletonIndex: number
   readonly squaredDistance: number
 }
