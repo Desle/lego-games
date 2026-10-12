@@ -1,11 +1,13 @@
-import { createReadStream, existsSync, statSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { createReadStream, existsSync, readdirSync, statSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { dirname, join, relative, resolve } from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
 import {
   DEVELOPMENT_GAME_FILE_ROUTE,
+  DEVELOPMENT_HIGH_DEFINITION_ROUTE,
   DEVELOPMENT_JAM_ROUTE,
 } from './src/shared/development-jam/development-jam-route.ts'
 
@@ -57,6 +59,49 @@ const developmentGameFilesPlugin = (): Plugin => ({
   },
 })
 
+const getPngPaths = (directory: string): readonly string[] =>
+  readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name)
+    if (entry.isDirectory()) return getPngPaths(path)
+    return /\.png$/i.test(entry.name) ? [path] : []
+  })
+
+// Serves an upscaled texture pack to the dev server only, looked up case-insensitively by archive path.
+const developmentHighDefinitionPlugin = (): Plugin => ({
+  name: 'lego-racers-development-high-definition',
+  apply: 'serve',
+  configureServer: (server) => {
+    const directory =
+      process.env['LEGO_HD_TEXTURES_PATH'] ?? join(homedir(), 'lego-racers-textures-hd')
+    const pathsByKey = new Map(
+      (existsSync(directory) ? getPngPaths(directory) : []).map((path) => [
+        relative(directory, path).replaceAll('\\', '/').toLowerCase(),
+        path,
+      ])
+    )
+    server.middlewares.use(DEVELOPMENT_HIGH_DEFINITION_ROUTE, (request, response) => {
+      const key = decodeURIComponent(
+        (request.url ?? '').replace(/^\//, '').split('?')[0] ?? ''
+      ).toLowerCase()
+      const path = pathsByKey.get(key)
+      if (path === undefined) {
+        response.writeHead(404)
+        response.end()
+        return
+      }
+      response.setHeader('Content-Type', 'image/png')
+      response.setHeader('Content-Length', String(statSync(path).size))
+      createReadStream(path).pipe(response)
+    })
+  },
+})
+
 export default defineConfig({
-  plugins: [react(), tailwindcss(), developmentJamPlugin(), developmentGameFilesPlugin()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    developmentJamPlugin(),
+    developmentGameFilesPlugin(),
+    developmentHighDefinitionPlugin(),
+  ],
 })

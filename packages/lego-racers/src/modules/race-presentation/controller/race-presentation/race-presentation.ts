@@ -1,3 +1,4 @@
+import { getIntroductionCameraView } from '../get-introduction-camera-view/get-introduction-camera-view.ts'
 import { getWarpView } from '../get-warp-view/get-warp-view.ts'
 import { getScreenFadeViews } from '../get-screen-fade-views/get-screen-fade-views.ts'
 import { getPhysicsSubSteps, getRaceTimeStep } from '../../../racer-physics/index.ts'
@@ -196,6 +197,8 @@ const getUpdatedCamera = (
   presentation: RacePresentation,
   frameMilliseconds: number
 ) => {
+  const introductionView = getIntroductionCameraView(raceState)
+  if (introductionView !== null) return { camera, view: introductionView }
   const racer = getPlayerRacer(raceState, presentation.playerRacerIndex)
   const timeStep = getRaceTimeStep(raceState.context.arithmetic, {
     isTimeScaled: (raceState.raceModeFlags & TIME_SCALE_FLAG) !== 0,

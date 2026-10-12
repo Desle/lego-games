@@ -36,6 +36,10 @@ import { showSceneObjects } from '../scene-viewport/scene-viewport.ts'
 import type { ShownScene } from '../scene-viewport/scene-viewport.types.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
 import type { RaceStage, RaceStageSize, RaceViewport, RacerRig } from './race-viewport.types.ts'
+import {
+  getHighDefinitionPixelRatio,
+  getIsHighDefinitionEnabled,
+} from '../scene-object/high-definition-texture/high-definition-texture.ts'
 
 const BACKGROUND_COLOR = 0x101820
 const MILLISECONDS_PER_SECOND = 1000
@@ -332,6 +336,9 @@ export const createRaceViewport = (
   renderer.outputColorSpace = LinearSRGBColorSpace
   renderer.setClearColor(new Color(BACKGROUND_COLOR))
   renderer.autoClear = false
+  if (getIsHighDefinitionEnabled(globalThis.location.search)) {
+    renderer.setPixelRatio(getHighDefinitionPixelRatio(size, globalThis.window))
+  }
   renderer.setSize(size.width, size.height)
   container.appendChild(renderer.domElement)
   const stage = createRaceStage(assets, size)

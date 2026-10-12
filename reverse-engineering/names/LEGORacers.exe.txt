@@ -942,3 +942,5 @@
 004905e0 ScreenFade_Draw
 00490530 ScreenFade_Reset
 00427e80 Camera_UpdateFieldOfView
+004047b0 CameraObject_ApplyAnimationLock
+00404780 CameraObject_LockToAnimation

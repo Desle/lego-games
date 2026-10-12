@@ -25,13 +25,14 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
     watchedTextures: [],
   },
   {
-    // Open: the introduction's camera is not the original's (the whole scene is displaced).
+    // The camera lock of 0x004047b0: before it was ported the scene was displaced (51.5 percent differed). The rest is
+    // edges and the textures the matcher cannot name (pixel-trace.md).
     request: {
       name: 'Royal Knights, introduction',
       raceFolder: 'RACEC0R0',
       recordFrames: [5],
     },
-    maximumDifferingShare: 0.6,
+    maximumDifferingShare: 0.015,
     watchedTextures: [],
   },
   {
