@@ -275,6 +275,7 @@ const getAttachmentView = (raceState: RaceState, effect: PowerUpEffect): Attachm
       state,
       timerMilliseconds: effect.timerMilliseconds,
       elapsedMilliseconds: WARP_STARTING_MILLISECONDS - effect.timerMilliseconds,
+      scrollMilliseconds: effect.figureAgeMilliseconds,
       scale: getWarpFadeScale(
         raceState.context.arithmetic,
         raceState.context.tables,
@@ -291,6 +292,7 @@ const getAttachmentView = (raceState: RaceState, effect: PowerUpEffect): Attachm
     state,
     timerMilliseconds: effect.timerMilliseconds,
     elapsedMilliseconds: getAttachmentElapsed(effect, state),
+    scrollMilliseconds: effect.figureAgeMilliseconds,
   }
 }
 

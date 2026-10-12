@@ -243,6 +243,8 @@ export type AttachmentView = {
   readonly state: AttachmentState
   readonly timerMilliseconds: number
   readonly elapsedMilliseconds: number
+  // The milliseconds the figures were stepped since the effect started: their texture scroll has run this long.
+  readonly scrollMilliseconds: number
   // The figure's scale (+0x58): 1, except the warp portal's, which follows the fade table (0x0045dbe0).
   readonly scale: number
 }

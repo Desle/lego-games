@@ -134,9 +134,8 @@ const getExplosionFigureAlpha = (progress: number): number =>
 const SCROLL_UNITS_PER_RATE = 65.536
 const SCROLL_UNITS_PER_TURN = 65536
 // Hypothesis, measured against the render trace (turbo levels 0 to 2): once the turbo is active its figures have advanced one
-// frame more than the effect's timer shows, and their texture scroll runs about two frames behind it.
+// frame more than the effect's timer shows.
 const TURBO_ANIMATION_LEAD_MILLISECONDS = 33
-const TURBO_SCROLL_LAG_MILLISECONDS = 71
 const setTextureScroll = (
   copy: ModelObject,
   scroll: readonly [number, number],
@@ -366,7 +365,7 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
               { x: pose.position.x, y: pose.position.y, z: pose.position.z + SHIELD_HEIGHT }
             )
           )
-          setTextureScroll(copy, models.shieldScroll, attachment.elapsedMilliseconds)
+          setTextureScroll(copy, models.shieldScroll, attachment.scrollMilliseconds)
           copy.object.setAnimationState(
             getEffectFigureState(models.shieldAnimations, {
               animationId: 0,
@@ -401,9 +400,7 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
           setTextureScroll(
             copy,
             figureModels[figureIndex]?.scroll ?? [0, 0],
-            attachment.state === 'starting'
-              ? attachment.elapsedMilliseconds
-              : attachment.elapsedMilliseconds - TURBO_SCROLL_LAG_MILLISECONDS
+            attachment.scrollMilliseconds
           )
           if (animations !== undefined) {
             const isStarting = attachment.state === 'starting'
