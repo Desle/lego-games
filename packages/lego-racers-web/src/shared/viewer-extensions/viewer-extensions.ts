@@ -1,6 +1,7 @@
 import type { Object3D } from 'three'
 import type {
   BuiltCarDrawingRequest,
+  EffectModelDrawingRequest,
   PictureCreatedEvent,
   TextureCreatedEvent,
   ViewerExtension,
@@ -14,6 +15,7 @@ export const NEUTRAL_EXTENSION: ViewerExtension = Object.freeze({
   getMenuSurfaceScale: () => null,
   getSoundReplacement: () => Promise.resolve(null),
   getBuiltCarDrawing: () => null,
+  getEffectModelDrawing: () => null,
   getSelections: () => [],
 })
 
@@ -65,6 +67,14 @@ export const getSoundReplacement = async (
 export const getBuiltCarDrawing = (request: BuiltCarDrawingRequest): Object3D | null => {
   for (const extension of registeredExtensions) {
     const drawing = extension.getBuiltCarDrawing(request)
+    if (drawing !== null) return drawing
+  }
+  return null
+}
+
+export const getEffectModelDrawing = (request: EffectModelDrawingRequest): Object3D | null => {
+  for (const extension of registeredExtensions) {
+    const drawing = extension.getEffectModelDrawing(request)
     if (drawing !== null) return drawing
   }
   return null

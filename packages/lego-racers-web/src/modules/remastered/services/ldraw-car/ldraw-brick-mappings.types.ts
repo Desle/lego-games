@@ -15,3 +15,29 @@ export type LDrawBrickColor = {
   readonly code: number
   readonly hex: number
 }
+
+// One LDraw part of a composite brick (a base brick with an accessory moulded on). `matrix` is the part's points (LDraw axes and
+// units) into the brick's frame (game axes, LDraw units): the rows of a 3 x 3 matrix, then the translation. `colorCode` is the
+// LDraw colour of the part, or null for the colour of the brick the player placed.
+export type LDrawCompositePart = {
+  readonly partNumber: string
+  readonly colorCode: number | null
+  readonly matrix: readonly [
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+  ]
+}
+
+export type LDrawCompositeMapping = {
+  readonly parts: readonly LDrawCompositePart[]
+}

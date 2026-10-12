@@ -11,12 +11,18 @@ import { Matrix4 } from 'three'
 import type { Mesh, MeshBasicMaterial } from 'three'
 import { BRICK_LEVEL_DISTANCE } from '@lego-games/lego-racers/race-presentation'
 import type { FigureAnimation } from '@lego-games/lego-racers/racer'
+import {
+  ENHANCEMENT_BRICK_MODEL_NAME,
+  POWER_UP_BRICK_MODEL_NAME,
+} from '../../../../shared/viewer-extensions/effect-model-names.ts'
+import type { EffectModelDrawingRequest } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import type { Vector3Like } from '../race-viewport/race-viewport.types.ts'
 import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
 import { getEffectFigureState } from '@lego-games/lego-racers/race-presentation'
 import { setAlphaOverride } from '../scene-object/alpha-override.ts'
 import { getReversedModel } from '../model-object/reverse-faces.ts'
 import { getFrameMatrix, getUprightRotation } from '../frame-matrix/frame-matrix.ts'
+import { showEffectModelDrawing } from '../effect-model-drawing/effect-model-drawing.ts'
 import { createModelObject } from '../model-object/model-object.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
 import type { EffectModels } from '../race-assets/race-assets.types.ts'
@@ -149,8 +155,13 @@ const getTurboRotation = (pose: RacerPose): Matrix3 => {
   return [sideX, sideY, sideZ, -forwardX, -forwardY, -forwardZ, upX, upY, upZ]
 }
 
-// A growing pool of one model: `use` shows the next free copy, `reset` hides them all.
-const createPool = (scene: ThreeScene, model: ModelScene) => {
+// A growing pool of one model: `use` shows the next free copy, `reset` hides them all. A viewer extension may draw the copies of
+// a model it names (`drawingRequest`) in place of the original's.
+const createPool = (
+  scene: ThreeScene,
+  model: ModelScene,
+  drawingRequest: EffectModelDrawingRequest | null = null
+) => {
   const copies: ModelObject[] = []
   let used = 0
   return {
@@ -161,7 +172,10 @@ const createPool = (scene: ThreeScene, model: ModelScene) => {
     use: (): ModelObject => {
       let copy = copies[used]
       if (copy === undefined) {
-        copy = createModelObject(model)
+        copy =
+          drawingRequest === null
+            ? createModelObject(model)
+            : showEffectModelDrawing(createModelObject(model), drawingRequest)
         copy.group.visible = false
         copies.push(copy)
         scene.add(copy.group)
@@ -181,7 +195,11 @@ const createPool = (scene: ThreeScene, model: ModelScene) => {
 export const createRaceEffects = (scene: ThreeScene, models: EffectModels): RaceEffects => {
   const brickPools = new Map(
     Object.entries(models.powerUpBricks).map(
-      ([kind, model]) => [kind, createPool(scene, model)] as const
+      ([kind, model]) =>
+        [
+          kind,
+          createPool(scene, model, { modelName: POWER_UP_BRICK_MODEL_NAME, variant: kind }),
+        ] as const
     )
   )
   const pools = {
@@ -190,7 +208,10 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
     magnet: createPool(scene, models.magnet),
     plainExplosion: createPool(scene, models.plainExplosion),
     spikedExplosion: createPool(scene, models.spikedExplosion),
-    enhancementBrick: createPool(scene, models.enhancementBrick),
+    enhancementBrick: createPool(scene, models.enhancementBrick, {
+      modelName: ENHANCEMENT_BRICK_MODEL_NAME,
+      variant: null,
+    }),
   }
   const portalPool = createPool(scene, models.warpPortal)
   const shieldPools = models.shields.map((model) => createPool(scene, model))

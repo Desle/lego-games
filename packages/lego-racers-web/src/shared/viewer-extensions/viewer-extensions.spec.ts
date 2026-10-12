@@ -5,6 +5,7 @@ import {
   clearViewerExtensions,
   emitTextureCreated,
   getBuiltCarDrawing,
+  getEffectModelDrawing,
   getMenuSurfaceScale,
   getSoundReplacement,
   getIsClassic,
@@ -85,5 +86,19 @@ describe('viewer extensions', () => {
 
     // Assert
     expect([isOriginalKept, getBuiltCarDrawing(request)]).toEqual([true, drawing])
+  })
+
+  it('draws an effect model as the original does until an extension offers a drawing', () => {
+    // Arrange
+    const request = { modelName: 'PUBRICKY', variant: 'shield' }
+    const drawing = new Group()
+    registerViewerExtension(NEUTRAL_EXTENSION)
+    const isOriginalKept = getEffectModelDrawing(request) === null
+
+    // Act
+    registerViewerExtension({ ...NEUTRAL_EXTENSION, getEffectModelDrawing: () => drawing })
+
+    // Assert
+    expect([isOriginalKept, getEffectModelDrawing(request)]).toEqual([true, drawing])
   })
 })

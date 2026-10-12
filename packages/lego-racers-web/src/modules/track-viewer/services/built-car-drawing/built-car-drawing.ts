@@ -7,7 +7,7 @@ import type { ModelObject } from '../model-object/model-object.types.ts'
 
 const getIsMesh = (object: Object3D): object is Mesh => object instanceof Mesh
 
-const disposeDrawing = (drawing: Object3D) => {
+export const disposeDrawing = (drawing: Object3D) => {
   const materials = new Set<Material>()
   drawing.traverse((child) => {
     if (!getIsMesh(child)) return

@@ -131,7 +131,7 @@ const EFFECT_MATERIAL_LIBRARIES = [
   'DTUBE',
 ]
 
-const loadEffectModel = (
+export const loadEffectModel = (
   archive: JamArchive,
   name: string,
   isSkeletal: boolean,

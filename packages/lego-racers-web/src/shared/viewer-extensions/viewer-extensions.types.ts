@@ -54,6 +54,13 @@ export type BuiltCarDrawingRequest = {
   readonly design: CarDesign
 }
 
+// An effect the race draws from a model of the original's (a power-up brick on the track, say).
+export type EffectModelDrawingRequest = {
+  readonly modelName: string
+  // Which look of the model the effect has (the kind of a power-up brick); null when it has one.
+  readonly variant: string | null
+}
+
 // A choice the developer panel offers for a layer above the original port.
 export type DevelopmentSelector = {
   readonly label: string
@@ -76,6 +83,8 @@ export type ViewerExtension = {
   readonly getRaceDisplay: (window: WindowMetrics) => RaceDisplay | null
   // Something to draw in place of the mesh the original builds for a car built from bricks, in that mesh's frame; null keeps the original's.
   readonly getBuiltCarDrawing: (request: BuiltCarDrawingRequest) => Object3D | null
+  // Something to draw in place of the model the original draws for an effect, in that model's frame (the original's units, its scale applied); null keeps the original's.
+  readonly getEffectModelDrawing: (request: EffectModelDrawingRequest) => Object3D | null
   // The selections the layer runs with (texture pack, audio pack, bricks), for the notes of a recording.
   readonly getSelections: () => readonly string[]
 }

@@ -20,6 +20,7 @@ import {
   WebGLRenderer,
 } from 'three'
 import { DEVELOPMENT_JAM_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
+import { createModelObject, loadEffectModel } from '../../../track-viewer/index.ts'
 import { createGameBrickMeshes } from '../ldraw-car/game-brick-meshes.ts'
 import { createLDrawCarDrawing } from '../ldraw-car/ldraw-car-drawing.ts'
 import { GalleryMode, GalleryView } from './ldraw-gallery-page.types.ts'
@@ -164,9 +165,46 @@ const renderPieceSheet = async (
   return { width, height, missing }
 }
 
+// Every named effect model (a POWERUP.WDB model such as PUBRICKY) alone, the game's drawing on the left of each pair.
+const renderEffectSheet = async (
+  names: readonly string[],
+  columns: number,
+  cellSize: number,
+  view: GalleryView = GalleryView.FRONT
+): Promise<PieceSheetResult> => {
+  const archive = await getArchive()
+  const rows = Math.ceil(names.length / columns)
+  const width = columns * cellSize * 2
+  const height = rows * cellSize
+  renderer.setSize(width, height, false)
+  renderer.setScissorTest(true)
+  renderer.setClearColor(new Color(BACKGROUND_COLOR))
+  renderer.clear()
+  for (const [position, name] of names.entries()) {
+    const column = position % columns
+    const row = Math.floor(position / columns)
+    const scene = new Scene()
+    const modelObject = createModelObject(loadEffectModel(archive, name, name !== 'BARREL'))
+    scene.add(modelObject.group)
+    scene.updateMatrixWorld(true)
+    console.error(
+      'SIZE',
+      name,
+      JSON.stringify(new Box3().setFromObject(scene).min),
+      JSON.stringify(new Box3().setFromObject(scene).max)
+    )
+    const left = column * 2 * cellSize
+    const bottom = height - (row + 1) * cellSize
+    renderer.setViewport(left, bottom, cellSize, cellSize)
+    renderer.setScissor(left, bottom, cellSize, cellSize)
+    renderer.render(scene, frameCamera(scene, view, 1))
+  }
+  return { width, height, missing: [] }
+}
+
 const getDesignCount = async (savePath: string): Promise<number> => {
   const archive = await getArchive()
   return loadSavedCars((path) => archive.readFile(path), savePath).length
 }
 
-Object.assign(window, { renderCar, renderPieceSheet, getDesignCount })
+Object.assign(window, { renderCar, renderPieceSheet, renderEffectSheet, getDesignCount })
