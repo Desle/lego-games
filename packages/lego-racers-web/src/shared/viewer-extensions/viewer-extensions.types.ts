@@ -1,5 +1,7 @@
+import type { CarDesign } from '@lego-games/lego-racers/car-builder'
+import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { HudCommand } from '@lego-games/lego-racers/race-hud'
-import type { DataTexture } from 'three'
+import type { DataTexture, Object3D } from 'three'
 
 export type TexturePixels = {
   readonly colors: Uint8Array
@@ -46,6 +48,12 @@ export type RaceDisplay = {
   readonly getHudCommands: (commands: readonly HudCommand[]) => readonly HudCommand[]
 }
 
+// A car built from bricks that the race is about to draw.
+export type BuiltCarDrawingRequest = {
+  readonly archive: JamArchive
+  readonly design: CarDesign
+}
+
 // A choice the developer panel offers for a layer above the original port.
 export type DevelopmentSelector = {
   readonly label: string
@@ -66,4 +74,6 @@ export type ViewerExtension = {
     archivePath: string
   ) => Promise<AudioBuffer | null>
   readonly getRaceDisplay: (window: WindowMetrics) => RaceDisplay | null
+  // Something to draw in place of the mesh the original builds for a car built from bricks, in that mesh's frame; null keeps the original's.
+  readonly getBuiltCarDrawing: (request: BuiltCarDrawingRequest) => Object3D | null
 }

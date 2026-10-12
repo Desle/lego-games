@@ -1,7 +1,10 @@
-import { DataTexture } from 'three'
+import { createBuildGrid } from '@lego-games/lego-racers/car-builder'
+import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
+import { DataTexture, Group } from 'three'
 import {
   clearViewerExtensions,
   emitTextureCreated,
+  getBuiltCarDrawing,
   getMenuSurfaceScale,
   getSoundReplacement,
   getIsClassic,
@@ -68,5 +71,19 @@ describe('viewer extensions', () => {
 
     // Assert
     expect(replacement).toBe(buffer)
+  })
+
+  it('draws a built car as the original does until an extension offers a drawing', () => {
+    // Arrange
+    const request = { archive: {} as JamArchive, design: { bricks: [], grid: createBuildGrid() } }
+    const drawing = new Group()
+    registerViewerExtension(NEUTRAL_EXTENSION)
+    const isOriginalKept = getBuiltCarDrawing(request) === null
+
+    // Act
+    registerViewerExtension({ ...NEUTRAL_EXTENSION, getBuiltCarDrawing: () => drawing })
+
+    // Assert
+    expect([isOriginalKept, getBuiltCarDrawing(request)]).toEqual([true, drawing])
   })
 })

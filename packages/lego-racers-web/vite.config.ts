@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
+import { developmentLDrawPlugin } from './src/modules/remastered/services/development-ldraw-server/development-ldraw-server.ts'
 import {
   developmentHighDefinitionAudioPlugin,
   developmentHighDefinitionPlugin,
@@ -74,5 +75,6 @@ export default defineConfig({
     developmentHighDefinitionAudioPlugin(
       process.env['LEGO_HD_AUDIO_ROOT'] ?? join(homedir(), 'audio', 'lego-racers')
     ),
+    developmentLDrawPlugin(process.env['LEGO_LDRAW_ROOT'] ?? join(homedir(), 'ldraw')),
   ],
 })
