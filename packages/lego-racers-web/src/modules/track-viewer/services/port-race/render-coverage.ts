@@ -3,7 +3,7 @@ import { decodeBitmap, getBitmapColors } from '@lego-games/lego-racers/bitmap'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import {
   getIsFragmentOfPolygon,
-  getIsInside,
+  getIsCutPiece,
   matchTextures,
   readOriginalPresentation,
 } from '@lego-games/lego-racers/presentation-trace'
@@ -285,7 +285,7 @@ export const runRenderCoverage = async (
       row.originalTriangles += 1
       if (matched.has(triangle)) continue
       if (
-        !getIsInside(triangle.vertices, ORIGINAL_STAGE_SIZE) &&
+        getIsCutPiece(triangle.vertices, ORIGINAL_STAGE_SIZE) &&
         getIsFragmentOfPolygon(triangle, comparison.clippedPolygons, textureMatches)
       ) {
         row.clippedTriangles += 1

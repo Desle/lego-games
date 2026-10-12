@@ -8,11 +8,11 @@ import type {
 import type { DrawState } from '../render-trace.types.ts'
 import { TextureOperation } from '../../../../scene/index.ts'
 import type { TextureMatch } from '../texture-matching.types.ts'
-import { getClippedPolygon, getIsFragmentOfPolygon } from './clipped-polygon.ts'
+import { getClippedPolygon, getIsCutPiece, getIsFragmentOfPolygon } from './clipped-polygon.ts'
 
 const VIEWPORT = { width: 640, height: 480 }
-// Pixels are x and y, w is z: a point at depth 1 lands on the pixel of its x and y.
-const FLAT_MATRIX: ScreenMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]
+// w is z: a point at depth 10 lands on the pixel of its x and y.
+const FLAT_MATRIX: ScreenMatrix = [10, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]
 const STATE = {} as DrawState
 
 const getVertex = (x: number, y: number, z: number): WorldVertex => ({
@@ -65,9 +65,9 @@ describe('clipped polygon', () => {
   it('leaves a triangle inside the viewport alone', () => {
     // Arrange
     const triangle = getTriangle([
-      [100, 100, 1],
-      [100, 200, 1],
-      [200, 100, 1],
+      [100, 100, 10],
+      [100, 200, 10],
+      [200, 100, 10],
     ])
 
     // Act
@@ -80,9 +80,9 @@ describe('clipped polygon', () => {
   it('drops a triangle that faces away', () => {
     // Arrange
     const triangle = getTriangle([
-      [100, 100, 1],
-      [200, 100, 1],
-      [700, 200, 1],
+      [100, 100, 10],
+      [200, 100, 10],
+      [700, 200, 10],
     ])
 
     // Act
@@ -95,9 +95,9 @@ describe('clipped polygon', () => {
   it('keeps the whole triangle that reaches past the viewport, so the pieces cut from it have a parent', () => {
     // Arrange
     const triangle = getTriangle([
-      [100, 100, 1],
-      [100, 200, 1],
-      [700, 100, 1],
+      [100, 100, 10],
+      [100, 200, 10],
+      [700, 100, 10],
     ])
     const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT)
     const piece = getFragment([
@@ -116,9 +116,9 @@ describe('clipped polygon', () => {
   it('does not accept a piece that lies outside the triangle', () => {
     // Arrange
     const triangle = getTriangle([
-      [100, 100, 1],
-      [100, 200, 1],
-      [700, 100, 1],
+      [100, 100, 10],
+      [100, 200, 10],
+      [700, 100, 10],
     ])
     const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT)
     const piece = getFragment([
@@ -152,9 +152,9 @@ describe('clipped polygon', () => {
   it('does not accept a piece with another texture', () => {
     // Arrange
     const triangle = getTriangle([
-      [100, 100, 1],
-      [100, 200, 1],
-      [700, 100, 1],
+      [100, 100, 10],
+      [100, 200, 10],
+      [700, 100, 10],
     ])
     const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT)
     const piece = getFragment([
@@ -178,9 +178,9 @@ describe('clipped polygon', () => {
     // Arrange
     const triangle = {
       ...getTriangle([
-        [100, 100, 1],
-        [100, 200, 1],
-        [700, 100, 1],
+        [100, 100, 10],
+        [100, 200, 10],
+        [700, 100, 10],
       ]),
       textureKey: null,
     }
@@ -199,5 +199,52 @@ describe('clipped polygon', () => {
 
     // Assert
     expect(isPiece).toBe(true)
+  })
+
+  it('cuts a triangle that reaches past the far plane', () => {
+    // Arrange
+    const triangle = getTriangle([
+      [100, 100, 700],
+      [100, 200, 700],
+      [200, 100, 900],
+    ])
+
+    // Act
+    const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT)
+
+    // Assert
+    expect(polygon).not.toBeNull()
+  })
+
+  it('knows a piece by a corner on the far plane', () => {
+    // Arrange
+    const piece = getFragment([
+      [100, 100],
+      [100, 190],
+      [200, 100],
+    ])
+    const farPiece = {
+      ...piece,
+      vertices: piece.vertices.map((vertex, index) => ({
+        ...vertex,
+        reciprocalW: index === 0 ? 1 / 800 : 1 / 300,
+      })) as unknown as ScreenTriangle,
+    }
+    const nearPiece = {
+      ...piece,
+      vertices: piece.vertices.map((vertex) => ({
+        ...vertex,
+        reciprocalW: 1 / 300,
+      })) as unknown as ScreenTriangle,
+    }
+
+    // Act
+    const results = [
+      getIsCutPiece(farPiece.vertices, VIEWPORT),
+      getIsCutPiece(nearPiece.vertices, VIEWPORT),
+    ]
+
+    // Assert
+    expect(results).toEqual([true, false])
   })
 })

@@ -10,7 +10,7 @@ export type {
   RootComparison,
   RootComparisonInput,
 } from './controller/render-trace/compare-by-root.types.ts'
-export { getIsFragmentOfPolygon } from './controller/render-trace/clipped-polygon/clipped-polygon.ts'
+export { getIsCutPiece, getIsFragmentOfPolygon } from './controller/render-trace/clipped-polygon/clipped-polygon.ts'
 export { compareRenderFrame, getIsInside } from './controller/render-trace/compare-render-frame.ts'
 export { getOriginalTriangles } from './controller/render-trace/original-triangles.ts'
 export {
