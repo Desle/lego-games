@@ -18,7 +18,10 @@ import {
   RepeatWrapping,
   RGBAFormat,
 } from 'three'
-import { createPlasticMaterialFromColor, createPlasticMaterialFromTexture } from './ldraw-plastic.ts'
+import {
+  createPlasticMaterialFromColor,
+  createPlasticMaterialFromTexture,
+} from './ldraw-plastic.ts'
 import { getLDrawBrickColor } from './ldraw-brick-colors.ts'
 import type { CarOrigin } from './ldraw-car-document.types.ts'
 import type { GameBrickMaterials, GameFaceBucket } from './game-brick-meshes.types.ts'
