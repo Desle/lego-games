@@ -1,5 +1,6 @@
 import type { CarDesign } from '@lego-games/lego-racers/car-builder'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
+import type { ModelResourceNames } from '@lego-games/lego-racers/racer-appearance'
 import type { HudCommand } from '@lego-games/lego-racers/race-hud'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
@@ -56,6 +57,12 @@ export type RaceDisplay = {
 export type BuiltCarDrawingRequest = {
   readonly archive: JamArchive
   readonly design: CarDesign
+}
+
+// A car body model of the original (a champion's, which no brick list builds) that the race is about to draw.
+export type CarBodyDrawingRequest = {
+  readonly archive: JamArchive
+  readonly names: ModelResourceNames
 }
 
 // An effect the race draws from a model of the original's (a power-up brick on the track, say).
@@ -116,6 +123,8 @@ export type ViewerExtension = {
   readonly getRaceDisplay: (window: WindowMetrics) => RaceDisplay | null
   // Something to draw in place of the mesh the original builds for a car built from bricks, in that mesh's frame; null keeps the original's.
   readonly getBuiltCarDrawing: (request: BuiltCarDrawingRequest) => Object3D | null
+  // Something to draw in place of the car body model with these names, in that model's frame (its vertices times its scale); null keeps the original's.
+  readonly getCarBodyDrawing: (request: CarBodyDrawingRequest) => Object3D | null
   // Something to draw in place of the model the original draws for an effect, in that model's frame (the original's units, its scale applied); null keeps the original's.
   readonly getEffectModelDrawing: (request: EffectModelDrawingRequest) => Object3D | null
   // Something to draw in place of a racer's wheels or driver, posed by the viewer; null keeps the original's.

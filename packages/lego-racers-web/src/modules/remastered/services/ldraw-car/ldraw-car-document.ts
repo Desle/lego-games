@@ -72,7 +72,7 @@ const getCompositePartMatrix = (part: LDrawCompositePart): Matrix4 => {
 const formatNumber = (value: number): string => String(Number(value.toFixed(MATRIX_DIGITS)) + 0)
 
 // An LDraw type 1 line: `1 <colour> x y z a b c d e f g h i <file>`, the nine numbers being the matrix rows.
-const getPartLine = (colorCode: number, matrix: Matrix4, partNumber: string): string => {
+export const getPartLine = (colorCode: number, matrix: Matrix4, partNumber: string): string => {
   const [m11, m21, m31, , m12, m22, m32, , m13, m23, m33, , m14, m24, m34] = matrix.elements
   const numbers = [m14, m24, m34, m11, m12, m13, m21, m22, m23, m31, m32, m33]
   return `1 ${String(colorCode)} ${numbers.map((value) => formatNumber(value)).join(' ')} ${partNumber}.dat`
