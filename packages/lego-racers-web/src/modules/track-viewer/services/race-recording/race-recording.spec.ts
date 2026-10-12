@@ -1,5 +1,8 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { createServer } from 'vite'
+import { developmentReplayInboxPlugin } from '../replay-inbox-server/replay-inbox-server.ts'
 import { loadSavedCars, DEFAULT_SAVE_PATH } from '@lego-games/lego-racers/car-builder'
 import {
   createGameSession,
@@ -118,6 +121,56 @@ describe('the session recording', () => {
       expect(replayed.frames.map((frame) => frame.fields)).toEqual(liveFields)
       if (!existsSync(SYNTHETIC_REPLAY_PATH)) writeFileSync(SYNTHETIC_REPLAY_PATH, text)
       expect(text).toBe(readFileSync(SYNTHETIC_REPLAY_PATH, 'utf8'))
+    },
+    120_000
+  )
+
+  it.skipIf(!getIsOriginalGamePresent())(
+    'posts a finished race to the dev server inbox, which writes the file the recorder named',
+    async () => {
+      // Arrange
+      const inbox = join(mkdtempSync(join(tmpdir(), 'inbox-')), 'inbox')
+      const server = await createServer({
+        configFile: false,
+        logLevel: 'silent',
+        plugins: [developmentReplayInboxPlugin(inbox)],
+        server: { port: 0, host: '127.0.0.1' },
+      })
+      await server.listen()
+      const address = server.httpServer?.address()
+      const port = typeof address === 'object' && address !== null ? address.port : 0
+      const postedNames: string[] = []
+      const postToServer = async (fileName: string, text: string) => {
+        postedNames.push(fileName)
+        await fetch(
+          `http://127.0.0.1:${String(port)}/__development/replay-inbox?name=${encodeURIComponent(fileName)}`,
+          { method: 'POST', body: text }
+        )
+      }
+      const store = createSessionRecordingStore(createMemoryBackend())
+      const recording = createRaceRecording(
+        getRoyalKnightsStart(readOriginalJam(), readOriginalExecutable()),
+        store,
+        postToServer
+      )
+
+      // Act
+      for (let frame = 0; frame < IDLE_FRAME_COUNT; frame += 1) {
+        recording?.addFrame({
+          milliseconds: FRAME_MILLISECONDS,
+          input: { pressedKeyCodes: new Set(), gamepad: null },
+          menu: NO_MENU_INPUT,
+          grant: null,
+        })
+      }
+      await recording?.finish()
+      await server.close()
+
+      // Assert
+      expect(readdirSync(inbox)).toEqual(postedNames)
+      expect(readFileSync(join(inbox, postedNames[0] ?? ''), 'utf8')).toBe(
+        (await store.readLast())?.text
+      )
     },
     120_000
   )

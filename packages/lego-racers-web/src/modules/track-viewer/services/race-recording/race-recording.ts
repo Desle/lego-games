@@ -7,7 +7,8 @@ import {
 import { getIsClassic } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
 import { sessionRecordingStore } from '../session-recording-store/session-recording-store.ts'
 import type { SessionRecordingStore } from '../session-recording-store/session-recording-store.types.ts'
-import type { RaceRecording } from './race-recording.types.ts'
+import { postRecordingToInbox } from '../replay-inbox-upload/replay-inbox-upload.ts'
+import type { InboxPoster, RaceRecording } from './race-recording.types.ts'
 
 const FILE_EXTENSION = '.replay.jsonl'
 
@@ -16,7 +17,8 @@ const FILE_EXTENSION = '.replay.jsonl'
 // game the port reproduces.
 export const createRaceRecording = (
   start: RaceStart,
-  store: SessionRecordingStore = sessionRecordingStore
+  store: SessionRecordingStore = sessionRecordingStore,
+  postToInbox: InboxPoster = postRecordingToInbox
 ): RaceRecording | null => {
   if (!getIsClassic()) return null
   const header = createReplayHeader(start)
@@ -30,10 +32,10 @@ export const createRaceRecording = (
       isFinished = true
       if (recorder.getFrameCount() === 0) return
       const stamp = new Date().toISOString().replaceAll(/[:.]/g, '-')
-      await store.save(
-        `${header.raceFolder}-${stamp}${FILE_EXTENSION}`,
-        serializeRecording(recorder.finish())
-      )
+      const fileName = `${header.raceFolder}-${stamp}${FILE_EXTENSION}`
+      const text = serializeRecording(recorder.finish())
+      await store.save(fileName, text)
+      await postToInbox(fileName, text)
     },
   })
 }

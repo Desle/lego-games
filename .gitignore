@@ -24,3 +24,6 @@ reverse-engineering/ghidra-server-logs/
 # Emulator virtualenv and Python caches
 reverse-engineering/emulator/.venv
 __pycache__/
+
+# Recordings posted by the dev viewer, waiting for pnpm run replay:inbox
+reverse-engineering/replays/inbox

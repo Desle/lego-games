@@ -6,3 +6,6 @@ export type RaceRecording = {
   // Stores the recording once (a later call does nothing); an empty one is dropped.
   readonly finish: () => Promise<void>
 }
+
+// Hands a finished recording to the dev server's inbox.
+export type InboxPoster = (fileName: string, text: string) => Promise<void>

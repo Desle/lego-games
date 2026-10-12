@@ -97,3 +97,7 @@ Besides single calls the emulator boots both images the way Windows does and run
 ## What is still open
 
 Sine and cosine against the real FPU (see Limits). Functions that call imports or other unported code are not covered: the rest of `RigidBody_Step`, `RacerSet_Step`, `Race_Update`.
+
+## DirectInput gamepad and menu taps (session replay)
+
+`golden_trace.py` scenarios may set `"controller": "joystick"` and per frame `"joystick": {"axes", "buttons"}` and `"menuKeys"`: `DirectInput_EnumDevices` answers a joystick enumeration (device type 4, not the force feedback one) with one gamepad (`dwDevType` `0x0404`), `GetCapabilities`, `GetDeviceInfo` and `EnumObjects` describe two axes (X, Y) and 16 buttons in the `DIJOYSTATE2` layout, and `GetDeviceState` returns the frame's state. `menuKeys` are scan codes tapped (down and up) in the frame. See [session-replay.md](session-replay.md).

@@ -1,4 +1,5 @@
 import type { FieldDivergence, TraceComparison } from '../../../golden-trace/index.ts'
+import type { ReplayControllerKind } from '../../../session-recording/index.ts'
 
 export type ReplayReport = {
   readonly frameCount: number
@@ -12,6 +13,12 @@ export type ReplayReport = {
     readonly stopReason: string | null
     readonly comparison: TraceComparison
     readonly firstDivergence: FieldDivergence | null
+    // What the original was fed: the controller, the frames with a pause-menu key, the frames with a gamepad in use.
+    readonly controller: ReplayControllerKind
+    readonly menuKeyFrameCount: number
+    readonly gamepadFrameCount: number
+    // Which car drives on both sides and why.
+    readonly carNote: string
   } | null
   // Why the original was not run at all.
   readonly originalSkipReason: string | null

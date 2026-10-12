@@ -4,7 +4,11 @@ export {
   getPortTrace,
   getTraceFields,
 } from './controller/port-trace/port-trace.ts'
-export { formatDivergence, runGoldenTrace } from './controller/run-golden-trace/run-golden-trace.ts'
+export {
+  compareWithOriginal,
+  formatDivergence,
+  runGoldenTrace,
+} from './controller/run-golden-trace/run-golden-trace.ts'
 export { getRouteDrivingFrames } from './controller/route-driving/route-driving.ts'
 export {
   createTraceScenario,
@@ -27,5 +31,7 @@ export type {
   TraceComparison,
   TraceFields,
   TraceFrame,
+  TraceController,
   TraceFrameInput,
+  TraceJoystickInput,
 } from './types/golden-trace.types.ts'
