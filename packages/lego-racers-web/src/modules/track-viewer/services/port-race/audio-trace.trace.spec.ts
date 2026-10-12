@@ -13,6 +13,7 @@ import {
   readOriginalExecutable,
   readOriginalJam,
 } from './original-game-files.ts'
+import { AUDIO_SWEEP_CASES } from './audio-sweep-cases.ts'
 import { runPortRace } from './port-race.ts'
 import { createPresentationScenario } from './trace-scenarios.ts'
 import type { AudioTraceCase } from './trace-scenarios.types.ts'
@@ -36,6 +37,7 @@ const AUDIO_CASES: readonly AudioTraceCase[] = [
   { name: 'RACEC0R3', raceFolder: 'RACEC0R3' },
   { name: 'RACEC1R0', raceFolder: 'RACEC1R0' },
   { name: 'RACEC3R0', raceFolder: 'RACEC3R0' },
+  ...AUDIO_SWEEP_CASES,
 ]
 
 describe.skipIf(!isGamePresent())('audio trace', () => {
@@ -87,7 +89,13 @@ describe.skipIf(!isGamePresent())('audio trace', () => {
       const differing = comparison.sounds.filter((sound) => sound.originalCount !== sound.portCount)
       appendFileSync(
         process.env['AUDIO_TRACE_REPORT'],
-        `${audioCase.name}\n${differing.map((sound) => JSON.stringify(sound)).join('\n')}\n`
+        `${audioCase.name}\n${differing.map((sound) => JSON.stringify(sound)).join('\n')}\n${original.audioFrames
+          .flatMap(({ frame, events }) =>
+            events
+              .filter((event) => event.kind === 'racerVoiceCall')
+              .map((event) => `voice ${String(frame)} ${JSON.stringify(event.values)}`)
+          )
+          .join('\n')}\n`
       )
     }
 
