@@ -1,4 +1,4 @@
-import { DEVELOPMENT_HIGH_DEFINITION_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
+import { DEVELOPMENT_HIGH_DEFINITION_ROUTE } from '../high-definition-texture/high-definition-route.ts'
 
 const getIsNameList = (value: unknown): value is readonly string[] =>
   Array.isArray(value) && value.every((entry) => typeof entry === 'string')

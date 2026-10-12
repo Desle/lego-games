@@ -37,11 +37,6 @@ import { showSceneObjects } from '../scene-viewport/scene-viewport.ts'
 import type { ShownScene } from '../scene-viewport/scene-viewport.types.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
 import type { RaceStage, RaceStageSize, RaceViewport, RacerRig } from './race-viewport.types.ts'
-import {
-  getHighDefinitionPixelRatio,
-  getIsHighDefinitionEnabled,
-  getPageSearch,
-} from '../scene-object/high-definition-texture/high-definition-texture.ts'
 
 const BACKGROUND_COLOR = 0x101820
 const MILLISECONDS_PER_SECOND = 1000
@@ -340,16 +335,15 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
 export const createRaceViewport = (
   container: HTMLElement,
   assets: RaceAssets,
-  size: RaceStageSize
+  size: RaceStageSize,
+  pixelRatio: number | null = null
 ): RaceViewport => {
   const renderer = new WebGLRenderer({ antialias: true })
   // Direct3D 6 has no colour management: colours reach the screen as stored.
   renderer.outputColorSpace = LinearSRGBColorSpace
   renderer.setClearColor(new Color(BACKGROUND_COLOR))
   renderer.autoClear = false
-  if (getIsHighDefinitionEnabled(getPageSearch())) {
-    renderer.setPixelRatio(getHighDefinitionPixelRatio(size, globalThis.window))
-  }
+  if (pixelRatio !== null) renderer.setPixelRatio(pixelRatio)
   renderer.setSize(size.width, size.height)
   container.appendChild(renderer.domElement)
   const stage = createRaceStage(assets, size)
@@ -357,6 +351,11 @@ export const createRaceViewport = (
     update: stage.update,
     showHazards: stage.showHazards,
     animate: stage.animate,
+    resize: (nextSize) => {
+      renderer.setSize(nextSize.width, nextSize.height)
+      stage.camera.aspect = nextSize.width / nextSize.height
+      stage.camera.updateProjectionMatrix()
+    },
     render: () => {
       renderer.clear()
       renderer.render(stage.backgroundScene, stage.camera)

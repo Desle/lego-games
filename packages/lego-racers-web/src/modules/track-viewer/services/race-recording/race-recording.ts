@@ -4,7 +4,7 @@ import {
   createReplayRecorder,
   serializeRecording,
 } from '@lego-games/lego-racers/session-recording'
-import { getIsHighDefinitionEnabled } from '../scene-object/high-definition-texture/high-definition-texture.ts'
+import { getIsClassic } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
 import { sessionRecordingStore } from '../session-recording-store/session-recording-store.ts'
 import type { SessionRecordingStore } from '../session-recording-store/session-recording-store.types.ts'
 import type { RaceRecording } from './race-recording.types.ts'
@@ -12,14 +12,13 @@ import type { RaceRecording } from './race-recording.types.ts'
 const FILE_EXTENSION = '.replay.jsonl'
 
 // Records what feeds the deterministic simulation of the race that starts: the settings, the cars, the random cursor and
-// per frame the integer time and the input state. Never in the high-definition view (`?hd`): only the classic view is
-// the game the port reproduces.
+// per frame the integer time and the input state. Never with an extension registered: only the classic view is the
+// game the port reproduces.
 export const createRaceRecording = (
   start: RaceStart,
-  search: string,
   store: SessionRecordingStore = sessionRecordingStore
 ): RaceRecording | null => {
-  if (getIsHighDefinitionEnabled(search)) return null
+  if (!getIsClassic()) return null
   const header = createReplayHeader(start)
   if (header === null) return null
   const recorder = createReplayRecorder(header)

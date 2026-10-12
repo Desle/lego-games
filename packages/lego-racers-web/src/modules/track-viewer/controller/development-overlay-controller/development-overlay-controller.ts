@@ -2,13 +2,8 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { downloadLastRecording } from '../../services/recording-download/recording-download.ts'
 import { createIndexedDbSaveStorage } from '../../services/indexed-db-save-storage/indexed-db-save-storage.ts'
 import { unlockEverythingInStorage } from '../../services/development-unlocks/development-unlocks.ts'
-import {
-  getHighDefinitionVariant,
-  getIsHighDefinitionEnabled,
-  getPageSearch,
-} from '../../services/scene-object/high-definition-texture/high-definition-texture.ts'
-import { getTextureVariants } from '../../services/texture-variants/texture-variants.ts'
 import { developmentToolsState } from '../../services/development-tools-state/development-tools-state.ts'
+import type { DevelopmentSelector } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import type { DevelopmentOverlayController } from './development-overlay-controller.types.ts'
 
 const TOGGLE_KEY_CODE = 'Backquote'
@@ -23,30 +18,20 @@ const unlockEverything = async () => {
   if (isUnlocked) globalThis.location.reload()
 }
 
-// Switching packs reloads the page: textures are swapped as they load.
-const selectTextureVariant = (variant: string | null) => {
-  const url = new URL(globalThis.location.href)
-  if (variant === null) url.searchParams.delete('hd')
-  else url.searchParams.set('hd', variant)
-  globalThis.location.assign(url.toString())
-}
-
-const getSelectedTextureVariant = (): string | null => {
-  const search = getPageSearch()
-  return getIsHighDefinitionEnabled(search) ? getHighDefinitionVariant(search) : null
-}
-
 export const useDevelopmentOverlayController = (): DevelopmentOverlayController => {
   const isOverlayOpen = useSyncExternalStore(
     developmentToolsState.subscribe,
     developmentToolsState.getIsOpen
   )
   const [isTrackViewerOpen, setIsTrackViewerOpen] = useState(false)
-  const [textureVariants, setTextureVariants] = useState<readonly string[]>([])
+  const [selectors, setSelectors] = useState<readonly DevelopmentSelector[]>([])
 
   useEffect(() => {
     if (!isOverlayOpen) return
-    void getTextureVariants().then(setTextureVariants)
+    // The remastered layer's choices; this chunk is development-only, so the layer's code never reaches a build.
+    void import('../../../remastered/index.ts')
+      .then((remastered) => remastered.getRemasteredSelectors(globalThis.location.search))
+      .then(setSelectors)
   }, [isOverlayOpen])
 
   useEffect(() => {
@@ -67,9 +52,7 @@ export const useDevelopmentOverlayController = (): DevelopmentOverlayController 
     onTrackViewerClosed: () => setIsTrackViewerOpen(false),
     onRecordingDownloaded: () => void downloadLastRecording(),
     onEverythingUnlocked: () => void unlockEverything(),
-    textureVariants,
-    selectedTextureVariant: getSelectedTextureVariant(),
-    onTextureVariantSelected: (variant) => selectTextureVariant(variant),
+    selectors,
     onOverlayClosed: () => developmentToolsState.setIsOpen(false),
   }
 }

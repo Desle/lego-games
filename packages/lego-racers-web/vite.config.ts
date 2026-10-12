@@ -1,13 +1,13 @@
-import { createReadStream, existsSync, readdirSync, statSync } from 'node:fs'
+import { createReadStream, existsSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join, relative, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
+import { developmentHighDefinitionPlugin } from './src/modules/remastered/services/development-texture-server/development-texture-server.ts'
 import {
   DEVELOPMENT_GAME_FILE_ROUTE,
-  DEVELOPMENT_HIGH_DEFINITION_ROUTE,
   DEVELOPMENT_JAM_ROUTE,
 } from './src/shared/development-jam/development-jam-route.ts'
 
@@ -59,70 +59,14 @@ const developmentGameFilesPlugin = (): Plugin => ({
   },
 })
 
-const getPngPaths = (directory: string): readonly string[] =>
-  readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(directory, entry.name)
-    if (entry.isDirectory()) return getPngPaths(path)
-    return /\.png$/i.test(entry.name) ? [path] : []
-  })
-
-// Serves upscaled texture packs to the dev server only: `<root>/<variant>/<archive path>.png`, looked up
-// case-insensitively. The root is `LEGO_HD_TEXTURES_ROOT`, by default `~/textures/lego-racers`.
-const developmentHighDefinitionPlugin = (): Plugin => ({
-  name: 'lego-racers-development-high-definition',
-  apply: 'serve',
-  configureServer: (server) => {
-    const root = process.env['LEGO_HD_TEXTURES_ROOT'] ?? join(homedir(), 'textures', 'lego-racers')
-    const variants = new Map<string, ReadonlyMap<string, string>>()
-    const getVariant = (variant: string): ReadonlyMap<string, string> => {
-      const known = variants.get(variant)
-      if (known !== undefined) return known
-      const directory = join(root, variant)
-      const pathsByKey = new Map(
-        (existsSync(directory) ? getPngPaths(directory) : []).map((path) => [
-          relative(directory, path).replaceAll('\\', '/').toLowerCase(),
-          path,
-        ])
-      )
-      variants.set(variant, pathsByKey)
-      return pathsByKey
-    }
-    server.middlewares.use(DEVELOPMENT_HIGH_DEFINITION_ROUTE, (request, response) => {
-      if ((request.url ?? '/') === '/') {
-        const names = existsSync(root)
-          ? readdirSync(root, { withFileTypes: true })
-              .filter((entry) => entry.isDirectory())
-              .map((entry) => entry.name)
-              .sort()
-          : []
-        response.setHeader('Content-Type', 'application/json')
-        response.end(JSON.stringify(names))
-        return
-      }
-      const [variant = '', ...rest] = decodeURIComponent(
-        (request.url ?? '').replace(/^\//, '').split('?')[0] ?? ''
-      ).split('/')
-      const path = /^[\w.-]+$/.test(variant)
-        ? getVariant(variant).get(rest.join('/').toLowerCase())
-        : undefined
-      if (path === undefined) {
-        response.writeHead(404)
-        response.end()
-        return
-      }
-      response.setHeader('Content-Type', 'image/png')
-      response.setHeader('Content-Length', String(statSync(path).size))
-      createReadStream(path).pipe(response)
-    })
-  },
-})
-
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
     developmentJamPlugin(),
     developmentGameFilesPlugin(),
-    developmentHighDefinitionPlugin(),
+    developmentHighDefinitionPlugin(
+      process.env['LEGO_HD_TEXTURES_ROOT'] ?? join(homedir(), 'textures', 'lego-racers')
+    ),
   ],
 })

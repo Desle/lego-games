@@ -1,0 +1,53 @@
+import type { HudCommand } from '@lego-games/lego-racers/race-hud'
+import type { DataTexture } from 'three'
+
+export type TexturePixels = {
+  readonly colors: Uint8Array
+  readonly width: number
+  readonly height: number
+}
+
+export type StageSize = {
+  readonly width: number
+  readonly height: number
+}
+
+export type WindowMetrics = {
+  readonly innerWidth: number
+  readonly innerHeight: number
+  readonly devicePixelRatio: number
+}
+
+// A texture the viewer just made from an original bitmap, uploaded and drawn as the original's pixels.
+export type TextureCreatedEvent = {
+  readonly texture: DataTexture
+  readonly bitmapPath: string
+  readonly originalPixels: TexturePixels
+  // Replaces the texture's picture, of any size, by another with the same row order as the original's.
+  readonly replacePixels: (pixels: TexturePixels) => void
+}
+
+// How the race is laid out on the page: the stage the race and the HUD canvases cover, in page pixels.
+export type RaceDisplay = {
+  readonly stageSize: StageSize
+  readonly pixelRatio: number
+  // The size the HUD is laid out for; the HUD commands are then moved onto the stage.
+  readonly hudDesignSize: StageSize
+  // True when the stage fills the whole window instead of being scaled into it.
+  readonly isFullWindow: boolean
+  readonly getHudCommands: (commands: readonly HudCommand[]) => readonly HudCommand[]
+}
+
+// A choice the developer panel offers for a layer above the original port.
+export type DevelopmentSelector = {
+  readonly label: string
+  readonly options: readonly string[]
+  readonly selected: string | null
+  readonly onSelected: (option: string | null) => void
+}
+
+// What a layer above the original port may change. The viewer draws the original exactly when none is registered.
+export type ViewerExtension = {
+  readonly onTextureCreated: (event: TextureCreatedEvent) => void
+  readonly getRaceDisplay: (window: WindowMetrics) => RaceDisplay | null
+}

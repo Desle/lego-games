@@ -31,6 +31,8 @@ export type RaceViewport = {
   readonly showHazards: (trackWorld: WorldAnimation, pools: readonly (EmitterPool | null)[]) => void
   // Advances the backdrop and the sky by whole milliseconds (the track's instances follow the simulation).
   readonly animate: (deltaMilliseconds: number) => void
+  // Draws the race at another size, keeping the camera's vertical field of view.
+  readonly resize: (size: RaceStageSize) => void
   readonly render: () => void
   readonly dispose: () => void
 }
