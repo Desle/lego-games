@@ -2,6 +2,12 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { downloadLastRecording } from '../../services/recording-download/recording-download.ts'
 import { createIndexedDbSaveStorage } from '../../services/indexed-db-save-storage/indexed-db-save-storage.ts'
 import { unlockEverythingInStorage } from '../../services/development-unlocks/development-unlocks.ts'
+import {
+  getHighDefinitionVariant,
+  getIsHighDefinitionEnabled,
+  getPageSearch,
+} from '../../services/scene-object/high-definition-texture/high-definition-texture.ts'
+import { getTextureVariants } from '../../services/texture-variants/texture-variants.ts'
 import { developmentToolsState } from '../../services/development-tools-state/development-tools-state.ts'
 import type { DevelopmentOverlayController } from './development-overlay-controller.types.ts'
 
@@ -17,12 +23,31 @@ const unlockEverything = async () => {
   if (isUnlocked) globalThis.location.reload()
 }
 
+// Switching packs reloads the page: textures are swapped as they load.
+const selectTextureVariant = (variant: string | null) => {
+  const url = new URL(globalThis.location.href)
+  if (variant === null) url.searchParams.delete('hd')
+  else url.searchParams.set('hd', variant)
+  globalThis.location.assign(url.toString())
+}
+
+const getSelectedTextureVariant = (): string | null => {
+  const search = getPageSearch()
+  return getIsHighDefinitionEnabled(search) ? getHighDefinitionVariant(search) : null
+}
+
 export const useDevelopmentOverlayController = (): DevelopmentOverlayController => {
   const isOverlayOpen = useSyncExternalStore(
     developmentToolsState.subscribe,
     developmentToolsState.getIsOpen
   )
   const [isTrackViewerOpen, setIsTrackViewerOpen] = useState(false)
+  const [textureVariants, setTextureVariants] = useState<readonly string[]>([])
+
+  useEffect(() => {
+    if (!isOverlayOpen) return
+    void getTextureVariants().then(setTextureVariants)
+  }, [isOverlayOpen])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -42,6 +67,9 @@ export const useDevelopmentOverlayController = (): DevelopmentOverlayController 
     onTrackViewerClosed: () => setIsTrackViewerOpen(false),
     onRecordingDownloaded: () => void downloadLastRecording(),
     onEverythingUnlocked: () => void unlockEverything(),
+    textureVariants,
+    selectedTextureVariant: getSelectedTextureVariant(),
+    onTextureVariantSelected: (variant) => selectTextureVariant(variant),
     onOverlayClosed: () => developmentToolsState.setIsOpen(false),
   }
 }

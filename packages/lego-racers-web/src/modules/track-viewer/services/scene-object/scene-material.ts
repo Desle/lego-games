@@ -41,6 +41,7 @@ import {
 import type { BlendingParameters, TextureCache } from './scene-object.types.ts'
 import {
   getIsHighDefinitionEnabled,
+  getPageSearch,
   loadHighDefinitionPixels,
 } from './high-definition-texture/high-definition-texture.ts'
 
@@ -123,7 +124,7 @@ const getTexture = (
   texture.colorSpace = NoColorSpace
   texture.needsUpdate = true
   const sceneTexture = textures[textureIndex]
-  if (sceneTexture !== undefined && getIsHighDefinitionEnabled(globalThis.location.search)) {
+  if (sceneTexture !== undefined && getIsHighDefinitionEnabled(getPageSearch())) {
     void loadHighDefinitionPixels(sceneTexture.bitmapPath, bitmap).then((pixels) => {
       if (pixels === null) return
       // The GPU copy was allocated at the original's size (immutable storage); release it so the larger picture

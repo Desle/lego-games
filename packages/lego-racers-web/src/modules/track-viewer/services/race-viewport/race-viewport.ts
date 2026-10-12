@@ -40,6 +40,7 @@ import type { RaceStage, RaceStageSize, RaceViewport, RacerRig } from './race-vi
 import {
   getHighDefinitionPixelRatio,
   getIsHighDefinitionEnabled,
+  getPageSearch,
 } from '../scene-object/high-definition-texture/high-definition-texture.ts'
 
 const BACKGROUND_COLOR = 0x101820
@@ -346,7 +347,7 @@ export const createRaceViewport = (
   renderer.outputColorSpace = LinearSRGBColorSpace
   renderer.setClearColor(new Color(BACKGROUND_COLOR))
   renderer.autoClear = false
-  if (getIsHighDefinitionEnabled(globalThis.location.search)) {
+  if (getIsHighDefinitionEnabled(getPageSearch())) {
     renderer.setPixelRatio(getHighDefinitionPixelRatio(size, globalThis.window))
   }
   renderer.setSize(size.width, size.height)

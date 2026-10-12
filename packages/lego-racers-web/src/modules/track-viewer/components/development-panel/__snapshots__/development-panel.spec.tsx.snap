@@ -28,6 +28,25 @@ exports[`DevelopmentPanel > renders default snapshot 1`] = `
     >
       Unlock everything (rewrites the save, reloads)
     </button>
+    <label
+      class="flex flex-col gap-1"
+    >
+      Textures (reloads)
+      <select
+        class="rounded bg-slate-700 px-2 py-1"
+      >
+        <option
+          value=""
+        >
+          Classic (original)
+        </option>
+        <option
+          value="ultrasharp"
+        >
+          ultrasharp
+        </option>
+      </select>
+    </label>
     <p
       class="text-slate-400"
     >
@@ -77,6 +96,25 @@ exports[`DevelopmentPanel > renders the stop button while a race runs 1`] = `
     >
       Unlock everything (rewrites the save, reloads)
     </button>
+    <label
+      class="flex flex-col gap-1"
+    >
+      Textures (reloads)
+      <select
+        class="rounded bg-slate-700 px-2 py-1"
+      >
+        <option
+          value=""
+        >
+          Classic (original)
+        </option>
+        <option
+          value="ultrasharp"
+        >
+          ultrasharp
+        </option>
+      </select>
+    </label>
     <p
       class="text-slate-400"
     >
