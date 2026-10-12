@@ -24,6 +24,7 @@
     "export-assets": "node packages/lego-racers-export/src/modules/asset-export/controller/export-assets-command/export-assets-command.ts",
     "render-trace": "sh reverse-engineering/emulator/setup.sh && pnpm --filter @lego-games/lego-racers-web run render-trace",
     "pixel-trace": "sh reverse-engineering/emulator/setup.sh && pnpm --filter @lego-games/lego-racers-web run pixel-trace",
+    "traces": "pnpm run golden-trace && pnpm run render-trace && pnpm run pixel-trace",
     "render-coverage": "sh reverse-engineering/emulator/setup.sh && pnpm --filter @lego-games/lego-racers-web run render-coverage",
     "audio-trace": "sh reverse-engineering/emulator/setup.sh && pnpm --filter @lego-games/lego-racers-web run audio-trace",
     "dev": "pnpm --filter @lego-games/lego-racers-web run dev"
