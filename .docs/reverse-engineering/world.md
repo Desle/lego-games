@@ -127,7 +127,7 @@ Same header. `0x2b` int material assignment (checked) at `+0x2c` (default -1), `
 
 ### Sprites (`0x37`, 0x38 bytes)
 
-`0x37 {` with no name. `0x39` string → material name at `+0x00`; `0x31` position `+0x08`; `0x38` 3 floats `+0x14` (flag 2 in byte `+0x2c`); `0x3a` float `+0x20`; `0x3b` float `+0x24`; `0x3c` float `+0x28` (default `FLT_MAX`, `0x100576e8`); `0x2b` two ints stored as shorts `+0x34`, `+0x36` (flag 4); `0x3e` two ints as shorts `+0x2e`, `+0x30` (byte `+0x32` = 1). `0x10017ac0` needs either the material name ("Sprite is missing material name") or the `0x2b` material assignment ("Illegal mat assign reference").
+`0x37 {` with no name. `0x39` string → material name at `+0x00`; `0x31` position `+0x08`; `0x38` 3 floats `+0x14` (flag 2 in byte `+0x2c`); `0x3a` float `+0x20`; `0x3b` float `+0x24`; `0x3c` float `+0x28` (default `FLT_MAX`, `0x100576e8`); `0x2b` two ints stored as shorts `+0x34`, `+0x36` (flag 4); `0x3e` two ints as shorts `+0x2e`, `+0x30` (byte `+0x32` = 1). `0x10017ac0` needs either the material name ("Sprite is missing material name") or the `0x2b` material assignment ("Illegal mat assign reference"). What the draw does with them: [world-sprite.md](world-sprite.md).
 
 ### Cameras (`0x43`, 0x4c bytes)
 
