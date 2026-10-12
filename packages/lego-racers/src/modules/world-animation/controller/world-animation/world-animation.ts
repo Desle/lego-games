@@ -202,6 +202,15 @@ export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation
         })
       : instance
   return Object.freeze({
+    cameras: Object.freeze(
+      world.cameras.map((camera) =>
+        Object.freeze({
+          name: camera.name,
+          skeletonInstanceIndex: camera.skeletonInstanceIndex,
+          boneIndex: camera.keyword2fValue,
+        })
+      )
+    ),
     skeletonInstances: Object.freeze(
       world.skeletonInstances.map((instance) =>
         getMirrored(
@@ -229,6 +238,7 @@ export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation
 
 // An empty world: what a race without a world file has.
 export const EMPTY_WORLD_ANIMATION: WorldAnimation = Object.freeze({
+  cameras: Object.freeze([]),
   skeletonInstances: Object.freeze([]),
   meshInstances: Object.freeze([]),
   materialAnimations: Object.freeze([]),
@@ -264,6 +274,11 @@ export const findSkeletonInstanceIndex = (world: WorldAnimation, name: string): 
   return world.skeletonInstances.findIndex(
     (instance) => instance.name.slice(0, CLIP_NAME_LENGTH) === key
   )
+}
+
+export const findCameraIndex = (world: WorldAnimation, name: string): number => {
+  const key = name.slice(0, CLIP_NAME_LENGTH)
+  return world.cameras.findIndex((camera) => camera.name.slice(0, CLIP_NAME_LENGTH) === key)
 }
 
 export const findMeshInstanceIndex = (world: WorldAnimation, name: string): number => {

@@ -34,6 +34,13 @@ export type SkeletonInstanceRuntime = {
   readonly levelSquaredDistances: readonly number[]
 }
 
+// Where the camera lock (0x004047b0) puts the camera: its position and the forward and up vectors it is given.
+export type SkeletonInstanceCameraView = {
+  readonly position: { readonly x: number; readonly y: number; readonly z: number }
+  readonly forward: { readonly x: number; readonly y: number; readonly z: number }
+  readonly up: { readonly x: number; readonly y: number; readonly z: number }
+}
+
 // A mesh instance (class 0x10027b50).
 export type MeshInstanceRuntime = {
   readonly name: string
@@ -62,8 +69,17 @@ export type MaterialAnimationRuntime = {
   readonly entries: readonly MaterialAnimationPlayback[]
 }
 
+// A world camera (file keyword 0x43, GolDP.dll 0x1002dc80) as the race's name lookup (race +0x3ac, 0x00432e20) hands it
+// to the camera lock: its skeleton instance (0x2f, first int) and the bone of that instance (0x2f, second int).
+export type WorldCameraRuntime = {
+  readonly name: string
+  readonly skeletonInstanceIndex: number
+  readonly boneIndex: number
+}
+
 export type WorldAnimation = {
   readonly skeletonInstances: readonly SkeletonInstanceRuntime[]
+  readonly cameras: readonly WorldCameraRuntime[]
   readonly meshInstances: readonly MeshInstanceRuntime[]
   readonly materialAnimations: readonly MaterialAnimationRuntime[]
 }
