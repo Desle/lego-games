@@ -1,3 +1,10 @@
+import { createFigure, playFigureAnimation, updateFigure } from '../../../racer/index.ts'
+import type { Figure } from '../../../racer/index.ts'
+import {
+  advanceSkeletonInstance,
+  startSkeletonInstanceClip,
+} from '../../../world-animation/index.ts'
+import type { SkeletonInstanceRuntime } from '../../../world-animation/index.ts'
 import {
   getQuaternionFromMatrix,
   getTruncatedInteger,
@@ -5,6 +12,8 @@ import {
 } from '../../../simulation-math/index.ts'
 import { getSignedShort, getUnsignedByte } from '../../../../shared/binary-values/binary-values.ts'
 import {
+  BEST_DRIVER_ANIMATION,
+  CHAMPION_DRIVER_CLIP,
   GHOST_LAP_COUNT,
   MAXIMUM_RECORDED_SAMPLE_COUNT,
   ORIENTATION_SCALE,
@@ -12,7 +21,12 @@ import {
   SAMPLE_INTERVAL_MILLISECONDS,
 } from '../../types/ghost-constants/ghost-constants.ts'
 import type { Ghost, GhostSample } from '../../types/ghost.types.ts'
-import type { GhostPose, GhostRun, GhostSession } from '../../types/ghost-run/ghost-run.types.ts'
+import type {
+  GhostBestCar,
+  GhostPose,
+  GhostRun,
+  GhostSession,
+} from '../../types/ghost-run/ghost-run.types.ts'
 
 const NO_LAP_TIMES: readonly number[] = Object.freeze(new Array<number>(GHOST_LAP_COUNT).fill(0))
 
@@ -56,6 +70,22 @@ export const createGhostSession = (isMirrored: boolean): GhostSession =>
     isMirrored,
     isChampionPlaybackFinished: false,
     isBestPlaybackFinished: false,
+    championCar: null,
+    bestCar: null,
+  })
+
+// The rest of Ghost_Initialize (0x00422420): the champion's car is the `ghost2` and `ghostdr` skeleton instances of the
+// `ghost` world; `FUN_0040dad0(driver, 0xc)` starts the driver's clip 12, looping. The wheels keep the clip the world's
+// keyword 0x35 started (flags 0x50001 at the first frame).
+export const loadGhostCar = (
+  session: GhostSession,
+  instances: { readonly wheels: SkeletonInstanceRuntime; readonly driver: SkeletonInstanceRuntime }
+): GhostSession =>
+  getChanged(session, {
+    championCar: Object.freeze({
+      wheels: instances.wheels,
+      driver: startSkeletonInstanceClip(instances.driver, CHAMPION_DRIVER_CLIP, 0),
+    }),
   })
 
 // FUN_00422de0, from Race_LoadRaceDescription: the champion ghost of the race is loaded (null for a race without
@@ -83,10 +113,31 @@ export const restartGhostRun = (session: GhostSession): GhostSession =>
     isBestPlaybackFinished: false,
   })
 
+// 0x00422eb0 with flag 0x01: the wheels and the driver of the first local racer are bound anew (0x0040d550) to the same models
+// and animations, and the driver starts animation 13 (0x0040dad0).
+const getBestCar = (playerFigures: {
+  readonly wheels: Figure
+  readonly driver: Figure
+}): GhostBestCar => {
+  const getCopy = (figure: Figure): Figure => createFigure(figure.animations, figure.child)
+  return Object.freeze({
+    wheels: getCopy(playerFigures.wheels),
+    driver: playFigureAnimation(getCopy(playerFigures.driver), BEST_DRIVER_ANIMATION),
+  })
+}
+
 // FUN_00422eb0, from Race_UpdateState2 when the countdown ends: the clock runs; a run finished earlier in the
 // session plays beside the champion.
-export const beginGhostRun = (session: GhostSession): GhostSession =>
-  getChanged(session, { isRunning: true, isBestRunShown: session.isRunFinished })
+export const beginGhostRun = (
+  session: GhostSession,
+  playerFigures: { readonly wheels: Figure; readonly driver: Figure } | null = null
+): GhostSession =>
+  getChanged(session, {
+    isRunning: true,
+    isBestRunShown: session.isRunFinished,
+    bestCar:
+      session.isRunFinished && playerFigures !== null ? getBestCar(playerFigures) : session.bestCar,
+  })
 
 const getRecordedSample = (arithmetic: FloatArithmetic, pose: GhostPose): GhostSample => {
   const { x, y, z } = pose.position
@@ -106,6 +157,32 @@ const getRecordedSample = (arithmetic: FloatArithmetic, pose: GhostPose): GhostS
   })
 }
 
+// The first half of GhostRecorder_RecordSample: the cars' figures and skeleton instances advance by the step through their
+// update slot (+0x10): the best run's copies with flag 0x01, the champion's instances with flag 0x08 (a champion loaded).
+const getAdvancedCars = (
+  arithmetic: FloatArithmetic,
+  session: GhostSession,
+  stepMilliseconds: number
+): Pick<GhostSession, 'championCar' | 'bestCar'> => {
+  const { bestCar, championCar } = session
+  return {
+    bestCar:
+      session.isBestRunShown && bestCar !== null
+        ? Object.freeze({
+            wheels: updateFigure(arithmetic, bestCar.wheels, stepMilliseconds),
+            driver: updateFigure(arithmetic, bestCar.driver, stepMilliseconds),
+          })
+        : bestCar,
+    championCar:
+      session.championRun !== null && championCar !== null
+        ? Object.freeze({
+            wheels: advanceSkeletonInstance(championCar.wheels, stepMilliseconds),
+            driver: advanceSkeletonInstance(championCar.driver, stepMilliseconds),
+          })
+        : championCar,
+  }
+}
+
 // GhostRecorder_RecordSample 0x00422710, called with every sub-step of Race_Update. While the clock runs it adds the
 // step; when the sample timer is used up it takes a sample (position · 32 and 127 · quaternion, truncated) and
 // restarts the timer at 250 ms less the overshoot. The first sample also keeps the full position and quaternion.
@@ -117,7 +194,10 @@ export const recordGhostSample = (
 ): GhostSession => {
   if (!session.isRunning) return session
   const elapsed = (session.elapsedMilliseconds + stepMilliseconds) >>> 0
-  const clocked = getChanged(session, { elapsedMilliseconds: elapsed })
+  const clocked = getChanged(session, {
+    elapsedMilliseconds: elapsed,
+    ...getAdvancedCars(arithmetic, session, stepMilliseconds),
+  })
   if (stepMilliseconds < session.sampleTimerMilliseconds) {
     return getChanged(clocked, {
       sampleTimerMilliseconds: session.sampleTimerMilliseconds - stepMilliseconds,

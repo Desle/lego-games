@@ -16,3 +16,8 @@ export const SAMPLE_FRACTION_PER_MILLISECOND = Math.fround(0.004)
 // float32 1.8 (0x004b01a4) and 4.0 (0x004af674): the wheel speed FUN_00422960 derives from two samples.
 export const SPEED_SCALE = Math.fround(1.8)
 export const SPEED_INTERVAL_SCALE = 4
+
+// FUN_0040dad0 plays clip 12 on the champion car's driver (Ghost_Initialize 0x00422420) and animation 13 on the driver of
+// the best run's car (0x00422eb0).
+export const CHAMPION_DRIVER_CLIP = 12
+export const BEST_DRIVER_ANIMATION = 13

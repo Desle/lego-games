@@ -9,6 +9,7 @@ export {
   getGhostRun,
   getIsChampionBeaten,
   loadChampionGhost,
+  loadGhostCar,
   recordGhostSample,
   restartGhostRun,
 } from './controller/ghost-session/ghost-session.ts'
@@ -23,6 +24,8 @@ export { TooManyGhostSamplesError } from './types/ghost-errors/ghost-errors.ts'
 export { GhostKeyword } from './types/ghost-keyword/ghost-keyword.ts'
 export type {
   GhostPlaybackPose,
+  GhostBestCar,
+  GhostChampionCar,
   GhostPose,
   GhostRun,
   GhostRunSelection,

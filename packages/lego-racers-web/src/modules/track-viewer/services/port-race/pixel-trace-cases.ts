@@ -82,4 +82,19 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
     maximumDifferingShare: 0.08,
     watchedTextures: [],
   },
+  {
+    // The champion ghost drives from the start line (GHOST.GHB, drawn from GHOST.WDB); the player idles behind it.
+    request: {
+      name: 'RACEC0R0, time trial ghost',
+      raceFolder: 'RACEC0R0',
+      isTimeTrial: true,
+      recordFrames: [140, 158, 168, 200, 260],
+    },
+    maximumDifferingShare: 0.03,
+    watchedTextures: [
+      // The ghost car's own pictures (GHOST.WDB), which the matcher names by their hashes.
+      { label: '2d13aec07aff6e6c', maximumDifferingShare: 0.03 },
+      { label: '867676f1b4ecf538', maximumDifferingShare: 0.03 },
+    ],
+  },
 ]

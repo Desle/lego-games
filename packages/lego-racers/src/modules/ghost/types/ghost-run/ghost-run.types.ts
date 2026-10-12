@@ -3,7 +3,25 @@ import type {
   Quaternion as MathQuaternion,
   Vector3 as MathVector3,
 } from '../../../simulation-math/index.ts'
+import type { Figure } from '../../../racer/index.ts'
+import type { SkeletonInstanceRuntime } from '../../../world-animation/index.ts'
 import type { GhostSample, Quaternion, Vector3 } from '../ghost.types.ts'
+
+// The champion's car (Ghost_Initialize 0x00422420): the skeleton instances `ghost2` (the wheels, ghost +0x110) and
+// `ghostdr` (the driver, ghost +0x208) of GAMEDATA\COMMON\GHOST.WDB. The wheels loop their first clip (the world's
+// keyword 0x35) at the rate FUN_00422960 stores; the driver loops clip 12 (0x0040dad0).
+export type GhostChampionCar = {
+  readonly wheels: SkeletonInstanceRuntime
+  readonly driver: SkeletonInstanceRuntime
+}
+
+// The session's best run car (Ghost_StartRun 0x00422eb0): fresh copies of the first local racer's wheels (ghost +0x1c) and
+// driver (+0x114) figures, the driver started on animation 13 (0x0040dad0). The copies never get the plays flag
+// 0x10000 (only 0x0043d7a0 sets it), so the update (0x0040dd60) leaves them where they started.
+export type GhostBestCar = {
+  readonly wheels: Figure
+  readonly driver: Figure
+}
 
 // One of the ghost object's 0x25c0-byte buffers: the lap times of the run, its samples and the first sample's full
 // position and orientation (Ghost_Load fills it from a file, GhostRecorder_RecordSample from a race).
@@ -42,6 +60,10 @@ export type GhostSession = {
   // +0x25bc of the champion run and of the best run: playback has reached the last sample.
   readonly isChampionPlaybackFinished: boolean
   readonly isBestPlaybackFinished: boolean
+  // The champion's car, loaded with the session (Ghost_Initialize); null until the viewer's world is loaded.
+  readonly championCar: GhostChampionCar | null
+  // The best run's car, copied when a run starts after a finished one (flag 0x01); null before.
+  readonly bestCar: GhostBestCar | null
 }
 
 // What GhostRecorder_RecordSample reads from the racer: the model frame's position (racer +0x5c, vtable +4) and

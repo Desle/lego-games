@@ -22,4 +22,21 @@ describe('getStartSlot', () => {
     // Assert
     expect(slots).toEqual([2, 1, 2])
   })
+
+  it('puts every racer of a ghost race on slot 2 with the champion loaded and slot 1 without (0x0043ba3c)', () => {
+    // Arrange
+    const racerIndices = [0, 1]
+
+    // Act
+    const withChampion = racerIndices.map((racerIndex) =>
+      getStartSlot(racerIndex, true, { isChampionLoaded: true })
+    )
+    const withoutChampion = racerIndices.map((racerIndex) =>
+      getStartSlot(racerIndex, false, { isChampionLoaded: false })
+    )
+
+    // Assert
+    expect(withChampion).toEqual([2, 2])
+    expect(withoutChampion).toEqual([1, 1])
+  })
 })

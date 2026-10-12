@@ -39,7 +39,12 @@ import type { RaceDefinition, RaceRacerDefinition } from '../../types/race.types
 import { getStartFrame } from '../../types/start-frame/start-frame.ts'
 import { loadCollisionWorld } from './load-collision-world.ts'
 import type { LoadRaceOptions, RouteDraws, RouteDrawer, RouteFiles } from './load-race.types.ts'
-import { loadRaceEmitters, loadRaceSky, loadRaceWorlds } from './load-race-worlds.ts'
+import {
+  loadRaceEmitters,
+  loadRaceGhost,
+  loadRaceSky,
+  loadRaceWorlds,
+} from './load-race-worlds.ts'
 import {
   describeAppearances,
   describeRacers,
@@ -218,7 +223,13 @@ export const loadRaceDefinition = (
         displayFrame: getStartFrame(
           arithmetic,
           startPositions,
-          getStartSlot(index, isMultiplayer),
+          getStartSlot(
+            index,
+            isMultiplayer,
+            options.ghost === undefined || options.ghost === null
+              ? null
+              : { isChampionLoaded: options.ghost.championRun !== null }
+          ),
           null
         ),
         displayBoundingRadius: getFigureBounds(arithmetic, racerFigures.wheels)?.radius ?? 0,
@@ -247,7 +258,7 @@ export const loadRaceDefinition = (
     isCountdownSkipped: false,
     isMirrored,
     isPointsRecordPresent: options.isPointsRecordPresent ?? false,
-    ghost: options.ghost ?? null,
+    ghost: loadRaceGhost(readArchiveFile, options.ghost),
     introductionCameraObject: description.trackWorldObject,
     musicTuneCount:
       options.musicTuneCount ??
