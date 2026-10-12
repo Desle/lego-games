@@ -6,6 +6,7 @@ export {
   RACER_FIGURE_LEVEL_DISTANCE,
 } from './types/level-distances/level-distances.ts'
 export { getRacerPoses } from './controller/get-racer-poses/get-racer-poses.ts'
+export { getRacerShadowAlpha } from './controller/get-racer-shadow-alpha/get-racer-shadow-alpha.ts'
 export {
   createRacePresentation,
   stepRacePresentation,

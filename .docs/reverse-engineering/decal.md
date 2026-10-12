@@ -26,10 +26,14 @@ It then fills the placement:
 3. `0x00414f40`: a common out-code bit drops the face; a face turned clockwise in the picture is dropped; a face with no out-code is kept; the rest is clipped against u = 0, u = 1, v = 0, v = 1 in that order and fanned.
 4. `0x00415810` stops at the capacity asked for by `0x0043d9cc`: 16 triangles.
 
+## Drawing the shadow (`0x0043fc20`)
+
+The shadow is drawn only when `0x0043fa50` projected it that frame (vehicle flag `0x10`, which Vehicle_Update clears at its end, `0x0043e5f6`). The squared distance from the camera to the decal's position (x and y from the decal, z the centre's z + 6) decides the alpha: up to 2500 (50 units) it is `0xbf`; between 2500 and 10000 it is `0xbf - trunc((distance - 2500) / 7500 * 191)`; from 10000 (100 units) nothing is drawn, nor when the alpha reaches 0. The alpha goes in through the device's override (slot `0xb8`, mode 1), which the original records as the vertex alpha with alpha test off and depth write on (blend source alpha, destination inverse source alpha). The decal's instance sits 0.4 above the track (`0x004af914`, set in `0x00414950`).
+
 ## Verification
 
-`pnpm run render-trace`: in the Royal Knights case no `carshad` triangle is missing or extra in the five recorded frames. In `RACEC0R2` the shadows match in position, but at one recorded frame the original draws `carshad1` with diffuse alpha 80 against the material's 180; the source of that fade is not found yet.
+`pnpm run render-trace`: the shadows' triangles, UVs and states match in the Royal Knights case and `RACEC1R0` (the port's vertices equal the original's, compared at `0x00415810`). The colour mismatches left (alpha 160 against 191) are the intro frames where the port's camera is not the original's; a texture mismatch of `carshad1` (the original's racer 1 texture hashes unlike the port's) remains open.
 
 ## Not decals
 
-The skid marks are not ribbons projected on the track: vehicle `+0x1e4..+0x1f0` are four particle emitters, one per wheel, made by `0x004927c0` with kind `0x3e8` (`0xfa` when vehicle flag `0x100` is set) and freed by `0x00492820` (`0x0043f424`, `0x0043dce3`). They draw with the `skid` material and belong to the particle work. The oil slick and scorch marks use the decal object (callers `0x004573a0`, `0x00421850`, `0x00491e20`, `0x00490330`) and are not ported yet.
+The `skid` source the comparison reports is a label: the sky texture and the shadow textures of the racers match `skid` best. The skid marks are not ribbons projected on the track: vehicle `+0x1e4..+0x1f0` are four trail objects (0x334 bytes, made by `0x004927c0` in the pool at race `+0x27d4`, four of them) that project a decal per stretch of the wheel's path with `0x00491fa0`. They exist only while the tire smoke runs (vehicle flag `0x8`). The oil slick and scorch marks use the decal object (callers `0x004573a0`, `0x00421850`, `0x00491e20`, `0x00490330`) and are not ported yet.
