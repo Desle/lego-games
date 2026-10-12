@@ -3,6 +3,6 @@ export type FrameLine = readonly [
   number,
   readonly string[],
   readonly [readonly number[], readonly number[]] | null,
-  readonly [boolean, number, boolean, boolean] | null,
+  readonly [boolean, number, boolean, boolean, boolean?] | null,
   readonly [number, number] | null,
 ]

@@ -25,6 +25,7 @@ export {
   startSkeletonInstanceClip,
 } from './controller/skeleton-instance/skeleton-instance.ts'
 export {
+  getSkeletonInstanceBoneAxes,
   getSkeletonInstanceBoneTranslation,
   getSkeletonInstanceCameraView,
   getSkeletonInstanceChainAxes,

@@ -1,5 +1,6 @@
 import { getBitsFromFloat } from '../../../../shared/emulator/float-bits.ts'
 import { HazardKeyword, HazardLifecycle } from '../../../hazard/index.ts'
+import { PauseMenuMode } from '../../../race/index.ts'
 import type { RaceState } from '../../../race/index.ts'
 import { getBoundingInterval } from '../../../racer-collision/index.ts'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
@@ -112,6 +113,16 @@ const getHammerWords = (
     ]
   })
 
+// Race +0x30c0, as track_trace.py reads it.
+const PAUSE_MENU_MODE_NUMBERS: Readonly<Record<RaceState['pauseMenu']['mode'], number>> =
+  Object.freeze({
+    [PauseMenuMode.NONE]: 0,
+    [PauseMenuMode.PAUSED]: 1,
+    [PauseMenuMode.RESULTS]: 2,
+    // @check-allow traced-constants: race +0x30c0 is 3 for the confirmation menu (0x00436160 compares it with 3)
+    [PauseMenuMode.CONFIRMATION]: 3,
+  })
+
 // The race flow and track logic fields the emulator side reads (reverse-engineering/emulator/track_trace.py).
 const KICK_TIMER_MILLISECONDS = 0x2ee
 
@@ -163,7 +174,7 @@ export const getTrackFields: TraceFieldProvider = (raceState) => {
     'track.sky': sky === null ? [] : getSkyWords(sky),
     'race.finishedCount': [raceState.finishedRacerCount],
     'race.isRunning': [raceState.isRunning ? 1 : 0],
-    'race.pauseState': [raceState.pauseMenu.mode === 'none' ? 0 : 1],
+    'race.pauseState': [PAUSE_MENU_MODE_NUMBERS[raceState.pauseMenu.mode]],
     'race.unidentifiedCountdown': [raceState.unidentifiedCountdownMilliseconds >>> 0],
     'race.placements': raceState.placements.map((place) => place & 0xffff),
     ...getRacerFlowFields(raceState),

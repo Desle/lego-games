@@ -25,7 +25,7 @@ const ROYAL_KNIGHTS_RACEWAY = 'RACEC0R0'
 // The unported emitters of power-up objects and projectiles (oil slicks, cannon balls) draw from the random table in
 // the original; the race of each is named in golden-trace.md.
 const OTHER_TRACKS = [
-  { folder: 'RACEC0R1', expected: { frame: 436, field: 'powerUps.registry' } },
+  { folder: 'RACEC0R1', expected: null },
   { folder: 'RACEC0R2', expected: { frame: 278, field: 'racer0.body.forwardSpeed' } },
   { folder: 'RACEC0R3', expected: null },
   { folder: 'RACEC1R0', expected: null },

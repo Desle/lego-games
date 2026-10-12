@@ -95,6 +95,7 @@ describe('the frames the original can be fed', () => {
             isPausePressed: true,
             selectionChange: 0,
             isConfirmPressed: false,
+            isConfirmReleased: false,
             isAnyInputPressed: true,
           },
         }),

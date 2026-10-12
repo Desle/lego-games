@@ -48,6 +48,7 @@ describe('the session recording format', () => {
           isPausePressed: true,
           selectionChange: -1,
           isConfirmPressed: false,
+          isConfirmReleased: false,
           isAnyInputPressed: true,
         },
         grant: { kind: 3, level: 2 },
