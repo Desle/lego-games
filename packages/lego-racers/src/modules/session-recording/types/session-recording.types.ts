@@ -28,6 +28,10 @@ export type ReplayHeader = {
   readonly isCountdownSkipped: boolean
   readonly playerCars: readonly BuiltCar[]
   readonly playerRacers: readonly ReplayPlayerRacer[]
+  // Present (true) when the remastered layer was on: it changes drawing and sound only, so the replay ignores it and the
+  // report shows it. `remasteredSelections` (texture, audio, bricks) is for information.
+  readonly isRemastered?: boolean
+  readonly remasteredSelections?: readonly string[]
 }
 
 // A power-up the developer keys handed racer 0 before the frame.

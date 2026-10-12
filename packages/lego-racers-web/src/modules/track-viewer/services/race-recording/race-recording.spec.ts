@@ -176,20 +176,35 @@ describe('the session recording', () => {
     120_000
   )
 
-  it('records nothing while an extension is registered', () => {
-    // Arrange
-    const store = createSessionRecordingStore(createMemoryBackend())
-    registerViewerExtension(NEUTRAL_EXTENSION)
+  it.skipIf(!getIsOriginalGamePresent())(
+    'records while an extension is registered and marks the header',
+    async () => {
+      // Arrange
+      const store = createSessionRecordingStore(createMemoryBackend())
+      registerViewerExtension({ ...NEUTRAL_EXTENSION, getSelections: () => ['textures=default'] })
+      const recording = createRaceRecording(
+        getRoyalKnightsStart(readOriginalJam(), readOriginalExecutable()),
+        store,
+        () => Promise.resolve()
+      )
 
-    // Act
-    const recording = createRaceRecording(
-      // Never read: the extension check comes first.
-      Object.freeze({}) as RaceStart,
-      store
-    )
-    clearViewerExtensions()
+      // Act
+      recording?.addFrame({
+        milliseconds: FRAME_MILLISECONDS,
+        input: { pressedKeyCodes: new Set(), gamepad: null },
+        menu: NO_MENU_INPUT,
+        grant: null,
+      })
+      await recording?.finish()
+      clearViewerExtensions()
+      const header = parseRecording((await store.readLast())?.text ?? '').header
 
-    // Assert
-    expect(recording).toBeNull()
-  })
+      // Assert
+      expect(header).toMatchObject({
+        isRemastered: true,
+        remasteredSelections: ['textures=default'],
+      })
+    },
+    120_000
+  )
 })

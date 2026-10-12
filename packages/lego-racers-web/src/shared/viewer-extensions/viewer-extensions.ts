@@ -14,6 +14,7 @@ export const NEUTRAL_EXTENSION: ViewerExtension = Object.freeze({
   getMenuSurfaceScale: () => null,
   getSoundReplacement: () => Promise.resolve(null),
   getBuiltCarDrawing: () => null,
+  getSelections: () => [],
 })
 
 let registeredExtensions: readonly ViewerExtension[] = Object.freeze([])
@@ -29,6 +30,9 @@ export const clearViewerExtensions = () => {
 export const getViewerExtensions = (): readonly ViewerExtension[] => registeredExtensions
 
 export const getIsClassic = (): boolean => registeredExtensions.length === 0
+
+export const getExtensionSelections = (): readonly string[] =>
+  registeredExtensions.flatMap((extension) => extension.getSelections())
 
 export const emitTextureCreated = (event: TextureCreatedEvent) => {
   for (const extension of registeredExtensions) extension.onTextureCreated(event)

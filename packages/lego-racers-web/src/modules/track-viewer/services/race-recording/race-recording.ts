@@ -4,7 +4,10 @@ import {
   createReplayRecorder,
   serializeRecording,
 } from '@lego-games/lego-racers/session-recording'
-import { getIsClassic } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
+import {
+  getExtensionSelections,
+  getIsClassic,
+} from '../../../../shared/viewer-extensions/viewer-extensions.ts'
 import { sessionRecordingStore } from '../session-recording-store/session-recording-store.ts'
 import type { SessionRecordingStore } from '../session-recording-store/session-recording-store.types.ts'
 import { postRecordingToInbox } from '../replay-inbox-upload/replay-inbox-upload.ts'
@@ -13,15 +16,14 @@ import type { InboxPoster, RaceRecording } from './race-recording.types.ts'
 const FILE_EXTENSION = '.replay.jsonl'
 
 // Records what feeds the deterministic simulation of the race that starts: the settings, the cars, the random cursor and
-// per frame the integer time and the input state. Never with an extension registered: only the classic view is the
-// game the port reproduces.
+// per frame the integer time and the input state. With an extension registered the header says so: drawing and sound
+// change, the simulation does not.
 export const createRaceRecording = (
   start: RaceStart,
   store: SessionRecordingStore = sessionRecordingStore,
   postToInbox: InboxPoster = postRecordingToInbox
 ): RaceRecording | null => {
-  if (!getIsClassic()) return null
-  const header = createReplayHeader(start)
+  const header = createReplayHeader(start, getIsClassic() ? null : getExtensionSelections())
   if (header === null) return null
   const recorder = createReplayRecorder(header)
   let isFinished = false

@@ -7,7 +7,7 @@ import {
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
 import { parseRecording } from '../../../session-recording/index.ts'
-import { formatReplayReportLine } from '../replay-report/replay-report.ts'
+import { formatReplayReportLine, getRemasteredNote } from '../replay-report/replay-report.ts'
 import { runReplay } from '../run-replay/run-replay.ts'
 import { moveToProcessed, readInboxFileNames, REPLAY_INBOX_DIRECTORY } from './replay-inbox.ts'
 
@@ -32,7 +32,9 @@ const main = async (): Promise<number> => {
     try {
       const recording = parseRecording(readFileSync(resolve(REPLAY_INBOX_DIRECTORY, name), 'utf8'))
       const report = await runReplay(recording, jam, executable, name)
-      process.stdout.write(`${formatReplayReportLine(name, report)}\n`)
+      process.stdout.write(
+        `${formatReplayReportLine(name, report, getRemasteredNote(recording.header))}\n`
+      )
       if (!isKept) moveToProcessed(name)
     } catch (error) {
       process.stdout.write(

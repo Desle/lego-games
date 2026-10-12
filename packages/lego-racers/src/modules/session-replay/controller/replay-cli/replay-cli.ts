@@ -7,7 +7,7 @@ import {
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
 import { parseRecording } from '../../../session-recording/index.ts'
-import { formatReplayReportLine } from '../replay-report/replay-report.ts'
+import { formatReplayReportLine, getRemasteredNote } from '../replay-report/replay-report.ts'
 import { getExpectationOfReport } from '../replay-folder/replay-folder.ts'
 import { runReplay } from '../run-replay/run-replay.ts'
 
@@ -42,7 +42,9 @@ const main = async (): Promise<number> => {
     process.stdout.write(`The original was not run: ${report.originalSkipReason ?? ''}\n`)
     return 0
   }
-  process.stdout.write(`${formatReplayReportLine(basename(path), report)}\n`)
+  process.stdout.write(
+    `${formatReplayReportLine(basename(path), report, getRemasteredNote(recording.header))}\n`
+  )
   if (commandArguments.includes(WRITE_EXPECTATION_FLAG)) {
     const expectationPath = path.replace(/\.replay\.jsonl$/, '.expected.json')
     writeFileSync(expectationPath, `${JSON.stringify(getExpectationOfReport(report))}\n`)

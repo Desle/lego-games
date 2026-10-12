@@ -1,4 +1,5 @@
 import { formatDivergence } from '../../../golden-trace/index.ts'
+import type { ReplayHeader } from '../../../session-recording/index.ts'
 import type { ReplayReport } from '../run-replay/run-replay.types.ts'
 
 const getOriginalOutcome = (report: ReplayReport): string => {
@@ -23,10 +24,20 @@ const getFeedSummary = (report: ReplayReport): string => {
 }
 
 // One line: the frames compared, the first divergence or none, why the emulator side stopped early, and the limits that held.
-export const formatReplayReportLine = (name: string, report: ReplayReport): string => {
+export const formatReplayReportLine = (
+  name: string,
+  report: ReplayReport,
+  remasteredNote: string | null = null
+): string => {
   const compared = report.original?.comparedFrameCount ?? 0
   return (
-    `${name}: ${String(compared)} of ${String(report.frameCount)} frames compared, ${getOriginalOutcome(report)}` +
+    `${name}${remasteredNote === null ? '' : ` [${remasteredNote}]`}: ${String(compared)} of ${String(report.frameCount)} frames compared, ${getOriginalOutcome(report)}` +
     (report.original === null ? '' : `; ${getFeedSummary(report)}`)
   )
 }
+
+// "remastered (textures=..., ...)" for a recording made with the remastered layer; null for a classic one.
+export const getRemasteredNote = (header: ReplayHeader): string | null =>
+  header.isRemastered === true
+    ? `remastered${(header.remasteredSelections ?? []).length === 0 ? '' : ` ${(header.remasteredSelections ?? []).join(', ')}`}`
+    : null

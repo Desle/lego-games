@@ -15,7 +15,7 @@ An optional layer above the exact port: things the original never did (upscaled 
 
 ## How it is loaded
 
-`main.tsx` imports the module dynamically only when `import.meta.env.DEV` and the URL has `?hd`; a production build has no such import, so none of it is bundled. The developer panel (also development only) offers the Textures choice, which reloads the page with `?hd=<pack>`. Races are not recorded for replay while an extension is registered.
+`main.tsx` imports the module dynamically only when `import.meta.env.DEV` and the URL has `?hd`; a production build has no such import, so none of it is bundled. The developer panel (also development only) offers the Textures choice, which reloads the page with `?hd=<pack>`. Races are recorded for replay with the header marked `isRemastered` (the layer changes drawing and sound only; see [session-replay.md](reverse-engineering/session-replay.md)).
 
 ## What it does today
 

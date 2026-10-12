@@ -18,7 +18,10 @@ const getPlayerRacer = (saved: SavedCar): ReplayPlayerRacer =>
   })
 
 // A race that plays a ghost (a time trial) carries state the recording does not hold: no header, no recording.
-export const createReplayHeader = (start: RaceStart): ReplayHeader | null => {
+export const createReplayHeader = (
+  start: RaceStart,
+  remasteredSelections: readonly string[] | null = null
+): ReplayHeader | null => {
   if (start.session.ghost !== null) return null
   const options = getRaceLoadOptions(start.session, start.race, null)
   return Object.freeze({
@@ -37,6 +40,7 @@ export const createReplayHeader = (start: RaceStart): ReplayHeader | null => {
     isCountdownSkipped: start.definition.isCountdownSkipped,
     playerCars: options.playerCars ?? [],
     playerRacers: (options.playerSavedCars ?? []).map(getPlayerRacer),
+    ...(remasteredSelections === null ? {} : { isRemastered: true, remasteredSelections }),
   })
 }
 
