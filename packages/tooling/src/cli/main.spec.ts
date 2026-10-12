@@ -72,7 +72,7 @@ describe('tooling verify', () => {
     const packageResult = runCli(packageRoot, ['verify'])
 
     // Assert
-    expect(rootResult.stdout).toContain('all 2 checks passed')
+    expect(rootResult.stdout).toContain('all 3 checks passed')
     expect(packageResult.stdout).toContain('all 6 checks passed')
   })
 

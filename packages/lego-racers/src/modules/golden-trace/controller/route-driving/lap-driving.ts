@@ -18,11 +18,15 @@ import {
 import type { DrivingPose } from './route-driving.types.ts'
 
 // The guide finishes its first lap well inside this many frames on every track the traces drive.
+// @check-allow traced-constants: parameter of the trace harness's scripted driver, not game behaviour
 const GUIDE_FRAME_LIMIT = 2400
 // How many points of the lap, from the one nearest the player, the search for the nearest point looks at.
+// @check-allow traced-constants: parameter of the trace harness's scripted driver, not game behaviour
 const NEAREST_WINDOW = 60
 // The player aims at the first point of the lap ahead of it that is at least this far away.
+// @check-allow traced-constants: parameter of the trace harness's scripted driver, not game behaviour
 const AIM_DISTANCE = 42
+// @check-allow traced-constants: parameter of the trace harness's scripted driver, not game behaviour
 const STEERING_DEAD_ZONE = 0.1
 
 // The guide's positions from the moment the race lets it go to the end of its first lap.
