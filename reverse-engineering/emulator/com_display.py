@@ -13,6 +13,8 @@ DDSCAPS_PRIMARYSURFACE = 0x200
 DDSCAPS_TEXTURE = 0x1000
 DDSCAPS_ZBUFFER = 0x20000
 
+DDSD_COLOR_KEY_SOURCE_BLIT = 0x8000
+DDCKEY_SOURCE_BLIT = 0x8
 DISPLAY_WIDTH = 640
 DISPLAY_HEIGHT = 480
 DISPLAY_FORMAT = struct.pack("<IIIIIIII", 32, 0x40, 0, 16, 0xF800, 0x07E0, 0x001F, 0)
@@ -44,6 +46,7 @@ class DisplayMethods:
             attached=[],
             description_size=size,
             flags=flags,
+            color_key=struct.unpack_from("<II", description, 0x40) if flags & DDSD_COLOR_KEY_SOURCE_BLIT else None,
         )
         return address
 
@@ -74,6 +77,11 @@ class DisplayMethods:
                 back = self.create_surface(description, capabilities_override=DDSCAPS_BACKBUFFER | 0x2000)
                 surface["attached"].append(back)
         self.machine.write_u32(argument(2), surface_address)
+        return S_OK
+
+    def any_SetColorKey(self, this, record, argument):
+        if argument(1) & DDCKEY_SOURCE_BLIT and argument(2) != 0:
+            record["color_key"] = (self.machine.read_u32(argument(2)), self.machine.read_u32(argument(2) + 4))
         return S_OK
 
     def any_GetAttachedSurface(self, this, record, argument):

@@ -8,6 +8,8 @@ export type PixelTraceRequest = {
   readonly powerUpGrants: readonly ScriptedPowerUpGrant[]
   // The frames whose pixels are read back.
   readonly recordFrames: readonly number[]
+  // The HUD overlay is painted over the viewport's pixels.
+  readonly isHudIncluded: boolean
   readonly width: number
   readonly height: number
 }

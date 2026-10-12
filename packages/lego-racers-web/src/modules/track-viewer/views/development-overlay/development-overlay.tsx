@@ -14,6 +14,8 @@ const DevelopmentOverlay = ({ isRaceRunning, onRaceStopped }: DevelopmentOverlay
           isRaceRunning={isRaceRunning}
           onTrackViewerOpened={overlay.onTrackViewerOpened}
           onRaceStopped={onRaceStopped}
+          onRecordingDownloaded={overlay.onRecordingDownloaded}
+          onEverythingUnlocked={overlay.onEverythingUnlocked}
           onOverlayClosed={overlay.onOverlayClosed}
         />
       )}

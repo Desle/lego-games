@@ -66,6 +66,8 @@
     "./skeleton": "./src/modules/skeleton/index.ts",
     "./track-logic": "./src/modules/track-logic/index.ts",
     "./skid-trail": "./src/modules/skid-trail/index.ts",
+    "./session-recording": "./src/modules/session-recording/index.ts",
+    "./session-replay": "./src/modules/session-replay/index.ts",
     "./sky": "./src/modules/sky/index.ts",
     "./start-position": "./src/modules/start-position/index.ts",
     "./string-table": "./src/modules/string-table/index.ts",

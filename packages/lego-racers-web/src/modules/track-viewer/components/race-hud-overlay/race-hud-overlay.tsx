@@ -1,15 +1,9 @@
-import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-racers/simulation-math'
-import { layoutText } from '@lego-games/lego-racers/font-rendering'
 import { useEffect, useMemo, useRef } from 'react'
-import { createBitmapFontPainter } from '../../controller/bitmap-font-painter/bitmap-font-painter.ts'
-import { paintHudPolygon } from './hud-polygon.ts'
+// @check-allow layer-boundaries: the overlay paints with the same painter the pixel trace composites with, which only services may share with the harness
+import { createBitmapFontPainter } from '../../services/bitmap-font-painter/bitmap-font-painter.ts'
+// @check-allow layer-boundaries: the overlay paints with the same painter the pixel trace composites with, which only services may share with the harness
+import { paintHud } from '../../services/hud-painter/hud-painter.ts'
 import type { RaceHudOverlayProps } from './race-hud-overlay.types.ts'
-
-// 0xAARRGGBB; null is the font's own white.
-const WHITE = 0xffffffff
-// The text has no line break width in the HUD: the layout never wraps.
-const UNBOUNDED_WIDTH = 0x7fff
-const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
 
 // The race HUD as the HUD module laid it out: the text set in the game's bitmap fonts (glyph rectangles from the
 // engine's font layout, drawn on a canvas) and the images at the positions and scales it gives, over the race view.
@@ -38,60 +32,19 @@ const RaceHudOverlay = ({
   useEffect(() => {
     const context = canvasReference.current?.getContext('2d') ?? null
     if (context === null) return
-    context.clearRect(0, 0, width, height)
-    if (fonts === null) return
-    context.imageSmoothingEnabled = false
-    const getCssColor = (color: number) =>
-      `rgba(${String((color >>> 16) & 0xff)}, ${String((color >>> 8) & 0xff)}, ${String(color & 0xff)}, ${String(((color >>> 24) & 0xff) / 255)})`
-    for (const command of commands) {
-      if (command.kind === 'fill') {
-        context.fillStyle = getCssColor(command.color)
-        context.fillRect(command.x, command.y, command.width, command.height)
-        continue
-      }
-      if (command.kind === 'image_part') {
-        const image = loadedImages.get(command.imageName.toUpperCase())
-        if (image === undefined || !image.complete) continue
-        const [sourceLeft, sourceTop, sourceRight, sourceBottom] = command.source
-        context.drawImage(
-          image,
-          sourceLeft,
-          sourceTop,
-          sourceRight - sourceLeft,
-          sourceBottom - sourceTop,
-          command.x,
-          command.y,
-          command.width,
-          command.height
-        )
-        continue
-      }
-      if (command.kind === 'polygon') {
-        paintHudPolygon(
-          context,
-          command,
-          command.imageName === null ? null : (loadedImages.get(command.imageName) ?? null)
-        )
-        continue
-      }
-      if (command.kind !== 'text') continue
-      const hudFont = fonts.get(command.font)
-      if (hudFont === undefined) continue
-      const glyphs = layoutText({
-        font: hudFont.font,
-        text: Array.from(command.text, (letter) => letter.charCodeAt(0)),
-        surface: { width, height },
-        x: command.x,
-        y: command.y,
-        maximumWidth: UNBOUNDED_WIDTH,
-        lineGap: 0,
-        scale: { x: command.scaleX, y: command.scaleY },
-        clip: null,
-        alignment: 'left',
-        arithmetic,
-      })
-      painter.drawGlyphs(context, hudFont.image, glyphs, command.color ?? WHITE)
+    if (fonts === null) {
+      context.clearRect(0, 0, width, height)
+      return
     }
+    paintHud(context, {
+      commands,
+      fonts,
+      loadedImages,
+      painter,
+      width,
+      height,
+      isImagePainted: false,
+    })
   }, [commands, fonts, height, loadedImages, painter, width])
   return (
     <div className="pointer-events-none absolute inset-0" data-testid="race-hud">
