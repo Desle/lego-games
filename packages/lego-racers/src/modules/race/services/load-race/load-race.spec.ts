@@ -279,4 +279,29 @@ describe('loadRaceDefinition', () => {
       expect(mirroredFrames.map(({ x }) => x)).toEqual(forwardFrames.map(({ x }) => x))
     }
   )
+
+  it.skipIf(!getIsGamePresent())(
+    "reads the points the cannon and the grapple aim at from the race's TGB file, and the debris clips of 2BRK02",
+    () => {
+      // Arrange
+      const jam = readOriginalJam()
+      const executable = readOriginalExecutable()
+
+      // Act
+      const withoutPoints = loadRaceDefinition(jam, executable, { raceFolder: 'RACEC0R0' })
+      const withPoints = loadRaceDefinition(jam, executable, { raceFolder: 'RACEC0R2' })
+
+      // Assert
+      expect(withoutPoints.trackTargets).toEqual([])
+      expect(withPoints.trackTargets).toHaveLength(2)
+      expect(withPoints.trackTargets[0]?.position.x).toBeCloseTo(-166.6526, 3)
+      // (frames - 1) / rate of the four clips of 2BRK02.ADB, the same for the four models.
+      const clips = withPoints.projectileModelData.debrisAnimations
+      expect(clips).toHaveLength(4)
+      expect(clips[0]?.map((milliseconds) => Math.round(milliseconds))).toEqual([
+        1033, 833, 1033, 1267,
+      ])
+      expect(clips[3]).toEqual(clips[0])
+    }
+  )
 })

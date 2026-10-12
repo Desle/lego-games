@@ -54,6 +54,7 @@ import {
   stepRacerScriptWithContacts,
 } from '../racer-contacts/racer-contacts.ts'
 import { getRacerSetAfterProjectileContact } from '../projectile-registry/projectile-registry.ts'
+import { sendTauntSignal } from '../taunt-signal/taunt-signal.ts'
 import { getRegistryEntries, getRegistrySphere } from '../registry-objects/registry-objects.ts'
 
 const RACER_PERMANENT_TURBO_FLAG = 0x8000000
@@ -215,8 +216,6 @@ const guidePlayer: RacerBoundary = (context, racerSet, racerIndex, stepMilliseco
 
 // Racer_Taunt 0x00439c90 from 0x004377f0: the racer plays its taunt sound (racer +0xd23, 0x00439cd0), then sends the
 // start/stop signal 999 (0x00462580) from its display frame's position to the event bus.
-const TAUNT_SIGNAL_IDENTIFIER = 999
-
 const playTaunt: RacerBoundary = (context, racerSet, racerIndex) => {
   const racer = getRacer(racerSet, racerIndex)
   const { position } = racer.carBody.rigidBody.displayFrame
@@ -228,13 +227,7 @@ const playTaunt: RacerBoundary = (context, racerSet, racerIndex) => {
     ]),
   })
   return changeTrackLogic(context, getRaceRacerSetOf(sounded), (trackLogic, trackContext) =>
-    runTrackLogic(trackLogic, trackContext, (session) =>
-      session.startStopSignal(TAUNT_SIGNAL_IDENTIFIER, TAUNT_SIGNAL_IDENTIFIER, [
-        position.x,
-        position.y,
-        position.z,
-      ])
-    )
+    runTrackLogic(trackLogic, trackContext, (session) => sendTauntSignal(session, position))
   )
 }
 
