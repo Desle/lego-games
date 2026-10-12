@@ -178,6 +178,15 @@ const BRICK_MATERIALS: Readonly<Record<string, string>> = Object.freeze({
   hazard: 'pbrickM',
 })
 
+// 0x00458a80 also looks up ptrailP, ptrailS, ptrailT and ptrailM for the trail instance (genblen, the mesh putraily) of each
+// brick kind (0x0045bae0); the model names ptrailM.
+const TRAIL_MATERIALS: Readonly<Record<string, string>> = Object.freeze({
+  projectile: 'ptrailP',
+  shield: 'ptrailS',
+  turbo: 'ptrailT',
+  hazard: 'ptrailM',
+})
+
 const getBrickInMaterial = (model: ModelScene, materialName: string): ModelScene => {
   const { materials } = model.scene
   const target = materials.findLastIndex((material) => material.name === materialName)
@@ -285,6 +294,17 @@ const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
       )
     ),
     enhancementBrick: loadEffectModel(archive, 'ENHABRIK', true),
+    powerUpBrickAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('PUBRICKY', 'ADB'))),
+    enhancementBrickAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('ENHABRIK', 'ADB'))),
+    powerUpTrails: Object.freeze(
+      Object.fromEntries(
+        Object.entries(TRAIL_MATERIALS).map(([kind, materialName]) => [
+          kind,
+          getBrickInMaterial(loadEffectModel(archive, 'PUTRAILY', true), materialName),
+        ])
+      )
+    ),
+    powerUpTrailAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('PUTRAILY', 'ADB'))),
     warpTunnel: getWarpTunnel(archive, raceScene),
     warpTextureScroll: getWarpTextureScroll(archive),
   })

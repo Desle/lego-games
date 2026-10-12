@@ -202,6 +202,11 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
         ] as const
     )
   )
+  const trailPools = new Map(
+    Object.entries(models.powerUpTrails).map(
+      ([kind, model]) => [kind, createPool(scene, model)] as const
+    )
+  )
   const pools = {
     rocket: createPool(scene, models.rocket),
     barrel: createPool(scene, models.barrel),
@@ -224,6 +229,7 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
       for (const pool of [
         ...Object.values(pools),
         ...brickPools.values(),
+        ...trailPools.values(),
         ...shieldPools,
         ...shieldBackPools,
         ...turboPools.flat(),
@@ -264,8 +270,28 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
         const copy = pool.use()
         copy.group.matrix
           .copy(getHeadingMatrix(null, brick.position))
-          .multiply(new Matrix4().makeRotationZ(views.spinAngle))
           .multiply(new Matrix4().makeScale(brick.scale, brick.scale, brick.scale))
+        copy.object.setAnimationState(
+          getEffectFigureState(
+            brick.isEnhancement ? models.enhancementBrickAnimations : models.powerUpBrickAnimations,
+            { animationId: 0, isLooping: true, elapsedMilliseconds: views.brickClockMilliseconds }
+          )
+        )
+        // 0x00453b90 (vtable slot +0x14, 0x0045a8a0): the trail instance at the brick's position and scale, not turned. The
+        // enhancement bricks' trail (enhblen) is in no traced frame of the original, so it is not drawn.
+        const trailPool = brick.isEnhancement ? undefined : trailPools.get(brick.kind ?? '')
+        if (trailPool === undefined) continue
+        const trail = trailPool.use()
+        trail.group.matrix
+          .copy(getHeadingMatrix(null, brick.position))
+          .multiply(new Matrix4().makeScale(brick.scale, brick.scale, brick.scale))
+        trail.object.setAnimationState(
+          getEffectFigureState(models.powerUpTrailAnimations, {
+            animationId: 0,
+            isLooping: true,
+            elapsedMilliseconds: views.brickClockMilliseconds,
+          })
+        )
       }
       for (const attachment of views.attachments) {
         const pose = poses.find((candidate) => candidate.racerIndex === attachment.racerIndex)

@@ -57,6 +57,12 @@ export type EffectModels = {
   // The power-up brick in the colour of each kind (projectile, shield, turbo, hazard).
   readonly powerUpBricks: Readonly<Record<string, ModelScene>>
   readonly enhancementBrick: ModelScene
+  // The clips of the bricks (gen: pubricky, enh: enhabrik), advanced with the power-up system's clock.
+  readonly powerUpBrickAnimations: readonly FigureAnimation[]
+  readonly enhancementBrickAnimations: readonly FigureAnimation[]
+  // The trail instances the bricks draw with them in the blended pass (genblen: putraily), with their clips.
+  readonly powerUpTrails: Readonly<Record<string, ModelScene>>
+  readonly powerUpTrailAnimations: readonly FigureAnimation[]
   // The warp's tunnel (TURBO3.WDB lists `dbricks` and `dtube`; 0x0045d940 draws them).
   readonly warpTunnel: Scene
   // The texture scroll per second of the tube (the world's keyword 0x3f on `dtube`: u, v), which the original adds to the

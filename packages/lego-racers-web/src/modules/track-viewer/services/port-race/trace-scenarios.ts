@@ -2,13 +2,17 @@ import {
   createTraceScenario,
   getIdleFrames,
   getPowerSlideFrames,
+  getRouteDrivingFrames,
   getSteeringSweepFrames,
   holdBindings,
 } from '@lego-games/lego-racers/golden-trace'
 import type { GoldenTraceScenario, TraceFrameInput } from '@lego-games/lego-racers/golden-trace'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
-import { getCircuitRacerCodes } from '@lego-games/lego-racers/race'
+import { getCircuitRacerCodes, loadRaceDefinition } from '@lego-games/lego-racers/race'
+import { RaceBinding } from '@lego-games/lego-racers/race-input'
+import { FpuPrecision } from '@lego-games/lego-racers/simulation-math'
 import type { PresentationScenario } from '@lego-games/lego-racers/presentation-trace'
+import { readOriginalExecutable } from './original-game-files.ts'
 import type { TraceScenarioRequest } from './trace-scenarios.types.ts'
 
 // The introduction, the countdown and the first seconds of racing (the racers are released at frame 160).
@@ -41,8 +45,38 @@ const getPresentationScenario = (
 const ACCELERATE_FRAME = 175
 const USE_FRAME_COUNT = 3
 
+// The route drive of the golden trace with the use key pressed from the use frame (the barrier's golden trace).
+const getRouteDrivenFrames = (
+  jam: Uint8Array,
+  request: TraceScenarioRequest,
+  racerCodes: readonly string[],
+  powerUp: NonNullable<TraceScenarioRequest['powerUp']>
+): readonly TraceFrameInput[] => {
+  const definition = loadRaceDefinition(jam, readOriginalExecutable(), {
+    raceFolder: request.raceFolder,
+    racerCodes,
+    localPlayerCount: 1,
+    fpuPrecision: FpuPrecision.SINGLE,
+    isPlayerChampionCar: true,
+    musicTuneCount: 0,
+  })
+  const useCodes = holdBindings(1, [RaceBinding.USE_POWER_UP])[0]?.scanCodes ?? []
+  return getRouteDrivingFrames(definition, powerUp.frameCount).map((frame, index) =>
+    index >= powerUp.useFrame && index < powerUp.useFrame + USE_FRAME_COUNT
+      ? { ...frame, scanCodes: [...frame.scanCodes, ...useCodes] }
+      : frame
+  )
+}
+
 // Idling, the steering sweep, or a drive with a power-up: accelerate from frame 175 and press the use key from the use frame.
-const getRequestFrames = (request: TraceScenarioRequest): readonly TraceFrameInput[] => {
+const getRequestFrames = (
+  jam: Uint8Array,
+  request: TraceScenarioRequest,
+  racerCodes: readonly string[]
+): readonly TraceFrameInput[] => {
+  if (request.powerUp !== undefined && request.isRouteDriven === true) {
+    return getRouteDrivenFrames(jam, request, racerCodes, request.powerUp)
+  }
   if (request.powerUp !== undefined) {
     const { useFrame, frameCount } = request.powerUp
     return Array.from({ length: frameCount }, (_, frame) => ({
@@ -67,14 +101,15 @@ export const createPresentationScenario = (
   request: TraceScenarioRequest
 ): PresentationScenario => {
   const archive = openJamArchive(jam)
+  const racerCodes = getCircuitRacerCodes(archive.readFile, request.raceFolder)
   const golden = createTraceScenario({
     name: request.name,
     raceFolder: request.raceFolder,
-    racerCodes: getCircuitRacerCodes(archive.readFile, request.raceFolder),
+    racerCodes,
     // FUN_00487f90: a time trial has no opponents.
     ...(request.isTimeTrial === true ? { racerCount: 1 } : {}),
     isMirrored: request.isMirrored ?? false,
-    frames: getRequestFrames(request),
+    frames: getRequestFrames(jam, request, racerCodes),
   })
   return getPresentationScenario(
     golden,

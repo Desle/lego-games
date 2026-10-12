@@ -1,3 +1,11 @@
+// A drawing the render trace counts in both games: the original's triangles by the name of the texture they match, the
+// port's by its object (`instance/material`), both as case-insensitive regular expressions.
+export type WatchedDrawing = {
+  readonly label: string
+  readonly originalTexture: string
+  readonly portSource: string
+}
+
 export type TraceScenarioRequest = {
   readonly name: string
   readonly raceFolder: string
@@ -8,7 +16,11 @@ export type TraceScenarioRequest = {
   readonly isSteering?: boolean
   // Full throttle and two power slides (the tire smoke runs and the wheels leave marks).
   readonly isPowerSliding?: boolean
+  // The closed-loop route drive of the golden trace (getRouteDrivingFrames) for `powerUp.frameCount` frames instead of
+  // accelerating straight ahead; the use key is pressed from `powerUp.useFrame` as in the barrier golden trace.
+  readonly isRouteDriven?: boolean
   readonly recordFrames?: readonly number[]
+  readonly watched?: readonly WatchedDrawing[]
   readonly isRenderRecorded?: boolean
   // Record the triangles the original's decals hold (they are projected whether or not the camera sees them).
   readonly isDecalRecorded?: boolean
