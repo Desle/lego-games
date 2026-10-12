@@ -48,6 +48,7 @@ import {
 import { placeCarBodyOnRoute } from '../../types/scripted-car-body/scripted-car-body.ts'
 import { createSurfaceMaterials } from '../../types/surface-materials/surface-materials.ts'
 import { createRegistryObjects, getRegistryEntries } from '../registry-objects/registry-objects.ts'
+import { createCameraFovEffect } from '../camera-fov-effect/camera-fov-effect.ts'
 import type { RacerSetup } from './create-race.types.ts'
 
 // The laps of a race with one local player (0x004327f0).
@@ -109,6 +110,7 @@ const createRacerFromDefinition = (
     controllerKind: racerDefinition.controllerKind,
     racePosition: racerIndex + 1,
     voiceBase: racerDefinition.voiceBase,
+    engineSoundValue: racerDefinition.engineSoundValue,
   })
   const setup: RaceRacerPowerUpSetup = Object.freeze({
     personality: Object.freeze({
@@ -346,6 +348,7 @@ export const createRace = (definition: RaceDefinition): RaceState => {
         })
       )
     ),
+    cameraFovEffects: Object.freeze(playerRacerIndices.map(() => createCameraFovEffect())),
     powerUpStep,
     powerUpSetups: Object.freeze(setups.map((made) => made.setup)),
     getGroundPoint: getGroundPoint,

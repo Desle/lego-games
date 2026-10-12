@@ -369,6 +369,8 @@ export type Racer = {
   // +0xd40: voice base (1000); +0xd44: uint32 milliseconds until the next voice (0x00439240).
   readonly voiceBase: number
   readonly voiceMilliseconds: number
+  // +0xd54: the scale of the engine sounds (description +0x78).
+  readonly engineSoundValue: number
   // +0xd48: uint32 milliseconds of fading (flag 0x10000000).
   readonly fadeMilliseconds: number
   // +0xd4c: uint32 milliseconds until the next collision sound.

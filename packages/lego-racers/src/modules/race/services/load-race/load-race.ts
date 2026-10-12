@@ -227,6 +227,7 @@ export const loadRaceDefinition = (
       preferredPowerUpKind: description.preferredPowerUpKind,
       preferredPowerUpLevel: description.preferredPowerUpLevel,
       voiceBase: description.voiceBase,
+      engineSoundValue: description.soundValue,
       appearance,
       figures: racerFigures,
       // A local player's car is the save's racer of its slot (the first when the save has fewer).

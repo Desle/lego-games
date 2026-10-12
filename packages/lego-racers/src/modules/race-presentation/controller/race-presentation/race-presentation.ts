@@ -19,8 +19,11 @@ import {
   getPowerSlideSound,
   getRaceEventSounds,
   getTuneMusic,
+  getSkidStartSound,
+  INITIAL_ENGINE_SOUND_STATE,
+  stepEngineSounds,
 } from '../../../race-audio/index.ts'
-import type { SoundRequest } from '../../../race-audio/index.ts'
+import type { EngineSoundState, SoundRequest } from '../../../race-audio/index.ts'
 import {
   createHudState,
   finishHud,
@@ -46,6 +49,10 @@ const TIME_SCALE_FLAG = 0x100
 const WARPING_FLAG = 0x10
 const POWER_SLIDING_FLAG = 0x80
 const WRONG_WAY_FLAG = 0x4000
+// Racer flags 0x400 (the engine sounds run) and 0x1000 (they are quieter), driver flag 0x1 (full throttle).
+const RACER_RUNNING_FLAG = 0x400
+const RACER_QUIET_FLAG = 0x1000
+const DRIVER_FULL_THROTTLE_FLAG = 0x1
 // The countdown and racing and finishing states draw the HUD (Race_Render 0x004354d0 calls slot +0x40 in 2..4).
 const HUD_PHASES: readonly string[] = [RacePhase.COUNTDOWN, RacePhase.RACING, RacePhase.FINISHING]
 
@@ -71,6 +78,7 @@ export const createRacePresentation = (
       previousPhase: raceState.phase,
       isChangeCameraHeld: false,
       isPlayerPowerSliding: false,
+      engineSounds: Object.freeze(raceState.racerSet.racers.map(() => INITIAL_ENGINE_SOUND_STATE)),
     }),
     music: getIntroductionMusic(),
   })
@@ -168,6 +176,63 @@ const getUpdatedCamera = (
   )
 }
 
+// 0x00437d40 for every racer after every physics sub-step (RacerSet_Step); only the state after the last sub-step is
+// known here, so every sub-step sees it.
+const getEngineSounds = (
+  raceState: RaceState,
+  engineSounds: readonly EngineSoundState[],
+  frameMilliseconds: number
+) => {
+  const timeStep = getRaceTimeStep(raceState.context.arithmetic, {
+    isTimeScaled: (raceState.raceModeFlags & TIME_SCALE_FLAG) !== 0,
+    frameDeltaMilliseconds: frameMilliseconds,
+  })
+  const subSteps = getPhysicsSubSteps(timeStep)
+  const steps = raceState.racerSet.racers.map((racer, racerIndex) => {
+    const { rigidBody } = racer.carBody
+    const { displayFrame } = rigidBody
+    const input = {
+      isRunning: (racer.flags & RACER_RUNNING_FLAG) !== 0,
+      isQuiet: (racer.flags & RACER_QUIET_FLAG) !== 0,
+      isDriverThrottling: (racer.driver.flags & DRIVER_FULL_THROTTLE_FLAG) !== 0,
+      throttle: rigidBody.throttle,
+      speed: rigidBody.speed,
+      forwardSpeed: rigidBody.forwardSpeed,
+      airborneMilliseconds: racer.airborneMilliseconds,
+      engineSoundValue: racer.engineSoundValue,
+    }
+    const start = engineSounds[racerIndex] ?? INITIAL_ENGINE_SOUND_STATE
+    const result = subSteps.reduce(
+      (current, subStep) => {
+        const step = stepEngineSounds(current.state, input, subStep)
+        return { ...step, isSkidStarted: current.isSkidStarted || step.isSkidStarted }
+      },
+      {
+        state: start,
+        loops: [] as ReturnType<typeof stepEngineSounds>['loops'],
+        isSkidStarted: false,
+      }
+    )
+    return { racerIndex, racer, result, position: displayFrame.position }
+  })
+  return Object.freeze({
+    states: Object.freeze(steps.map((step) => step.result.state)),
+    loops: Object.freeze(
+      steps.map((step) =>
+        Object.freeze({
+          racerIndex: step.racerIndex,
+          position: step.position,
+          velocity: step.racer.carBody.rigidBody.linearVelocity,
+          loops: step.result.loops,
+        })
+      )
+    ),
+    skidSounds: Object.freeze(
+      steps.flatMap((step) => (step.result.isSkidStarted ? [getSkidStartSound()] : []))
+    ),
+  })
+}
+
 // One frame of presentation after `stepRace`: the player's camera and HUD advance, the music and sound effects the
 // frame's events call for are chosen, and the camera and HUD bindings act. `controls` are the ones the frame ran with.
 export const stepRacePresentation = (
@@ -217,6 +282,7 @@ export const stepRacePresentation = (
         measureText: hudContext.measureText,
       })
     : null
+  const engine = getEngineSounds(raceState, presentation.engineSounds, frameMilliseconds)
   const racer = getPlayerRacer(raceState, presentation.playerRacerIndex)
   const isPowerSliding = (racer.flags & POWER_SLIDING_FLAG) !== 0
   const powerSlideSounds: readonly SoundRequest[] =
@@ -228,6 +294,7 @@ export const stepRacePresentation = (
       camera: cameraUpdate.camera,
       hud: hudFrame?.state ?? edits.hud,
       isPlayerPowerSliding: isPowerSliding,
+      engineSounds: engine.states,
     }),
     cameraView: cameraUpdate.view,
     warpView: getWarpView(
@@ -241,7 +308,9 @@ export const stepRacePresentation = (
       ...step.events.flatMap((event) => getRaceEventSounds(event)),
       ...hudSounds,
       ...powerSlideSounds,
+      ...engine.skidSounds,
     ]),
+    engineLoops: engine.loops,
     music: edits.music,
   })
 }

@@ -25,6 +25,7 @@ import {
   NO_RACE_CONTACTS,
   updateTaggedPositions,
 } from '../race-world/race-world.ts'
+import { stepCameraFovEffect } from '../camera-fov-effect/camera-fov-effect.ts'
 import { getStateWithWarpsDrawn } from '../warp-draw/warp-draw.ts'
 import type { PlayerControllerProgress, PlayerControllerRun } from './update-race.types.ts'
 
@@ -201,6 +202,7 @@ export const updateRace = (
       )
   const ghostRacerIndex = counted.playerRacerIndices[0]
   let ghost = counted.ghost
+  let cameraFovEffects = counted.cameraFovEffects
   const stepped = updateRacePhysics(
     arithmetic,
     controlled.racerSet,
@@ -214,13 +216,36 @@ export const updateRace = (
           dependencies: RACE_STEP_DEPENDENCIES,
         })
       )
+      // Race_Update then updates each local player's camera; its field-of-view effect draws from the random table.
+      const camerasStepped = counted.playerRacerIndices.reduce(
+        (current, racerIndex, playerIndex) => {
+          const effect = cameraFovEffects[playerIndex]
+          const racer = current.racers[racerIndex]
+          if (effect === undefined || racer === undefined) return current
+          const step = stepCameraFovEffect(
+            arithmetic,
+            counted.context.tables.randomTable,
+            current.randomPosition,
+            effect,
+            racer.flags,
+            Math.trunc(subStepMilliseconds)
+          )
+          cameraFovEffects = Object.freeze(
+            cameraFovEffects.map((candidate, index) =>
+              index === playerIndex ? step.effect : candidate
+            )
+          )
+          return Object.freeze({ ...current, randomPosition: step.position })
+        },
+        steppedSet
+      )
       const ghostRacer =
-        ghostRacerIndex === undefined ? undefined : steppedSet.racers[ghostRacerIndex]
+        ghostRacerIndex === undefined ? undefined : camerasStepped.racers[ghostRacerIndex]
       if (ghost !== null && ghostRacer !== undefined) {
         const { position, rotation } = ghostRacer.carBody.rigidBody.displayFrame
         ghost = recordGhostSample(arithmetic, ghost, subStepMilliseconds, { position, rotation })
       }
-      return steppedSet
+      return camerasStepped
     }
   )
   const hazardsFollowed = changeTrackLogic(counted.context, stepped, (trackLogic, trackContext) =>
@@ -232,6 +257,7 @@ export const updateRace = (
       racerSet: hazardsFollowed,
     }),
     ghost,
+    cameraFovEffects,
   })
   return getStateWithWarpsDrawn(getStateWithSkyUpdated(progressed, stepMilliseconds))
 }

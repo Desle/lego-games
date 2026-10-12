@@ -1,5 +1,6 @@
 import { BrickKind } from '../../types/brick-kind/brick-kind.ts'
 import type { RacerPowerUpAbilities } from '../../types/power-ups.types.ts'
+import { getTauntSoundId } from '../../types/racer-power-ups/racer-power-ups.ts'
 import { activatePowerUp } from '../activate-power-up/activate-power-up.ts'
 import {
   getRacer,
@@ -21,7 +22,13 @@ export const usePowerUp = (
 ): PowerUpStep => {
   const racer = getRacer(step, racerIndex)
   if (racer.heldBrickKind === null) {
-    return getStepWithEvents(step, [{ type: 'power_ups.racer_taunted', racer: racerIndex }])
+    return getStepWithEvents(step, [
+      {
+        type: 'power_ups.racer_taunted',
+        racer: racerIndex,
+        sound: getTauntSoundId(racer.voiceSoundBase),
+      },
+    ])
   }
   const level = abilities.isAlwaysLevelThree ? MAXIMUM_LEVEL : racer.enhancementLevel
   const activated = ((): PowerUpStep => {

@@ -1,6 +1,11 @@
 import type { BrickBase } from '../../power-ups/index.ts'
 import type { CameraState, CameraView } from '../../race-camera/index.ts'
-import type { MusicCue, SoundRequest } from '../../race-audio/index.ts'
+import type {
+  EngineLoop,
+  EngineSoundState,
+  MusicCue,
+  SoundRequest,
+} from '../../race-audio/index.ts'
 import type {
   HudFrame,
   HudImageSize,
@@ -30,6 +35,8 @@ export type RacePresentation = {
   readonly previousPhase: RacePhaseValue
   readonly isChangeCameraHeld: boolean
   readonly isPlayerPowerSliding: boolean
+  // Racer +0xd24..+0xd30 and the loops' playing flags (0x00437d40), one per racer.
+  readonly engineSounds: readonly EngineSoundState[]
 }
 
 // What the HUD needs from the renderer: the strings, the images and the text measure.
@@ -41,6 +48,14 @@ export type HudContext = {
   readonly measureText: HudMeasureText
 }
 
+// One racer's looped engine and skid sounds this frame, with where the racer is (the sound objects' +0x18 and +0x24).
+export type RacerEngineLoops = {
+  readonly racerIndex: number
+  readonly position: Vector3
+  readonly velocity: Vector3
+  readonly loops: readonly EngineLoop[]
+}
+
 export type RacePresentationFrame = {
   readonly presentation: RacePresentation
   readonly cameraView: CameraView
@@ -49,6 +64,7 @@ export type RacePresentationFrame = {
   // null in the introduction and the results, when the original draws no HUD.
   readonly hudFrame: HudFrame | null
   readonly sounds: readonly SoundRequest[]
+  readonly engineLoops: readonly RacerEngineLoops[]
   // The music track to switch to this frame, if any.
   readonly music: MusicCue | null
 }

@@ -54,6 +54,9 @@ const getPowerUpEventSounds = (event: PowerUpEvent): readonly SoundRequest[] => 
     case 'power_ups.racer_shield_struck':
       return [createRequest(event.sound, '0x0043a2df')]
     // 0x00439240: a driver voice (1000 + r % 6, + 6 for a taunt).
+    // 0x00439c90 (Racer_Taunt) plays the racer's taunt sound.
+    case 'power_ups.racer_taunted':
+      return [createRequest(event.sound, '0x00439cd0')]
     case 'power_ups.sound_played':
       return [createRequest(event.soundId, event.address)]
     case 'power_ups.voice':
@@ -107,6 +110,9 @@ export const COUNTDOWN_SOUND_IDS = Object.freeze({
   second: COUNTDOWN_SECOND_SOUND,
   go: GO_SOUND,
 })
+
+// 0x00437d40: the skid begins with sound 2.
+export const getSkidStartSound = (): SoundRequest => createRequest(2, '0x00438450')
 
 // 0x00439870 and 0x004397c0: a player's power slide starts and stops with a sound.
 export const getPowerSlideSound = (isStarting: boolean): SoundRequest =>

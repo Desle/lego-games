@@ -84,7 +84,10 @@ export {
   POWER_UP_EFFECT_POOL_SIZES,
   PowerUpEffectKind,
 } from './types/power-up-effect-kind/power-up-effect-kind.ts'
-export { getRacerWithVoiceCooldownAdvanced } from './types/racer-power-ups/racer-power-ups.ts'
+export {
+  getRacerWithVoiceCooldownAdvanced,
+  getTauntSoundId,
+} from './types/racer-power-ups/racer-power-ups.ts'
 export type {
   ActivationRequest,
   BrickContact,
