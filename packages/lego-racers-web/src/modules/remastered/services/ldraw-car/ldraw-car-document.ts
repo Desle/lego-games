@@ -2,7 +2,8 @@ import type { CarDesign, PlacedBrick } from '@lego-games/lego-racers/car-builder
 import { Matrix4 } from 'three'
 import { getLDrawBrickColor } from './ldraw-brick-colors.ts'
 import { LDRAW_BRICK_MAPPINGS } from './ldraw-brick-mappings.ts'
-import type { LDrawBrickMapping } from './ldraw-brick-mappings.types.ts'
+import type { LDrawBrickMapping, LDrawCompositePart } from './ldraw-brick-mappings.types.ts'
+import { LDRAW_COMPOSITE_MAPPINGS } from './ldraw-composite-mappings.ts'
 import type { CarOrigin, LDrawCarDocument } from './ldraw-car-document.types.ts'
 
 // LDraw: 20 units to a stud, 8 to a plate; the game: a stud is 1 and a plate (a brick height unit) 0.4.
@@ -45,27 +46,33 @@ const getPartMatrix = (mapping: LDrawBrickMapping): Matrix4 =>
     .multiply(new Matrix4().makeScale(mapping.isMirrored ? -1 : 1, 1, 1))
     .multiply(LDRAW_TO_GAME)
 
-// The matrix, in game axes and LDraw units, that takes a part's points to where the brick stands in the car.
-export const getBrickPlacementMatrix = (
-  brick: PlacedBrick,
-  mapping: LDrawBrickMapping,
-  origin: CarOrigin
-): Matrix4 => {
+// The matrix, in game axes and LDraw units, that takes the brick's own frame to where the brick stands in the car.
+const getBrickFrameMatrix = (brick: PlacedBrick, origin: CarOrigin): Matrix4 => {
   const { width, height } = brick.piece.footprint
   const placement = new Matrix4().makeTranslation(
     (brick.x + origin.x) * LDRAW_UNITS_PER_STUD,
     (brick.y + origin.y) * LDRAW_UNITS_PER_STUD,
     brick.baseHeight * LDRAW_UNITS_PER_PLATE + origin.z * LDRAW_UNITS_PER_STUD
   )
-  return placement
-    .multiply(getOrientationMatrix(width, height, brick.orientation))
-    .multiply(getPartMatrix(mapping))
+  return placement.multiply(getOrientationMatrix(width, height, brick.orientation))
+}
+
+// The matrix, in game axes and LDraw units, that takes a part's points to where the brick stands in the car.
+export const getBrickPlacementMatrix = (
+  brick: PlacedBrick,
+  mapping: LDrawBrickMapping,
+  origin: CarOrigin
+): Matrix4 => getBrickFrameMatrix(brick, origin).multiply(getPartMatrix(mapping))
+
+const getCompositePartMatrix = (part: LDrawCompositePart): Matrix4 => {
+  const [m11, m12, m13, m21, m22, m23, m31, m32, m33, x, y, z] = part.matrix
+  return new Matrix4().set(m11, m12, m13, x, m21, m22, m23, y, m31, m32, m33, z, 0, 0, 0, 1)
 }
 
 const formatNumber = (value: number): string => String(Number(value.toFixed(MATRIX_DIGITS)) + 0)
 
 // An LDraw type 1 line: `1 <colour> x y z a b c d e f g h i <file>`, the nine numbers being the matrix rows.
-const getPartLine = (colorCode: number, matrix: Matrix4, partNumber: string): string => {
+export const getPartLine = (colorCode: number, matrix: Matrix4, partNumber: string): string => {
   const [m11, m21, m31, , m12, m22, m32, , m13, m23, m33, , m14, m24, m34] = matrix.elements
   const numbers = [m14, m24, m34, m11, m12, m13, m21, m22, m23, m31, m32, m33]
   return `1 ${String(colorCode)} ${numbers.map((value) => formatNumber(value)).join(' ')} ${partNumber}.dat`
@@ -80,6 +87,22 @@ export const createLDrawCarDocument = (design: CarDesign, origin: CarOrigin): LD
   const partNumbers = new Set<string>()
   const unmappedBricks: PlacedBrick[] = []
   for (const brick of design.bricks) {
+    const composite = LDRAW_COMPOSITE_MAPPINGS[brick.piece.name]
+    if (composite !== undefined) {
+      const frame = GAME_TO_LDRAW.clone().multiply(getBrickFrameMatrix(brick, origin))
+      for (const part of composite.parts) {
+        const matrix = frame.clone().multiply(getCompositePartMatrix(part))
+        lines.push(
+          getPartLine(
+            part.colorCode ?? getLDrawBrickColor(brick.colorIndex).code,
+            matrix,
+            part.partNumber
+          )
+        )
+        partNumbers.add(part.partNumber)
+      }
+      continue
+    }
     const mapping = getLDrawMapping(brick)
     if (mapping === null) {
       unmappedBricks.push(brick)

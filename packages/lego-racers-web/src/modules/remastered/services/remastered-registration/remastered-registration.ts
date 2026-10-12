@@ -12,6 +12,8 @@ import {
   applyHighDefinitionTexture,
   getHighDefinitionVariant,
 } from '../high-definition-texture/high-definition-texture.ts'
+import { createOpponentCarDrawing } from '../opponent-car/opponent-car-drawing.ts'
+import { createLDrawPickupDrawing } from '../ldraw-pickup/ldraw-pickup-drawing.ts'
 import { createLDrawCarDrawing } from '../ldraw-car/ldraw-car-drawing.ts'
 import {
   getShadowMode,
@@ -24,6 +26,7 @@ import {
 import { ShadowMode } from '../real-shadows/shadow-mode.types.ts'
 import { createShadowPass } from '../real-shadows/shadow-pass.ts'
 import { getTrackSun } from '../real-shadows/sun-selection.ts'
+import { createLDrawRacerPartDrawing } from '../ldraw-racer/ldraw-racer-part-drawing.ts'
 import { getAudioVariants, getTextureVariants } from '../texture-variants/texture-variants.ts'
 import { getNativeMenuSurfaceScale } from '../widescreen-display/menu-surface.ts'
 import { getWidescreenDisplay } from '../widescreen-display/widescreen-display.ts'
@@ -60,6 +63,14 @@ export const registerRemastered = (search: string) => {
         getTrackSun(search, request.trackKey, request.trackGroup)
       )
     },
+    getCarBodyDrawing: ({ archive, names }) =>
+      getIsLDrawRequested(search)
+        ? (createOpponentCarDrawing(archive, names)?.object ?? null)
+        : null,
+    getEffectModelDrawing: (request) =>
+      getIsLDrawRequested(search) ? createLDrawPickupDrawing(request) : null,
+    getRacerPartDrawing: (request) =>
+      getIsLDrawRequested(search) ? createLDrawRacerPartDrawing(request, search) : null,
     getSelections: () => [
       `textures=${getHighDefinitionVariant(search)}`,
       `audio=${audioVariant ?? 'none'}`,

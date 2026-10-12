@@ -15,11 +15,13 @@ import {
 } from './ldraw-car-document.ts'
 import { applyPlasticLook, createStudioLights } from './ldraw-plastic.ts'
 import type { PlasticMesh } from './ldraw-plastic.types.ts'
-import type { LDrawCarDrawing } from './ldraw-car-drawing.types.ts'
+import type { LDrawCarDrawing, LDrawCarDrawingOptions } from './ldraw-car-drawing.types.ts'
 
 const LDRAW_TO_STUDS = new Matrix4()
   .makeScale(1 / LDRAW_UNITS_PER_STUD, 1 / LDRAW_UNITS_PER_STUD, 1 / LDRAW_UNITS_PER_STUD)
   .multiply(LDRAW_TO_GAME)
+
+const DEFAULT_OPTIONS: LDrawCarDrawingOptions = Object.freeze({ origin: null, extraText: '' })
 
 const getIsPlasticMesh = (object: Object3D): object is PlasticMesh => object instanceof Mesh
 
@@ -35,11 +37,16 @@ const disposeMeshes = (group: Group) => {
 // library has delivered their parts. When it cannot (no library on the dev server), the whole car stays the game's mesh.
 export const createLDrawCarDrawing = (
   { archive, design }: BuiltCarDrawingRequest,
-  isLDrawUsed = true
+  isLDrawUsed = true,
+  options: LDrawCarDrawingOptions = DEFAULT_OPTIONS
 ): LDrawCarDrawing => {
   const database = parseBrickDatabase(archive.readFile(BRICK_DATABASE_PATH))
-  const origin = getCarOrigin(database, design)
-  const document = createLDrawCarDocument(design, origin)
+  const origin = options.origin ?? getCarOrigin(database, design)
+  const brickDocument = createLDrawCarDocument(design, origin)
+  const document = Object.freeze({
+    ...brickDocument,
+    text: [brickDocument.text, options.extraText].filter((text) => text !== '').join('\n'),
+  })
   const object = new Group()
   object.add(createStudioLights())
   const gameBricks = isLDrawUsed ? document.unmappedBricks : design.bricks

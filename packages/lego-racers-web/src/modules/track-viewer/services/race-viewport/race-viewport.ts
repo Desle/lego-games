@@ -35,8 +35,12 @@ import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import {
   getBuiltCarDrawing,
   getRaceRenderPasses,
+  getCarBodyDrawing,
 } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
 import { createModelObject } from '../model-object/model-object.ts'
+import { showRacerPartDrawing } from '../racer-part-drawing/racer-part-drawing.ts'
+import { RacerPartKind } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
+import { getDriverPartBytes } from '@lego-games/lego-racers/car-builder'
 import { GHOST_WORLD_PATH, WARP_WORLD_PATH } from '../race-assets/race-assets.ts'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import { showSceneObjects } from '../scene-viewport/scene-viewport.ts'
@@ -89,18 +93,42 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   if (shown.backdrop !== null) backgroundScene.add(shown.backdrop.group)
   if (shown.sky !== null) backgroundScene.add(shown.sky.mesh)
   const racerRigs = assets.racerModels.map((models, racerIndex): RacerRig => {
-    const wheels = createModelObject(models.wheels)
+    const racer = assets.definition.racers[racerIndex]
+    const wheels = showRacerPartDrawing(
+      createModelObject(models.wheels),
+      models.wheels,
+      assets.archive,
+      RacerPartKind.WHEELS,
+      { modelName: racer?.appearance.wheelModel.modelName ?? null, partBytes: null }
+    )
     const body = models.body === null ? null : createModelObject(models.body)
     const design = assets.definition.racers[racerIndex]?.savedCar?.design ?? null
+    const bodyModelNames = assets.definition.racers[racerIndex]?.appearance.bodyModel ?? null
     const builtCarDrawing =
-      body === null || design === null
+      body === null
         ? null
-        : getBuiltCarDrawing({ archive: assets.archive, design })
+        : design === null
+          ? bodyModelNames === null
+            ? null
+            : getCarBodyDrawing({ archive: assets.archive, names: bodyModelNames })
+          : getBuiltCarDrawing({ archive: assets.archive, design })
     if (body !== null && builtCarDrawing !== null) {
       body.object.group.visible = false
       body.group.add(builtCarDrawing)
     }
-    const driver = models.driver === null ? null : createModelObject(models.driver)
+    const driver =
+      models.driver === null
+        ? null
+        : showRacerPartDrawing(
+            createModelObject(models.driver),
+            models.driver,
+            assets.archive,
+            RacerPartKind.DRIVER,
+            {
+              modelName: racer?.appearance.driverModel?.modelName ?? null,
+              partBytes: racer?.savedCar == null ? null : getDriverPartBytes(racer.savedCar.record),
+            }
+          )
     const parts = [wheels, body, driver].filter((part): part is ModelObject => part !== null)
     for (const part of parts) {
       trackScene.add(part.group)

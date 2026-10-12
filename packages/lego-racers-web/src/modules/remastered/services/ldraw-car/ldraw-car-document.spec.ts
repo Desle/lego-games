@@ -12,6 +12,7 @@ import type { BrickPiece, PlacedBrick } from '@lego-games/lego-racers/car-builde
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import { LDRAW_BRICK_COLORS } from './ldraw-brick-colors.ts'
 import { LDRAW_BRICK_MAPPINGS, UNMAPPED_BRICK_REASONS } from './ldraw-brick-mappings.ts'
+import { LDRAW_COMPOSITE_MAPPINGS } from './ldraw-composite-mappings.ts'
 import { createLDrawCarDocument } from './ldraw-car-document.ts'
 
 const JAM_PATH = resolve(
@@ -84,6 +85,20 @@ describe('createLDrawCarDocument', () => {
     expect([document.text, document.unmappedBricks]).toEqual(['', [unknown]])
   })
 
+  it('draws a composite brick as its base brick and its accessory, the accessory in its own colour', () => {
+    // Arrange
+    const design = { bricks: [getBrick(getPiece('sLance', 2, 9), {})], grid: createBuildGrid() }
+
+    // Act
+    const { text, unmappedBricks } = createLDrawCarDocument(design, ORIGIN)
+
+    // Assert
+    expect([text.split('\n').map((line) => line.split(' ').at(-1)), unmappedBricks]).toEqual([
+      ['3849.dat', '3070b.dat'],
+      [],
+    ])
+  })
+
   it('moves every brick by the origin of the car', () => {
     // Arrange
     const design = { bricks: [getBrick(getPiece('L300300', 2, 2), {})], grid: createBuildGrid() }
@@ -121,10 +136,14 @@ describe.skipIf(!isPresent)('the brick mapping against the original files', () =
 
     // Act
     const unaccounted = names.filter(
-      (name) => !(name in LDRAW_BRICK_MAPPINGS) && !(name in UNMAPPED_BRICK_REASONS)
+      (name) =>
+        !(name in LDRAW_BRICK_MAPPINGS) &&
+        !(name in LDRAW_COMPOSITE_MAPPINGS) &&
+        !(name in UNMAPPED_BRICK_REASONS)
     )
     const unknown = [
       ...Object.keys(LDRAW_BRICK_MAPPINGS),
+      ...Object.keys(LDRAW_COMPOSITE_MAPPINGS),
       ...Object.keys(UNMAPPED_BRICK_REASONS),
     ].filter((name) => !names.includes(name))
 
@@ -132,7 +151,7 @@ describe.skipIf(!isPresent)('the brick mapping against the original files', () =
     expect([unaccounted, unknown]).toEqual([[], []])
   })
 
-  it('converts every saved design, each brick either to a line or to the unmapped list', () => {
+  it('converts every saved design, each brick to at least a line or to the unmapped list', () => {
     // Arrange
     const cars = [DEFAULT_SAVE_PATH, QUICK_BUILD_SAVE_PATH].flatMap((path) =>
       loadSavedCars(readFile, path)
@@ -147,6 +166,6 @@ describe.skipIf(!isPresent)('the brick mapping against the original files', () =
     })
 
     // Assert
-    expect([cars.length, counts.every((difference) => difference === 0)]).toEqual([28, true])
+    expect([cars.length, counts.every((difference) => difference >= 0)]).toEqual([28, true])
   })
 })

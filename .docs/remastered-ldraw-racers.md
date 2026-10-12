@@ -1,0 +1,41 @@
+# LDraw wheels and drivers (remastered layer)
+
+With `?hd` in development and Bricks = LDraw (the default), every racer's wheels and driver are drawn from the official LDraw parts library, in the same plastic as the [LDraw cars](remastered-ldraw-cars.md): the player, the computer opponents and the champions, in the race, the Racer Select showcase, the driver editor, the main menu and the race cinemas. Physics, the simulation and the original's skeleton animations are untouched: the LDraw parts follow the poses the viewer already computes. Read [remastered.md](remastered.md) first for the rule. Code: `packages/lego-racers-web/src/modules/remastered/services/ldraw-racer/`.
+
+## The neutral hooks (Classic side)
+
+Classic code knows nothing about LDraw. It has one extension point and one helper:
+
+- `ViewerExtension.getRacerPartDrawing(request)` (`src/shared/viewer-extensions/`): "something to draw in place of this racer's wheels or driver". The request names the part (`RacerPartKind.WHEELS` or `DRIVER`), the archive, the original's model (its skeleton and animation set) and what identifies it (the model's name, or the five part bytes of a driver the figure builder made). The answer (`RacerPartDrawing`) is an object in the model's frame plus `setAnimationState`, `animate` and `dispose`. With no extension registered it answers `null` and nothing changes.
+- `showRacerPartDrawing` (`track-viewer/services/racer-part-drawing`) is called where Classic makes a racer's wheels or driver: `race-viewport` (all racers), `showcase-stage` (the car's wheels), `driver-view` (the main menu figure, the showcase driver, the driver editor) and `cinema-stage` (the cinema figure). If the extension has a drawing it hides the original's mesh, puts the drawing in the model's scale inside the model's group, and forwards what Classic does to the original: the animation state ("racer pose applied": the wheels' spin and steering, the driver's skeleton pose) and `animate`. The group is moved, leaned and scaled by Classic as before (the model frame with the body's lean, the driver at the seat, the part scale), so the drawing inherits all of it.
+
+Not drawn: the ghost cars of a time trial (they are semi-transparent through an alpha override of the original's materials) and the champions' car bodies (plain GDB models, not brick designs).
+
+## Wheels
+
+`wheel-analysis` reads the original's wheel model (`<chassis>JMW`, three bones: the model frame and the two axles): its triangles are welded by position into pieces, a hubcap beside a tyre is one wheel, and each wheel gets its bone, its centre in the bone's frame, its axle (the axis whose two other extents match), radius and width. All 24 chassis have four wheels, 40 to 70 LDraw units across (a stud is 64 raw units and 20 LDraw units, the same scale as the bricks).
+
+`ldraw-wheel-sets` lists tyre and rim pairs of the library (the rim's seat is the tyre's bore, measured on the parts; `51011` + `4624`, `56890` + `6014b`, `30391` + `11208`, `2696` + `2994`, `2857`/`4267` + `2695`, `4410` + `6595c02`). The set whose tyre is nearest in diameter is scaled to the wheel's exact size; a drum as wide as several tyres (two wheels fused in the original's model: `dcchas0`, `gm_chas0`) is that many tyres side by side. The rim takes the colour the original paints its hub: the most common bright colour of the wheel's texture. Each wheel is placed with the bone's matrix of the pose, so the animation spins and steers it.
+
+## Drivers
+
+A driver is five part bytes (hat, face, torso, legs, expression). The race's computer drivers are fixed models (`rrpelvis`), but the driver database holds their five bytes (the port's `unreadBytes`: `RR` is `1 28 15 18 0`: `helmtrr`, `rr_`, `rr_chst`, `rr_leg`), so a champion is built the same way as a player's driver.
+
+- **Parts** (`minifig-assembly`): hips `3815b`, legs `3816b` and `3817b` (a peg leg `2532` for the legs of type 1, `leg_peg`), torso `973`, head `3626b`, arms `3818` and `3819`, hands `3820` (a hook `2531` for the left hand of a torso of type 1, `vb_chst` and `cr_chst`), and the hat. The figure is assembled in LDraw's frame as the library's own assemblies do (torso at y -24, head and hat at y -48, hips and legs `3815c01`; seated as `3815c02`) and scaled 3.2 raw units to an LDraw unit, so a minifigure is as big as a brick of the car.
+- **Hats** (`ldraw-minifig-hats`): the 36 hats of `BODYPART.PCB` by index, the nearest library headwear in the colour the game paints it (`helmtrr`/`helmet01..03`/`helmetvv` are the classic racing helmet `3842a` in black, blue, red, white, grey; `bb_hats` the bat helmet `30105`; `jt_hats` the fedora `61506`; the hair of `gh_`, `mh_`, `il_`, `rk_`, `al_` the library's hair). The library has no part for the red feathered helmet (`kk_hats`) or the tribal headdress (`ap_hats`): the bird headdress `30276` and the warbonnet `30138` stand in. **Hypothesis**: the names (`kk` King Kahuka, `cr` Captain Redbeard, ...) are not read from the game; the mapping was made by looking at the game's hats (a contact sheet of all 36) next to the parts.
+- **Colours and pictures** (`minifig-surfaces`): read from the figure builder's own model of the bytes, so they are the original's. The skin is the dominant colour of the face card's part of the face picture; the torso is the dominant colour of the chest picture's front, the arms of the arms' part of it; the legs the dominant colour of the leg picture, the hips a second colour when the picture is plain with a small patch (`leg_bkrd`: black legs, red hips). The face is the original's picture on a patch of the head (`ICB_CHAR.GCB`'s face card, 32 x 20 raw units, shows u 0.27 to 0.72 and v 0.375 to 0.688 of the 64 x 64 picture on all 30 faces; **v counts down the bitmap's rows** for these parts) and the chest picture covers the front of the torso. With the texture pack on (`?hd`) the pictures come from the pack as they load.
+- **Skeletons** (`minifig-rig`): the race driver's seated skeleton (`pelvis`, `torso`, `arm_l`, `arm_r`, `dummy01`, `head`; bind pose: legs forward, arms reaching 14 degrees below the horizontal, measured as the principal axis of their vertices) and the menus' standing one (`rr`, `hr`, `rp`, `hp`: 29 bones, bind pose arms out sideways). A part is attached to a bone (hips, torso, head and hat, the race driver's arms) or follows a chord between two bones (a menu figure's arms from shoulder to wrist, its legs from thigh to ankle): one rigid library arm cannot bend at the elbow, so it keeps pointing from the shoulder to the wrist the animation moves, with the hand at its end, and a hanging arm splays outward by 9.78 degrees as the library's own do. Each frame the part's matrix is the bone's (or the chord's) change from the bind pose, so the original's animations (steering, celebrating, the menu idles) play.
+
+## The look
+
+Same plastic and the same studio as the cars. three.js lights every material by all lights of a scene, so a scene gets the studio once (`ensureStudioLights`): a car's drawing brings its own, a scene without one (a menu) gets it, turned to light from the front for the standing figure and from behind for the race, the way each is looked at. The face and chest decals glow a little so they stay readable on the unlit side.
+
+## The gallery
+
+`/ldraw-racer-gallery.html` on the dev server (not part of the build) exposes `renderWheels(chassisIndex, view, width, height, milliseconds)`, `renderWheelSheet`, `renderDriver(partBytes, 'race' | 'menu', view, width, height, clip, milliseconds)`, `renderDriverSheet`, `renderChampion(name, view, width, height)` and `renderCatalogueSheet(slot, indices, baseBytes, columns, cell)` (every hat, face, torso or leg of the catalogue on a seated driver) for a headless browser to call and save the canvas. The renders in `~/ldraw-gallery/drivers/` come from it.
+
+## Open
+
+- The ghost cars and the champions' car bodies are the original's.
+- Hats the library cannot match are approximations (above); the legs' prints (`tc_leg`, `kk_leg`, ...) are not drawn, only their colour; the two-tone hips rule is a measurement of the 20 leg pictures, not a read of the game.
+- The race driver's bind pose is a measured pose of the box body (`leg_box`), the LDraw legs sit forward as a minifigure sits; they do not follow the box's exact outline.

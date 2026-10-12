@@ -1,9 +1,13 @@
 import type { Object3D } from 'three'
 import type {
   BuiltCarDrawingRequest,
+  CarBodyDrawingRequest,
+  EffectModelDrawingRequest,
   PictureCreatedEvent,
   RaceRenderPass,
   RaceRenderRequest,
+  RacerPartDrawing,
+  RacerPartDrawingRequest,
   TextureCreatedEvent,
   ViewerExtension,
 } from './viewer-extensions.types.ts'
@@ -17,6 +21,9 @@ export const NEUTRAL_EXTENSION: ViewerExtension = Object.freeze({
   getSoundReplacement: () => Promise.resolve(null),
   getBuiltCarDrawing: () => null,
   getRaceRenderPass: () => null,
+  getCarBodyDrawing: () => null,
+  getEffectModelDrawing: () => null,
+  getRacerPartDrawing: () => null,
   getSelections: () => [],
 })
 
@@ -81,3 +88,26 @@ export const getRaceRenderPasses = (request: RaceRenderRequest): readonly RaceRe
     const pass = extension.getRaceRenderPass(request)
     return pass === null ? [] : [pass]
   })
+export const getCarBodyDrawing = (request: CarBodyDrawingRequest): Object3D | null => {
+  for (const extension of registeredExtensions) {
+    const drawing = extension.getCarBodyDrawing(request)
+    if (drawing !== null) return drawing
+  }
+  return null
+}
+
+export const getEffectModelDrawing = (request: EffectModelDrawingRequest): Object3D | null => {
+  for (const extension of registeredExtensions) {
+    const drawing = extension.getEffectModelDrawing(request)
+    if (drawing !== null) return drawing
+  }
+  return null
+}
+
+export const getRacerPartDrawing = (request: RacerPartDrawingRequest): RacerPartDrawing | null => {
+  for (const extension of registeredExtensions) {
+    const drawing = extension.getRacerPartDrawing(request)
+    if (drawing !== null) return drawing
+  }
+  return null
+}
