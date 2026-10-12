@@ -12,12 +12,14 @@ import type {
   PowerUpStep,
 } from '../../../power-ups/index.ts'
 import {
+  getFrameAxes,
   getFrameRotatedVector,
   getFrameTransformedPoint,
   getRotationFromFrameAxes,
+  getStoredScaledVector,
   ZERO_VECTOR3,
 } from '../../../simulation-math/index.ts'
-import type { Frame, Matrix3, Vector3 } from '../../../simulation-math/index.ts'
+import type { Frame, Vector3 } from '../../../simulation-math/index.ts'
 import {
   BallisticFlightState,
   createBallisticFlight,
@@ -149,13 +151,6 @@ const getWorldWithRocket = (
 // The missile figure's scale (+0x58) before anything changes it.
 const FIGURE_SCALE = 1
 
-const getRowOf = (rotation: Matrix3, row: number): Vector3 =>
-  Object.freeze({
-    x: rotation[row * 3] ?? 0,
-    y: rotation[row * 3 + 1] ?? 0,
-    z: rotation[row * 3 + 2] ?? 0,
-  })
-
 // 0x00456db0 (state 2 -> 3, from 0x00456e75): the figure still holds the owner's frame of the last animation step; the
 // launch bone's position (scaled by the model's scale times the figure's) is carried through it, its two axes are
 // turned by it, and the figure takes the position and the axes (0x00410900: normalized, the third made orthogonal).
@@ -167,13 +162,8 @@ const getLaunchFrame = (
   const bone = context.rocketLaunchBones[rocketIndex]
   if (bone === undefined) return ownerFrame
   const { arithmetic } = context.powerUps
-  const { multiply, storeFloat } = arithmetic
-  const scale = multiply(context.rocketModelScale, FIGURE_SCALE)
-  const scaled = Object.freeze({
-    x: storeFloat(multiply(bone.position.x, scale)),
-    y: storeFloat(multiply(bone.position.y, scale)),
-    z: storeFloat(multiply(bone.position.z, scale)),
-  })
+  const scale = arithmetic.multiply(context.rocketModelScale, FIGURE_SCALE)
+  const scaled = getStoredScaledVector(arithmetic, bone.position, scale)
   return Object.freeze({
     rotation: getRotationFromFrameAxes(arithmetic, {
       first: getFrameRotatedVector(arithmetic, ownerFrame, bone.firstAxis),
@@ -223,7 +213,7 @@ const getLaunchedRocket = (
     homing: createHomingFlight(
       arithmetic,
       flight,
-      getRowOf(frame.rotation, 0),
+      getFrameAxes(frame.rotation).first,
       ownerRacer.routeNodeIndex,
       context.route
     ),
@@ -268,7 +258,7 @@ const getFlownRocket = (
     advance.result === BallisticFlightState.FLYING
       ? getRotationFromFrameAxes(arithmetic, {
           first: advance.homing.heading,
-          third: getRowOf(motion.frameRotation, 2),
+          third: getFrameAxes(motion.frameRotation).third,
         })
       : motion.frameRotation
   return Object.freeze({

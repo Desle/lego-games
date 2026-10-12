@@ -40,14 +40,14 @@ Fields (`power_up_trace.py`, `power-up-trace.ts`): `powerUps.bricks` (state `+0x
 | Kind and level                 | Result                                                                                |
 | ------------------------------ | ------------------------------------------------------------------------------------- |
 | 1/0 cannon                     | match                                                                                 |
-| 1/1 grapple                    | match except the hook's shape centre (registry words only)                            |
+| 1/1 grapple                    | match                                                                                 |
 | 1/2 wand                       | bodies match; one voice draw differs at frame 199                                     |
-| 1/3 rocket                     | state machine matches; the missile's shape centre differs from frame 193, hits follow |
+| 1/3 rocket                     | match                                                                                 |
 | 2/0 to 2/3 shield              | match                                                                                 |
 | 3/0 to 3/2 turbo               | match                                                                                 |
 | 3/3 warp                       | match, also with every racer holding the brick (`POWER_UP_COMPUTERS=1`)               |
 | 4/0 oil, 4/2 magnet, 4/3 curse | match                                                                                 |
-| 4/1 barrel                     | match except its shape centre (registry words only)                                   |
+| 4/1 barrel                     | match                                                                                 |
 
 With every racer holding the brick (`POWER_UP_COMPUTERS=1`, before the hit reaction and curse fixes): shield all match; cannon and turbo 0 and 1 differ only in computers' volume spheres; magnet and curse thrown at the player differ from frames 181 to 185; the warp is open.
 
@@ -74,13 +74,22 @@ The golden run draws every frame, so the draw callbacks change the sim. What the
 - Magnet `0x0043a130` / `0x0043a1a0`: a human's driver gets flag `0x80` and its vehicle starts the tire smoke (`0x0043dc00`) while held; a scripted body's target speed factors (`+0x7e8`, and `+0x7ec` unless car body flag `0x40000`) go to 0 and back to 1; `0x004395a0` ends a tumble.
 - Curse (4/3): a warp or curse taken over by a racer's use (`0x00439100`, in the racers' pass after the vehicle update) ends its registry entry in the same frame, so the registry is synced again at the end of the frame.
 - Wand (1/2): `0x00454d70` hands the rest of the step, after the countdown, to the jitter, the hold and the sparks.
-- Still open in the grid: kind 1 level 3 (rocket: the missile's shape centre).
+## Projectile shape centres (fix/shape-centres)
+
+All sixteen cells of the grid match with `POWER_UP_COMPUTERS=1`. What the registry's shapes are:
+
+- **The shape is a model frame** (registration block word 4, the body's `+0x08`). `0x0040e0b0` (frame slot `+0x4c`, called through slot 0 when the radius is negative) gives a frame that does not play (flag `0x10000` clear) the sphere `centre = frame(figure scale * model centre)`, `radius = figure scale * model radius`, the centre carried through the frame by slot `+0x2c` (`0x00410d60`: row vectors times the rotation, plus the position). `getFigureSphere` (`race/projectile-registry`) does it with the model's bounds from `load-projectile-model-data`.
+- **Rocket** (`0x00456db0`, `0x004568f0`): the figure is inside the effect (`+0x128`). While the launch animation plays it copies the owner's display frame each step (position, rotation rows `+0x28..+0x48`; the step that ends the animation keeps the copy of the step before). The launch then takes node 1 of the missile skeleton at the last frame of clip k (`DMISSILE.SDB`/`.ADB`: matrix row 3 is the position, rows 0 and 2 the axes; `rocketLaunchBones`), carries the position (times the model scale, about 0.0017 for `DMISSILE`) and rotates both axes through the copied frame, and sets position and axes (slot `+0x40`, `0x00410900`: Gram-Schmidt). The homing body's heading (`0x00423980`, frame slot `+0x48`) is that frame's first axis, not the owner's; every flying step sets the axes again with the new heading and the frame's third axis.
+- **The wobble angle persists** (`+0xbc`): `0x00423980` does not reset it, so a rocket that takes over an effect (`0x0045b2e0` steals the furthest one when the pool is empty) continues the angle of the one before. `ProjectileWorld.rocketWobbleAngles`. A stolen effect also starts a fresh body (`RocketMotion.ownerRacer`, `rocketIndex`).
+- **Grapple hook**: one model frame (`+0x268`, the same object for every hook of the race) that all hooks move (`0x00431550` while flying, `0x00444820` while latched; a retracting hook only draws its rope) and read their position from, so with several hooks the registry sees the pose the last update left, and a hook that has not reached its victim starts from where another hook left the frame. After the flight of the active state `0x00453ef0` turns its first axis from the owner at the aim (`aim - owner position`, stored per component) with z up. `ProjectileWorld.hookFrame`.
+- **Tow** (`0x00453ef0` state 4): a `power_ups.racer_towed` event, so it stays in order with `power_ups.grapple_released` of other hooks (a racer can be latched by several; the release of one clears the tow of the others).
+- **Barrel** (`0x00452ff0`): the spin (`+0x178`, kept when the effect is reused) grows by `ms * 0.012` in every update but the last, and the model turns about y: first axis `(-sine, 0, cosine)`, third `(cosine, 0, sine)` from the table at `0x004bf7ec` (`barrel-spin`). The body is let go (`0x00431530`) in the update that sees its flight end; a racer's touch only marks it (state 2), the next update explodes it. The barrel looks **behind** the racer for its target (`0x0045ad30` negates the first axis).
+- Cannon balls keep the centre of their position (the built-in `@@cannon` model is centred).
 
 ## Open
 
-- Shape centres: the hook's bounds centre is placed with a hypothesis (the frame faces along the horizontal velocity); the barrel's spin and the missile's animated figure bounds (its first registered centre is about 6 units off the owner) are not ported.
 - Warp: the route (checkpoints), the carry (`0x0045d780`), the start (`0x004395d0`: flag 0x10, timed effect and spin end, tows end, flag 0x1000) and the landing (`0x0045dc90`) are ported for a human's free body. The bounds quirk, the vehicle's smoke and fade state, the computers' scripted warp and the launcher destination are ported (see the warp sections). Open: the oil slick and scorch decal callers and the skid emitters (vehicle `+0x1e4`).
-- Debris animation lengths are still the empty values of `EMPTY_PROJECTILE_MODEL_DATA` (the warp route now comes from the checkpoints); `trackTargets` (the TGB points the cannon and grapple aim at) are empty.
+- Debris animation lengths are still the empty values of `EMPTY_PROJECTILE_MODEL_DATA` (the warp route now comes from the checkpoints); `trackTargets` (the TGB points the cannon and grapple aim at) are empty (the computers-grid cells do not reach them).
 - Sound-driven random draws (`tauntNearestRacer`, `updateRacerSounds`) are stand-ins: a draw is missing or extra after some hits (wand, frame 199).
 - `racec0r3` shows a track event difference at frame 797 (`track.events.2a[61]`) that the random cursor used to hide.
 - Brick colours per kind belong to the render-trace branch (PR 37): `pbrickP`, `pbrickS`, `pbrickT`, `pbrickM` (`0x00458a80`, `0x0045ba90`).

@@ -418,10 +418,12 @@ describe('updatePowerUpsWithProjectiles: the grapple', () => {
       timerMilliseconds: 4000,
       targetRacer: 1,
     })
-    expect(hit.step.events).toMatchObject([
-      { type: 'power_ups.racer_towed', racer: 0, vector: { x: 180 }, isOwner: true },
-      { type: 'power_ups.racer_towed', racer: 1, vector: { x: -180 }, isOwner: false },
-    ])
+    expect(hit.step.events.filter((event) => event.type === 'power_ups.racer_towed')).toMatchObject(
+      [
+        { type: 'power_ups.racer_towed', racer: 0, vector: { x: 180 }, isOwner: true },
+        { type: 'power_ups.racer_towed', racer: 1, vector: { x: -180 }, isOwner: false },
+      ]
+    )
   })
 
   it('brings the hook back when the victim is shielded (0x004545d0)', () => {

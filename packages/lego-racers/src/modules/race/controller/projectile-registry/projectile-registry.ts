@@ -9,6 +9,7 @@ import type { RegistryEntry } from '../../../projectiles/index.ts'
 import {
   getFloatFromBits,
   getFrameTransformedPoint,
+  getStoredScaledVector,
   IDENTITY_MATRIX3,
   ZERO_VECTOR3,
 } from '../../../simulation-math/index.ts'
@@ -54,18 +55,15 @@ const getFigureSphere = (
   arithmetic: FloatArithmetic,
   frame: Frame,
   bounds: ModelBounds
-): BoundingSphere => {
-  const { multiply, storeFloat } = arithmetic
-  const scaled = Object.freeze({
-    x: storeFloat(multiply(FIGURE_SCALE, bounds.centre.x)),
-    y: storeFloat(multiply(FIGURE_SCALE, bounds.centre.y)),
-    z: storeFloat(multiply(FIGURE_SCALE, bounds.centre.z)),
-  })
-  return getSphere(
-    getFrameTransformedPoint(arithmetic, frame, scaled),
-    storeFloat(multiply(FIGURE_SCALE, bounds.radius))
+): BoundingSphere =>
+  getSphere(
+    getFrameTransformedPoint(
+      arithmetic,
+      frame,
+      getStoredScaledVector(arithmetic, bounds.centre, FIGURE_SCALE)
+    ),
+    arithmetic.storeFloat(arithmetic.multiply(FIGURE_SCALE, bounds.radius))
   )
-}
 
 const getEffectOf = (source: RegistrySource, effectId: number): PowerUpEffect | undefined =>
   source.powerUpStep.world.effects.effects[effectId]
@@ -88,11 +86,7 @@ const getFlightSphere = (source: RegistrySource, effect: PowerUpEffect): Boundin
   }
   const { shapeBounds } = source.projectileModelData
   if (motion.kind === 'grapple') {
-    return getFigureSphere(
-      source.arithmetic,
-      source.projectileWorld.hookFrame,
-      shapeBounds.grapple
-    )
+    return getFigureSphere(source.arithmetic, source.projectileWorld.hookFrame, shapeBounds.grapple)
   }
   if (motion.kind === 'rocket' && motion.homing !== null) {
     return getFigureSphere(

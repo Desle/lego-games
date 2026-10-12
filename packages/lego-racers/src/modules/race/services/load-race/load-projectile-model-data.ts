@@ -1,6 +1,6 @@
 import { getModelBounds, parseModel } from '../../../model/index.ts'
 import type { ModelBounds } from '../../../model/index.ts'
-import type { FloatArithmetic } from '../../../simulation-math/index.ts'
+import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 import type { Checkpoint } from '../../../checkpoint/index.ts'
 import type { RouteNode } from '../../../projectiles/index.ts'
 import { parseAnimation } from '../../../animation/index.ts'
@@ -59,7 +59,7 @@ const getRocketLaunchBones = (
         skeleton,
         getSkeletonPose(getRestPose(skeleton), animation, state)
       )
-      const getRow = (row: number): Readonly<{ x: number; y: number; z: number }> => {
+      const getRow = (row: number): Vector3 => {
         const start = LAUNCH_BONE_INDEX * MATRIX_SIZE + row * 4
         return Object.freeze({
           x: matrices[start] ?? 0,

@@ -31,13 +31,13 @@ The player drives its **champion car** (`isPlayerChampionCar` in `loadRaceDefini
 | Royal Knights, no input         | 300    | match                                                                                           |
 | Royal Knights, steering sweep   | 475    | match                                                                                           |
 | Royal Knights, start boost      | 280    | match                                                                                           |
-| Royal Knights, weaving          | 1,375  | match until frame 539: a computer drops an oil slick, whose `oilbub` emitter is not ported (14) |
+| Royal Knights, weaving          | 1,375  | match                                                                                           |
 | Royal Knights, frame times      | 475    | match until frame 424 (the same oil slick)                                                      |
-| Royal Knights, route driving    | 3,175  | match until frame 539 (the same oil slick)                                                      |
+| Royal Knights, route driving    | 3,175  | match until frame 1882 (`powerUps.registry`)                                                    |
 | Royal Knights, double precision | 475    | the player matches; computers differ by one unit in the last place at frame 160 (15)            |
-| `racec0r3`                      | 475    | match                                                                                           |
-| `racec0r1`                      | 475    | match until frame 436 (oil slick, 14)                                                           |
-| `racec0r2`, `c1r0`, `c3r0`      | 475    | match until frames 220, 417 and 278: a cannon or grapple projectile spawns `cannsmk` (14)       |
+| `racec0r3`, `c1r0`, `c3r0`      | 475    | match                                                                                           |
+| `racec0r1`                      | 475    | match until frame 436 (`powerUps.registry`)                                                     |
+| `racec0r2`                      | 475    | match until frame 278 (`racer0.body.forwardSpeed`, divergence 8)                                |
 
 The expectation per scenario is in the spec: the first field and frame where any compared field may differ (`null` for none). Fixing a divergence makes the spec fail until the expectation is updated, so progress is visible.
 
