@@ -126,6 +126,9 @@ const getTexture = (
   if (sceneTexture !== undefined && getIsHighDefinitionEnabled(globalThis.location.search)) {
     void loadHighDefinitionPixels(sceneTexture.bitmapPath, bitmap).then((pixels) => {
       if (pixels === null) return
+      // The GPU copy was allocated at the original's size (immutable storage); release it so the larger picture
+      // is uploaded into a new one.
+      texture.dispose()
       texture.image = {
         data: isRowOrderKept
           ? pixels.colors
