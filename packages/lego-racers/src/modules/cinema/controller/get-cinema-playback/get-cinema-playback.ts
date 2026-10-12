@@ -1,4 +1,4 @@
-import type { Cinema, CinemaAction } from '../../types/cinema.types.ts'
+import type { Cinema, CinemaAction, CinemaDummy } from '../../types/cinema.types.ts'
 
 const MILLISECONDS_PER_SECOND = 1000
 
@@ -24,5 +24,15 @@ export const getActiveCinemaActions = (
   const frame = getCinemaFrame(cinema, milliseconds)
   return cinema.actions.filter(
     (action) => action.startFrame <= frame && frame < action.startFrame + action.durationFrames
+  )
+}
+
+export const getActiveCinemaDummies = (
+  cinema: Cinema,
+  milliseconds: number
+): readonly CinemaDummy[] => {
+  const frame = getCinemaFrame(cinema, milliseconds)
+  return cinema.dummies.filter(
+    (dummy) => dummy.startFrame <= frame && frame < dummy.startFrame + dummy.durationFrames
   )
 }
