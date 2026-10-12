@@ -41,6 +41,8 @@ export type FrameWidget = {
   readonly itemName: string
   // The item whose rectangle the box takes (a chooser's box is declared once and used for each chooser).
   readonly rectangleItemName?: string
+  // 0xAARRGGBB the border images are multiplied by (0x00488cb0).
+  readonly tint?: number
 }
 
 // A translucent fill over the whole screen (MIB 0x37).
@@ -61,6 +63,8 @@ export type ViewportWidget = {
   readonly showcase?: RacerShowcaseView | null
   // The race preview of the race selects.
   readonly cinema?: RaceCinemaView | null
+  // 0xAARRGGBB the border images of the viewport's box are multiplied by.
+  readonly frameTint?: number
 }
 
 // A rectangle the screen computed itself (a list row, a chooser).

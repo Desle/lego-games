@@ -23,10 +23,14 @@ import { getUnlockedCircuitMask } from '../profile/profile.ts'
 import { createResult, getClampedStep, MenuSound } from '../screen-helpers/screen-helpers.ts'
 
 const RACES_PER_CIRCUIT = 4
-// 0x0047a3f0: the circuit race screen shows the next race of the circuit every 2,000 ms.
-const RACE_CYCLE_MILLISECONDS = 2000
 // The last circuit has one race and no cycle.
 const FINAL_CIRCUIT_INDEX = 6
+// 0x00488cb0 gives the eight pieces of the preview's frame the colour DAT_004c2278[DAT_004c228c[circuit * 4 + race slot]]
+// (grey, gold, beige, blue and, for the last circuit, yellow), measured in the original's draws.
+const FRAME_TINT_INDICES: readonly number[] = [
+  1, 0, 3, 2, 1, 0, 3, 2, 0, 1, 2, 3, 2, 0, 3, 1, 2, 0, 3, 1, 3, 1, 2, 0, 4, 0, 0, 0,
+]
+const FRAME_TINTS: readonly number[] = [0xffadadad, 0xffffdf00, 0xffe6dcb4, 0xff253ddf, 0xffffda1f]
 const GONEXT_INDEX = 0
 const GOBACK_INDEX = 1
 const SELECTOR_RECTANGLE = Object.freeze({ left: 3, top: 29, right: 220, bottom: 72 })
@@ -72,35 +76,29 @@ const getTitleId = (kind: RaceSelectionKind, isVersus: boolean): number => {
 const getIsCircuitLocked = (runtime: ScreenRuntime): boolean =>
   ((getUnlockedCircuitMask(runtime) >> runtime.selection.circuitIndex) & 1) === 0
 
-const getRaceNumberWithinCycle = (
-  resources: FrontEndResources,
-  runtime: ScreenRuntime,
-  screenMilliseconds: number
-): number => {
+const getRaceNumberWithinCycle = (resources: FrontEndResources, runtime: ScreenRuntime): number => {
   const circuit = getCircuit(resources, runtime.selection.circuitIndex)
   const count = circuit === null ? 0 : getAvailableRaces(resources, circuit.name).length
   return count === 0 || runtime.selection.circuitIndex === FINAL_CIRCUIT_INDEX
     ? 0
-    : Math.floor(screenMilliseconds / RACE_CYCLE_MILLISECONDS) % count
+    : runtime.racePreview.cycleCount % count
 }
 
 // 0x0047a2b0: a race whose cinema is not the one running switches to it (0x00466d00) and sets the champion's figure
-// (0x00488b40); the circuit screen does this every `RACE_CYCLE_MILLISECONDS` (hypothesis: a switch restarts the cinema's
-// clock, so it runs from the start of each race's turn).
+// (0x00488b40); the circuit screen does this every 61 frames (race-preview.ts) and the cinema's
+// clock restarts with each switch (measured).
 const getRaceCinema = (
   runtime: ScreenRuntime,
-  kind: RaceSelectionKind,
   race: RaceCatalogEntry | undefined
 ): RaceCinemaView | null => {
   if (race === undefined || race.secondName === '') return null
-  const { screenMilliseconds, selection, resources } = runtime
-  const isCycling = kind === 'circuit_race' && selection.circuitIndex !== FINAL_CIRCUIT_INDEX
+  const { resources } = runtime
   const champion = resources
     .getDriverDatabase()
     .drivers.find((driver) => driver.name.toLowerCase() === race.thirdName.toLowerCase())
   return {
     cinemaName: race.secondName,
-    milliseconds: isCycling ? screenMilliseconds % RACE_CYCLE_MILLISECONDS : screenMilliseconds,
+    milliseconds: runtime.racePreview.cinemaMilliseconds,
     partBytes: champion?.unreadBytes ?? null,
   }
 }
@@ -118,8 +116,14 @@ const getCommonWidgets = (runtime: ScreenRuntime, kind: RaceSelectionKind): Fron
   const races = circuit === null ? [] : getAvailableRaces(resources, circuit.name)
   const previewRace =
     kind === 'circuit_race'
-      ? races[getRaceNumberWithinCycle(resources, runtime, runtime.screenMilliseconds)]
+      ? races[getRaceNumberWithinCycle(resources, runtime)]
       : races[selection.raceIndex]
+  const raceSlot = Math.max(
+    0,
+    races.findIndex((race) => race === previewRace)
+  )
+  const frameTint =
+    FRAME_TINTS[FRAME_TINT_INDICES[selection.circuitIndex * RACES_PER_CIRCUIT + raceSlot] ?? 0]
   const widgets: FrontEndWidget[] = [
     { kind: 'image', itemName: 'backdrp', imageName: 'backdrp' },
     {
@@ -129,7 +133,11 @@ const getCommonWidgets = (runtime: ScreenRuntime, kind: RaceSelectionKind): Fron
       styleName: 'banner',
       alignment: 'left',
     },
-    { kind: 'frame', itemName: 'brickbox' },
+    {
+      kind: 'frame',
+      itemName: 'brickbox',
+      ...(frameTint === undefined ? {} : { tint: frameTint }),
+    },
     {
       kind: 'placed_image',
       imageName: logoName,
@@ -170,7 +178,8 @@ const getCommonWidgets = (runtime: ScreenRuntime, kind: RaceSelectionKind): Fron
     {
       kind: 'viewport',
       itemName: 'singrace',
-      cinema: getRaceCinema(runtime, kind, previewRace),
+      ...(frameTint === undefined ? {} : { frameTint }),
+      cinema: getRaceCinema(runtime, previewRace),
     },
     {
       kind: 'button',
@@ -194,7 +203,7 @@ const getCircuitRaceWidgets = (runtime: ScreenRuntime): readonly FrontEndWidget[
   const { resources, selection } = runtime
   const circuit = getCircuit(resources, selection.circuitIndex)
   const races = circuit === null ? [] : getAvailableRaces(resources, circuit.name)
-  const raceEntry = races[getRaceNumberWithinCycle(resources, runtime, runtime.screenMilliseconds)]
+  const raceEntry = races[getRaceNumberWithinCycle(resources, runtime)]
   const text = (itemName: string, value: string): FrontEndWidget => ({
     kind: 'text',
     itemName,

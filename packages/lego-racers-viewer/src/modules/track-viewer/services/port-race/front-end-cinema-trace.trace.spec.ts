@@ -26,7 +26,7 @@ import {
 const FRAME_MILLISECONDS = 33
 const POSITION_TOLERANCE = 0.03
 const MENU_OPENED_FRAME = 154
-const MATCHED_SHARE = 0.7
+const MATCHED_SHARE = 0.9
 // Down and enter open the circuit race screen, two downs and enter the single race screen (scan codes 208 and 28; a key of frame f
 // shows in frame f + 1). The circuit screen shows the next race (and its cinema) every two seconds.
 const CIRCUIT_KEYS: readonly (readonly [number, FrontEndInput, number])[] = [
@@ -38,7 +38,7 @@ const SINGLE_KEYS: readonly (readonly [number, FrontEndInput, number])[] = [
   [250, 'down', 208],
   [270, 'accept', 28],
 ]
-const CIRCUIT_FRAMES = [285, 300, 330, 345, 400, 460, 520, 700]
+const CIRCUIT_FRAMES = [285, 300, 330, 332, 345, 350, 356, 392, 396, 400, 460, 520, 700]
 const SINGLE_FRAMES = [285, 300, 400, 500, 700]
 
 const archive = openJamArchive(readOriginalJam())
@@ -57,6 +57,15 @@ type CinemaFrame = {
   readonly cinemaName: string | null
   readonly originalCount: number
   readonly share: number
+  // The original's draws with the colour the port tints the preview's frame with (8 pieces).
+  readonly tintedDrawCount: number
+}
+
+const getFrameTint = (state: FrontEndState): number | null => {
+  for (const command of getFrontEndFrame(state, resources, environment).commands) {
+    if (command.kind === 'image' && command.tint !== undefined) return command.tint
+  }
+  return null
 }
 
 const getCinemaView = (state: FrontEndState): RaceCinemaView | null => {
@@ -97,7 +106,12 @@ const runScenario = async (
     const matched = originalPositions.filter((position) =>
       bonePositions.some((bone) => getDistance(bone, position) < POSITION_TOLERANCE)
     )
+    const tint = getFrameTint(state)
     return {
+      tintedDrawCount:
+        tint === null
+          ? 0
+          : draws.filter((draw) => draw.vertices.some((vertex) => vertex.diffuse === tint)).length,
       frame: watchedFrame,
       cinemaName: view?.cinemaName ?? null,
       originalCount: originalPositions.length,
@@ -123,6 +137,7 @@ describe.skipIf(!(getIsOriginalGamePresent() && getIsOriginalPresentationAvailab
 
       // Assert
       expect(Math.min(...frames.map((frame) => frame.share))).toBeGreaterThan(MATCHED_SHARE)
+      expect(Math.min(...frames.map((frame) => frame.tintedDrawCount))).toBeGreaterThanOrEqual(8)
       expect(new Set(frames.map((frame) => frame.cinemaName)).size).toBeGreaterThan(1)
     })
   }

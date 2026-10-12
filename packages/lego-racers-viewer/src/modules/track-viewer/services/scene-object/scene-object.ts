@@ -10,6 +10,8 @@ import type {
 } from '../race-viewport/race-viewport.types.ts'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import { getLocalVisibilityQuery, showVisibleLeaves } from './bsp-visibility.ts'
+import { applyVertexLighting } from './vertex-lighting.ts'
+import type { SceneLights } from './vertex-lighting.types.ts'
 import { createSkeletonInstanceObject } from './skeleton-instance-object.ts'
 import { createStaticInstanceObject } from './static-instance-object.ts'
 import type {
@@ -152,6 +154,7 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
     setSkeletonState: (name: string, state: SkeletonAnimationState) =>
       stateSetters.get(name)?.(state),
     animatedInstanceCount: animators.length,
+    setLights: (lights: SceneLights | null) => applyVertexLighting(group, lights),
     setAnimationState: (state: SkeletonAnimationState) => {
       for (const setState of stateSetters.values()) setState(state)
     },

@@ -877,3 +877,6 @@
 004065d0 CinemaTimeline_ProcessFrames
 00406330 CinemaTimeline_Reset
 00488b40 RaceSelect_SetChampionFigure
+0047a3f0 RaceSelect_Update
+0047a2b0 RaceSelect_ShowRace
+00488cb0 RaceSelect_SetFrameTint

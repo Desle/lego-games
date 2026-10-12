@@ -61,6 +61,28 @@ export const createFrontEndRenderer = (
     }
     return imageCanvases.get(name) ?? null
   }
+  const tintedCanvases = new Map<string, HTMLCanvasElement | null>()
+  // The image's pixels multiplied by a colour (the alpha stays the image's), as the device modulates a textured quad.
+  const getTintedImageCanvas = (name: string, tint: number): HTMLCanvasElement | null => {
+    const key = `${name}/${String(tint)}`
+    if (!tintedCanvases.has(key)) {
+      const source = getCachedImageCanvas(name)
+      const tinted = source === null ? null : document.createElement('canvas')
+      const context = tinted?.getContext('2d')
+      if (source !== null && tinted !== null && context !== null && context !== undefined) {
+        tinted.width = source.width
+        tinted.height = source.height
+        context.drawImage(source, 0, 0)
+        context.globalCompositeOperation = 'multiply'
+        context.fillStyle = getCssColor(tint)
+        context.fillRect(0, 0, tinted.width, tinted.height)
+        context.globalCompositeOperation = 'destination-in'
+        context.drawImage(source, 0, 0)
+      }
+      tintedCanvases.set(key, tinted)
+    }
+    return tintedCanvases.get(key) ?? null
+  }
   return Object.freeze({
     draw: (commands: readonly FrontEndDrawCommand[]) => {
       const context = canvas.getContext('2d')
@@ -73,7 +95,10 @@ export const createFrontEndRenderer = (
       for (const command of commands) {
         switch (command.kind) {
           case 'image': {
-            const source = getCachedImageCanvas(command.imageName)
+            const source =
+              command.tint === undefined
+                ? getCachedImageCanvas(command.imageName)
+                : getTintedImageCanvas(command.imageName, command.tint)
             if (source === null) break
             context.drawImage(
               source,
