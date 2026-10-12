@@ -342,6 +342,7 @@ export const createRace = (definition: RaceDefinition): RaceState => {
       createdTrackLogic,
       definition.introductionCameraObject
     ),
+    isMirrored: definition.isMirrored,
     tuneIndex: definition.musicTuneCount > 0 ? INTRODUCTION_TUNE_INDEX : null,
     unidentifiedCountdownMilliseconds: 0,
     raceModeFlags: definition.raceModeFlags,
