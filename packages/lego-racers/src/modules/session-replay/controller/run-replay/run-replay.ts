@@ -1,7 +1,7 @@
 import { getIsOriginalTraceAvailable, runGoldenTrace } from '../../../golden-trace/index.ts'
 import { replayOnPort } from '../replay-port/replay-port.ts'
 import { getReplayScenario, getReplayScenarioSplit } from '../replay-scenario/replay-scenario.ts'
-import type { SessionRecording } from '../../types/session-replay.types.ts'
+import type { SessionRecording } from '../../../session-recording/index.ts'
 import type { ReplayReport } from './run-replay.types.ts'
 
 const getOriginalSkipReason = (supportedFrameCount: number, stopReason: string | null) => {

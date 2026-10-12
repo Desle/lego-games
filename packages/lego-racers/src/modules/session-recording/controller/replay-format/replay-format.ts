@@ -4,7 +4,7 @@ import type {
   ReplayGrant,
   ReplayHeader,
   SessionRecording,
-} from '../../types/session-replay.types.ts'
+} from '../../types/session-recording.types.ts'
 import type { FrameLine } from './replay-format.types.ts'
 
 export const REPLAY_FORMAT = 'lego-racers-session-replay'

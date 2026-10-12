@@ -11,7 +11,7 @@ import type {
   ReplayHeader,
   ReplayScenarioSplit,
   SessionRecording,
-} from '../../types/session-replay.types.ts'
+} from '../../../session-recording/index.ts'
 
 const SCAN_CODE_MASK = 0xff
 

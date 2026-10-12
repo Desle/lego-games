@@ -3,7 +3,7 @@ import {
   createReplayHeader,
   createReplayRecorder,
   serializeRecording,
-} from '@lego-games/lego-racers/session-replay'
+} from '@lego-games/lego-racers/session-recording'
 import { getIsHighDefinitionEnabled } from '../scene-object/high-definition-texture/high-definition-texture.ts'
 import { sessionRecordingStore } from '../session-recording-store/session-recording-store.ts'
 import type { SessionRecordingStore } from '../session-recording-store/session-recording-store.types.ts'
