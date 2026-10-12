@@ -1,6 +1,6 @@
 import { EffectState, PowerUpEffectKind } from '../../../power-ups/index.ts'
 import type { PowerUpEffect } from '../../../power-ups/index.ts'
-import { ExplosionState } from '../../../projectiles/index.ts'
+import { BallisticFlightState, ExplosionState } from '../../../projectiles/index.ts'
 import type { ExplosionPool } from '../../../projectiles/index.ts'
 import { getBoundingInterval } from '../../../racer-collision/index.ts'
 import type { BoundingSphere } from '../../../racer-collision/index.ts'
@@ -152,8 +152,10 @@ const getIsFlightRegistered = (source: RegistrySource, effect: PowerUpEffect): b
   if (motion === undefined || motion === null || !getIsLive(effect)) return false
   switch (effect.kind) {
     case PowerUpEffectKind.CANNON:
-    case PowerUpEffectKind.BARREL:
       return motion.kind === 'ballistic'
+    case PowerUpEffectKind.BARREL:
+      // 0x00452ff0 lets the body go (0x00431530) as soon as its flight ends, whatever ended it.
+      return motion.kind === 'ballistic' && motion.flight.state === BallisticFlightState.FLYING
     case PowerUpEffectKind.GRAPPLE:
       return motion.kind === 'grapple' && !motion.hook.isRetracting
     case PowerUpEffectKind.ROCKET:
