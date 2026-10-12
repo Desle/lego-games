@@ -291,12 +291,18 @@ export const updateRocket = (
   }
   const owner = before.ownerRacer
   const status = context.powerUps.racers[owner]
-  const existing = getRocketMotion(world, before.id)
+  const stored = getRocketMotion(world, before.id)
+  const existing =
+    stored !== null && stored.ownerRacer === owner && stored.rocketIndex === before.rocketIndex
+      ? stored
+      : null
   const ownerRotation = context.racers[owner]?.displayRotation
   if (status === undefined || ownerRotation === undefined) return Object.freeze({ step, world })
   let current: ProjectileStep = Object.freeze({ step, world })
   let motion: RocketMotion = existing ?? {
     kind: 'rocket',
+    ownerRacer: owner,
+    rocketIndex: before.rocketIndex,
     launchElapsedMilliseconds: 0,
     framePosition: status.position,
     frameRotation: ownerRotation,

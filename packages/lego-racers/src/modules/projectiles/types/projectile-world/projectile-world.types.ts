@@ -45,6 +45,10 @@ export type WandMotion = {
 // The rocket (0x004568f0): its launch animation, then its homing body.
 export type RocketMotion = {
   readonly kind: 'rocket'
+  // The racer and rocket the body belongs to: a stolen effect (0x0045b2e0) restarts in place, and the new use does not
+  // inherit the old body.
+  readonly ownerRacer: number
+  readonly rocketIndex: number
   // Milliseconds of the launch animation played so far (state 2).
   readonly launchElapsedMilliseconds: number
   // The missile figure's frame: the owner's display frame while the launch animation plays, then the one 0x00456db0
