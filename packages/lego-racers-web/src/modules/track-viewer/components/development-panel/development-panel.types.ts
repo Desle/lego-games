@@ -3,5 +3,6 @@ export type DevelopmentPanelProps = {
   readonly onTrackViewerOpened: () => void
   readonly onRaceStopped: () => void
   readonly onRecordingDownloaded: () => void
+  readonly onEverythingUnlocked: () => void
   readonly onOverlayClosed: () => void
 }

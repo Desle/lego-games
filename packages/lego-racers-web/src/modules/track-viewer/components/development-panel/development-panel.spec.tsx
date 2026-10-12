@@ -7,6 +7,7 @@ const getProps = (overrides: Partial<DevelopmentPanelProps> = {}): DevelopmentPa
   onTrackViewerOpened: vi.fn(),
   onRaceStopped: vi.fn(),
   onRecordingDownloaded: vi.fn(),
+  onEverythingUnlocked: vi.fn(),
   onOverlayClosed: vi.fn(),
   ...overrides,
 })
