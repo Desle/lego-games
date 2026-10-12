@@ -49,7 +49,7 @@ export const LDRAW_WHEEL_SETS: Readonly<Record<WheelKind, readonly LDrawWheelSet
     [WheelKind.SPOKED_OFFROAD]: Object.freeze([
       createTyreSet(WheelKind.SPOKED_OFFROAD, '2346', '30155', 70, 30),
     ]),
-    // A drum as wide as two wheels (fused in the original's model): the tread sets, side by side as needed.
+    // A drum as wide as two wheels (fused in the original's model): a tread set stretched to its width.
     [WheelKind.DRUM]: TREAD_SETS,
   })
 
