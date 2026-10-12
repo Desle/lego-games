@@ -275,6 +275,7 @@ const getExplosionViews = (pool: ExplosionPool, isSpiked: boolean): readonly Exp
         isSpiked,
         position: explosion.position,
         scale: explosion.scale,
+        progress: explosion.progress,
         isFading: explosion.state === ExplosionState.FADING,
       },
     ]

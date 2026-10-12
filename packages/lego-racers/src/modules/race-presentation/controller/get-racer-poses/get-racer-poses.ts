@@ -1,4 +1,9 @@
-import { getDisplayedColourShift, getRacerVolumeParts } from '../../../racer/index.ts'
+import {
+  getDisplayedColourShift,
+  getRacerVolumeParts,
+  getWarpFadeScale,
+} from '../../../racer/index.ts'
+import { EffectState, PowerUpEffectKind } from '../../../power-ups/index.ts'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
 import type { Racer } from '../../../racer/index.ts'
@@ -31,6 +36,29 @@ const getRacerShadow = (racer: Racer, centre: Vector3): RacerShadow => {
   })
 }
 
+// 0x0045dbe0: from the last 250 ms of the warp's first phase on, the car's parts take the portal's fade scale.
+const WARP_SHRINK_MILLISECONDS = 250
+// Hypothesis, measured against the render trace: the car is drawn before the portal sets its scale, so it wears the scale
+// of the previous frame (one 33 ms step older timer).
+const WARP_SCALE_LAG_MILLISECONDS = 33
+
+const getPartScale = (raceState: RaceState, racerIndex: number): number => {
+  const { effects, activeEffectIds } = raceState.powerUpStep.world.effects
+  const warp = activeEffectIds
+    .map((effectId) => effects[effectId])
+    .find(
+      (candidate) =>
+        candidate?.kind === PowerUpEffectKind.WARP &&
+        candidate.state === EffectState.STARTING &&
+        candidate.ownerRacer === racerIndex
+    )
+  if (warp === undefined) return 1
+  const previousTimer = warp.timerMilliseconds + WARP_SCALE_LAG_MILLISECONDS
+  return previousTimer >= WARP_SHRINK_MILLISECONDS
+    ? 1
+    : getWarpFadeScale(raceState.context.arithmetic, raceState.context.tables, previousTimer)
+}
+
 // Where each racer's car is drawn: its display frame (racer +0x5c), which the physics step keeps up to date, the
 // leaned car model frame and the driver, and the animations of the wheels and the driver.
 export const getRacerPoses = (raceState: RaceState): readonly RacerPose[] => {
@@ -57,6 +85,7 @@ export const getRacerPoses = (raceState: RaceState): readonly RacerPose[] => {
         shadow: isOffTrack ? null : getRacerShadow(racer, parts.wheels.centre),
         skids: racer.vehicle.skids,
         isOffTrack,
+        partScale: getPartScale(raceState, racerIndex),
       })
     })
   )
