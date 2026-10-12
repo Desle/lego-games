@@ -106,5 +106,6 @@ export const getSkeletonInstanceChainAxes = (
             )
       }, row)
     )
+  // @check-allow traced-constants: 6 is the offset of the third row in a 3×3 rotation matrix
   return Object.freeze({ first: getTurned(getRow(0)), third: getTurned(getRow(6)) })
 }
