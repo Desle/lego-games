@@ -1,3 +1,4 @@
+import { useLetterboxScale } from '../../controller/letterbox-scale/letterbox-scale.ts'
 import RaceHudOverlay from '../../components/race-hud-overlay/race-hud-overlay.tsx'
 import RacePanel from '../../components/race-panel/race-panel.tsx'
 import {
@@ -11,23 +12,42 @@ import FrontEndView from '../front-end-view/front-end-view.tsx'
 // drawn in it and the HUD over the race.
 const RaceView = () => {
   const race = useRaceController()
+  const { frameReference, scale } = useLetterboxScale(RACE_STAGE_SIZE)
+  const isGameShown = race.status === RaceStatus.MENU || race.status === RaceStatus.RUNNING
+  const racePanel = (
+    <RacePanel
+      status={race.status}
+      errorMessage={race.errorMessage}
+      isDevelopmentFilesAvailable={race.isDevelopmentFilesAvailable}
+      isDirectoryPickerAvailable={race.isDirectoryPickerAvailable}
+      onDevelopmentGameRequested={race.onDevelopmentGameRequested}
+      onGameFolderRequested={race.onGameFolderRequested}
+      onGameFilesChosen={race.onGameFilesChosen}
+      onRaceStopped={race.onRaceStopped}
+    />
+  )
   return (
     <>
-      <aside className="flex w-80 shrink-0 flex-col gap-4 overflow-y-auto border-r border-slate-700 p-4">
-        <h1 className="text-lg font-bold">LEGO Racers</h1>
-        <RacePanel
-          status={race.status}
-          errorMessage={race.errorMessage}
-          isDevelopmentFilesAvailable={race.isDevelopmentFilesAvailable}
-          onDevelopmentGameRequested={race.onDevelopmentGameRequested}
-          onGameFilesChosen={race.onGameFilesChosen}
-          onRaceStopped={race.onRaceStopped}
-        />
-      </aside>
-      <main className="flex min-w-0 flex-1 items-center justify-center overflow-auto bg-black">
+      {import.meta.env.DEV && (
+        <aside className="flex w-80 shrink-0 flex-col gap-4 overflow-y-auto border-r border-slate-700 p-4">
+          <h1 className="text-lg font-bold">LEGO Racers</h1>
+          {racePanel}
+        </aside>
+      )}
+      {!isGameShown && !import.meta.env.DEV && (
+        <div className="fixed inset-0 z-20 flex flex-col items-center justify-center gap-6 bg-black p-6 text-slate-100">
+          <h1 className="text-3xl font-bold text-amber-400">LEGO Racers</h1>
+          <div className="w-full max-w-md overflow-y-auto">{racePanel}</div>
+        </div>
+      )}
+      <main ref={frameReference} className="relative min-w-0 flex-1 overflow-hidden bg-black">
         <div
-          className="relative shrink-0 overflow-hidden"
-          style={{ width: RACE_STAGE_SIZE.width, height: RACE_STAGE_SIZE.height }}
+          className="absolute top-1/2 left-1/2 overflow-hidden"
+          style={{
+            width: RACE_STAGE_SIZE.width,
+            height: RACE_STAGE_SIZE.height,
+            transform: `translate(-50%, -50%) scale(${String(scale)})`,
+          }}
         >
           {race.status === RaceStatus.MENU && race.gameJam !== null && race.randomTable !== null ? (
             <FrontEndView

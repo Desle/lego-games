@@ -38,6 +38,8 @@ export type RaceController = RaceScreen & {
   // Reads a music file next to LEGO.JAM while the menus show; null otherwise.
   readonly readTune: ((name: string) => Promise<Uint8Array | null>) | null
   readonly onDevelopmentGameRequested: () => void
+  readonly isDirectoryPickerAvailable: boolean
+  readonly onGameFolderRequested: () => void
   readonly onGameFilesChosen: (files: readonly File[]) => void
   // The menus chose a race, a circuit or a time trial: play it through the game session.
   // The menus changed what they keep (the car, the racer, the save); the controller stores it and writes the save.
