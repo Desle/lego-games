@@ -1,5 +1,5 @@
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
-import { Group, Matrix4, Quaternion, Vector3 } from 'three'
+import { Group, Matrix4, Mesh, MeshPhysicalMaterial, Quaternion, Vector3 } from 'three'
 import type { RacerPartDrawingRequest } from './ldraw-racer-drawing.types.ts'
 import { applyPlasticLook } from '../ldraw-car/ldraw-plastic.ts'
 import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
@@ -80,6 +80,22 @@ const getAttachmentMatrix = (
     .multiply(new Matrix4().makeTranslation(-restStart.x, -restStart.y, -restStart.z))
 }
 
+const PRINT_GLOW = 0.45
+
+// A printed face stays readable under a hat's shadow, as the game's picture decals did: the plastic glows a little in its own colour.
+const glowMaterial = (material: unknown) => {
+  if (material instanceof MeshPhysicalMaterial) {
+    material.emissive.copy(material.color).multiplyScalar(PRINT_GLOW)
+  }
+}
+
+const glowPrint = (model: Group) =>
+  model.traverse((child) => {
+    if (!(child instanceof Mesh)) return
+    const materials: unknown[] = Array.isArray(child.material) ? child.material : [child.material]
+    materials.forEach(glowMaterial)
+  })
+
 const getPartText = (plan: MinifigPartPlan): string =>
   `1 ${String(plan.color)} 0 0 0 ${IDENTITY_ROTATION} ${plan.part}.dat`
 
@@ -118,6 +134,7 @@ export const createLDrawDriverDrawing = (
       (model) => {
         if (isDisposed) return
         applyPlasticLook(model)
+        if (plan.part === spec.face?.part) glowPrint(model)
         loadedGroups.push(model)
         const placed = new Group()
         placed.matrixAutoUpdate = false
@@ -129,14 +146,14 @@ export const createLDrawDriverDrawing = (
     )
   )
   const decals = [
-    spec.surfaces.face === null
+    spec.face !== null || spec.surfaces.face === null
       ? null
       : {
           decal: createFaceDecal(spec.surfaces.face, search),
           key: MinifigPartKey.HEAD,
           y: HEAD_ORIGIN_Y,
         },
-    spec.surfaces.torso === null
+    spec.torso !== null || spec.surfaces.torso === null
       ? null
       : {
           decal: createTorsoDecal(spec.surfaces.torso, search),

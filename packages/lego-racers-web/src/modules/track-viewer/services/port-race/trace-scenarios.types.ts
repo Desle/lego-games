@@ -2,6 +2,14 @@ export type TraceScenarioRequest = {
   readonly name: string
   readonly raceFolder: string
   readonly isMirrored?: boolean
+  // 0 is the demonstration: no human, the computer drives racer 0 (race +0x3350).
+  readonly localPlayerCount?: number
+  // Idle frames to run (default 330: the introduction, the countdown and the first seconds of racing).
+  readonly frameCount?: number
+  // The circuit key of the settings (default `c1`); the second passes belong to `c3` to `c5`.
+  readonly circuitName?: string
+  // The drivers (default: those of the race folder's first catalog entry).
+  readonly racerCodes?: readonly string[]
   // Game mode 2: the race has the champion's ghost car.
   readonly isTimeTrial?: boolean
   // The steering sweep of the golden trace (about 475 frames) instead of idling through the countdown.
