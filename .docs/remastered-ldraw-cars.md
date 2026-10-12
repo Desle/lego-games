@@ -45,7 +45,7 @@ The fallback draws the game's faces double-sided in the plastic and also the dec
 
 `s243200` (the windscreen frame, the most used unmapped brick, 19 uses on 13 of the 28 saved cars) is now the 1 x 2 x 2 brick `3245c`: the bounding box is exact, the handle and the leaning front are not (`heightError` 0.6, approximate). `S243201` is a thin angled pane; the windscreen 21 is a solid block, so it stays unmapped.
 
-Wheels: the game's own wheels keep their animation; LDraw wheels were not mapped (the chassis is the game's, and the wheels sit on its axles; the wheels are separate GDB models, not bricks). **Not done.**
+Wheels: the game's own wheels keep their animation; LDraw wheels were not mapped (the chassis is the game's, and the wheels sit on its axles; the wheels are separate GDB models, not bricks). Done since: see [remastered-ldraw-racers.md](remastered-ldraw-racers.md) (wheels and drivers).
 
 Where the LDraw car is drawn: the race, the build-a-car screen (as bricks are placed; the placeholder is the game's mesh in the same plastic until the parts arrive), and the Racer Select showcase, all through `showBuiltCarDrawing` (`track-viewer/services/built-car-drawing`), which asks `getBuiltCarDrawing` and does nothing without an extension. Computer racers and champions are the game's model files (`*cm` GDB models from `CHAMPS.CCB`), not brick lists, so they are not touched: only the cars built from bricks (the player's own and the `DEFAULT.LRS` racers) have designs.
 
