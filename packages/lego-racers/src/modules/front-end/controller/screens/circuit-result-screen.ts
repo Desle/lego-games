@@ -6,7 +6,8 @@ import type {
   ScreenRuntime,
 } from '../../types/front-end-screen.types.ts'
 import { FrontEndScreen } from '../../types/front-end-screen/front-end-screen.ts'
-import { createResult, getPageWidgets, MenuSound } from '../screen-helpers/screen-helpers.ts'
+import { getFullScreenCinemaWidgets } from './cinema-screens.ts'
+import { createResult, MenuSound } from '../screen-helpers/screen-helpers.ts'
 
 const ROW_LEFT = 160
 const ROW_RIGHT = 480
@@ -16,11 +17,11 @@ const PLAYER_COLOR = 0xff00ff00
 const OTHER_COLOR = 0xffffffff
 const ROW_STYLE = 'banner'
 
-// The screens a circuit ends on (settings +0x1c = 0x16..0x19, CircuitRunner_PlayCircuit 0x0041ed80): the page of the
-// description (its award cinema is not ported) and the final standings the points record holds. Any key leaves for
+// The screens a circuit ends on (settings +0x1c = 0x16..0x19, CircuitRunner_PlayCircuit 0x0041ed80): the award
+// cinema (full screen) and over it the final standings the points record holds. Any key leaves for
 // the main menu, where the front end starts after a session.
 const getWidgets = (runtime: ScreenRuntime, screenId: number): readonly FrontEndWidget[] => [
-  ...getPageWidgets(runtime, screenId),
+  ...getFullScreenCinemaWidgets(runtime, screenId),
   ...runtime.environment.standingRows.map((row, index): FrontEndWidget => ({
     kind: 'placed_text',
     text: `${String(row.rank + 1)}. ${row.racerName.toUpperCase()}  ${String(row.points)}`,

@@ -1,6 +1,8 @@
 export { parseCinemaDatabase } from './controller/parse-cinema-database/parse-cinema-database.ts'
 export {
   getActiveCinemaActions,
+  getCinemaActionMilliseconds,
+  getIsOnTimeline,
   getActiveCinemaVertexEffects,
   getActiveCinemaDummies,
   getCinemaFrame,

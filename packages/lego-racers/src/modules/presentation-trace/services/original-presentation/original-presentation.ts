@@ -142,6 +142,7 @@ export const readOriginalFrontEnd = (scenario: FrontEndScenario): Promise<Origin
     recordFrames: scenario.recordFrames,
     isRenderRecorded: scenario.isRenderRecorded,
     frames: scenario.frames.map((frame) => ({ dt: frame.milliseconds, keys: frame.scanCodes })),
+    pushScreens: scenario.pushScreens ?? [],
   })
 
 const readTraceScript = async (

@@ -40,7 +40,7 @@ import {
 import { advanceRacePreviewEffects } from '../race-preview/race-preview-effects.ts'
 import { advanceRacePreviewEmitters } from '../race-preview/race-preview-emitters.ts'
 import { advanceRacePreviewClock, createRacePreviewClock } from '../race-preview/race-preview.ts'
-import { getRacePreviewCinemaName } from '../screens/race-selection-screens.ts'
+import { getCinemaScreenSource, getScreenCinema } from '../screens/cinema-screens.ts'
 import { getFrontEndMusicIndex } from '../front-end-music/front-end-music.ts'
 import { getWidgetCommands } from '../widget-commands/widget-commands.ts'
 
@@ -277,18 +277,21 @@ const getStateWithPreviewEmitters = (
 ): FrontEndState => {
   const runtime = getRuntime(after, resources, environment)
   const screenId = after.screens.at(-1)?.screenId
-  const cinemaName =
-    runtime === null || screenId === undefined ? null : getRacePreviewCinemaName(runtime, screenId)
+  const screenCinema =
+    runtime === null || screenId === undefined ? null : getScreenCinema(runtime, screenId)
   if (
-    cinemaName === null &&
+    screenCinema === null &&
     before.racePreviewEmitters === null &&
     before.racePreviewEffects === null
   )
     return after
-  const preview = resources.getRacePreview()
+  if (screenCinema === null) {
+    return { ...after, racePreviewEmitters: null, racePreviewEffects: null }
+  }
+  const preview = resources.getCinemaFiles(screenCinema.source)
   const cinema =
     preview.cinemas.cinemas.find(
-      (candidate) => candidate.name.toLowerCase() === cinemaName?.toLowerCase()
+      (candidate) => candidate.name.toLowerCase() === screenCinema.cinemaName.toLowerCase()
     ) ?? null
   const isRestartedNow =
     isRestarted || after.racePreview.cycleCount !== before.racePreview.cycleCount
@@ -318,6 +321,19 @@ const getStateWithPreviewEmitters = (
   }
 }
 
+// A full-screen cinema that has run its length is done (Cinema_Update 0x00466d90 sets its finished flag): the screen takes
+// the way out a key would give it.
+const getIsCinemaScreenEnded = (state: FrontEndState, resources: FrontEndResources): boolean => {
+  const screenId = state.screens.at(-1)?.screenId
+  const source = screenId === undefined ? null : getCinemaScreenSource(screenId)
+  const cinema = source === null ? undefined : resources.getCinemaFiles(source).cinemas.cinemas[0]
+  return (
+    cinema !== undefined &&
+    cinema.framesPerSecond !== 0 &&
+    state.racePreview.cinemaMilliseconds >= (cinema.lengthFrames * 1000) / cinema.framesPerSecond
+  )
+}
+
 // One pass of the loop of 0x0042d510: the time advances and the input, if any, reaches the current screen, which
 // answers with the next screen, the race or the exit (0x004812c0, 0x004850a0).
 export const stepFrontEnd = (
@@ -342,7 +358,12 @@ export const stepFrontEnd = (
   const pending = getPendingShowcaseNavigation(advanced, resources)
   const stepped =
     pending === null
-      ? getInputStep(advanced, resources, environment, input)
+      ? getInputStep(
+          advanced,
+          resources,
+          environment,
+          input ?? (getIsCinemaScreenEnded(advanced, resources) ? 'accept' : null)
+        )
       : applyNavigation(advanced, pending, [], resources, environment)
   if (
     stepped.state.outcome === 'running' &&

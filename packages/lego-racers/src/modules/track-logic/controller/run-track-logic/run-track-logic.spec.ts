@@ -15,7 +15,12 @@ import {
 import { TrackEventKind, TrackEventState } from '../../types/track-event-state/track-event-state.ts'
 import type { TrackEvent, TrackLogicContext } from '../../types/track-logic.types.ts'
 import { createTrackLogic } from '../create-track-logic/create-track-logic.ts'
-import { runTrackLogic, STATIC_TRACK_WORLD, updateTrackEvents } from './run-track-logic.ts'
+import {
+  runTrackLogic,
+  STATIC_TRACK_WORLD,
+  updateTrackEvents,
+  updateTrackLogicFrame,
+} from './run-track-logic.ts'
 
 const CONTEXT: TrackLogicContext = {
   arithmetic: createFloatArithmetic(FpuPrecision.SINGLE),
@@ -306,5 +311,39 @@ describe('the 42 event (0x0045e2a0)', () => {
       name: 'night',
       durationMilliseconds: 2500,
     })
+  })
+})
+
+describe('the signals of a projectile hitting a surface (0x0041f730)', () => {
+  const POSITION: readonly [number, number, number] = [-402, 508, 100]
+  const bytes = [
+    ...section(0x4b, [block(7, [...signal(0x34, 20), 0x49, ...integerTokens([100])])]),
+    ...section(0x42, [block(20, [])]),
+  ]
+
+  it('starts and stops the signal of the hit surface in the frame that carries it', () => {
+    // Arrange
+    const logic = createLogic(bytes)
+
+    // Act
+    const step = updateTrackLogicFrame(logic, CONTEXT, 33, 1, [
+      { identifier: 7, position: POSITION },
+    ])
+
+    // Assert
+    const timed = getEvent(step.state.events[TrackEventKind.KIND_4B])
+    expect(timed.state).toBe(TrackEventState.RUNNING)
+  })
+
+  it('leaves the events alone when no projectile hit a surface', () => {
+    // Arrange
+    const logic = createLogic(bytes)
+
+    // Act
+    const step = updateTrackLogicFrame(logic, CONTEXT, 33, 1)
+
+    // Assert
+    const timed = getEvent(step.state.events[TrackEventKind.KIND_4B])
+    expect(timed.state).not.toBe(TrackEventState.RUNNING)
   })
 })

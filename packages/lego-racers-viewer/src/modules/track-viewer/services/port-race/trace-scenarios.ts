@@ -36,7 +36,7 @@ const getPresentationScenario = (
     powerUpGrants,
   })
 
-const WARP_ACCELERATE_FRAME = 175
+const ACCELERATE_FRAME = 175
 const USE_FRAME_COUNT = 3
 
 // Idling, the steering sweep, or a drive with a power-up: accelerate from frame 175 and press the use key from the use frame.
@@ -47,7 +47,7 @@ const getRequestFrames = (request: TraceScenarioRequest): readonly TraceFrameInp
       milliseconds: 33,
       scanCodes:
         holdBindings(1, [
-          ...(frame >= WARP_ACCELERATE_FRAME ? ['accelerate' as const] : []),
+          ...(frame >= ACCELERATE_FRAME ? ['accelerate' as const] : []),
           ...(frame >= useFrame && frame < useFrame + USE_FRAME_COUNT
             ? ['use_power_up' as const]
             : []),

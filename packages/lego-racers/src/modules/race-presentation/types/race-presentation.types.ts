@@ -18,7 +18,25 @@ import type { VehicleSkids } from '../../racer/index.ts'
 import type { DecalLimits, DecalPlacement } from '../../decal/index.ts'
 import type { ColourShift } from '../../racer/index.ts'
 import type { Matrix3, Vector3 } from '../../simulation-math/index.ts'
-import type { RacePhaseValue } from '../../race/index.ts'
+import type { RacePhaseValue, RaceState } from '../../race/index.ts'
+import type { GhostRunSelection } from '../../ghost/index.ts'
+
+// A ghost car of a time trial (FUN_00422960): the champion's, drawn from GHOST.WDB, or the session's best run, drawn with
+// the player's own car. All three parts take the run's one orientation; the driver sits at the seat point carried by it.
+export type GhostCar = {
+  readonly kind: GhostRunSelection
+  readonly position: Vector3
+  readonly rotation: Matrix3
+  readonly driverPosition: Vector3
+  // The integer FUN_00422960 stores as the wheels' animation rate (+0xb8).
+  readonly speed: number
+}
+
+export type GhostCarsStep = {
+  // The race with the ghost's playback flags moved on (a run whose last sample has passed stops being drawn).
+  readonly raceState: RaceState
+  readonly cars: readonly GhostCar[]
+}
 
 // Everything the screen and the speakers show that the simulation does not keep: the player's camera and HUD, the
 // turbo level the camera reads, and the previous frame's phase and bindings for edge detection.
@@ -36,6 +54,8 @@ export type RacePresentation = {
   readonly isCameraSwitchEnabled: boolean
   readonly previousPhase: RacePhaseValue
   readonly isChangeCameraHeld: boolean
+  // The last frame drew the warp (0x0045d940 sets the camera's snap flag, 0x0043a3e0, on every such draw).
+  readonly isWarpDrawn: boolean
   readonly isPlayerPowerSliding: boolean
   // Racer +0xd24..+0xd30 and the loops' playing flags (0x00437d40), one per racer.
   readonly engineSounds: readonly EngineSoundState[]
@@ -143,6 +163,12 @@ export type EffectView = {
   readonly kind: string
   readonly position: Vector3
   readonly heading: Vector3 | null
+  // The missile figure's frame (0x00456db0, 0x004568f0) and its clip: the rocket's number (0 to 2) is the clip of its
+  // launch animation, which has played `launchMilliseconds` while `isLaunching`. Null, 0, false and 0 for the others.
+  readonly rotation: Matrix3 | null
+  readonly rocketIndex: number
+  readonly isLaunching: boolean
+  readonly launchMilliseconds: number
 }
 
 // An explosion pool member that is growing or fading: where, and the frame scale the engine gives it (0x00410f10).
@@ -176,7 +202,32 @@ export type DecalView = {
   readonly alpha: number | null
 }
 
+// A shield or turbo effect hanging on a racer: its kind and level, the racer, its state (2, 3 or 4) with the milliseconds
+// left in it, and the milliseconds its figures' animation has run in that state.
+export type AttachmentView = {
+  readonly kind: string
+  readonly level: number
+  readonly racerIndex: number
+  readonly state: AttachmentState
+  readonly timerMilliseconds: number
+  readonly elapsedMilliseconds: number
+  // The figure's scale (+0x58): 1, except the warp portal's, which follows the fade table (0x0045dbe0).
+  readonly scale: number
+}
+
+export type AttachmentState = 'starting' | 'active' | 'ending'
+
+// A camera-facing picture an effect draws (the cannon ball is one): its material, centre and size in the world.
+export type SpriteView = {
+  readonly materialName: string
+  readonly position: Vector3
+  readonly width: number
+  readonly height: number
+}
+
 export type EffectViews = {
+  readonly sprites: readonly SpriteView[]
+  readonly attachments: readonly AttachmentView[]
   readonly bricks: readonly BrickView[]
   readonly spinAngle: number
   readonly effects: readonly EffectView[]

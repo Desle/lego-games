@@ -14,6 +14,8 @@ import type {
   RaceRacerDefinition,
 } from '@lego-games/lego-racers/race'
 import {
+  getFigureAnimations,
+  getRacerFilePath,
   loadBuiltCarScene,
   getRacerModelFiles,
   loadBuiltDriverScene,
@@ -30,6 +32,7 @@ import {
   loadSceneOnto,
 } from '@lego-games/lego-racers/scene'
 import { parseSky } from '@lego-games/lego-racers/sky'
+import { parseModel } from '@lego-games/lego-racers/model'
 import { readWorld } from '@lego-games/lego-racers/world'
 import { getString, parseStringTable } from '@lego-games/lego-racers/string-table'
 import type { ModelScene, Scene } from '@lego-games/lego-racers/scene'
@@ -49,6 +52,9 @@ import type {
 const DEFAULT_RACE_FOLDER = 'RACEC0R0'
 // The warp's tunnel world (LEGORacers.exe 0x0045d940 draws its `dbricks` and `dtube`).
 export const WARP_WORLD_PATH = `${COMMON_DIRECTORY}\\TURBO3.WDB`
+// The champion ghost's car (Ghost_Initialize 0x00422420 loads "ghost" from GAMEDATA\COMMON): `ghost2` (the wheels), `ghostb2` (the
+// body) and `ghostdr` (the driver).
+export const GHOST_WORLD_PATH = `${COMMON_DIRECTORY}\\GHOST.WDB`
 const ENGLISH_DIRECTORY = `${COMMON_DIRECTORY}\\ENGLISH`
 const SEPARATOR = '\\'
 // The image database flag for a colour key (IMAGE_KEYWORD_2B_FLAG, 0x20).
@@ -99,18 +105,68 @@ const getRacerModels = (
 }
 
 // The effect models name materials the power-up libraries hold (GAMEDATA\COMMON POWERUP, GRAPPLE, BARREL, DBRICKS).
-const EFFECT_TEXTURE_LIBRARIES = ['POWERUP', 'BARREL', 'DBRICKS', 'DTUBE']
-const EFFECT_MATERIAL_LIBRARIES = ['POWERUP', 'GRAPPLE', 'BARREL', 'DBRICKS', 'DTUBE']
+const EFFECT_TEXTURE_LIBRARIES = [
+  'DTURBO0',
+  'DTURBO1',
+  'DTURBO2',
+  'POWERUP',
+  'CURSE',
+  'BARREL',
+  'WARPHOLE',
+  'CGREEN',
+  'DBRICKS',
+  'DTUBE',
+]
+const EFFECT_MATERIAL_LIBRARIES = [
+  'DTURBO0',
+  'DTURBO1',
+  'DTURBO2',
+  'POWERUP',
+  'GRAPPLE',
+  'WARPHOLE',
+  'CURSE',
+  'BARREL',
+  'CGREEN',
+  'DBRICKS',
+  'DTUBE',
+]
 
-const loadEffectModel = (archive: JamArchive, name: string, isSkeletal: boolean): ModelScene =>
+const loadEffectModel = (
+  archive: JamArchive,
+  name: string,
+  isSkeletal: boolean,
+  skeletonName: string = name
+): ModelScene =>
   loadModelScene(archive, {
     directory: RACER_FILE_DIRECTORY,
     textureNames: EFFECT_TEXTURE_LIBRARIES,
     materialNames: EFFECT_MATERIAL_LIBRARIES,
     meshNames: [name],
-    skeletonName: isSkeletal ? name : null,
-    animationName: isSkeletal ? name : null,
+    skeletonName: isSkeletal ? skeletonName : null,
+    animationName: isSkeletal ? skeletonName : null,
   })
+
+// POWERUP.WDB lists a turbo's instances TurboL0..2 (dt0burn, dt1burn, dt2cburn) and turb0f1, turb0f2 .. turb2f2.
+const TURBO_MODEL_NAMES = [
+  [
+    ['DT0BURN', 'TurboL0'],
+    ['DT0FLA1', 'turb0f1'],
+    ['DT0FLA2', 'turb0f2'],
+  ],
+  [
+    ['DT1BURN', 'TurboL1'],
+    ['DT1FLA1', 'turb1f1'],
+    ['DT1FLA2', 'turb1f2'],
+  ],
+  [
+    ['DT2CBURN', 'TurboL2'],
+    ['DT2CFLA1', 'turb2f1'],
+    ['DT2CFLA2', 'turb2f2'],
+  ],
+]
+
+// POWERUP.WDB lists the four shields (instances shield0..3) on one skeleton and animation, the one of SHEOUT0.
+const SHIELD_MODEL_NAMES = ['SHEOUT0', 'SHEOUT1', 'SHEOUT2', 'SHEOUT3']
 
 // LEGORacers.exe 0x00458a80 looks up the materials pbrickP, pbrickM, pbrickS and pbrickT; 0x0045ba90 gives a brick of
 // kind 1 to 4 the models P, S, T and M: red, blue, green and yellow. The brick mesh itself names the yellow ptrailM.
@@ -156,12 +212,69 @@ const getWarpTextureScroll = (archive: JamArchive): readonly [number, number] =>
   return [values?.[0] ?? 0, values?.[1] ?? 0]
 }
 
+// The scroll per second of an instance's texture: keyword 0x3f of the instance in POWERUP.WDB (warpprt, shield0,
+// turb0f1 ...), which the original adds to the texture coordinates while the figure lives.
+const getInstanceTextureScroll = (
+  archive: JamArchive,
+  instanceName: string
+): readonly [number, number] => {
+  const world = readWorld(archive.readFile(`${COMMON_DIRECTORY}\\POWERUP.WDB`))
+  const values = [...world.meshInstances, ...world.skeletonInstances].find(
+    (instance) => instance.name === instanceName
+  )?.keyword3fValues
+  return [values?.[0] ?? 0, values?.[1] ?? 0]
+}
+
+const getEffectMaterials = (archive: JamArchive): Scene =>
+  loadModelScene(archive, {
+    directory: RACER_FILE_DIRECTORY,
+    textureNames: EFFECT_TEXTURE_LIBRARIES,
+    materialNames: EFFECT_MATERIAL_LIBRARIES,
+    meshNames: [],
+    skeletonName: null,
+    animationName: null,
+  }).scene
+
+// The ghost car's parts are drawn at the scale of their model (GDB keyword 0x33), as a racer's car is.
+const getGhostModels = (
+  archive: JamArchive,
+  scene: Scene,
+  isTimeTrial: boolean
+): Pick<RaceAssets, 'ghostScene' | 'ghostScales'> => {
+  if (!isTimeTrial) return { ghostScene: null, ghostScales: Object.freeze({}) }
+  const ghostScene = loadSceneOnto(archive, scene, [GHOST_WORLD_PATH])
+  const scales = ghostScene.instances
+    .filter((instance) => instance.worldPath === GHOST_WORLD_PATH)
+    .map((instance) => {
+      const mesh = ghostScene.meshes[instance.levels[0]?.meshIndex ?? -1]
+      return [
+        instance.name,
+        mesh === undefined ? 1 : parseModel(archive.readFile(mesh.path)).scale,
+      ] as const
+    })
+  return { ghostScene, ghostScales: Object.freeze(Object.fromEntries(scales)) }
+}
+
 const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
   Object.freeze({
+    materials: getEffectMaterials(archive),
     rocket: loadEffectModel(archive, 'DMISSILE', true),
+    rocketAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('DMISSILE', 'ADB'))),
     barrel: loadEffectModel(archive, 'BARREL', false),
     magnet: loadEffectModel(archive, 'MAGNET04', true),
     spikedExplosion: loadEffectModel(archive, 'SPIKEXP', false),
+    warpPortal: loadEffectModel(archive, 'WARPHOLE', false),
+    warpPortalScroll: getInstanceTextureScroll(archive, 'warpprt'),
+    shieldScroll: getInstanceTextureScroll(archive, 'shield0'),
+    turbos: TURBO_MODEL_NAMES.map((names) =>
+      names.map(([name, instanceName]) => ({
+        model: loadEffectModel(archive, name ?? '', true),
+        animations: getFigureAnimations(archive.readFile(getRacerFilePath(name ?? '', 'ADB'))),
+        scroll: getInstanceTextureScroll(archive, instanceName ?? ''),
+      }))
+    ),
+    shields: SHIELD_MODEL_NAMES.map((name) => loadEffectModel(archive, name, true, 'SHEOUT0')),
+    shieldAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('SHEOUT0', 'ADB'))),
     powerUpBricks: Object.freeze(
       Object.fromEntries(
         Object.entries(BRICK_MATERIALS).map(([kind, materialName]) => [
@@ -288,6 +401,7 @@ export const loadRaceAssets = (
       definition.racers.map((racer) => getRacerModels(archive, racer, loadModel))
     ),
     effectModels: getEffectModels(archive, scene),
+    ...getGhostModels(archive, scene, definition.ghost !== null),
     getString: (stringId: number) => getString(table, stringId) ?? '',
     imageNames: Object.freeze(imageDatabase.images.map((image) => image.name.toUpperCase())),
     hudFonts: loadHudFonts(archive),

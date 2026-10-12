@@ -30,3 +30,11 @@ export type BillboardCamera = {
   readonly position: Vector3
   readonly axes: BillboardAxes
 }
+
+// A sprite: a material, the world position of its centre and its size.
+export type SpriteRequest = {
+  readonly materialName: string
+  readonly position: Vector3
+  readonly width: number
+  readonly height: number
+}

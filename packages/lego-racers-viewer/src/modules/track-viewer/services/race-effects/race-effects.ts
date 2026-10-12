@@ -1,10 +1,16 @@
-import type { EffectViews, EffectView } from '@lego-games/lego-racers/race-presentation'
+import type { EffectViews, EffectView, RacerPose } from '@lego-games/lego-racers/race-presentation'
+import type { Matrix3 } from '@lego-games/lego-racers/simulation-math'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import type { Scene as ThreeScene } from 'three'
 import { Matrix4 } from 'three'
+import type { Mesh, MeshBasicMaterial } from 'three'
 import { BRICK_LEVEL_DISTANCE } from '@lego-games/lego-racers/race-presentation'
+import type { FigureAnimation } from '@lego-games/lego-racers/racer'
 import type { Vector3Like } from '../race-viewport/race-viewport.types.ts'
 import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
+import { getEffectFigureState } from '@lego-games/lego-racers/race-presentation'
+import { getReversedModel } from '../model-object/reverse-faces.ts'
+import { getFrameMatrix, getUprightRotation } from '../frame-matrix/frame-matrix.ts'
 import { createModelObject } from '../model-object/model-object.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
 import type { EffectModels } from '../race-assets/race-assets.types.ts'
@@ -43,6 +49,60 @@ const getHeadingMatrix = (
     0,
     1
   )
+}
+
+// 0x0045c160: the shield sits two units above the racer's position.
+const SHIELD_HEIGHT = 2
+
+// 0x00456db0: rocket k holds state 2 for (frames - 1) / rate milliseconds of clip k.
+const getRocketLaunchMilliseconds = (
+  animations: readonly FigureAnimation[],
+  rocketIndex: number
+): number => {
+  const animation = animations[rocketIndex]
+  return animation === undefined ? 0 : Math.trunc((animation.frameCount - 1) / animation.rate)
+}
+
+// 0x0045cf90: a turbo's figures sit 2 units behind the display figure's position and 3 above it, in its frame.
+const TURBO_BEHIND = 2
+const TURBO_ABOVE = 3
+const getTurboPosition = (pose: RacerPose): Vector3Like => {
+  const [forwardX, forwardY, forwardZ, , , , upX, upY, upZ] = pose.rotation
+  return {
+    x: pose.position.x - forwardX * TURBO_BEHIND + upX * TURBO_ABOVE,
+    y: pose.position.y - forwardY * TURBO_BEHIND + upY * TURBO_ABOVE,
+    z: pose.position.z - forwardZ * TURBO_BEHIND + upZ * TURBO_ABOVE,
+  }
+}
+
+const MILLISECONDS_PER_SECOND = 1000
+// Hypothesis, measured against the render trace (turbo levels 0 to 2): the turbo's figures have advanced one frame more
+// than the effect's timer shows, and their texture scroll runs about two frames behind it.
+const TURBO_ANIMATION_LEAD_MILLISECONDS = 33
+const TURBO_SCROLL_LAG_MILLISECONDS = 71
+const setTextureScroll = (
+  copy: ModelObject,
+  scroll: readonly [number, number],
+  elapsedMilliseconds: number
+) => {
+  const [scrollU, scrollV] = scroll
+  copy.group.traverse((object) => {
+    if (object.type !== 'Mesh') return
+    const { map } = (object as Mesh).material as MeshBasicMaterial
+    map?.offset.set(
+      getWrappedFraction((scrollU * elapsedMilliseconds) / MILLISECONDS_PER_SECOND),
+      getWrappedFraction((scrollV * elapsedMilliseconds) / MILLISECONDS_PER_SECOND)
+    )
+  })
+}
+// The scroll the original adds stays below 1 (it wraps).
+const getWrappedFraction = (value: number): number => value - Math.floor(value)
+
+// 0x0045cf90 sets the figures' orientation (slot 0x40, 0x00410900) from the display figure's second row and third row: the
+// first row of the turbo's frame is the car's side, the second its backwards axis.
+const getTurboRotation = (pose: RacerPose): Matrix3 => {
+  const [forwardX, forwardY, forwardZ, sideX, sideY, sideZ, upX, upY, upZ] = pose.rotation
+  return [sideX, sideY, sideZ, -forwardX, -forwardY, -forwardZ, upX, upY, upZ]
 }
 
 // A growing pool of one model: `use` shows the next free copy, `reset` hides them all.
@@ -87,9 +147,23 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
     spikedExplosion: createPool(scene, models.spikedExplosion),
     enhancementBrick: createPool(scene, models.enhancementBrick),
   }
+  const portalPool = createPool(scene, models.warpPortal)
+  const shieldPools = models.shields.map((model) => createPool(scene, model))
+  const shieldBackPools = models.shields.map((model) => createPool(scene, getReversedModel(model)))
+  const turboPools = models.turbos.map((figures) =>
+    figures.map(({ model }) => createPool(scene, model))
+  )
   return Object.freeze({
-    update: (views: EffectViews, eye: Vector3Like) => {
-      for (const pool of [...Object.values(pools), ...brickPools.values()]) pool.reset()
+    update: (views: EffectViews, eye: Vector3Like, poses: readonly RacerPose[]) => {
+      for (const pool of [
+        ...Object.values(pools),
+        ...brickPools.values(),
+        ...shieldPools,
+        ...shieldBackPools,
+        ...turboPools.flat(),
+        portalPool,
+      ])
+        pool.reset()
       for (const view of views.effects) {
         const pool =
           view.kind === 'rocket'
@@ -100,7 +174,22 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
                 ? pools.magnet
                 : null
         if (pool === null) continue
-        pool.use().group.matrix.copy(getHeadingMatrix(view.heading, view.position))
+        const copy = pool.use()
+        copy.group.matrix.copy(getHeadingMatrix(view.heading, view.position))
+        if (view.kind === 'rocket' && view.rotation !== null) {
+          copy.group.matrix.copy(getFrameMatrix(view.rotation, view.position))
+        }
+        if (view.kind === 'rocket') {
+          copy.object.setAnimationState(
+            getEffectFigureState(models.rocketAnimations, {
+              animationId: view.rocketIndex,
+              isLooping: false,
+              elapsedMilliseconds: view.isLaunching
+                ? view.launchMilliseconds
+                : getRocketLaunchMilliseconds(models.rocketAnimations, view.rocketIndex) + 1000,
+            })
+          )
+        }
       }
       for (const brick of views.bricks) {
         if (!getIsWithinLevelDistance(brick.position, eye, BRICK_LEVEL_DISTANCE)) continue
@@ -112,6 +201,72 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
           .multiply(new Matrix4().makeRotationZ(views.spinAngle))
           .multiply(new Matrix4().makeScale(brick.scale, brick.scale, brick.scale))
       }
+      for (const attachment of views.attachments) {
+        const pose = poses.find((candidate) => candidate.racerIndex === attachment.racerIndex)
+        if (pose === undefined || attachment.kind !== 'shield') continue
+        // The shield figure is double-sided: its back faces are drawn, then its front faces.
+        for (const pool of [shieldBackPools[attachment.level], shieldPools[attachment.level]]) {
+          if (pool === undefined) continue
+          const copy = pool.use()
+          copy.group.matrix.copy(
+            getFrameMatrix(
+              getUprightRotation({ x: pose.rotation[0], y: pose.rotation[1], z: pose.rotation[2] }),
+              { x: pose.position.x, y: pose.position.y, z: pose.position.z + SHIELD_HEIGHT }
+            )
+          )
+          setTextureScroll(copy, models.shieldScroll, attachment.elapsedMilliseconds)
+          copy.object.setAnimationState(
+            getEffectFigureState(models.shieldAnimations, {
+              animationId: 0,
+              isLooping: true,
+              elapsedMilliseconds: attachment.elapsedMilliseconds,
+            })
+          )
+        }
+      }
+      for (const attachment of views.attachments) {
+        if (attachment.kind !== 'warp') continue
+        const pose = poses.find((candidate) => candidate.racerIndex === attachment.racerIndex)
+        if (pose === undefined) continue
+        const portal = portalPool.use()
+        portal.group.matrix
+          .copy(getFrameMatrix(pose.rotation, pose.position))
+          .multiply(new Matrix4().makeScale(attachment.scale, attachment.scale, attachment.scale))
+        setTextureScroll(portal, models.warpPortalScroll, attachment.elapsedMilliseconds)
+      }
+      for (const attachment of views.attachments) {
+        const pose = poses.find((candidate) => candidate.racerIndex === attachment.racerIndex)
+        const figures = turboPools[attachment.level]
+        const figureModels = models.turbos[attachment.level]
+        if (pose === undefined || figures === undefined || figureModels === undefined) continue
+        if (attachment.kind !== 'turbo') continue
+        figures.forEach((pool, figureIndex) => {
+          const isFlame = figureIndex > 0
+          // 0x0045d150: the flames are drawn with alpha 0 until the last 50 ms of the starting state.
+          if (isFlame && attachment.state === 'starting' && attachment.timerMilliseconds > 50)
+            return
+          const copy = pool.use()
+          copy.group.matrix.copy(getFrameMatrix(getTurboRotation(pose), getTurboPosition(pose)))
+          const animations = figureModels[figureIndex]?.animations
+          setTextureScroll(
+            copy,
+            figureModels[figureIndex]?.scroll ?? [0, 0],
+            attachment.elapsedMilliseconds - TURBO_SCROLL_LAG_MILLISECONDS
+          )
+          if (animations !== undefined) {
+            const isStarting = attachment.state === 'starting'
+            copy.object.setAnimationState(
+              getEffectFigureState(animations, {
+                animationId: attachment.state === 'ending' ? 2 : isStarting ? 0 : 1,
+                isLooping: true,
+                elapsedMilliseconds: isStarting
+                  ? 0
+                  : attachment.elapsedMilliseconds + TURBO_ANIMATION_LEAD_MILLISECONDS,
+              })
+            )
+          }
+        })
+      }
       for (const explosion of views.explosions) {
         if (!explosion.isSpiked) continue
         const copy = pools.spikedExplosion.use()
@@ -121,7 +276,15 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
       }
     },
     dispose: () => {
-      for (const pool of [...Object.values(pools), ...brickPools.values()]) pool.dispose()
+      for (const pool of [
+        ...Object.values(pools),
+        ...brickPools.values(),
+        ...shieldPools,
+        ...shieldBackPools,
+        ...turboPools.flat(),
+        portalPool,
+      ])
+        pool.dispose()
     },
   })
 }

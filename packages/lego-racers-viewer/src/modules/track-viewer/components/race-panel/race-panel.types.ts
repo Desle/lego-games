@@ -5,6 +5,8 @@ export type RacePanelProps = {
   readonly errorMessage: string | null
   readonly isDevelopmentFilesAvailable: boolean
   readonly onDevelopmentGameRequested: () => void
+  readonly isDirectoryPickerAvailable: boolean
+  readonly onGameFolderRequested: () => void
   readonly onGameFilesChosen: (files: readonly File[]) => void
   readonly onRaceStopped: () => void
 }

@@ -4,19 +4,24 @@ import {
   getOilSlickPlacement,
   OIL_SLICK_DECAL_LIMITS,
 } from '../../../decal/index.ts'
+
 import { BrickState, EffectState, PowerUpEffectKind } from '../../../power-ups/index.ts'
 import type { PowerUpEffect } from '../../../power-ups/index.ts'
 import { BallisticFlightState, ExplosionState } from '../../../projectiles/index.ts'
 import type { EffectMotion, ExplosionPool } from '../../../projectiles/index.ts'
+import { getWarpFadeScale } from '../../../racer/index.ts'
 import type { RaceState } from '../../../race/index.ts'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
 import type {
+  AttachmentState,
+  AttachmentView,
   BrickView,
   DecalView,
   DrawnBrick,
   EffectView,
   EffectViews,
   ExplosionView,
+  SpriteView,
 } from '../../types/race-presentation.types.ts'
 
 // The states in which an effect has a body to draw: after the launch and before its pool takes it back.
@@ -53,21 +58,32 @@ const getBrickViews = (
 
 const getMotionView = (effect: PowerUpEffect, motion: EffectMotion | null): EffectView | null => {
   if (motion === null) return null
+  const base = {
+    kind: effect.kind,
+    rotation: null,
+    rocketIndex: 0,
+    isLaunching: false,
+    launchMilliseconds: 0,
+  }
   switch (motion.kind) {
     case 'ballistic':
       return motion.flight.state === BallisticFlightState.IDLE
         ? null
-        : { kind: effect.kind, position: motion.flight.framePosition, heading: null }
+        : { ...base, position: motion.flight.framePosition, heading: null }
     case 'rocket':
       return {
-        kind: effect.kind,
+        ...base,
         position: motion.homing?.flight.framePosition ?? motion.framePosition,
         heading: motion.homing?.heading ?? null,
+        rotation: motion.frameRotation,
+        rocketIndex: motion.rocketIndex,
+        isLaunching: motion.homing === null,
+        launchMilliseconds: motion.launchElapsedMilliseconds,
       }
     case 'magnet':
-      return { kind: effect.kind, position: motion.position, heading: null }
+      return { ...base, position: motion.position, heading: null }
     case 'grapple':
-      return { kind: effect.kind, position: motion.hook.flight.framePosition, heading: null }
+      return { ...base, position: motion.hook.flight.framePosition, heading: null }
     case 'wand':
     case 'hazard':
       return null
@@ -141,6 +157,98 @@ const getScarDecalViews = (pool: ExplosionPool): readonly DecalView[] =>
     ]
   })
 
+// 0x0045bd30: a shield of level 0..3 lasts this many milliseconds; 0x0045c2a0 gives it 1000 more while it ends.
+const SHIELD_MILLISECONDS: readonly number[] = [4000, 6000, 8000, 10000]
+const SHIELD_ENDING_MILLISECONDS = 1000
+// 0x0045c8f0 starts a turbo for 400 ms; 0x0045d200 gives it 1000, 1500 or 5000 and then 700 to end.
+const TURBO_STARTING_MILLISECONDS = 400
+const TURBO_MILLISECONDS: readonly number[] = [1000, 1500, 5000]
+const TURBO_ENDING_MILLISECONDS = 700
+// 0x0045d560: the warp's first phase lasts 500 ms.
+const WARP_STARTING_MILLISECONDS = 500
+
+const getAttachmentState = (state: PowerUpEffect['state']): AttachmentState | null => {
+  switch (state) {
+    case EffectState.STARTING:
+      return 'starting'
+    case EffectState.ACTIVE:
+      return 'active'
+    case EffectState.ENDING:
+      return 'ending'
+    default:
+      return null
+  }
+}
+
+const getAttachmentElapsed = (effect: PowerUpEffect, state: AttachmentState): number => {
+  if (effect.kind === PowerUpEffectKind.SHIELD) {
+    const total = SHIELD_MILLISECONDS[effect.level] ?? 0
+    return state === 'ending'
+      ? total + SHIELD_ENDING_MILLISECONDS - effect.timerMilliseconds
+      : total - effect.timerMilliseconds
+  }
+  if (state === 'starting') return TURBO_STARTING_MILLISECONDS - effect.timerMilliseconds
+  if (state === 'ending') return TURBO_ENDING_MILLISECONDS - effect.timerMilliseconds
+  return (TURBO_MILLISECONDS[effect.level] ?? 0) - effect.timerMilliseconds
+}
+
+const getAttachmentView = (raceState: RaceState, effect: PowerUpEffect): AttachmentView | null => {
+  const isAttached =
+    effect.kind === PowerUpEffectKind.SHIELD || effect.kind === PowerUpEffectKind.TURBO
+  const state = getAttachmentState(effect.state)
+  if (effect.ownerRacer === null || state === null) return null
+  // 0x0045dbe0: the warp's portal is drawn in its first phase (state 2) at the scale the fade table gives.
+  if (effect.kind === PowerUpEffectKind.WARP) {
+    if (state !== 'starting') return null
+    return {
+      kind: effect.kind,
+      level: effect.level,
+      racerIndex: effect.ownerRacer,
+      state,
+      timerMilliseconds: effect.timerMilliseconds,
+      elapsedMilliseconds: WARP_STARTING_MILLISECONDS - effect.timerMilliseconds,
+      scale: getWarpFadeScale(
+        raceState.context.arithmetic,
+        raceState.context.tables,
+        effect.timerMilliseconds
+      ),
+    }
+  }
+  if (!isAttached) return null
+  return {
+    scale: 1,
+    kind: effect.kind,
+    level: effect.level,
+    racerIndex: effect.ownerRacer,
+    state,
+    timerMilliseconds: effect.timerMilliseconds,
+    elapsedMilliseconds: getAttachmentElapsed(effect, state),
+  }
+}
+
+// 0x00451a50 gives the cannon ball the material "cannon" and a sprite of 5 by 5 (0x004b13a0); 0x00451f30 draws it while
+// the ball flies (state 3).
+const CANNON_BALL_MATERIAL = 'cannon'
+const CANNON_BALL_SIZE = 5
+
+const getSpriteViews = (
+  effect: PowerUpEffect,
+  motion: EffectMotion | null
+): readonly SpriteView[] =>
+  effect.kind === PowerUpEffectKind.CANNON &&
+  effect.state === EffectState.ACTIVE &&
+  motion?.kind === 'ballistic' &&
+  motion.flight.state !== BallisticFlightState.IDLE
+    ? [
+        {
+          materialName: CANNON_BALL_MATERIAL,
+          position: motion.flight.framePosition,
+          width: CANNON_BALL_SIZE,
+          height: CANNON_BALL_SIZE,
+        },
+      ]
+    : []
+
 const getExplosionViews = (pool: ExplosionPool, isSpiked: boolean): readonly ExplosionView[] =>
   pool.activeIndices.flatMap((index) => {
     const explosion = pool.explosions[index]
@@ -167,7 +275,23 @@ export const getEffectViews = (raceState: RaceState): EffectViews => {
     return view === null ? [] : [view]
   })
   const { world } = raceState.powerUpStep
+  const attachments = activeEffectIds.flatMap((effectId) => {
+    const effect = effects[effectId]
+    const view =
+      effect === undefined || !DRAWN_STATES.includes(effect.state)
+        ? null
+        : getAttachmentView(raceState, effect)
+    return view === null ? [] : [view]
+  })
+  const sprites = activeEffectIds.flatMap((effectId) => {
+    const effect = effects[effectId]
+    return effect === undefined
+      ? []
+      : getSpriteViews(effect, raceState.projectileWorld.motions[effectId] ?? null)
+  })
   return Object.freeze({
+    sprites: Object.freeze(sprites),
+    attachments: Object.freeze(attachments),
     bricks: Object.freeze([
       ...getBrickViews(world.bricks, false),
       ...getBrickViews(world.enhancementBricks, true),

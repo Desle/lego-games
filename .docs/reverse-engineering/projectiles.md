@@ -111,7 +111,7 @@ Each update: inactive entries are removed from the object list (`0x0043d200`), r
 
 - Model, animation and emitter data: the rockets' launch animation lengths and the missile heading (`rocketLaunchMilliseconds`, `rocketHeading`), the debris animation lengths (`debrisAnimations`), the racers' bounding spheres, the explosions' model radii and whether the scar texture exists. They are inputs.
 - Launcher-owned effects (the hazards at power-up system `+0x1998`): the cannon from a launcher, the warp to a destination (`0x0045d780`'s interpolation), the wand from a launcher.
-- The world's dynamic sphere objects in the line probe (`0x0041f4d0`) and the material side effects of flag `0x10`.
+- The world's dynamic sphere objects in the line probe (`0x0041f4d0`). The material side effects of flag `0x10` (and the pass-through of flag `0x20000`) are ported: [surface-signals.md](surface-signals.md).
 - The car body, rigid body and racer reactions the events ask for (`0x00429770`, `0x004298a0`, `0x004298f0`, `0x00429a70`, `0x00429cf0`, `0x00439570`, `0x004397a0`).
 - Drawing, sounds, smoke, sparks and rope models; the barrel's spin; the hook's rope sag fields (`+0x218`..`+0x224` except the tension).
 - The registry's racer-volume update (`0x0043aa10`) and sort, the volume extents and the precise test: callers pass them.

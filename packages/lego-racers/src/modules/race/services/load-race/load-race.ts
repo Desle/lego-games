@@ -27,6 +27,7 @@ import { parseRaceDescription } from '../../../race-description/index.ts'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic } from '../../../simulation-math/index.ts'
 import { parseStartPositions } from '../../../start-position/index.ts'
+import { parseTaggedPositions } from '../../../tagged-position/index.ts'
 import { parseTimers } from '../../../timer/index.ts'
 import { parseTrackMaterials } from '../../../track-material/index.ts'
 import { parseTriggers, TriggerFileKind } from '../../../trigger/index.ts'
@@ -151,6 +152,7 @@ export const loadRaceDefinition = (
     checkpointBytes === null ? [] : parseCheckpoints(checkpointBytes, isMirrored).checkpoints
   const startPositionBytes = readNamed(description.startPositions)
   const powerUpBytes = readNamed(description.powerUpPlacements)
+  const taggedPositionBytes = readNamed(description.taggedPositions)
   const eventBytes = readNamed(description.events)
   const timerBytes = readNamed(description.timers)
   const mainTriggerBytes = readNamed(description.mainTriggers)
@@ -290,7 +292,13 @@ export const loadRaceDefinition = (
     ...optionalSky,
     randomPosition: routeDraws.position,
     getGroundPoint: null,
-    trackTargets: [],
+    // Tgb_Load 0x0045c3d0: the points the cannon and the grapple of a human racer aim at (0x0045c6a0).
+    trackTargets:
+      taggedPositionBytes === null
+        ? []
+        : parseTaggedPositions(taggedPositionBytes, isMirrored).taggedPositions.map(
+            ({ position: [x, y, z] }) => ({ position: { x, y, z } })
+          ),
     projectileModelData: loadProjectileModelData(arithmetic, readArchiveFile, checkpoints),
   })
 }

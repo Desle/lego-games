@@ -10,8 +10,7 @@ export type TraceScenarioRequest = {
   readonly isRenderRecorded?: boolean
   // Record the triangles the original's decals hold (they are projected whether or not the camera sees them).
   readonly isDecalRecorded?: boolean
-  // The player is handed a power-up (brick kind and level) at `grantFrame`, accelerates from 175 and presses use at
-  // `useFrame`.
+  // A power-up: the player is handed a brick of `kind` (1 to 4) at `level` at `grantFrame`, accelerates from 175 and presses use at `useFrame`.
   readonly powerUp?: {
     readonly kind: number
     readonly level: number

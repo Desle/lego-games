@@ -14,6 +14,7 @@ import {
   SINGLE_RACE_SCREEN,
   TIME_TRIAL_SCREEN,
 } from '../screens/race-selection-screens.ts'
+import { createCinemaScreen, getCinemaScreenSource } from '../screens/cinema-screens.ts'
 import { createCircuitResultScreen } from '../screens/circuit-result-screen.ts'
 import { createStaticScreen } from '../screens/static-screen.ts'
 
@@ -45,6 +46,7 @@ export const getScreenDefinition = (screenId: number): ScreenDefinition => {
   ) {
     return createCircuitResultScreen(screenId)
   }
+  if (getCinemaScreenSource(screenId) !== null) return createCinemaScreen(screenId)
   return (
     IMPLEMENTED_SCREENS.find((screen) => screen.screenId === screenId) ??
     createStaticScreen(screenId)

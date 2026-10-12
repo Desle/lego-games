@@ -1,6 +1,7 @@
 import { recordGhostSample } from '../../../ghost/index.ts'
 import { advanceSky, switchSkySetting } from '../../../sky/index.ts'
 import { updateTrackHazardsAfterRacers, updateTrackLogicFrame } from '../../../track-logic/index.ts'
+import type { SurfaceSignal } from '../../../track-logic/index.ts'
 import { advanceWorldAnimation } from '../../../world-animation/index.ts'
 import { activateLauncherWarp } from '../../../power-ups/index.ts'
 import { updatePowerUpsWithProjectiles } from '../../../projectiles/index.ts'
@@ -97,6 +98,7 @@ const getStateWithProgress = (state: RaceState, progress: PlayerControllerProgre
     registryObjects: progress.racerSet.registryObjects,
     trackLogic: progress.racerSet.trackLogic,
     trackEffects: progress.racerSet.trackEffects,
+    surfaces: progress.racerSet.surfaces,
     taggedPositionMilliseconds: progress.racerSet.taggedPositionMilliseconds,
     playerControllers: progress.controllers,
   })
@@ -164,11 +166,14 @@ export const updateRace = (
   })
   const poweredSet = getRaceRacerSet(counted, inputs.contacts)
   let projectileWorld: ProjectileWorld = counted.projectileWorld
+  const surfaceSignals: SurfaceSignal[] = []
   const changed = changePowerUps(counted.context, poweredSet, (step, powerUpContext) => {
     const projected = updatePowerUpsWithProjectiles(
       step,
       counted.projectileWorld,
-      getProjectileContext(counted, poweredSet, powerUpContext),
+      getProjectileContext(counted, poweredSet, powerUpContext, (identifier, point) =>
+        surfaceSignals.push({ identifier, position: [point.x, point.y, point.z] })
+      ),
       stepMilliseconds
     )
     projectileWorld = projected.world
@@ -184,7 +189,13 @@ export const updateRace = (
   )
   const tagged = updateTaggedPositions(projected, stepMilliseconds)
   const powered = changeTrackLogic(counted.context, tagged, (trackLogic, trackContext) =>
-    updateTrackLogicFrame(trackLogic, trackContext, stepMilliseconds, tagged.racers.length)
+    updateTrackLogicFrame(
+      trackLogic,
+      trackContext,
+      stepMilliseconds,
+      tagged.racers.length,
+      surfaceSignals
+    )
   )
   const launched = getRacerSetWithLauncherWarps(
     counted.context,

@@ -14,6 +14,8 @@ MAIN_TRIGGERS_OFFSET = 0x2080
 ENVIRONMENT_TRIGGERS_OFFSET = 0x2128
 SKY_OFFSET = 0x2F90
 TIME_LIST_OFFSET = 0x4AC + 0xC
+# The track materials (TrackMaterials_Load 0x00444030): count at +0xc, 0x5c-byte entries at +0x10, flags at +8.
+TRACK_MATERIALS_OFFSET = 0x27E0
 # Instance flag bit the port does not model: 0x8 (fade distances, 0x10028110).
 PRESENTATION_FLAGS = 0x8
 WORLD_OFFSETS = (("track", 0x390), ("blended", 0x398), ("local", 0x3A4))
@@ -62,6 +64,13 @@ def read_hazards(machine, race: int, fields: dict) -> None:
         hazard = machine.read_u32(array + 4 * index)
         words += read_words(machine, hazard + 8, 2)
     fields["track.hazards"] = words
+
+
+def read_surfaces(machine, race: int, fields: dict) -> None:
+    materials = race + TRACK_MATERIALS_OFFSET
+    count = machine.read_u32(materials + 0xC)
+    array = machine.read_u32(materials + 0x10)
+    fields["track.surfaces"] = [machine.read_u32(array + 0x5C * index + 8) for index in range(count if array != 0 else 0)]
 
 
 def read_triggers(machine, race: int, fields: dict) -> None:
@@ -165,6 +174,7 @@ def snapshot_track_fields(machine, race: int, racer_count: int) -> dict:
     fields = {}
     read_events(machine, race, fields)
     read_hazards(machine, race, fields)
+    read_surfaces(machine, race, fields)
     read_triggers(machine, race, fields)
     read_timers(machine, race, fields)
     read_worlds(machine, race, fields)
