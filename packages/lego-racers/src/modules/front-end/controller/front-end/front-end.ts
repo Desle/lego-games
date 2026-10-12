@@ -37,6 +37,7 @@ import {
   getStateWithShowcaseReaction,
   getStateWithShowcaseStep,
 } from '../front-end-showcase/front-end-showcase.ts'
+import { advanceRacePreviewEffects } from '../race-preview/race-preview-effects.ts'
 import { advanceRacePreviewEmitters } from '../race-preview/race-preview-emitters.ts'
 import { advanceRacePreviewClock, createRacePreviewClock } from '../race-preview/race-preview.ts'
 import { getRacePreviewCinemaName } from '../screens/race-selection-screens.ts'
@@ -60,6 +61,7 @@ const getRuntime = (
     screenMilliseconds: state.screenMilliseconds,
     racePreview: state.racePreview,
     racePreviewEmitters: state.racePreviewEmitters,
+    racePreviewEffects: state.racePreviewEffects,
     menuFigureAnimation: state.menuFigure?.animation ?? null,
     showcase: state.showcase,
   }
@@ -108,6 +110,7 @@ export const createFrontEnd = (
           screenMilliseconds: 0,
           racePreview: createRacePreviewClock(),
           racePreviewEmitters: null,
+          racePreviewEffects: null,
           menuFigureAnimation: null,
           showcase: null,
         }),
@@ -118,6 +121,7 @@ export const createFrontEnd = (
     screenMilliseconds: 0,
     racePreview: createRacePreviewClock(),
     racePreviewEmitters: null,
+    racePreviewEffects: null,
     musicListIndex: getFrontEndMusicIndex(firstScreenId, null),
     menuFigure:
       firstScreenId === FrontEndScreen.MAIN_MENU
@@ -161,6 +165,7 @@ const applyNavigation = (
           screenMilliseconds: 0,
           racePreview: createRacePreviewClock(),
           racePreviewEmitters: null,
+          racePreviewEffects: null,
         },
         screenId
       )
@@ -274,23 +279,40 @@ const getStateWithPreviewEmitters = (
   const screenId = after.screens.at(-1)?.screenId
   const cinemaName =
     runtime === null || screenId === undefined ? null : getRacePreviewCinemaName(runtime, screenId)
-  if (cinemaName === null && before.racePreviewEmitters === null) return after
+  if (
+    cinemaName === null &&
+    before.racePreviewEmitters === null &&
+    before.racePreviewEffects === null
+  )
+    return after
   const preview = resources.getRacePreview()
+  const cinema =
+    preview.cinemas.cinemas.find(
+      (candidate) => candidate.name.toLowerCase() === cinemaName?.toLowerCase()
+    ) ?? null
+  const isRestartedNow =
+    isRestarted || after.racePreview.cycleCount !== before.racePreview.cycleCount
   const step = advanceRacePreviewEmitters({
     previous: before.racePreviewEmitters,
     resources: preview,
-    cinema:
-      preview.cinemas.cinemas.find(
-        (candidate) => candidate.name.toLowerCase() === cinemaName?.toLowerCase()
-      ) ?? null,
+    cinema,
     previousMilliseconds: before.racePreview.cinemaMilliseconds,
     milliseconds: after.racePreview.cinemaMilliseconds,
     frameMilliseconds,
-    isRestarted: isRestarted || after.racePreview.cycleCount !== before.racePreview.cycleCount,
+    isRestarted: isRestartedNow,
     random: { table: environment.randomTable, position: after.settings.randomPosition },
   })
   return {
     ...after,
+    racePreviewEffects: advanceRacePreviewEffects({
+      previous: before.racePreviewEffects,
+      cinema,
+      events: preview.events,
+      previousMilliseconds: before.racePreview.cinemaMilliseconds,
+      milliseconds: after.racePreview.cinemaMilliseconds,
+      frameMilliseconds,
+      isRestarted: isRestartedNow,
+    }),
     racePreviewEmitters: step.emitters,
     settings: { ...after.settings, randomPosition: step.randomPosition },
   }

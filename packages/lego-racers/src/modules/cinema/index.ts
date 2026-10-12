@@ -1,7 +1,7 @@
 export { parseCinemaDatabase } from './controller/parse-cinema-database/parse-cinema-database.ts'
 export {
   getActiveCinemaActions,
-  getActiveCinemaColourShifts,
+  getActiveCinemaVertexEffects,
   getActiveCinemaDummies,
   getCinemaFrame,
   getCinemaLoopMilliseconds,
@@ -14,7 +14,7 @@ export type {
 } from './types/vertex-lighting.types.ts'
 export { parseCinemaEvents } from './controller/parse-cinema-events/parse-cinema-events.ts'
 export type {
-  CinemaColourShift,
+  ActiveCinemaVertexEffect,
   CinemaEmitterEvent,
   CinemaEvents,
   CinemaReaction,

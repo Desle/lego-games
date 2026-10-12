@@ -35,8 +35,7 @@ const KEYS: readonly (readonly [number, FrontEndInput, number])[] = [
   [290, 'right', 205],
 ]
 const WATCHED_FRAMES = [420, 440, 441, 442, 460, 470]
-const MATCHED_SHARE = 0.85
-const CLIPPED_SHARE = 0.6
+const MATCHED_SHARE = 0.9
 
 const archive = openJamArchive(readOriginalJam())
 const resources = loadFrontEndResources(archive)
@@ -134,17 +133,9 @@ describe.skipIf(!(getIsOriginalGamePresent() && getIsOriginalPresentationAvailab
       })
 
       // Assert
-      // The few quads the original clips at the edge of the viewport (it draws polygons of other vertices there) stay
-      // unmatched; with 3 quads on show at frame 420 that is one of three.
-      const getMean = (shares: readonly number[]): number =>
-        shares.reduce((sum, share) => sum + share, 0) / shares.length
-      expect(getMean(frames.map((frame) => frame.originalShare))).toBeGreaterThan(MATCHED_SHARE)
-      expect(getMean(frames.map((frame) => frame.portShare))).toBeGreaterThan(MATCHED_SHARE)
-      expect(Math.min(...frames.map((frame) => frame.originalShare))).toBeGreaterThan(CLIPPED_SHARE)
-      expect(Math.min(...frames.map((frame) => frame.portShare))).toBeGreaterThan(CLIPPED_SHARE)
-      expect(frames.every((frame) => Math.abs(frame.portCount - frame.originalCount) <= 20)).toBe(
-        true
-      )
+      expect(Math.min(...frames.map((frame) => frame.originalShare))).toBeGreaterThan(MATCHED_SHARE)
+      // The original clips the quads on the viewport's edge (polygons of other vertices) and drops those wholly outside.
+      expect(Math.min(...frames.map((frame) => frame.portShare))).toBeGreaterThan(MATCHED_SHARE)
     })
   }
 )

@@ -69,3 +69,37 @@ export type RacePreviewStartedPool = {
   readonly pool: EmitterPool
   readonly started: readonly RacePreviewStartedEmitter[]
 }
+
+// A vertex effect that is on (`FUN_004a4be0`'s 0x48-byte object): the instance it shifts, its shifts and rates, and the biases
+// it holds as floats (`+0x30`, `+0x34`, `+0x38`), which the rates move.
+export type RacePreviewVertexEffect = {
+  readonly dummyIndex: number
+  readonly instanceName: string
+  readonly shifts: readonly number[]
+  readonly rates: readonly number[]
+  readonly currentBiases: readonly number[]
+}
+
+export type RacePreviewEffects = {
+  readonly cinemaName: string
+  readonly active: readonly RacePreviewVertexEffect[]
+}
+
+export type RacePreviewEffectsInput = {
+  readonly previous: RacePreviewEffects | null
+  readonly cinema: Cinema | null
+  readonly events: CinemaEvents
+  // The cinema's clock before and after the frame, and the frame's time.
+  readonly previousMilliseconds: number
+  readonly milliseconds: number
+  readonly frameMilliseconds: number
+  // The screen opened or the race changed in this frame: the old effects stop and the new cinema's start.
+  readonly isRestarted: boolean
+}
+
+// What the viewer applies to an instance's vertex colours: `(channel >> shift) + bias`, clamped (alpha is not shifted).
+export type RacePreviewColourShift = {
+  readonly instanceName: string
+  readonly shifts: readonly number[]
+  readonly biases: readonly number[]
+}

@@ -1,4 +1,3 @@
-import { getActiveCinemaColourShifts, parseCinemaEvents } from '@lego-games/lego-racers/cinema'
 import { loadRandomTable } from '@lego-games/lego-racers/random-table'
 import {
   createFrontEnd,
@@ -75,8 +74,6 @@ describe.skipIf(!(getIsOriginalGamePresent() && getIsOriginalPresentationAvailab
     // eslint-disable-next-line no-restricted-syntax -- the test body is a block of steps
     it('flashes the sky red in the same frames as the original', async () => {
       // Arrange
-      const events = parseCinemaEvents(archive.readFile('MENUDATA\\SINGRACE\\PST.CEB'))
-      const cinemas = resources.getRacePreview().cinemas.cinemas
       const lastFrame = Math.max(...WATCHED_FRAMES)
       const original = await readOriginalFrontEnd({
         name: 'race cinema flash',
@@ -103,11 +100,7 @@ describe.skipIf(!(getIsOriginalGamePresent() && getIsOriginalPresentationAvailab
           state = stepFrontEnd(state, resources, environment, input, FRAME_MILLISECONDS).state
         }
         const view = getCinemaView(state)
-        const cinema = cinemas.find((candidate) => candidate.name === view?.cinemaName)
-        const shifts =
-          cinema === undefined || view === null
-            ? []
-            : getActiveCinemaColourShifts(cinema, events, view.milliseconds)
+        const shifts = view?.colourShifts ?? []
         return {
           frame: watchedFrame,
           isPortFlashed: shifts.some((shift) => (shift.biases[0] ?? 0) === FLASH_RED_BIAS),

@@ -45,9 +45,9 @@ A track event of class 3D holds an emitter and, when it names an object, moves i
 
 Verified with `render-trace` on `RACEC1R0`: the wizard's quads match in place, shape and colour (a material's opacity goes into the vertex alpha).
 
-## The smallest quad the engine submits
+## No small-quad cut
 
-The particle draw (`0x00412a50`, `0x00412ce0`) only drops a quad whose size is not above `DAT_004af300` (0.0), and `0x00413090` only flushes the command buffer; yet the original's draw calls (the snow of a race preview, `front-end-cinema-snow-trace.trace.spec.ts`) never contain a quad narrower than about 1.4 pixels on the 640 x 480 surface (1.36 across is dropped, 1.44 is drawn, with the quads cut by the viewport's edge aside). The cut is therefore below the emitter code, in the engine's polygon submission (the facing test `0x1000ebd0` itself compares against 0.0), and its exact place is not found. The port applies it as a screen area: a billboard covering fewer than 2 pixels squared is not drawn (`getIsEmitterQuadDrawn`, `MINIMUM_QUAD_PIXEL_AREA`), by the viewer's particle drawing, which knows the camera and the surface: the race with the 480-pixel surface and its field of view, the race preview with its rectangle. Sub-pixel quads are invisible, so this matters for the trace comparison only.
+An earlier reading of the race preview's snow took the missing small quads for a size cut. It was not: those quads lie above the 3D viewport (y below its top edge), and the engine rejects a triangle whose three vertices share an outside outcode. `FUN_1000e540` (a transform variant of GolDP) writes each vertex's outcode from the signs of its clip coordinates (bit value 4 is the negative y), `0x1000edf0` then drops such triangles before the facing test. A quad inside the viewport is drawn at any size (measured in the emulator: every quad of the 24 the particle draw `0x00412ce0` submits reaches the face test; the ones with outcode 4 are outside the viewport). The particle draw itself only drops a size that is not above `DAT_004af300` (0.0). Nothing to port: the viewer's viewport clips them.
 
 ## The vehicle's emitters (`0x0043e070`, `0x0043dc00`, `0x0043def0`, `0x0043df90`, `0x0043dd50`)
 
