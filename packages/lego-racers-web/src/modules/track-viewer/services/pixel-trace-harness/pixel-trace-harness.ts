@@ -102,6 +102,7 @@ export const runPixelTrace = async (request: PixelTraceRequest): Promise<PixelTr
               commands: hudCommands,
               fonts: assets.hudFonts,
               loadedImages: hudImages,
+              imageScales: new Map(),
               painter: hudPainter,
               width: size.width,
               height: size.height,

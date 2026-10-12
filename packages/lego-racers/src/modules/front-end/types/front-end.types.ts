@@ -29,6 +29,7 @@ import type { RandomTable } from '../../random-table/index.ts'
 
 // A decoded menu image (MENUDATA\<name>.BMP) with the image database's colour key applied.
 export type FrontEndImage = {
+  readonly archivePath: string
   readonly name: string
   readonly width: number
   readonly height: number

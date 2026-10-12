@@ -8,6 +8,8 @@ export type HudPaintInput = {
   readonly fonts: HudFonts
   // The images the commands draw parts and triangles of, by upper case image database name.
   readonly loadedImages: ReadonlyMap<string, HTMLImageElement>
+  // Picture pixels per original pixel, by the same names (1 for a name left out): source rectangles are in the original's pixels.
+  readonly imageScales: ReadonlyMap<string, number>
   readonly painter: BitmapFontPainter
   readonly width: number
   readonly height: number

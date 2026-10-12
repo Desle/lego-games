@@ -1,5 +1,6 @@
 import {
   clearViewerExtensions,
+  NEUTRAL_EXTENSION,
   registerViewerExtension,
 } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
 import { CLASSIC_RACE_DISPLAY, getRaceDisplay } from './race-display.ts'
@@ -21,8 +22,8 @@ describe('getRaceDisplay', () => {
   it('takes the layout of the first extension that gives one', () => {
     // Arrange
     const layout = { ...CLASSIC_RACE_DISPLAY, isFullWindow: true }
-    registerViewerExtension({ onTextureCreated: () => undefined, getRaceDisplay: () => null })
-    registerViewerExtension({ onTextureCreated: () => undefined, getRaceDisplay: () => layout })
+    registerViewerExtension(NEUTRAL_EXTENSION)
+    registerViewerExtension({ ...NEUTRAL_EXTENSION, getRaceDisplay: () => layout })
 
     // Act
     const display = getRaceDisplay(WINDOW)

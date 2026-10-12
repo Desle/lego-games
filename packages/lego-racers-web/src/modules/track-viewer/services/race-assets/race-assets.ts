@@ -303,10 +303,12 @@ const getHudImage = (archive: JamArchive, definition: ImageDefinition): HudImage
       }
     }
     return Object.freeze({
+      archivePath: path,
       name: definition.name,
       width: bitmap.width,
       height: bitmap.height,
       colors,
+      sourceScale: 1,
     })
   } catch {
     return null
@@ -321,17 +323,18 @@ const loadHudFonts = (archive: JamArchive): HudFonts => {
   const entries = Object.entries(HUD_FONT_NAMES).flatMap(([hudFont, fontName]) => {
     const definition = database.fonts.find((candidate) => candidate.name === fontName)
     if (definition === undefined) return []
-    const bitmap = decodeBitmap(
-      archive.readFile(`${ENGLISH_DIRECTORY}\\${fontName.toUpperCase()}.BMP`)
-    )
+    const fontPath = `${ENGLISH_DIRECTORY}\\${fontName.toUpperCase()}.BMP`
+    const bitmap = decodeBitmap(archive.readFile(fontPath))
     const font = buildBitmapFont(definition, bitmap)
     const hudBitmapFont: HudBitmapFont = Object.freeze({
       font,
       image: Object.freeze({
+        archivePath: fontPath,
         name: fontName,
         width: bitmap.width,
         height: bitmap.height,
         colors: getFontImagePixels(bitmap, font.colorKey),
+        sourceScale: 1,
       }),
     })
     return [[hudFont, hudBitmapFont] as const]
@@ -352,10 +355,12 @@ const getMapImage = (scene: Scene): readonly (readonly [string, HudImage])[] => 
         [
           MAP_IMAGE_NAME,
           {
+            archivePath: null,
             name: MAP_IMAGE_NAME,
             width: bitmap.width,
             height: bitmap.height,
             colors: bitmap.colors,
+            sourceScale: 1,
           },
         ] as const,
       ]

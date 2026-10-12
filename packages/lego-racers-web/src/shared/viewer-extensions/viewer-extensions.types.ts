@@ -27,6 +27,14 @@ export type TextureCreatedEvent = {
   readonly replacePixels: (pixels: TexturePixels) => void
 }
 
+// A picture the viewer just made from an original bitmap of the archive and draws as a 2D image (a menu image, a font sheet).
+export type PictureCreatedEvent = {
+  readonly archivePath: string
+  readonly originalPixels: TexturePixels
+  // Replaces the picture by another of any size (RGBA, rows top to bottom); the viewer scales what it draws from it.
+  readonly replacePixels: (pixels: TexturePixels) => void
+}
+
 // How the race is laid out on the page: the stage the race and the HUD canvases cover, in page pixels.
 export type RaceDisplay = {
   readonly stageSize: StageSize
@@ -49,5 +57,13 @@ export type DevelopmentSelector = {
 // What a layer above the original port may change. The viewer draws the original exactly when none is registered.
 export type ViewerExtension = {
   readonly onTextureCreated: (event: TextureCreatedEvent) => void
+  readonly onPictureCreated: (event: PictureCreatedEvent) => void
+  // The scale of the menu surface relative to its 640 x 480 design, given the device pixels the menu covers per design pixel.
+  readonly getMenuSurfaceScale: (devicePixelsPerDesignPixel: number) => number | null
+  // A recording to play in place of the original sound or tune at this archive path; null keeps the original.
+  readonly getSoundReplacement: (
+    context: BaseAudioContext,
+    archivePath: string
+  ) => Promise<AudioBuffer | null>
   readonly getRaceDisplay: (window: WindowMetrics) => RaceDisplay | null
 }

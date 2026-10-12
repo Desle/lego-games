@@ -1,4 +1,17 @@
-import type { TextureCreatedEvent, ViewerExtension } from './viewer-extensions.types.ts'
+import type {
+  PictureCreatedEvent,
+  TextureCreatedEvent,
+  ViewerExtension,
+} from './viewer-extensions.types.ts'
+
+// An extension with no opinion on anything: a base to override what a layer changes.
+export const NEUTRAL_EXTENSION: ViewerExtension = Object.freeze({
+  onTextureCreated: () => undefined,
+  onPictureCreated: () => undefined,
+  getRaceDisplay: () => null,
+  getMenuSurfaceScale: () => null,
+  getSoundReplacement: () => Promise.resolve(null),
+})
 
 let registeredExtensions: readonly ViewerExtension[] = Object.freeze([])
 
@@ -16,4 +29,28 @@ export const getIsClassic = (): boolean => registeredExtensions.length === 0
 
 export const emitTextureCreated = (event: TextureCreatedEvent) => {
   for (const extension of registeredExtensions) extension.onTextureCreated(event)
+}
+
+export const emitPictureCreated = (event: PictureCreatedEvent) => {
+  for (const extension of registeredExtensions) extension.onPictureCreated(event)
+}
+
+// 1 (the design's own resolution) when no extension asks for more.
+export const getMenuSurfaceScale = (devicePixelsPerDesignPixel: number): number => {
+  for (const extension of registeredExtensions) {
+    const scale = extension.getMenuSurfaceScale(devicePixelsPerDesignPixel)
+    if (scale !== null) return scale
+  }
+  return 1
+}
+
+export const getSoundReplacement = async (
+  context: BaseAudioContext,
+  archivePath: string
+): Promise<AudioBuffer | null> => {
+  for (const extension of registeredExtensions) {
+    const buffer = await extension.getSoundReplacement(context, archivePath)
+    if (buffer !== null) return buffer
+  }
+  return null
 }

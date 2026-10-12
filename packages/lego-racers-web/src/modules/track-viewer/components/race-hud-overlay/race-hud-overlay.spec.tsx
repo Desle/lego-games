@@ -18,6 +18,7 @@ const text = (overrides: Partial<Extract<HudCommand, { kind: 'text' }>> = {}): H
 const getProps = (overrides: Partial<RaceHudOverlayProps> = {}): RaceHudOverlayProps => ({
   commands: [],
   imageUrls: new Map(),
+  imageScales: new Map(),
   fonts: null,
   width: 800,
   height: 600,

@@ -24,6 +24,7 @@ const getContext = () => {
 const getInput = (overrides: Partial<HudPaintInput> = {}): HudPaintInput => ({
   commands: [fill, image],
   fonts: new Map(),
+  imageScales: new Map(),
   loadedImages: new Map([['HOLDER', { complete: true } as unknown as HTMLImageElement]]),
   painter: createBitmapFontPainter(),
   width: 640,

@@ -6,6 +6,8 @@ export type PaintableFontImage = {
   readonly width: number
   readonly height: number
   readonly colors: Uint8Array
+  // Picture pixels per original pixel: the glyph rectangles are in the original's pixels.
+  readonly sourceScale: number
 }
 
 export type BitmapFontPainter = {
