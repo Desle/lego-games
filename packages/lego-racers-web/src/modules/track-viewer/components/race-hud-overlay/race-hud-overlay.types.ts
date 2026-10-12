@@ -10,6 +10,8 @@ export type RaceHudOverlayProps = {
   // The size of the stage the HUD was laid out for.
   readonly width: number
   readonly height: number
+  // Canvas pixels per stage pixel (1 draws the stage as is).
+  readonly pixelRatio: number
   // The race state, shown in a corner; null hides it.
   readonly phase: string | null
 }

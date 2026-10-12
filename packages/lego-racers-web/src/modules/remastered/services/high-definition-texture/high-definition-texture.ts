@@ -1,11 +1,11 @@
-import { DEVELOPMENT_HIGH_DEFINITION_ROUTE } from '../../../../../shared/development-jam/development-jam-route.ts'
-import type { StageSize, TexturePixels, WindowMetrics } from './high-definition-texture.types.ts'
+import { LinearFilter, LinearMipmapLinearFilter } from 'three'
+import { DEVELOPMENT_HIGH_DEFINITION_ROUTE } from './high-definition-route.ts'
+import type {
+  TextureCreatedEvent,
+  TexturePixels,
+} from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 
 const DEFAULT_VARIANT = 'ultrasharp'
-
-// The page's query string, or none when the viewport runs outside a page (the Node trace harnesses).
-export const getPageSearch = (): string =>
-  'location' in globalThis ? globalThis.location.search : ''
 
 export const getIsHighDefinitionEnabled = (search: string): boolean =>
   import.meta.env.DEV && new URLSearchParams(search).has('hd')
@@ -15,11 +15,6 @@ export const getHighDefinitionVariant = (search: string): string => {
   const variant = new URLSearchParams(search).get('hd') ?? ''
   return variant === '' ? DEFAULT_VARIANT : variant
 }
-
-// In the high-definition view the fixed stage is drawn with as many device pixels as it covers on screen.
-export const getHighDefinitionPixelRatio = (stage: StageSize, window: WindowMetrics): number =>
-  Math.min(window.innerWidth / stage.width, window.innerHeight / stage.height) *
-  window.devicePixelRatio
 
 export const getHighDefinitionUrl = (bitmapPath: string, variant: string): string =>
   `${DEVELOPMENT_HIGH_DEFINITION_ROUTE}/${encodeURIComponent(variant)}/${bitmapPath.replaceAll('\\', '/').replace(/\.[^./]+$/, '.png')}`
@@ -53,10 +48,24 @@ const readPixels = async (url: string): Promise<TexturePixels | null> => {
 // The pack's picture for a bitmap, masked by the original's alpha, or null when the pack has none.
 export const loadHighDefinitionPixels = async (
   bitmapPath: string,
-  original: TexturePixels
+  original: TexturePixels,
+  search: string
 ): Promise<TexturePixels | null> => {
-  const variant = getHighDefinitionVariant(getPageSearch())
+  const variant = getHighDefinitionVariant(search)
   const pack = await readPixels(getHighDefinitionUrl(bitmapPath, variant)).catch(() => null)
   if (pack === null) return null
   return { colors: getMaskedColors(pack, original), width: pack.width, height: pack.height }
+}
+
+// Swaps a texture's picture for the pack's once it has loaded; the original's picture shows until then.
+export const applyHighDefinitionTexture = (event: TextureCreatedEvent, search: string) => {
+  const { texture } = event
+  void loadHighDefinitionPixels(event.bitmapPath, event.originalPixels, search).then((pixels) => {
+    if (pixels === null) return
+    if (texture.magFilter === LinearFilter) {
+      texture.minFilter = LinearMipmapLinearFilter
+      texture.generateMipmaps = true
+    }
+    event.replacePixels(pixels)
+  })
 }

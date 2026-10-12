@@ -13,6 +13,7 @@ const RaceHudOverlay = ({
   fonts,
   width,
   height,
+  pixelRatio,
   phase,
 }: RaceHudOverlayProps) => {
   const canvasReference = useRef<HTMLCanvasElement | null>(null)
@@ -32,6 +33,7 @@ const RaceHudOverlay = ({
   useEffect(() => {
     const context = canvasReference.current?.getContext('2d') ?? null
     if (context === null) return
+    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
     if (fonts === null) {
       context.clearRect(0, 0, width, height)
       return
@@ -45,14 +47,15 @@ const RaceHudOverlay = ({
       height,
       isImagePainted: false,
     })
-  }, [commands, fonts, height, loadedImages, painter, width])
+  }, [commands, fonts, height, loadedImages, painter, pixelRatio, width])
   return (
     <div className="pointer-events-none absolute inset-0" data-testid="race-hud">
       <canvas
         ref={canvasReference}
         className="absolute inset-0"
-        width={width}
-        height={height}
+        width={width * pixelRatio}
+        height={height * pixelRatio}
+        style={pixelRatio === 1 ? undefined : { width, height }}
         aria-hidden="true"
       />
       {commands.map((command, index) => {

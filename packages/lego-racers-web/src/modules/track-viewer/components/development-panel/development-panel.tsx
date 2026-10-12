@@ -7,9 +7,7 @@ const DevelopmentPanel = ({
   onRaceStopped,
   onRecordingDownloaded,
   onEverythingUnlocked,
-  textureVariants,
-  selectedTextureVariant,
-  onTextureVariantSelected,
+  selectors,
   onOverlayClosed,
 }: DevelopmentPanelProps) => (
   <section className="fixed top-2 right-2 z-30 flex w-60 flex-col gap-2 rounded bg-slate-900/90 p-3 text-xs text-slate-100">
@@ -44,23 +42,25 @@ const DevelopmentPanel = ({
     >
       Unlock everything (rewrites the save, reloads)
     </button>
-    <label className="flex flex-col gap-1">
-      Textures (reloads)
-      <select
-        className="rounded bg-slate-700 px-2 py-1"
-        value={selectedTextureVariant ?? ''}
-        onChange={(event) =>
-          onTextureVariantSelected(event.target.value === '' ? null : event.target.value)
-        }
-      >
-        <option value="">Classic (original)</option>
-        {textureVariants.map((variant) => (
-          <option key={variant} value={variant}>
-            {variant}
-          </option>
-        ))}
-      </select>
-    </label>
+    {selectors.map((selector) => (
+      <label key={selector.label} className="flex flex-col gap-1">
+        {selector.label}
+        <select
+          className="rounded bg-slate-700 px-2 py-1"
+          value={selector.selected ?? ''}
+          onChange={(event) =>
+            selector.onSelected(event.target.value === '' ? null : event.target.value)
+          }
+        >
+          <option value="">Classic (original)</option>
+          {selector.options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+    ))}
     <p className="text-slate-400">
       Power-ups for the player: 1 cannon, 2 shield, 3 turbo, 4 oil; 5 and 6 lower and raise the
       level.
