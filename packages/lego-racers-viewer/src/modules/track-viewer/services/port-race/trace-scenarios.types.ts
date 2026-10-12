@@ -8,8 +8,11 @@ export type TraceScenarioRequest = {
   readonly isPowerSliding?: boolean
   readonly recordFrames?: readonly number[]
   readonly isRenderRecorded?: boolean
-  // A warp: the player is handed a level 3 turbo at `grantFrame`, accelerates from 175 and presses use at `useFrame`.
-  readonly warp?: {
+  // The player is handed a power-up (brick kind and level) at `grantFrame`, accelerates from 175 and presses use at
+  // `useFrame`.
+  readonly powerUp?: {
+    readonly kind: number
+    readonly level: number
     readonly grantFrame: number
     readonly useFrame: number
     readonly frameCount: number

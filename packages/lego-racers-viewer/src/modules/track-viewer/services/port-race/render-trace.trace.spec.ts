@@ -23,7 +23,7 @@ const RENDER_CASES: readonly TraceScenarioRequest[] = [
     name: 'Royal Knights, warp',
     raceFolder: 'RACEC0R0',
     recordFrames: [310, 320, 330, 345, 360, 375],
-    warp: { grantFrame: 300, useFrame: 305, frameCount: 380 },
+    powerUp: { kind: 3, level: 3, grantFrame: 300, useFrame: 305, frameCount: 380 },
   },
   {
     name: 'Royal Knights, power slide',
@@ -32,6 +32,12 @@ const RENDER_CASES: readonly TraceScenarioRequest[] = [
     recordFrames: [240, 260, 275, 285, 300, 340, 400],
   },
   { name: 'RACEC0R1', raceFolder: 'RACEC0R1', recordFrames: RECORD_FRAMES },
+  {
+    name: 'Royal Knights, oil slick',
+    raceFolder: 'RACEC0R0',
+    powerUp: { kind: 4, level: 0, grantFrame: 300, useFrame: 305, frameCount: 420 },
+    recordFrames: [306, 312, 320, 340, 380, 415],
+  },
   { name: 'RACEC0R2', raceFolder: 'RACEC0R2', recordFrames: RECORD_FRAMES },
   { name: 'RACEC0R3', raceFolder: 'RACEC0R3', recordFrames: RECORD_FRAMES },
   { name: 'RACEC1R0', raceFolder: 'RACEC1R0', recordFrames: RECORD_FRAMES },
