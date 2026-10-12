@@ -1,7 +1,9 @@
+import type { Scene } from '@lego-games/lego-racers/scene'
 import type { FrontEndViewportCommand, WorldCamera } from '@lego-games/lego-racers/front-end'
 import type { Scene as ThreeScene } from 'three'
 import type { DriverView } from '../driver-view/driver-view.types.ts'
 import type { BuilderCarView } from '../builder-car-view/builder-car-view.types.ts'
+import type { ShowcaseStage } from '../showcase-stage/showcase-stage.types.ts'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
 
 // Draws the 3D items of the menus (a world seen from the item's camera) into a rectangle of a 2D canvas.
@@ -18,6 +20,9 @@ export type MenuViewport = {
 export type MenuWorld = {
   readonly three: ThreeScene
   readonly object: SceneObject
+  readonly scene: Scene
+  // The racer showcase of the race select, built when it first asks.
+  readonly showcaseStage: () => ShowcaseStage
   // The world's own camera (`Camera01`), when it has one.
   readonly camera: WorldCamera | null
   // The car the builder screen puts in this world (created when it first asks).

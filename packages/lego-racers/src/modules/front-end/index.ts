@@ -13,8 +13,9 @@ export { getStandingRows } from './controller/race-launch/get-standing-rows.ts'
 export { loadFrontEndResources } from './services/load-front-end-resources/load-front-end-resources.ts'
 export { getBuilderCamera } from './controller/builder-camera/builder-camera.ts'
 export { getMenuCamera, getWorldMenuCamera } from './controller/menu-camera/menu-camera.ts'
-export { getMenuWorldPath, getWorldCameraInset } from './types/menu-world/menu-world.ts'
+export { getMenuWorldPaths, getWorldCameraInset } from './types/menu-world/menu-world.ts'
 export type { MenuCamera, WorldCamera } from './types/menu-world/menu-world.types.ts'
+export { RACER_SHOWCASE_CAR_POSITION } from './types/racer-showcase/racer-showcase.ts'
 export { MENU_SURFACE } from './controller/widget-commands/widget-commands.ts'
 export {
   CIRCUIT_IMAGE_NAMES,
@@ -48,4 +49,5 @@ export type {
   FrontEndStep,
   FrontEndTextCommand,
   FrontEndViewportCommand,
+  RacerShowcaseView,
 } from './types/front-end.types.ts'

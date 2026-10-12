@@ -89,9 +89,16 @@ const resources: FrontEndResources = {
   getRacerTemplate: () => {
     throw new RangeError('The test has no racer record')
   },
-  getDefaultCar: () => {
-    throw new RangeError('The test has no default car')
-  },
+  getDefaultCar: () => ({
+    record: {
+      name: 'TEST',
+      colorBytes: [0, 0, 0, 0, 0],
+      chassisName: 'testchas',
+      designBytes: [],
+      circuitRanks: 0,
+    },
+    design: null,
+  }),
   getDriverCatalog: () => {
     throw new RangeError('The test has no driver catalog')
   },
@@ -99,6 +106,10 @@ const resources: FrontEndResources = {
     throw new RangeError('The test has no driver database')
   },
   getMenuFigureAnimation: () => MENU_FIGURE_ANIMATION,
+  getRacerShowcaseAnimation: () => ({
+    animation: MENU_FIGURE_ANIMATION,
+    idleClipIndices: [0, 1, 2],
+  }),
 }
 
 const environment: FrontEndEnvironment = {
