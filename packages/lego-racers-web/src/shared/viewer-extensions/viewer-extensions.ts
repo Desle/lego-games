@@ -2,6 +2,8 @@ import type { Object3D } from 'three'
 import type {
   BuiltCarDrawingRequest,
   PictureCreatedEvent,
+  RacerPartDrawing,
+  RacerPartDrawingRequest,
   TextureCreatedEvent,
   ViewerExtension,
 } from './viewer-extensions.types.ts'
@@ -14,6 +16,7 @@ export const NEUTRAL_EXTENSION: ViewerExtension = Object.freeze({
   getMenuSurfaceScale: () => null,
   getSoundReplacement: () => Promise.resolve(null),
   getBuiltCarDrawing: () => null,
+  getRacerPartDrawing: () => null,
   getSelections: () => [],
 })
 
@@ -65,6 +68,14 @@ export const getSoundReplacement = async (
 export const getBuiltCarDrawing = (request: BuiltCarDrawingRequest): Object3D | null => {
   for (const extension of registeredExtensions) {
     const drawing = extension.getBuiltCarDrawing(request)
+    if (drawing !== null) return drawing
+  }
+  return null
+}
+
+export const getRacerPartDrawing = (request: RacerPartDrawingRequest): RacerPartDrawing | null => {
+  for (const extension of registeredExtensions) {
+    const drawing = extension.getRacerPartDrawing(request)
     if (drawing !== null) return drawing
   }
   return null

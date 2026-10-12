@@ -24,6 +24,8 @@ import type { Object3D, Scene as ThreeScene } from 'three'
 import { createRaceParticles } from '../race-particles/race-particles.ts'
 import { createModelObject } from '../model-object/model-object.ts'
 import { createModelSlot } from '../model-slot/model-slot.ts'
+import { showRacerPartDrawing } from '../racer-part-drawing/racer-part-drawing.ts'
+import { RacerPartKind } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import type { SceneLights } from '../scene-object/vertex-lighting.types.ts'
 import type { CinemaStage, UnitVector } from './cinema-stage.types.ts'
@@ -152,7 +154,13 @@ export const createCinemaStage = (
     const figure = figureSlot.show(partBytes.join(':'), () => {
       const model = loadMenuDriverScene(archive, partBytes, FIGURE_ANIMATION_NAME)
       figureAnimation = model.scene.animations[0]?.animation ?? null
-      return createModelObject(model)
+      return showRacerPartDrawing(
+        createModelObject(model),
+        model,
+        archive,
+        RacerPartKind.DRIVER,
+        { modelName: null, partBytes }
+      )
     })
     figure.group.matrix.copy(getActionMatrix(action))
     figure.group.matrixWorldNeedsUpdate = true
