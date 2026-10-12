@@ -34,7 +34,10 @@ export const getGhostCars = (raceState: RaceState): GhostCarsStep => {
   const playerRacer = raceState.racerSet.racers[raceState.playerRacerIndices[0] ?? 0]
   const { bestCar, championCar } = playback.session
   const animations: Readonly<
-    Record<GhostRunSelection, readonly [SkeletonAnimationState | null, SkeletonAnimationState | null]>
+    Record<
+      GhostRunSelection,
+      readonly [SkeletonAnimationState | null, SkeletonAnimationState | null]
+    >
   > = {
     best:
       bestCar === null

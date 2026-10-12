@@ -15,6 +15,12 @@ export type GhostChampionCar = {
   readonly driver: SkeletonInstanceRuntime
 }
 
+// The wheels and the driver of the first local racer, which the best run's car copies (0x00422eb0).
+export type GhostPlayerFigures = {
+  readonly wheels: Figure
+  readonly driver: Figure
+}
+
 // The session's best run car (Ghost_StartRun 0x00422eb0): fresh copies of the first local racer's wheels (ghost +0x1c) and
 // driver (+0x114) figures, the driver started on animation 13 (0x0040dad0). The copies never get the plays flag
 // 0x10000 (only 0x0043d7a0 sets it), so the update (0x0040dd60) leaves them where they started.

@@ -2678,12 +2678,6 @@
     },
     {
       "path": "packages/lego-racers/src/modules/front-end/controller/screens/race-selection-screens.ts",
-      "scope": "BEST_TIME_SWAP_MILLISECONDS",
-      "literal": "2500",
-      "count": 1
-    },
-    {
-      "path": "packages/lego-racers/src/modules/front-end/controller/screens/race-selection-screens.ts",
       "scope": "FINAL_CIRCUIT_INDEX",
       "literal": "6",
       "count": 1

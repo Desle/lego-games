@@ -26,6 +26,7 @@ export type {
   GhostPlaybackPose,
   GhostBestCar,
   GhostChampionCar,
+  GhostPlayerFigures,
   GhostPose,
   GhostRun,
   GhostRunSelection,

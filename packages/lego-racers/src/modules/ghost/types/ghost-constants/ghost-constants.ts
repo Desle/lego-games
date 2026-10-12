@@ -19,5 +19,5 @@ export const SPEED_INTERVAL_SCALE = 4
 
 // FUN_0040dad0 plays clip 12 on the champion car's driver (Ghost_Initialize 0x00422420) and animation 13 on the driver of
 // the best run's car (0x00422eb0).
-export const CHAMPION_DRIVER_CLIP = 12
-export const BEST_DRIVER_ANIMATION = 13
+export const CHAMPION_DRIVER_CLIP = 12 // PUSH 0xc at 0x00422612
+export const BEST_DRIVER_ANIMATION = 13 // PUSH 0xd at 0x004230b9

@@ -319,9 +319,7 @@ const stepFinishing = (step: RaceStepResult, frameMilliseconds: number): RaceSte
 const getGhostFigures = (raceState: RaceState) => {
   const racerIndex = raceState.playerRacerIndices[0]
   const racer = racerIndex === undefined ? undefined : raceState.racerSet.racers[racerIndex]
-  return racer === undefined
-    ? null
-    : { wheels: racer.figure, driver: racer.vehicle.driverFigure }
+  return racer === undefined ? null : { wheels: racer.figure, driver: racer.vehicle.driverFigure }
 }
 
 // FUN_004230e0, the last thing Race_UpdateState3 does for a finishing human: the ghost racer's lap times become the
@@ -451,7 +449,10 @@ const stepCountdown = (step: RaceStepResult, frameMilliseconds: number): RaceSte
     ...controlled,
     finishedRacerCount: 0,
     powerUpStep: setBrickSoundsEnabled(controlled.powerUpStep, true),
-    ghost: controlled.ghost === null ? null : beginGhostRun(controlled.ghost, getGhostFigures(controlled)),
+    ghost:
+      controlled.ghost === null
+        ? null
+        : beginGhostRun(controlled.ghost, getGhostFigures(controlled)),
   })
   const toned = getRacingTuneChange(sounding)
   return stepRacing(

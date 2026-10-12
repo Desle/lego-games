@@ -166,7 +166,10 @@ describe('the ghost cars of a time trial', () => {
         milliseconds: 33,
         controls: IDLE_RACER_CONTROLS,
       }))
-      const observed = new Map<number, { clock: number; wheels: number; driver: number; rate: number }>()
+      const observed = new Map<
+        number,
+        { clock: number; wheels: number; driver: number; rate: number }
+      >()
 
       // Act
       runRaceFrames(assets, STAGE_SIZE, frames, ({ frame, raceState }) => {
@@ -181,7 +184,12 @@ describe('the ghost cars of a time trial', () => {
       })
 
       // Assert
-      expect(observed.get(99)).toEqual({ clock: 0, wheels: 0, driver: 0, rate: 0.030000001192092896 })
+      expect(observed.get(99)).toEqual({
+        clock: 0,
+        wheels: 0,
+        driver: 0,
+        rate: 0.030000001192092896,
+      })
       expect(observed.get(199)).toEqual({
         clock: 1320,
         wheels: 23.4091796875,

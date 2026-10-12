@@ -120,35 +120,31 @@ const getWithWheelSpeeds = (
   champion: GhostPlaybackPose | null
 ): GhostSession => {
   const { bestCar, championCar } = session
+  const wheelClip = championCar?.wheels.clip ?? null
   const isChampionStored =
-    session.isRunning && champion !== null && championCar?.wheels.clip != null
+    session.isRunning && champion !== null && championCar !== null && wheelClip !== null
   const isBestStored = session.isRunning && best !== null && bestCar !== null
   if (!isChampionStored && !isBestStored) return session
   return Object.freeze({
     ...session,
-    championCar:
-      isChampionStored && championCar?.wheels.clip != null
-        ? Object.freeze({
-            ...championCar,
-            wheels: Object.freeze({
-              ...championCar.wheels,
-              clip: Object.freeze({
-                ...championCar.wheels.clip,
-                clip: Object.freeze({
-                  ...championCar.wheels.clip.clip,
-                  framesPerMillisecond: champion.speed,
-                }),
-              }),
+    championCar: isChampionStored
+      ? Object.freeze({
+          ...championCar,
+          wheels: Object.freeze({
+            ...championCar.wheels,
+            clip: Object.freeze({
+              ...wheelClip,
+              clip: Object.freeze({ ...wheelClip.clip, framesPerMillisecond: champion.speed }),
             }),
-          })
-        : championCar,
-    bestCar:
-      isBestStored
-        ? Object.freeze({
-            ...bestCar,
-            wheels: Object.freeze({ ...bestCar.wheels, currentRate: best.speed }),
-          })
-        : bestCar,
+          }),
+        })
+      : championCar,
+    bestCar: isBestStored
+      ? Object.freeze({
+          ...bestCar,
+          wheels: Object.freeze({ ...bestCar.wheels, currentRate: best.speed }),
+        })
+      : bestCar,
   })
 }
 

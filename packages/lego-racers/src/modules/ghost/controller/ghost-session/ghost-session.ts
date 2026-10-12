@@ -4,7 +4,6 @@ import {
   advanceSkeletonInstance,
   startSkeletonInstanceClip,
 } from '../../../world-animation/index.ts'
-import type { SkeletonInstanceRuntime } from '../../../world-animation/index.ts'
 import {
   getQuaternionFromMatrix,
   getTruncatedInteger,
@@ -23,6 +22,8 @@ import {
 import type { Ghost, GhostSample } from '../../types/ghost.types.ts'
 import type {
   GhostBestCar,
+  GhostChampionCar,
+  GhostPlayerFigures,
   GhostPose,
   GhostRun,
   GhostSession,
@@ -77,10 +78,7 @@ export const createGhostSession = (isMirrored: boolean): GhostSession =>
 // The rest of Ghost_Initialize (0x00422420): the champion's car is the `ghost2` and `ghostdr` skeleton instances of the
 // `ghost` world; `FUN_0040dad0(driver, 0xc)` starts the driver's clip 12, looping. The wheels keep the clip the world's
 // keyword 0x35 started (flags 0x50001 at the first frame).
-export const loadGhostCar = (
-  session: GhostSession,
-  instances: { readonly wheels: SkeletonInstanceRuntime; readonly driver: SkeletonInstanceRuntime }
-): GhostSession =>
+export const loadGhostCar = (session: GhostSession, instances: GhostChampionCar): GhostSession =>
   getChanged(session, {
     championCar: Object.freeze({
       wheels: instances.wheels,
@@ -115,10 +113,7 @@ export const restartGhostRun = (session: GhostSession): GhostSession =>
 
 // 0x00422eb0 with flag 0x01: the wheels and the driver of the first local racer are bound anew (0x0040d550) to the same models
 // and animations, and the driver starts animation 13 (0x0040dad0).
-const getBestCar = (playerFigures: {
-  readonly wheels: Figure
-  readonly driver: Figure
-}): GhostBestCar => {
+const getBestCar = (playerFigures: GhostPlayerFigures): GhostBestCar => {
   const getCopy = (figure: Figure): Figure => createFigure(figure.animations, figure.child)
   return Object.freeze({
     wheels: getCopy(playerFigures.wheels),
@@ -130,7 +125,7 @@ const getBestCar = (playerFigures: {
 // session plays beside the champion.
 export const beginGhostRun = (
   session: GhostSession,
-  playerFigures: { readonly wheels: Figure; readonly driver: Figure } | null = null
+  playerFigures: GhostPlayerFigures | null = null
 ): GhostSession =>
   getChanged(session, {
     isRunning: true,

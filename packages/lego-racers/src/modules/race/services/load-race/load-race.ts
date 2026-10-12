@@ -39,12 +39,7 @@ import type { RaceDefinition, RaceRacerDefinition } from '../../types/race.types
 import { getStartFrame } from '../../types/start-frame/start-frame.ts'
 import { loadCollisionWorld } from './load-collision-world.ts'
 import type { LoadRaceOptions, RouteDraws, RouteDrawer, RouteFiles } from './load-race.types.ts'
-import {
-  loadRaceEmitters,
-  loadRaceGhost,
-  loadRaceSky,
-  loadRaceWorlds,
-} from './load-race-worlds.ts'
+import { loadRaceEmitters, loadRaceGhost, loadRaceSky, loadRaceWorlds } from './load-race-worlds.ts'
 import {
   describeAppearances,
   describeRacers,
