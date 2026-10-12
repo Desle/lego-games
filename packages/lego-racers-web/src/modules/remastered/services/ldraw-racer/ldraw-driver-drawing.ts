@@ -1,8 +1,13 @@
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import { Group, Matrix4 } from 'three'
 import type { RacerPartDrawingRequest } from './ldraw-racer-drawing.types.ts'
-import { applyPlasticLook } from '../ldraw-car/ldraw-plastic.ts'
-import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
+import {
+  createMaterialSet,
+  getPreparedModel,
+  instantiateModel,
+} from '../ldraw-car/detailed-model.ts'
+import type { MaterialSet } from '../ldraw-car/detailed-model.types.ts'
+import { LDrawDetail } from '../ldraw-library/ldraw-library-loader.types.ts'
 import { restoreDisplayColors } from './skin-colors.ts'
 import { disposeObject } from './dispose-object.ts'
 import type { LDrawRacerPartDrawing } from './ldraw-racer-drawing.types.ts'
@@ -10,6 +15,7 @@ import { createFaceDecal, createTorsoDecal } from './minifig-decals.ts'
 import { createMinifigPartPlans } from './minifig-assembly.ts'
 import { MinifigPartKey, MinifigPosture } from './minifig-assembly.types.ts'
 import type { MinifigPartPlan } from './minifig-assembly.types.ts'
+import { MINIFIG_GEOMETRY } from './minifig-geometry.ts'
 import { getJointMatrices } from './minifig-joints.ts'
 import { getMinifigRig } from './minifig-rig.ts'
 import type { MinifigRig } from './minifig-rig.types.ts'
@@ -20,8 +26,6 @@ import { ensureStudioLights } from './studio-scene-lights.ts'
 
 const RAW_UNITS_PER_LDRAW_UNIT = 3.2
 const IDENTITY_ROTATION = '1 0 0 0 1 0 0 0 1'
-const HEAD_ORIGIN_Y = -48
-const TORSO_ORIGIN_Y = -24
 
 // The figure's frame in the model's: LDraw's (x to the viewer's right, y down, front toward -z) into the model's (x forward, y to the
 // figure's left, z up), at the scale of the car's bricks, with the figure's hips at the height the skeleton's bind pose puts them.
@@ -65,7 +69,7 @@ export const createLDrawDriverDrawing = (
     (request.modelName === null ? null : getDriverPartBytes(request.archive, request.modelName))
   if (sampler === null || rig === null || partBytes === null) return null
   const spec = createMinifigSpec(request.archive, partBytes)
-  const plans = createMinifigPartPlans(spec, rig.posture)
+  const plans = createMinifigPartPlans(spec)
   const figureFrame = getFigureFrame(rig)
   const object = new Group()
   const holders = new Map<MinifigPartKey, Group>(
@@ -76,18 +80,19 @@ export const createLDrawDriverDrawing = (
       return [key, holder]
     })
   )
-  const loadedGroups: Group[] = []
-  let isDisposed = false
+  const materials = createMaterialSet()
+  const skinMaterials: MaterialSet[] = []
   const loads = plans.map((plan) =>
-    parseLDrawModel(getPartText(plan)).then(
-      (model) => {
-        if (isDisposed) return
-        applyPlasticLook(model)
-        if (plan.isSkin) restoreDisplayColors(model)
-        loadedGroups.push(model)
+    getPreparedModel(getPartText(plan), LDrawDetail.HIGH).then(
+      (prepared) => {
         const placed = new Group()
         placed.matrixAutoUpdate = false
         placed.matrix.copy(plan.matrix)
+        // A flesh part has its colours changed once on its own copies of the materials, which no other part shares.
+        const partMaterials = plan.isSkin ? createMaterialSet() : materials
+        if (plan.isSkin) skinMaterials.push(partMaterials)
+        const model = instantiateModel(prepared, partMaterials)
+        if (plan.isSkin) restoreDisplayColors(model)
         placed.add(model)
         holders.get(plan.key)?.add(placed)
       },
@@ -100,19 +105,19 @@ export const createLDrawDriverDrawing = (
       : {
           decal: createFaceDecal(spec.surfaces.face, search),
           key: MinifigPartKey.HEAD,
-          y: HEAD_ORIGIN_Y,
+          origin: MINIFIG_GEOMETRY.head,
         },
     spec.torso !== null || spec.surfaces.torso === null
       ? null
       : {
           decal: createTorsoDecal(spec.surfaces.torso, search),
           key: MinifigPartKey.TORSO,
-          y: TORSO_ORIGIN_Y,
+          origin: MINIFIG_GEOMETRY.torso,
         },
   ]
   for (const entry of decals) {
     if (entry?.decal == null) continue
-    entry.decal.mesh.position.set(0, entry.y, 0)
+    entry.decal.mesh.position.setFromMatrixPosition(entry.origin)
     holders.get(entry.key)?.add(entry.decal.mesh)
   }
   const pose = (state: SkeletonAnimationState | null) => {
@@ -132,8 +137,8 @@ export const createLDrawDriverDrawing = (
     object,
     ...controls,
     dispose: () => {
-      isDisposed = true
-      for (const group of loadedGroups) disposeObject(group)
+      materials.dispose()
+      for (const skin of skinMaterials) skin.dispose()
       for (const entry of decals) {
         if (entry?.decal == null) continue
         disposeObject(entry.decal.mesh)

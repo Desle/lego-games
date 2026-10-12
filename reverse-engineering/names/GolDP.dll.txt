@@ -116,6 +116,7 @@
 10026d10 SkeletonInstance_TransformDirection
 10002c90 Bone_TransformDirection
 10002a00 Bone_GetAxes
+10025da0 MaterialAnimationEntry_Start
 10018270 World_DrawSprites
 10009a70 Renderer_DrawSprite
 10014e50 Sprite_BuildBillboardMatrix

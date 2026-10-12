@@ -11,16 +11,17 @@ import type {
   CarDrawingRequest,
 } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import { createChassisFallbackText } from '../ldraw-chassis/chassis-fallback.ts'
+import { createDetailedBody } from '../ldraw-car/detailed-body.ts'
 import { createLDrawCarDrawing } from '../ldraw-car/ldraw-car-drawing.ts'
 import { getChassisFileName, LDRAW_TO_STUDS } from '../ldraw-car/ldraw-car-document.ts'
-import { applyPlasticLook, createStudioLights } from '../ldraw-car/ldraw-plastic.ts'
-import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
+import { LDrawDetail } from '../ldraw-library/ldraw-library-loader.types.ts'
 import { getLDrawModelIndex, loadLDrawModelText } from '../ldraw-models/ldraw-model-client.ts'
 import { RacerPartKind } from '../ldraw-racer/ldraw-racer-drawing.types.ts'
 import type { RacerPartDrawingRequest } from '../ldraw-racer/ldraw-racer-drawing.types.ts'
 import { disposeObject } from '../ldraw-racer/dispose-object.ts'
 import { createLDrawWheelsDrawing } from '../ldraw-racer/ldraw-wheels-drawing.ts'
 import { setDrawingOpacity } from './drawing-opacity.ts'
+import { createCarStudio } from '../ldraw-racer/studio-scene-lights.ts'
 import { createFileWheelsDrawing } from './file-wheels-drawing.ts'
 import type {
   FoundWheel,
@@ -28,7 +29,7 @@ import type {
   LDrawCarSource,
   LDrawRacerSettings,
 } from './ldraw-racer-model.types.ts'
-import { takeWheelsAndFigures } from './racer-model-parts.ts'
+import { upgradeWheels } from './racer-model-parts.ts'
 
 const FIRST_BUILDER_BRICK_ID = 0x800
 const REFERENCE_LINE = /^1(?:\s+\S+){13}\s+(\S+)\.(?:ldr|dat)\s*$/i
@@ -129,12 +130,16 @@ export const createLDrawRacerCar = (
   wheelsScaled.scale.setScalar(request.wheels.model.meshScales[0] ?? 1)
   wheelsHolder.add(wheelsScaled)
   object.add(bodyHolder, wheelsHolder)
+  const studio = createCarStudio()
   const foundWheels: FoundWheel[] = []
   const failureListeners: (() => void)[] = []
   const live: LDrawCarLiveState = { wheels: null, state: null, opacity: 1, isDisposed: false }
   const getIsDisposed = () => live.isDisposed
   const database = parseBrickDatabase(request.archive.readFile(BRICK_DATABASE_PATH))
-  const keepModelParts = (model: Group) => foundWheels.push(...takeWheelsAndFigures(model))
+  const keepModelParts = (wheels: readonly FoundWheel[], detail: LDrawDetail) => {
+    if (detail === LDrawDetail.LOW) foundWheels.push(...wheels)
+    else upgradeWheels(foundWheels, wheels)
+  }
   const sourceName = source.kind === 'design' ? `${source.chassis.name}.ldr` : source.file
   const buildBody = async (): Promise<boolean> => {
     if (source.kind === 'design') {
@@ -151,10 +156,11 @@ export const createLDrawRacerCar = (
         { archive: request.archive, design: request.design },
         true,
         chassisModels,
-        keepModelParts
+        keepModelParts,
+        false
       )
       bodyHolder.add(drawing.object)
-      await drawing.settled
+      await drawing.shown
       return true
     }
     const text = await loadLDrawModelText(source.file)
@@ -173,14 +179,13 @@ export const createLDrawRacerCar = (
     )
     const fileText = await getFileText(source.file, chassisModels)
     if (fileText === null || getIsDisposed()) return false
-    const model = await parseLDrawModel(fileText)
+    const body = createDetailedBody(fileText, keepModelParts)
+    await body.shown
     if (getIsDisposed()) return false
-    applyPlasticLook(model)
-    keepModelParts(model)
     const holder = createIdentityHolder()
     holder.matrix.copy(LDRAW_TO_STUDS)
-    holder.add(model)
-    bodyHolder.add(createStudioLights(), holder)
+    holder.add(body.object)
+    bodyHolder.add(holder)
     return true
   }
   const buildWheels = () => {
@@ -219,6 +224,7 @@ export const createLDrawRacerCar = (
     object,
     applyPose: (pose: CarDrawingPose) => {
       placeHolder(bodyHolder, pose.body ?? pose.wheels)
+      studio.follow(object, bodyHolder.matrix)
       placeHolder(wheelsHolder, pose.wheels)
       if (pose.wheels.animationState !== null) {
         live.state = pose.wheels.animationState
@@ -232,6 +238,7 @@ export const createLDrawRacerCar = (
     onFailed: (listener) => failureListeners.push(listener),
     dispose: () => {
       live.isDisposed = true
+      studio.release()
       disposeObject(bodyHolder)
       live.wheels?.dispose()
     },
