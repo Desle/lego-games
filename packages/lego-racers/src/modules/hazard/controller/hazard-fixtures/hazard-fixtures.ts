@@ -30,7 +30,7 @@ export const TEST_ANIMATION: SkeletalAnimation = Object.freeze({
     {
       name: 'a0',
       framesPerMillisecond: 0.5,
-      velocity: [0, 0, 0],
+      velocity: [0, 0, 0], boundingSphere: [0, 0, 0, 0],
       firstTrackIndex: 0,
       frameCount: 300,
       loopLength: 299,
