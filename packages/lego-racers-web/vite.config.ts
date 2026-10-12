@@ -66,24 +66,34 @@ const getPngPaths = (directory: string): readonly string[] =>
     return /\.png$/i.test(entry.name) ? [path] : []
   })
 
-// Serves an upscaled texture pack to the dev server only, looked up case-insensitively by archive path.
+// Serves upscaled texture packs to the dev server only: `<root>/<variant>/<archive path>.png`, looked up
+// case-insensitively. The root is `LEGO_HD_TEXTURES_ROOT`, by default `~/textures/lego-racers`.
 const developmentHighDefinitionPlugin = (): Plugin => ({
   name: 'lego-racers-development-high-definition',
   apply: 'serve',
   configureServer: (server) => {
-    const directory =
-      process.env['LEGO_HD_TEXTURES_PATH'] ?? join(homedir(), 'lego-racers-textures-hd')
-    const pathsByKey = new Map(
-      (existsSync(directory) ? getPngPaths(directory) : []).map((path) => [
-        relative(directory, path).replaceAll('\\', '/').toLowerCase(),
-        path,
-      ])
-    )
+    const root = process.env['LEGO_HD_TEXTURES_ROOT'] ?? join(homedir(), 'textures', 'lego-racers')
+    const variants = new Map<string, ReadonlyMap<string, string>>()
+    const getVariant = (variant: string): ReadonlyMap<string, string> => {
+      const known = variants.get(variant)
+      if (known !== undefined) return known
+      const directory = join(root, variant)
+      const pathsByKey = new Map(
+        (existsSync(directory) ? getPngPaths(directory) : []).map((path) => [
+          relative(directory, path).replaceAll('\\', '/').toLowerCase(),
+          path,
+        ])
+      )
+      variants.set(variant, pathsByKey)
+      return pathsByKey
+    }
     server.middlewares.use(DEVELOPMENT_HIGH_DEFINITION_ROUTE, (request, response) => {
-      const key = decodeURIComponent(
+      const [variant = '', ...rest] = decodeURIComponent(
         (request.url ?? '').replace(/^\//, '').split('?')[0] ?? ''
-      ).toLowerCase()
-      const path = pathsByKey.get(key)
+      ).split('/')
+      const path = /^[\w.-]+$/.test(variant)
+        ? getVariant(variant).get(rest.join('/').toLowerCase())
+        : undefined
       if (path === undefined) {
         response.writeHead(404)
         response.end()

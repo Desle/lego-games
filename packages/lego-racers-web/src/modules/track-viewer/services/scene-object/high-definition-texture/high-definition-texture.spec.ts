@@ -1,6 +1,7 @@
 import {
   getHighDefinitionPixelRatio,
   getHighDefinitionUrl,
+  getHighDefinitionVariant,
   getMaskedColors,
 } from './high-definition-texture.ts'
 
@@ -10,10 +11,10 @@ describe('getHighDefinitionUrl', () => {
     const bitmapPath = 'GAMEDATA\\COMMON\\RH_CAR.BMP'
 
     // Act
-    const url = getHighDefinitionUrl(bitmapPath)
+    const url = getHighDefinitionUrl(bitmapPath, 'ultrasharp')
 
     // Assert
-    expect(url).toBe('/__development/high-definition/GAMEDATA/COMMON/RH_CAR.png')
+    expect(url).toBe('/__development/high-definition/ultrasharp/GAMEDATA/COMMON/RH_CAR.png')
   })
 })
 
@@ -44,5 +45,19 @@ describe('getHighDefinitionPixelRatio', () => {
 
     // Assert
     expect(ratio).toBeCloseTo((1000 / 600) * 2)
+  })
+})
+
+describe('getHighDefinitionVariant', () => {
+  it('uses the named pack, or the default for a bare flag', () => {
+    // Arrange
+    const named = '?hd=nomos8k-dat'
+    const bare = '?hd'
+
+    // Act
+    const variants = [getHighDefinitionVariant(named), getHighDefinitionVariant(bare)]
+
+    // Assert
+    expect(variants).toEqual(['nomos8k-dat', 'ultrasharp'])
   })
 })
