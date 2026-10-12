@@ -35,9 +35,7 @@ const RENDER_CASES: readonly TraceScenarioRequest[] = [
   { name: 'RACEC0R2', raceFolder: 'RACEC0R2', recordFrames: RECORD_FRAMES },
   { name: 'RACEC0R3', raceFolder: 'RACEC0R3', recordFrames: RECORD_FRAMES },
   { name: 'RACEC1R0', raceFolder: 'RACEC1R0', recordFrames: RECORD_FRAMES },
-  // The golden trace leaves the original at frame 278 here (a power-up's emitter draws from the random table, unported):
-  // later frames compare the cars of another race.
-  { name: 'RACEC3R0', raceFolder: 'RACEC3R0', recordFrames: [5, 100, 170, 250, 270] },
+  { name: 'RACEC3R0', raceFolder: 'RACEC3R0', recordFrames: RECORD_FRAMES },
 ]
 
 describe.skipIf(!isGamePresent())('render trace', () => {

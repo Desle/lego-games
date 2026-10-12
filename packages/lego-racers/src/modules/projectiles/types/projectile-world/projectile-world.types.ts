@@ -1,5 +1,5 @@
 import type { PowerUpContext, PowerUpEffect, PowerUpStep } from '../../../power-ups/index.ts'
-import type { Vector3 } from '../../../simulation-math/index.ts'
+import type { Frame, Matrix3, Vector3 } from '../../../simulation-math/index.ts'
 import type { ProjectileEvent } from '../projectile-event/projectile-event.types.ts'
 import type { BallisticFlight } from '../ballistic-flight/ballistic-flight.types.ts'
 import type { HomingFlight } from '../homing-flight/homing-flight.types.ts'
@@ -7,8 +7,9 @@ import type { DebrisAnimations, DebrisPool } from '../debris/debris.types.ts'
 import type { ExplosionPool } from '../explosion/explosion.types.ts'
 import type { GrappleHook } from '../grapple-hook/grapple-hook.types.ts'
 import type { RouteNode } from '../route-movement/route-movement.types.ts'
+import type { BarrelSpin } from '../barrel-spin/barrel-spin.types.ts'
 import type { WandBeam } from '../wand-beam/wand-beam.types.ts'
-import type { FlightRacer, LineProbe } from '../projectiles.types.ts'
+import type { FlightRacer, LineProbe, RocketLaunchBone } from '../projectiles.types.ts'
 
 // The movement state of one pooled effect: the body the original keeps inside the effect object.
 export type BallisticMotion = {
@@ -45,10 +46,16 @@ export type WandMotion = {
 // The rocket (0x004568f0): its launch animation, then its homing body.
 export type RocketMotion = {
   readonly kind: 'rocket'
+  // The racer and rocket the body belongs to: a stolen effect (0x0045b2e0) restarts in place, and the new use does not
+  // inherit the old body.
+  readonly ownerRacer: number
+  readonly rocketIndex: number
   // Milliseconds of the launch animation played so far (state 2).
   readonly launchElapsedMilliseconds: number
-  // The missile model's position: the owner's, until the rocket launches.
+  // The missile figure's frame: the owner's display frame while the launch animation plays, then the one 0x00456db0
+  // builds from the launch bone, whose first axis follows the heading and whose third axis it keeps.
   readonly framePosition: Vector3
+  readonly frameRotation: Matrix3
   readonly homing: HomingFlight | null
 }
 
@@ -65,6 +72,15 @@ export type EffectMotion =
 export type ProjectileWorld = {
   // Indexed by effect id; null until the effect has launched.
   readonly motions: readonly (EffectMotion | null)[]
+  // Indexed by effect id: the rocket body's wobble angle (+0xbc), which 0x00423980 does not reset, so a rocket that takes
+  // over an effect continues the angle of the one before it.
+  readonly rocketWobbleAngles: readonly number[]
+  // The grapple hooks' model frame (the pointer at effect +0x268): one object every hook of the race moves and turns, so
+  // the registry sees the pose the last hook update left, whichever hook it belongs to.
+  readonly hookFrame: Frame
+  // Indexed by effect id: the barrel's spin angle (effect +0x178, kept when the effect is reused) and the rotation of its
+  // model frame.
+  readonly barrelSpins: readonly BarrelSpin[]
   // The events of the update in progress; updatePowerUpsWithProjectiles starts them empty.
   readonly events: readonly ProjectileEvent[]
   // The explosions of power-up system +0x193c ("Explsn") and +0x1940 ("spikexp"), and the debris at +0x18bc.
@@ -81,8 +97,14 @@ export type ProjectileContext = {
   readonly route: readonly RouteNode[]
   // How long each rocket's launch animation lasts (model data the port does not read): rocket 0, 1 and 2.
   readonly rocketLaunchMilliseconds: readonly number[]
+  // The launch bone of each rocket's clip and the missile model's scale (model +0x38): 0x00456db0 places the launched
+  // rocket's frame with them.
+  readonly rocketLaunchBones: readonly RocketLaunchBone[]
+  readonly rocketModelScale: number
   // The lengths of the debris animations (model data the port does not read).
   readonly debrisAnimations: DebrisAnimations
+  // The float cosine table at 0x004bf7ec, by index.
+  readonly getTableCosine: (index: number) => number
   readonly probe: LineProbe
 }
 

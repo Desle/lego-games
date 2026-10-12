@@ -96,6 +96,7 @@ export const getRaceRacerSet = (state: RaceState, contacts: RaceContacts): RaceR
     projectileModelData: state.projectileModelData,
     raceModeFlags: state.raceModeFlags,
     pendingContacts: contacts,
+    arithmetic: state.context.arithmetic,
     trackLogic: state.trackLogic,
     trackEffects: state.trackEffects,
   })
@@ -318,7 +319,7 @@ export const getFlightRacer = (context: RacerSetContext, racer: Racer): FlightRa
     boundingRadius: sphere.radius,
     beamRadius: 0,
     routeNodeIndex: racer.checkpointIndex < 0 ? null : racer.checkpointIndex,
-    rocketHeading: row,
+    displayRotation: displayFrame.rotation,
     isComputer: racer.controllerKind === COMPUTER_CONTROLLER,
   })
 }
@@ -337,6 +338,9 @@ export const createProjectileContext = (
     racers: Object.freeze(racerSet.racers.map((racer) => getFlightRacer(context, racer))),
     route: modelData.routeNodes,
     rocketLaunchMilliseconds: modelData.rocketLaunchMilliseconds,
+    rocketLaunchBones: modelData.rocketLaunchBones,
+    rocketModelScale: modelData.rocketModelScale,
+    getTableCosine: (index: number) => getTableCosine(context.tables, index),
     debrisAnimations: modelData.debrisAnimations,
     probe:
       track === undefined
@@ -371,16 +375,6 @@ export const getRacerAfterProjectileEvent = (
       return Object.freeze({
         ...racer,
         carBody: startCarBodyFlip(arithmetic, racer.carBody, event.factor, event.milliseconds),
-      })
-    case 'projectiles.racer_towed':
-      return Object.freeze({
-        ...racer,
-        carBody: setCarBodyPush(
-          arithmetic,
-          racer.carBody,
-          event.isOwner ? 'extraForceB' : 'extraForceA',
-          event.vector
-        ),
       })
     case 'projectiles.racer_tow_ended':
       return Object.freeze({
