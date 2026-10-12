@@ -1,6 +1,7 @@
 import { Vector3 } from 'three'
 import type { Group } from 'three'
 import { LDrawDetail } from '../ldraw-library/ldraw-library-loader.types.ts'
+import { getIsStudLogoShown } from '../ldraw-library/stud-logos.ts'
 import { requestParsedModel } from '../ldraw-worker/ldraw-parse-client.ts'
 import { createPlasticModel, getIsOcclusionBaked } from './detailed-model.ts'
 import { DetailSwitch } from './detail-switch.ts'
@@ -35,7 +36,7 @@ export const createDetailedBody = (
     await precompileShaders(body)
     return body
   }
-  object.setHighLoader(() => prepareLevel(LDrawDetail.HIGH))
+  if (getIsStudLogoShown()) object.setHighLoader(() => prepareLevel(LDrawDetail.HIGH))
   const shown = prepareLevel(LDrawDetail.LOW).then((low) => object.setLow(low))
   const refined = () => shown.then(() => object.requestHigh())
   return { object, shown, refined }

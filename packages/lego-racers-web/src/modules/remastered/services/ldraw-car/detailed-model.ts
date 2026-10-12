@@ -1,6 +1,7 @@
 import { Material, Mesh } from 'three'
 import type { Group } from 'three'
 import { LDrawDetail } from '../ldraw-library/ldraw-library-loader.types.ts'
+import { getIsStudLogoShown, getModelDetail } from '../ldraw-library/stud-logos.ts'
 import { measureWork } from '../performance-monitor/performance-monitor.ts'
 import { deserializeModel, requestParsedModel } from '../ldraw-worker/ldraw-parse-client.ts'
 import type { SerializedModel } from '../ldraw-worker/ldraw-parse.types.ts'
@@ -37,9 +38,10 @@ export const createPlasticModel = (
 // `instantiateModel`.
 export const getPreparedModel = (
   text: string,
-  detail: LDrawDetail,
+  askedDetail: LDrawDetail,
   isWheel = false
 ): Promise<Group> => {
+  const detail = getModelDetail(askedDetail)
   const key = `${detail}|${String(isWheel)}|${text}`
   const existing = preparedModels.get(key)
   if (existing !== undefined) return existing
@@ -112,7 +114,9 @@ export const createDetailedPart = (
     onInstance?.(copy)
     return copy
   }
-  object.setHighLoader(() => getPreparedModel(text, LDrawDetail.HIGH).then(instantiate))
+  if (getIsStudLogoShown()) {
+    object.setHighLoader(() => getPreparedModel(text, LDrawDetail.HIGH).then(instantiate))
+  }
   const shown = getPreparedModel(text, LDrawDetail.LOW).then((prepared) =>
     object.setLow(instantiate(prepared))
   )
