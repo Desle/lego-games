@@ -348,6 +348,7 @@ export const getWidgetCommands = (
           camera,
           builder: widget.builder ?? null,
           driver: widget.driver ?? null,
+          showcase: widget.showcase ?? null,
         },
       ]
     }

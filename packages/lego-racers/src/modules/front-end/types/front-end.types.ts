@@ -7,6 +7,10 @@ import type {
 } from '../../car-builder/index.ts'
 import type { BodyPartCatalog, DriverSession } from '../../figure-builder/index.ts'
 import type { SkeletalAnimation, SkeletonAnimationState } from '../../skeletal-animation/index.ts'
+import type {
+  RacerShowcase,
+  RacerShowcaseAnimation,
+} from './racer-showcase/racer-showcase.types.ts'
 import type { MenuFigureAnimation } from './menu-figure/menu-figure-animation.types.ts'
 import type { DriverDatabase } from '../../driver-database/index.ts'
 import type { CircuitDatabase } from '../../circuit-database/index.ts'
@@ -57,6 +61,8 @@ export type FrontEndResources = {
   readonly getDriverDatabase: () => DriverDatabase
   // `MENUDATA\LEGOMAN.ADB`: the clips of the main menu's figure.
   readonly getMenuFigureAnimation: () => SkeletalAnimation
+  // `MENUDATA\RSANIM.ADB` and the idle clips of the racer showcase.
+  readonly getRacerShowcaseAnimation: () => RacerShowcaseAnimation
 }
 
 // What the menus read from the machine: the original's input manager (`+0x98` of it counts the controllers).
@@ -179,6 +185,8 @@ export type FrontEndState = {
   readonly musicListIndex: number | null
   // The main menu's figure and its timers; they run only while that screen is the top one.
   readonly menuFigure: MenuFigureAnimation | null
+  // The race select's racer showcase, while that screen is on top.
+  readonly showcase: RacerShowcase | null
 }
 
 export type FrontEndRectangle = {
@@ -225,6 +233,19 @@ export type FrontEndViewportCommand = {
   readonly builder: BuilderPreview | null
   // The driver the editor shows on the platform; null for any other viewport.
   readonly driver: DriverPreview | null
+  // The racer showcase of the race select; null for any other viewport.
+  readonly showcase: RacerShowcaseView | null
+}
+
+// The racer of the save the showcase shows: his car, turning on the turntable, and his driver standing on the platform.
+export type RacerShowcaseView = {
+  // null when the record's bytes load no car.
+  readonly design: CarDesign | null
+  // The chassis (CHASSIS.CMB) whose wheels the car stands on.
+  readonly chassisName: string
+  readonly driver: DriverPreview
+  // Milliseconds of the turntable's clock (`CRSDOW.ADB`), from the first frame of the screen.
+  readonly turntableMilliseconds: number
 }
 
 export type DriverPreview = {
@@ -233,6 +254,9 @@ export type DriverPreview = {
   // Where the figure stands in the screen's world and the way it faces (its frame's forward vector).
   readonly position: readonly [number, number, number]
   readonly forward: readonly [number, number, number]
+  // The animation file (in MENUDATA, without extension) the pose's clips are of: `LEGOMAN` (the main menu), `RSANIM`
+  // (the racer showcase).
+  readonly animationName: string
   // The pose the screen's behaviour has put the figure in; null leaves the viewer to play the first clip.
   readonly animation: SkeletonAnimationState | null
 }

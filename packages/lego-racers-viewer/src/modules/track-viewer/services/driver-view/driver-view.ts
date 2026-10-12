@@ -17,8 +17,8 @@ export const createDriverView = (archive: JamArchive, scene: ThreeScene): Driver
   let isFollowingScreen = false
   return Object.freeze({
     show: (preview: DriverPreview) => {
-      shown = slot.show(preview.partBytes.join(':'), () =>
-        createModelObject(loadMenuDriverScene(archive, preview.partBytes))
+      shown = slot.show(`${preview.animationName}/${preview.partBytes.join(':')}`, () =>
+        createModelObject(loadMenuDriverScene(archive, preview.partBytes, preview.animationName))
       )
       const [x, y, z] = preview.position
       shown.group.matrix

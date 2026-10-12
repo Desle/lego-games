@@ -2,6 +2,7 @@ export {
   getBuiltRacerAppearance,
   getChampionRacerAppearance,
 } from './controller/get-racer-appearance/get-racer-appearance.ts'
+export { getRacerModelFiles } from './controller/get-racer-model-files/get-racer-model-files.ts'
 export { loadBuiltDriverScene } from './controller/load-built-driver-scene/load-built-driver-scene.ts'
 export { loadMenuDriverScene } from './controller/load-menu-driver-scene/load-menu-driver-scene.ts'
 export { loadBuiltCarScene } from './controller/load-built-car-scene/load-built-car-scene.ts'

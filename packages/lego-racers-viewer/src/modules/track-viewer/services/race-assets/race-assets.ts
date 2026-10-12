@@ -15,6 +15,7 @@ import type {
 } from '@lego-games/lego-racers/race'
 import {
   loadBuiltCarScene,
+  getRacerModelFiles,
   loadBuiltDriverScene,
   RACER_FILE_DIRECTORY,
 } from '@lego-games/lego-racers/racer-appearance'
@@ -58,18 +59,7 @@ const COLOR_KEY_FLAG = 0x20
 const createModelLoader = (archive: JamArchive, raceScene: Scene): ModelLoader => {
   let container = raceScene
   return (names) => {
-    const model = loadModelScene(
-      archive,
-      {
-        directory: RACER_FILE_DIRECTORY,
-        textureNames: [names.textureDatabaseName.toUpperCase()],
-        materialNames: [names.materialLibraryName.toUpperCase()],
-        meshNames: [names.modelName.toUpperCase()],
-        skeletonName: names.skeletonName === '' ? null : names.skeletonName.toUpperCase(),
-        animationName: names.animationName === '' ? null : names.animationName.toUpperCase(),
-      },
-      container
-    )
+    const model = loadModelScene(archive, getRacerModelFiles(names), container)
     container = model.scene
     return model
   }

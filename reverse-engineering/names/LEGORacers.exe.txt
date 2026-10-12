@@ -859,3 +859,15 @@
 00481450 MainMenu_Update
 0046e970 MenuSound_Play
 00480e10 MainMenu_ResetTimers
+00486a00 RacerShowcase_Update
+00486730 RacerShowcase_DrawIdleClip
+00486810 RacerShowcase_PlayIdleClip
+00486890 RacerShowcase_PlayReactionClip
+00486540 RacerShowcase_SetDriverFrames
+004865c0 RacerShowcase_FollowShadow
+00486250 RacerShowcase_BuildRacer
+00488ed0 RacerShowcase_CreateWidgets
+00485f70 RacerShowcase_LoadWorld
+00484d90 PickRacerScreen_CreateWidgets
+00484f40 PickRacerScreen_OnButton
+004864a0 RacerShowcase_ShowNextRacer
