@@ -19,6 +19,7 @@ import { getFloatFromBits } from '../../../simulation-math/index.ts'
 export const GHOST_IDENTIFIER = 10
 // The sound the ghost loops while it is active (0x0048cac0) and the one it makes at a racer (0x0048cbb0).
 const LOOPED_SOUND = 0xbc4
+const TOUCH_SOUND = 0xbc7
 // Racer flag 0x1 (+0xd04): shielded.
 const SHIELDED_FLAG = 1
 // 0x0048cac0: the pitch changes every 500 ms.
@@ -113,6 +114,13 @@ export const GHOST: HazardBehavior = Object.freeze({
       racerIndex: racer.index,
       reaction: 'flung',
       vector: FLING_IMPULSE,
+    })
+    // 0x0048ce90 ends with sound 0xbc7 at the racer.
+    session.emit({
+      type: 'hazard.sound_played',
+      keyword: HazardKeyword.HAZARD_2B,
+      soundIdentifier: TOUCH_SOUND,
+      position: racer.position,
     })
     return instance
   },

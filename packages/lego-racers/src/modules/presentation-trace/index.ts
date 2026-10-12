@@ -1,4 +1,8 @@
-export { compareAudioCalls, getOriginalAudioCalls } from './controller/audio-trace/audio-trace.ts'
+export {
+  compareAudioCalls,
+  getOriginalAudioCalls,
+  LOOPED_SOUND_ID_OFFSET,
+} from './controller/audio-trace/audio-trace.ts'
 export {
   compareQuadPlacements,
   getBoundingRectangle,

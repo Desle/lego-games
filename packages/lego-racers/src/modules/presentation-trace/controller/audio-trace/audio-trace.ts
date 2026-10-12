@@ -9,6 +9,8 @@ import type {
 } from './audio-trace.types.ts'
 
 const MAXIMUM_DIFFERING_FRAMES = 10
+// Looped sounds are counted under their sound id plus this, apart from the one-shots with the same id.
+export const LOOPED_SOUND_ID_OFFSET = 100_000
 
 // The sound and music requests of the original's DirectSound trace: sound ids from the race's sound player, and a tune
 // from the music list entry the streamer opened (0x0041a8a0) and the play slot's loop flag.
@@ -16,8 +18,27 @@ export const getOriginalAudioCalls = (
   frames: readonly OriginalAudioFrame[]
 ): readonly AudioFrameCalls[] => {
   let musicIndex = -1
+  // RaceSounds_Get (0x00443bd0) hands out a sound object (its address is in the event); playing it with 1 (slot +4,
+  // 0x0041ad80) loops the sound.
+  const soundIdOfObject = new Map<number, number>()
   return frames.map(({ frame, events }) => {
     const calls = events.flatMap((event): readonly AudioCall[] => {
+      if (event.kind === 'soundGet') {
+        soundIdOfObject.set(event.values['object'] as number, event.values['id'] as number)
+        return []
+      }
+      if (event.kind === 'objectPlay') {
+        const soundId = soundIdOfObject.get(event.values['object'] as number)
+        return soundId === undefined || event.values['loop'] === 0
+          ? []
+          : [
+              {
+                kind: 'sound',
+                soundId: soundId + LOOPED_SOUND_ID_OFFSET,
+                address: event.values['from'] as string,
+              },
+            ]
+      }
       if (event.kind === 'soundPlayAt' || event.kind === 'soundPlay') {
         return [
           {
