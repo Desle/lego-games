@@ -1,11 +1,19 @@
 import { getModelBounds, parseModel } from '../../../model/index.ts'
 import type { ModelBounds } from '../../../model/index.ts'
-import type { FloatArithmetic } from '../../../simulation-math/index.ts'
+import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 import type { Checkpoint } from '../../../checkpoint/index.ts'
 import type { RouteNode } from '../../../projectiles/index.ts'
 import { parseAnimation } from '../../../animation/index.ts'
 import { getRacerFilePath } from '../../../racer-appearance/index.ts'
-import { getSkeletalAnimation } from '../../../skeletal-animation/index.ts'
+import {
+  createSkeletonAnimationState,
+  getBoneMatrices,
+  getRestPose,
+  getSkeletalAnimation,
+  getSkeletonPose,
+} from '../../../skeletal-animation/index.ts'
+import { parseSkeleton } from '../../../skeleton/index.ts'
+import type { RocketLaunchBone } from '../../../projectiles/index.ts'
 import { EMPTY_PROJECTILE_MODEL_DATA } from '../../types/projectile-model-data/projectile-model-data.ts'
 import type { ProjectileModelData } from '../../types/race.types.ts'
 
@@ -22,6 +30,44 @@ const getRocketLaunchMilliseconds = (readFile: (path: string) => Uint8Array): re
     Array.from({ length: ROCKET_COUNT }, (_, index) => {
       const clip = animation.clips[index]
       return clip === undefined ? 0 : (clip.frameCount - 1) / clip.framesPerMillisecond
+    })
+  )
+}
+
+// 0x00456db0 reads node 1 of the missile skeleton once the clip has played to its last frame: rows 0 and 2 of its matrix
+// are the axes and row 3 its position, in the model's units.
+const LAUNCH_BONE_INDEX = 1
+const MATRIX_SIZE = 16
+
+const getRocketLaunchBones = (
+  readFile: (path: string) => Uint8Array
+): readonly RocketLaunchBone[] => {
+  const skeleton = parseSkeleton(readFile(getRacerFilePath(ROCKET_ANIMATION_NAME, 'SDB')))
+  const animation = getSkeletalAnimation(
+    parseAnimation(readFile(getRacerFilePath(ROCKET_ANIMATION_NAME, 'ADB')))
+  )
+  return Object.freeze(
+    Array.from({ length: ROCKET_COUNT }, (_, index) => {
+      const clip = animation.clips[index]
+      const first = createSkeletonAnimationState(animation, index)
+      const state = Object.freeze({
+        ...first,
+        isLooping: false,
+        clip: Object.freeze({ ...first.clip, timeInFrames: (clip?.frameCount ?? 1) - 1 }),
+      })
+      const matrices = getBoneMatrices(
+        skeleton,
+        getSkeletonPose(getRestPose(skeleton), animation, state)
+      )
+      const getRow = (row: number): Vector3 => {
+        const start = LAUNCH_BONE_INDEX * MATRIX_SIZE + row * 4
+        return Object.freeze({
+          x: matrices[start] ?? 0,
+          y: matrices[start + 1] ?? 0,
+          z: matrices[start + 2] ?? 0,
+        })
+      }
+      return Object.freeze({ position: getRow(3), firstAxis: getRow(0), thirdAxis: getRow(2) })
     })
   )
 }
@@ -75,4 +121,6 @@ export const loadProjectileModelData = (
       rocket: getBounds(arithmetic, readFile, 'DMISSILE'),
     }),
     rocketLaunchMilliseconds: getRocketLaunchMilliseconds(readFile),
+    rocketLaunchBones: getRocketLaunchBones(readFile),
+    rocketModelScale: parseModel(readFile(getRacerFilePath(ROCKET_ANIMATION_NAME, 'GDB'))).scale,
   })
