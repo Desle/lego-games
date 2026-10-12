@@ -24,3 +24,7 @@ Keys `0x00427810`: up (`0x100000c8`, joystick up codes) and down (`0x100000d0`, 
 - The viewer's `createRaceMenuInputSource` hands one key per frame (as `0x00435c00` takes one key per call) and turns the window losing focus into the pause key (application flag `0x4000`).
 - While a menu is open the presentation is stepped with 0 ms (the race is frozen); the controller maps the race's `exit` to the session: quit → `abortSession`, restart → `restartRace` (first race or no circuit) or `requestCircuitRestart` (later races of a circuit), anything else → `finishRace`.
 - The ghost result menu (mode 2) is opened by the race after a time trial's ghost run; the results screens that follow a circuit are the front end's `0x16..0x19` screens (see [front-end.md](front-end.md)).
+
+## Trace
+
+`race.pauseState` is race `+0x30c0` as it is (0 none, 1 pause, 2 results, 3 confirmation); the port's field used to report only 0 or 1, so a real session that asked for a restart or a quit (`racec0r1-pause-confirmation`, `racec2r0-pause-confirmation`) looked like a divergence at the confirmation menu.
