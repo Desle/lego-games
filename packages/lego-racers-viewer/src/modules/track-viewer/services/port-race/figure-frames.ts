@@ -1,4 +1,10 @@
+import {
+  getActiveCinemaActions,
+  getCinemaLoopMilliseconds,
+  parseCinemaDatabase,
+} from '@lego-games/lego-racers/cinema'
 import { getFrontEndFrame } from '@lego-games/lego-racers/front-end'
+import type { RaceCinemaView } from '@lego-games/lego-racers/front-end'
 import type {
   FrontEndEnvironment,
   FrontEndResources,
@@ -8,6 +14,8 @@ import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { OriginalDraw } from '@lego-games/lego-racers/presentation-trace'
 import { loadMenuDriverScene } from '@lego-games/lego-racers/racer-appearance'
 import {
+  advanceSkeletonAnimation,
+  createSkeletonAnimationState,
   getBoneMatrices,
   getRestPose,
   getSkeletonPose,
@@ -18,6 +26,14 @@ export const MATRIX_SIZE = 16
 const FIGURE_SCALE = 1 / 64
 const SCALE_LIMIT = 0.1
 const DUPLICATE_TOLERANCE = 0.001
+
+const getBoneTranslation = (
+  matrices: Float32Array,
+  bone: number
+): readonly [number, number, number] => {
+  const at = (offset: number): number => (matrices[bone * MATRIX_SIZE + offset] ?? 0) * FIGURE_SCALE
+  return [at(12), at(13), at(14)]
+}
 
 export const multiply = (left: readonly number[], right: readonly number[]): number[] => {
   const product = Array.from({ length: MATRIX_SIZE }, () => 0)
@@ -94,13 +110,57 @@ export const getPortBonePositions = (
   )
   const angle = Math.atan2(figure.forward[1] ?? 0, figure.forward[0] ?? 1)
   return Array.from({ length: matrices.length / MATRIX_SIZE }, (_, bone) => {
-    const x = (matrices[bone * MATRIX_SIZE + 12] ?? 0) * FIGURE_SCALE
-    const y = (matrices[bone * MATRIX_SIZE + 13] ?? 0) * FIGURE_SCALE
-    const z = (matrices[bone * MATRIX_SIZE + 14] ?? 0) * FIGURE_SCALE
+    const [x, y, z] = getBoneTranslation(matrices, bone)
     return [
       (figure.position[0] ?? 0) + x * Math.cos(angle) - y * Math.sin(angle),
       (figure.position[1] ?? 0) + x * Math.sin(angle) + y * Math.cos(angle),
       (figure.position[2] ?? 0) + z,
+    ]
+  })
+}
+
+// The world positions of the bones of the champion's figure in a race preview: the guy1 action of the cinema places the figure
+// (its frame: forward, up x forward, up, scaled by the figure's 1/64) and its flag is the clip of GUY1.ADB.
+export const getCinemaBonePositions = (
+  archive: JamArchive,
+  view: RaceCinemaView
+): readonly (readonly number[])[] => {
+  const cinema = parseCinemaDatabase(archive.readFile('MENUDATA\\SINGRACE\\PST.CDB')).cinemas.find(
+    (candidate) => candidate.name.toLowerCase() === view.cinemaName.toLowerCase()
+  )
+  const action =
+    cinema === undefined
+      ? undefined
+      : getActiveCinemaActions(cinema, view.milliseconds).find(
+          (candidate) => candidate.instanceName === 'guy1'
+        )
+  if (cinema === undefined || action === undefined || view.partBytes === null) return []
+  const { scene } = loadMenuDriverScene(archive, view.partBytes, 'SINGRACE\\GUY1')
+  const skeleton = scene.skeletons[0]?.skeleton
+  const animation = scene.animations[0]?.animation
+  if (skeleton === undefined || animation === undefined) return []
+  const state = advanceSkeletonAnimation(
+    createSkeletonAnimationState(animation, action.flag),
+    animation,
+    getCinemaLoopMilliseconds(cinema, view.milliseconds)
+  )
+  const matrices = getBoneMatrices(
+    skeleton,
+    getSkeletonPose(getRestPose(skeleton), animation, state)
+  )
+  const [forwardX, forwardY, forwardZ] = action.forward
+  const [upX, upY, upZ] = action.up
+  const [sideX, sideY, sideZ] = [
+    upY * forwardZ - upZ * forwardY,
+    upZ * forwardX - upX * forwardZ,
+    upX * forwardY - upY * forwardX,
+  ] as const
+  return Array.from({ length: matrices.length / MATRIX_SIZE }, (_, bone) => {
+    const [x, y, z] = getBoneTranslation(matrices, bone)
+    return [
+      action.position[0] + x * forwardX + y * sideX + z * upX,
+      action.position[1] + x * forwardY + y * sideY + z * upY,
+      action.position[2] + x * forwardZ + y * sideZ + z * upZ,
     ]
   })
 }
