@@ -1,6 +1,7 @@
 import {
   getBillboardAxes,
   getEmitterQuads,
+  getIsEmitterQuadDrawn,
   QUAD_TRIANGLE_CORNERS,
 } from '@lego-games/lego-racers/emitter'
 import type { EmitterPool, EmitterQuad } from '@lego-games/lego-racers/emitter'
@@ -44,16 +45,25 @@ export const createRaceParticles = (scene: Scene): RaceParticles => {
     }
     return batches.get(materialName) ?? null
   }
-  const update = (pools: readonly (EmitterPool | null)[], cameraView: CameraView) => {
+  const update = (
+    pools: readonly (EmitterPool | null)[],
+    cameraView: CameraView,
+    focalLengthPixels: number | null
+  ) => {
     const axes = getBillboardAxes(arithmetic, cameraView.forward, cameraView.up)
-    const quads: EmitterQuad[] = pools.flatMap((pool) =>
-      (pool?.instances ?? []).flatMap((instance) =>
-        getEmitterQuads(arithmetic, instance.system, pool?.animation ?? null, {
-          position: cameraView.position,
-          axes,
-        })
+    const quads: EmitterQuad[] = pools
+      .flatMap((pool) =>
+        (pool?.instances ?? []).flatMap((instance) =>
+          getEmitterQuads(arithmetic, instance.system, pool?.animation ?? null, {
+            position: cameraView.position,
+            axes,
+          })
+        )
       )
-    )
+      .filter(
+        (quad) =>
+          focalLengthPixels === null || getIsEmitterQuadDrawn(quad, cameraView, focalLengthPixels)
+      )
     const counts = new Map<string, number>()
     for (const quad of quads) {
       const batch = getBatch(quad.materialName)

@@ -164,7 +164,7 @@ export const createCinemaStage = (
   }
 
   return Object.freeze({
-    show: (view) => {
+    show: (view, surfaceHeightPixels) => {
       const cinema = getCinema(database, view.cinemaName)
       const actions = cinema === null ? [] : getActiveCinemaActions(cinema, view.milliseconds)
       const loopMilliseconds =
@@ -194,7 +194,10 @@ export const createCinemaStage = (
           position: camera?.position ?? { x: 0, y: 0, z: 0 },
           forward: getUnit(camera?.forward ?? { x: 1, y: 0, z: 0 }),
           up: getUnit(camera?.up ?? { x: 0, y: 0, z: 1 }),
-        }
+        },
+        camera === undefined
+          ? null
+          : surfaceHeightPixels / (2 * Math.tan((camera.fieldOfViewDegrees * Math.PI) / 360))
       )
       showFigure(
         view.partBytes,
