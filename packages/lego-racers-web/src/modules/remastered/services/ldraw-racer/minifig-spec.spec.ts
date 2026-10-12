@@ -32,12 +32,17 @@ describe.skipIf(!isPresent)('the minifigure of a driver', () => {
     expect(partBytes).toBeNull()
   })
 
-  it('takes the hat from the catalogue and the skin from the face picture', () => {
+  it('takes the library parts from the tables and the skin from the face picture', () => {
     // Arrange / Act
     const spec = archive === null ? null : createMinifigSpec(archive, ROCKET_RACER_BYTES)
 
     // Assert
-    expect([spec?.hat?.part, spec?.surfaces.skinColor]).toEqual(['3842a', YELLOW])
+    expect([spec?.hats[0]?.part, spec?.face?.part, spec?.torso, spec?.surfaces.skinColor]).toEqual([
+      '3842a',
+      '3626cp40',
+      null,
+      YELLOW,
+    ])
   })
 
   it('shows the face card and the front of the torso as pictures of the original', () => {
@@ -51,12 +56,12 @@ describe.skipIf(!isPresent)('the minifigure of a driver', () => {
     ])
   })
 
-  it('knows a hook torso and peg legs by their catalogue type', () => {
+  it('knows a hook torso by its catalogue type and peg legs by their table row', () => {
     // Arrange / Act
     const hook = archive === null ? null : createMinifigSpec(archive, CAPTAIN_BYTES)
     const peg = archive === null ? null : createMinifigSpec(archive, PEG_LEG_BYTES)
 
     // Assert
-    expect([hook?.isHookTorso, peg?.isPegLegs]).toEqual([true, true])
+    expect([hook?.isHookTorso, peg?.legs?.rightLeg.part]).toEqual([true, '2532'])
   })
 })

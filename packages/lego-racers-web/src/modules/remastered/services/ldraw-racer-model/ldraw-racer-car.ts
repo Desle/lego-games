@@ -130,15 +130,23 @@ export const createLDrawRacerCar = (
   wheelsHolder.add(wheelsScaled)
   object.add(bodyHolder, wheelsHolder)
   const foundWheels: FoundWheel[] = []
+  const failureListeners: (() => void)[] = []
   const live: LDrawCarLiveState = { wheels: null, state: null, opacity: 1, isDisposed: false }
   const getIsDisposed = () => live.isDisposed
   const database = parseBrickDatabase(request.archive.readFile(BRICK_DATABASE_PATH))
   const keepModelParts = (model: Group) => foundWheels.push(...takeWheelsAndFigures(model))
-  const buildBody = async (): Promise<void> => {
+  const sourceName = source.kind === 'design' ? `${source.chassis.name}.ldr` : source.file
+  const buildBody = async (): Promise<boolean> => {
     if (source.kind === 'design') {
       const name = source.chassis.name.toLowerCase()
       const chassisModels = await loadChassisModels(request.archive, database, [name], settings)
-      if (request.design === null || getIsDisposed()) return
+      if (request.design === null || getIsDisposed()) return false
+      if (chassisModels.size === 0) {
+        console.warn(
+          `The chassis recipe ${sourceName} is missing or unreadable; the original car is drawn`
+        )
+        return false
+      }
       const drawing = createLDrawCarDrawing(
         { archive: request.archive, design: request.design },
         true,
@@ -147,10 +155,16 @@ export const createLDrawRacerCar = (
       )
       bodyHolder.add(drawing.object)
       await drawing.settled
-      return
+      return true
     }
     const text = await loadLDrawModelText(source.file)
-    if (text === null || getIsDisposed()) return
+    if (text === null) {
+      console.warn(
+        `The LDraw model ${source.file} is missing or unreadable; the original car is drawn`
+      )
+      return false
+    }
+    if (getIsDisposed()) return false
     const chassisModels = await loadChassisModels(
       request.archive,
       database,
@@ -158,15 +172,16 @@ export const createLDrawRacerCar = (
       settings
     )
     const fileText = await getFileText(source.file, chassisModels)
-    if (fileText === null || getIsDisposed()) return
+    if (fileText === null || getIsDisposed()) return false
     const model = await parseLDrawModel(fileText)
-    if (getIsDisposed()) return
+    if (getIsDisposed()) return false
     applyPlasticLook(model)
     keepModelParts(model)
     const holder = createIdentityHolder()
     holder.matrix.copy(LDRAW_TO_STUDS)
     holder.add(model)
     bodyHolder.add(createStudioLights(), holder)
+    return true
   }
   const buildWheels = () => {
     if (getIsDisposed()) return
@@ -180,9 +195,22 @@ export const createLDrawRacerCar = (
     if (live.state !== null) live.wheels.setAnimationState(live.state)
     setDrawingOpacity(object, live.opacity)
   }
+  const settle = (isBuilt: boolean) => {
+    if (isBuilt || getIsDisposed()) return
+    failureListeners.forEach((listener) => listener())
+  }
   void buildBody()
-    .then(buildWheels)
-    .catch((error: unknown) => console.error('The LDraw car could not be built', error))
+    .then((isBuilt) => {
+      if (isBuilt) buildWheels()
+      settle(isBuilt)
+    })
+    .catch((error: unknown) => {
+      console.warn(
+        `The LDraw car for ${sourceName} could not be built; the original car is drawn`,
+        error
+      )
+      settle(false)
+    })
   const placeHolder = (holder: Group, pose: CarDrawingPose['wheels']) => {
     holder.matrix.copy(pose.matrix)
     Object.assign(holder, { visible: pose.isVisible, matrixWorldNeedsUpdate: true })
@@ -201,6 +229,7 @@ export const createLDrawRacerCar = (
         setDrawingOpacity(object, live.opacity)
       }
     },
+    onFailed: (listener) => failureListeners.push(listener),
     dispose: () => {
       live.isDisposed = true
       disposeObject(bodyHolder)
