@@ -32,6 +32,8 @@ import {
   loadSceneOnto,
 } from '@lego-games/lego-racers/scene'
 import { parseSky } from '@lego-games/lego-racers/sky'
+import { parseAnimation } from '@lego-games/lego-racers/animation'
+import { getSkeletalAnimation } from '@lego-games/lego-racers/skeletal-animation'
 import { parseModel } from '@lego-games/lego-racers/model'
 import { readWorld } from '@lego-games/lego-racers/world'
 import { getString, parseStringTable } from '@lego-games/lego-racers/string-table'
@@ -264,8 +266,31 @@ const getGhostModels = (
   return { ghostScene, ghostScales: Object.freeze(Object.fromEntries(scales)) }
 }
 
-const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
-  Object.freeze({
+// 0x10023ef0: the sphere the first clip of a model's animation gives, in the model's scale (before the brick's own scale).
+const getModelClipSphere = (
+  archive: JamArchive,
+  name: string,
+  model: ModelScene
+): readonly [number, number, number, number] => {
+  const clip = getSkeletalAnimation(parseAnimation(archive.readFile(getRacerFilePath(name, 'ADB'))))
+    .clips[0]
+  const scale = model.meshScales[0] ?? 1
+  const [x, y, z, radius] = clip?.boundingSphere ?? [0, 0, 0, 0]
+  return [x * scale, y * scale, z * scale, radius * scale]
+}
+
+const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels => {
+  const enhancementBrick = loadEffectModel(archive, 'ENHABRIK', true)
+  const enhancementTrail = loadEffectModel(archive, 'ENHANER', true)
+  const powerUpBrick = loadEffectModel(archive, 'PUBRICKY', true)
+  const powerUpTrail = loadEffectModel(archive, 'PUTRAILY', true)
+  return Object.freeze({
+    brickSpheres: Object.freeze({
+      powerUpBrick: getModelClipSphere(archive, 'PUBRICKY', powerUpBrick),
+      powerUpTrail: getModelClipSphere(archive, 'PUTRAILY', powerUpTrail),
+      enhancementBrick: getModelClipSphere(archive, 'ENHABRIK', enhancementBrick),
+      enhancementTrail: getModelClipSphere(archive, 'ENHANER', enhancementTrail),
+    }),
     materials: getEffectMaterials(archive),
     rocket: loadEffectModel(archive, 'DMISSILE', true),
     rocketAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('DMISSILE', 'ADB'))),
@@ -289,11 +314,11 @@ const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
       Object.fromEntries(
         Object.entries(BRICK_MATERIALS).map(([kind, materialName]) => [
           kind,
-          getBrickInMaterial(loadEffectModel(archive, 'PUBRICKY', true), materialName),
+          getBrickInMaterial(powerUpBrick, materialName),
         ])
       )
     ),
-    enhancementBrick: loadEffectModel(archive, 'ENHABRIK', true),
+    enhancementBrick,
     powerUpBrickAnimations: getFigureAnimations(
       archive.readFile(getRacerFilePath('PUBRICKY', 'ADB'))
     ),
@@ -304,9 +329,13 @@ const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
       Object.fromEntries(
         Object.entries(TRAIL_MATERIALS).map(([kind, materialName]) => [
           kind,
-          getBrickInMaterial(loadEffectModel(archive, 'PUTRAILY', true), materialName),
+          getBrickInMaterial(powerUpTrail, materialName),
         ])
       )
+    ),
+    enhancementTrail,
+    enhancementTrailAnimations: getFigureAnimations(
+      archive.readFile(getRacerFilePath('ENHANER', 'ADB'))
     ),
     powerUpTrailAnimations: getFigureAnimations(
       archive.readFile(getRacerFilePath('PUTRAILY', 'ADB'))
@@ -314,6 +343,7 @@ const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
     warpTunnel: getWarpTunnel(archive, raceScene),
     warpTextureScroll: getWarpTextureScroll(archive),
   })
+}
 
 const getHudImage = (archive: JamArchive, definition: ImageDefinition): HudImage | null => {
   const path = `${COMMON_DIRECTORY}${SEPARATOR}${definition.name.toUpperCase()}.BMP`

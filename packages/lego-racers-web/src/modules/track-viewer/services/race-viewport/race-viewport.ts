@@ -318,6 +318,14 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     lastCameraView = cameraView
     lastSprites = warpView === null ? effectViews.sprites : []
     lastRibbons = warpView === null ? effectViews.ribbons : []
+    const { position, forward, up } = cameraView
+    camera.fov = warpView === null ? fieldOfViewDegrees : warpView.fieldOfViewDegrees
+    camera.updateProjectionMatrix()
+    camera.position.set(position.x, position.y, position.z)
+    // The engine's camera frames take a negated up vector (see the world's cameras).
+    camera.up.set(-up.x, -up.y, -up.z)
+    camera.lookAt(position.x + forward.x, position.y + forward.y, position.z + forward.z)
+    const frustum = getCameraFrustum(camera)
     effects.update(
       warpView === null
         ? effectViews
@@ -331,7 +339,8 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
             ribbons: [],
           },
       cameraView.position,
-      poses
+      poses,
+      frustum
     )
     for (const rig of racerRigs) {
       const isShown = warpView === null || rig === racerRigs[warpView.pose.racerIndex]
@@ -405,14 +414,6 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
       }
       rig.sync(GHOST_OPACITY)
     }
-    const { position, forward, up } = cameraView
-    camera.fov = warpView === null ? fieldOfViewDegrees : warpView.fieldOfViewDegrees
-    camera.updateProjectionMatrix()
-    camera.position.set(position.x, position.y, position.z)
-    // The engine's camera frames take a negated up vector (see the world's cameras).
-    camera.up.set(-up.x, -up.y, -up.z)
-    camera.lookAt(position.x + forward.x, position.y + forward.y, position.z + forward.z)
-    const frustum = getCameraFrustum(camera)
     shown.track.selectLevels(camera.position, frustum)
     shown.track.selectVisibleLeaves(frustum)
     const placement = shown.sky?.place(camera.position)

@@ -16,7 +16,9 @@ import {
   POWER_UP_BRICK_MODEL_NAME,
 } from '../../../../shared/viewer-extensions/effect-model-names.ts'
 import type { EffectModelDrawingRequest } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
-import type { Vector3Like } from '../race-viewport/race-viewport.types.ts'
+import type { FrustumView, Vector3Like } from '../race-viewport/race-viewport.types.ts'
+import { getIsSphereInFrustum } from '../scene-object/sphere-visibility.ts'
+import type { BrickSphere } from '../race-assets/race-assets.types.ts'
 import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
 import { getEffectFigureState } from '@lego-games/lego-racers/race-presentation'
 import { setAlphaOverride } from '../scene-object/alpha-override.ts'
@@ -155,6 +157,25 @@ const getTurboRotation = (pose: RacerPose): Matrix3 => {
   return [sideX, sideY, sideZ, -forwardX, -forwardY, -forwardZ, upX, upY, upZ]
 }
 
+// 0x100240b0 on a brick's instances: the sphere of the instance's clip (scaled by the brick's scale, the instance's frame is
+// not turned) must be within the level distance of the eye and inside the frustum.
+const getIsBrickInstanceDrawn = (
+  brick: EffectViews['bricks'][number],
+  sphere: BrickSphere,
+  eye: Vector3Like,
+  view: FrustumView
+): boolean => {
+  const centre = {
+    x: brick.position.x + sphere[0] * brick.scale,
+    y: brick.position.y + sphere[1] * brick.scale,
+    z: brick.position.z + sphere[2] * brick.scale,
+  }
+  return (
+    getIsWithinLevelDistance(centre, eye, BRICK_LEVEL_DISTANCE) &&
+    getIsSphereInFrustum(view, centre, sphere[3] * brick.scale)
+  )
+}
+
 // A growing pool of one model: `use` shows the next free copy, `reset` hides them all. A viewer extension may draw the copies of
 // a model it names (`drawingRequest`) in place of the original's.
 const createPool = (
@@ -207,6 +228,7 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
       ([kind, model]) => [kind, createPool(scene, model)] as const
     )
   )
+  const enhancementTrailPool = createPool(scene, models.enhancementTrail)
   const pools = {
     rocket: createPool(scene, models.rocket),
     barrel: createPool(scene, models.barrel),
@@ -225,11 +247,17 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
     figures.map(({ model }) => createPool(scene, model))
   )
   return Object.freeze({
-    update: (views: EffectViews, eye: Vector3Like, poses: readonly RacerPose[]) => {
+    update: (
+      views: EffectViews,
+      eye: Vector3Like,
+      poses: readonly RacerPose[],
+      view: FrustumView
+    ) => {
       for (const pool of [
         ...Object.values(pools),
         ...brickPools.values(),
         ...trailPools.values(),
+        enhancementTrailPool,
         ...shieldPools,
         ...shieldBackPools,
         ...turboPools.flat(),
@@ -264,34 +292,45 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
         }
       }
       for (const brick of views.bricks) {
-        if (!getIsWithinLevelDistance(brick.position, eye, BRICK_LEVEL_DISTANCE)) continue
+        const spheres = brick.isEnhancement
+          ? {
+              body: models.brickSpheres.enhancementBrick,
+              trail: models.brickSpheres.enhancementTrail,
+            }
+          : { body: models.brickSpheres.powerUpBrick, trail: models.brickSpheres.powerUpTrail }
         const pool = brick.isEnhancement ? pools.enhancementBrick : brickPools.get(brick.kind ?? '')
-        if (pool === undefined) continue
-        const copy = pool.use()
-        copy.group.matrix
-          .copy(getHeadingMatrix(null, brick.position))
-          .multiply(new Matrix4().makeScale(brick.scale, brick.scale, brick.scale))
-        copy.object.setAnimationState(
-          getEffectFigureState(
-            brick.isEnhancement ? models.enhancementBrickAnimations : models.powerUpBrickAnimations,
-            { animationId: 0, isLooping: true, elapsedMilliseconds: views.brickClockMilliseconds }
+        if (pool !== undefined && getIsBrickInstanceDrawn(brick, spheres.body, eye, view)) {
+          const copy = pool.use()
+          copy.group.matrix
+            .copy(getHeadingMatrix(null, brick.position))
+            .multiply(new Matrix4().makeScale(brick.scale, brick.scale, brick.scale))
+          copy.object.setAnimationState(
+            getEffectFigureState(
+              brick.isEnhancement
+                ? models.enhancementBrickAnimations
+                : models.powerUpBrickAnimations,
+              { animationId: 0, isLooping: true, elapsedMilliseconds: views.brickClockMilliseconds }
+            )
           )
-        )
-        // 0x00453b90 (vtable slot +0x14, 0x0045a8a0): the trail instance at the brick's position and scale, not turned. The
-        // enhancement bricks' trail (enhblen) is in no traced frame of the original, so it is not drawn.
-        const trailPool = brick.isEnhancement ? undefined : trailPools.get(brick.kind ?? '')
-        if (trailPool === undefined) continue
-        const trail = trailPool.use()
-        trail.group.matrix
-          .copy(getHeadingMatrix(null, brick.position))
-          .multiply(new Matrix4().makeScale(brick.scale, brick.scale, brick.scale))
-        trail.object.setAnimationState(
-          getEffectFigureState(models.powerUpTrailAnimations, {
-            animationId: 0,
-            isLooping: true,
-            elapsedMilliseconds: views.brickClockMilliseconds,
-          })
-        )
+        }
+        // 0x00453b90 (vtable slot +0x14, 0x0045a8a0): the trail instance at the brick's position and scale, not turned.
+        const trailPool = brick.isEnhancement
+          ? enhancementTrailPool
+          : trailPools.get(brick.kind ?? '')
+        if (trailPool !== undefined && getIsBrickInstanceDrawn(brick, spheres.trail, eye, view)) {
+          const trail = trailPool.use()
+          trail.group.matrix
+            .copy(getHeadingMatrix(null, brick.position))
+            .multiply(new Matrix4().makeScale(brick.scale, brick.scale, brick.scale))
+          trail.object.setAnimationState(
+            getEffectFigureState(
+              brick.isEnhancement
+                ? models.enhancementTrailAnimations
+                : models.powerUpTrailAnimations,
+              { animationId: 0, isLooping: true, elapsedMilliseconds: views.brickClockMilliseconds }
+            )
+          )
+        }
       }
       for (const attachment of views.attachments) {
         const pose = poses.find((candidate) => candidate.racerIndex === attachment.racerIndex)

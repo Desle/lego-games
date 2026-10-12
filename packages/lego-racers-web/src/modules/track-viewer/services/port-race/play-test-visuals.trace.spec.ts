@@ -1,11 +1,13 @@
 import { getIsOriginalPresentationAvailable } from '@lego-games/lego-racers/presentation-trace'
 import { getIsOriginalGamePresent } from './original-game-files.ts'
+import { BARRIER_REQUEST } from './play-test-visual-cases.ts'
 import { runRenderComparison } from './render-comparison.ts'
 
 const isGamePresent = () => getIsOriginalGamePresent() && getIsOriginalPresentationAvailable()
 
-// The textures of the bricks' trails (putraily: ptrailP, ptrailS, ptrailT, ptrailM).
-const TRAIL_TEXTURE_PATTERN = /^pup(red|blue|gree|yell)2$/
+// The textures of the bricks' trails (putraily: ptrailP, ptrailS, ptrailT, ptrailM; enhaner: p2trailw).
+const TRAIL_TEXTURE_PATTERN = /^pup(red|blue|gree|yell|whit)2$/
+const TRAIL_OBJECT_PATTERN = /^(PUTRAILY|ENHANER)\//
 
 // Three things the original draws that the port drew wrongly (docs/reverse-engineering/play-test-visuals.md). Each case
 // failed before its fix: the numbers in the comments are the render trace's findings on main.
@@ -40,22 +42,19 @@ describe.skipIf(!isGamePresent())('play-test visuals', () => {
     const result = await runRenderComparison(request)
 
     // Assert: before the fix the original's trail triangles (pupred2, pupblue2, pupyell2) had no partner at all
-    const missing = result.groups.filter(
-      (group) => group.kind === 'missing_in_port' && TRAIL_TEXTURE_PATTERN.test(group.source)
+    const wrong = result.groups.filter(
+      (group) =>
+        (group.kind === 'missing_in_port' && TRAIL_TEXTURE_PATTERN.test(group.source)) ||
+        (group.kind === 'extra_in_port' && TRAIL_OBJECT_PATTERN.test(group.source))
     )
-    expect(missing.map((group) => `${group.source} x${String(group.count)}`)).toEqual([])
+    expect(wrong.map((group) => `${group.kind} ${group.source} x${String(group.count)}`)).toEqual(
+      []
+    )
   })
 
   it('stops drawing the shortcut barrels once they break (0x0048ef70)', async () => {
     // Arrange: the closed-loop drive fires a cannon ball at the barrier at frame 1460; the original opens it at 1477
-    const request = {
-      name: 'Pirate shortcut barrels',
-      raceFolder: 'RACEC0R1',
-      isRouteDriven: true,
-      recordFrames: [1470, 1478, 1490, 1550],
-      powerUp: { kind: 1, level: 0, grantFrame: 1457, useFrame: 1460, frameCount: 1560 },
-      watched: [{ label: 'barrels', originalTexture: '^barrel2$', portSource: '^(block|barrel)' }],
-    }
+    const request = BARRIER_REQUEST
 
     // Act
     const result = await runRenderComparison(request)
