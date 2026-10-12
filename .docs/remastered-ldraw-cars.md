@@ -36,6 +36,8 @@ So the only source that can draw them is composition: the LDraw base brick plus 
 
 ### Bricks with no good LDraw match (drawn from the game's own mesh)
 
+The fallback draws the game's faces double-sided in the plastic and also the decals: a face whose material has a picture and is no brick colour (`jt_carw`, `rr_car1`, `rr_logo`, `stw_wt`: headlights, windscreens, logos on the chassis) is drawn with that picture (the engine's own loader, colour-keyed pixels cut out); it was a flat colour before, which read as missing parts. No face is dropped beyond the original's hidden undersides (flags 1, as in `buildCarGeometry`). The gallery has `bottom` and `side` views to check a chassis alone.
+
 - **All 12 chassis** (`JTchas0`, `GM_CHAS0`, `BVBCHA0`, `BBCHAS0`, `CRchas0`, `KKCHAS0`, `DACHAS0`, `DBCHAS0`, `DCCHAS0`, `DDCHAS0`, `RRchas0`, `VVCHAS0`): the Racers chassis are special moulds the library does not have (its car bases are other shapes; the closest plates differ by several plates over the footprint).
 - LEGO Racers themed pieces the library lacks or that no part resembles: the lances, spears, swords, axes, bat, oars, guns, flags, shields, rocket noses, the torch, lamp, wand, idol, spider, jungle gem and the like (every `s...` brick below), the toolbox-shaped windscreen frame `s243200` (the most used unmapped brick: 1 or 2 on about half of the saved cars) and `S243201`, `l248900`, `sdrum`/`scylnder`, the sub-brick `Cylinder` (the stud, never in a design).
 - The exact list, with the closest part and its error, is `UNMAPPED_BRICK_REASONS`.

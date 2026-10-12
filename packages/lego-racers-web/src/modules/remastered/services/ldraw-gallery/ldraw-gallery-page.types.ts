@@ -13,6 +13,8 @@ export const GalleryView = createEnum({
   FRONT: 'front',
   REAR: 'rear',
   TOP: 'top',
+  BOTTOM: 'bottom',
+  SIDE: 'side',
 })
 export type GalleryView = EnumValues<typeof GalleryView>
 

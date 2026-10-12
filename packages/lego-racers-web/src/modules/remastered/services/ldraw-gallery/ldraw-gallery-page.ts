@@ -33,6 +33,8 @@ const VIEW_DIRECTIONS: Readonly<Record<GalleryView, readonly [number, number, nu
   [GalleryView.FRONT]: [0.55, -1, 0.7],
   [GalleryView.REAR]: [-0.6, 1, 0.6],
   [GalleryView.TOP]: [0.05, -0.2, 1],
+  [GalleryView.BOTTOM]: [0.3, -0.4, -1],
+  [GalleryView.SIDE]: [0.05, -1, 0.15],
 }
 
 const canvas = document.getElementById('stage')
@@ -129,7 +131,8 @@ const getSingleBrickDesign = (piece: PlacedBrick['piece']): CarDesign => ({
 const renderPieceSheet = async (
   names: readonly string[],
   columns: number,
-  cellSize: number
+  cellSize: number,
+  view: GalleryView = GalleryView.FRONT
 ): Promise<PieceSheetResult> => {
   const archive = await getArchive()
   const database: BrickDatabase = parseBrickDatabase(archive.readFile(BRICK_DATABASE_PATH))
@@ -155,7 +158,7 @@ const renderPieceSheet = async (
       const bottom = height - (row + 1) * cellSize
       renderer.setViewport(left, bottom, cellSize, cellSize)
       renderer.setScissor(left, bottom, cellSize, cellSize)
-      renderer.render(scene, frameCamera(scene, GalleryView.FRONT, 1))
+      renderer.render(scene, frameCamera(scene, view, 1))
     }
   }
   return { width, height, missing }
