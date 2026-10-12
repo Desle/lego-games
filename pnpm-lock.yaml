@@ -36,6 +36,16 @@ importers:
         specifier: workspace:*
         version: link:../tooling
 
+  packages/lego-racers-export:
+    dependencies:
+      '@lego-games/lego-racers':
+        specifier: workspace:*
+        version: link:../lego-racers
+    devDependencies:
+      '@lego-games/tooling':
+        specifier: workspace:*
+        version: link:../tooling
+
   packages/lego-racers-web:
     dependencies:
       '@lego-games/lego-racers':
