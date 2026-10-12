@@ -2,6 +2,11 @@ import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { chromium } from 'playwright-core'
 import { createServer } from 'vite'
+// @check-allow layer-boundaries: a type-only import of the harness' request and result, which the harness' controller owns
+import type {
+  FrontEndPixelRequest,
+  FrontEndPixelResult,
+} from '../../controller/front-end-pixel-harness/front-end-pixel-harness.types.ts'
 import type {
   PixelTraceRequest,
   PixelTraceResult,
@@ -56,6 +61,11 @@ export const startPixelTraceBrowser = async (chromePath: string): Promise<PixelT
     runPixelTrace: (request: PixelTraceRequest) =>
       page.evaluate<PixelTraceResult, PixelTraceRequest>(
         (given) => (window as unknown as PixelTraceWindow).runPixelTrace(given),
+        request
+      ),
+    runFrontEndPixelTrace: (request: FrontEndPixelRequest) =>
+      page.evaluate<FrontEndPixelResult, FrontEndPixelRequest>(
+        (given) => (window as unknown as PixelTraceWindow).runFrontEndPixelTrace(given),
         request
       ),
     close: async () => {

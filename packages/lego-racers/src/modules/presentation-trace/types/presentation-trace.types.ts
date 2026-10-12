@@ -47,6 +47,8 @@ export type OriginalTexture = {
   readonly bitsPerPixel: number
   readonly masks: readonly number[]
   readonly pixels: Uint8Array
+  // The surface's source colour key (low, high) as raw surface values; null when it has none.
+  readonly colorKey: readonly [number, number] | null
 }
 
 // One vertex as Direct3D received it (FVF 0x1c4): the screen position, 1/w, the colours and the texture coordinates.

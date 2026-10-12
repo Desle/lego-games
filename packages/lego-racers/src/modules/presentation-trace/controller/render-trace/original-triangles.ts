@@ -29,6 +29,7 @@ const RenderStateNumber = Object.freeze({
   ALPHA_REFERENCE: '24',
   ALPHA_FUNCTION: '25',
   ALPHA_BLEND_ENABLE: '27',
+  COLOR_KEY_ENABLE: '41',
 })
 
 const StageStateNumber = Object.freeze({
@@ -105,6 +106,7 @@ export const getDrawState = (state: OriginalRenderState): DrawState => {
         : TextureAddressing.CLAMP,
     isDepthTestEnabled: render(RenderStateNumber.Z_ENABLE) !== 0,
     isDepthWriteEnabled: render(RenderStateNumber.Z_WRITE_ENABLE) !== 0,
+    isColorKeyEnabled: render(RenderStateNumber.COLOR_KEY_ENABLE) !== 0,
   })
 }
 

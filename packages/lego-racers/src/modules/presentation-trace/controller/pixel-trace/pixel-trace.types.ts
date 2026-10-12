@@ -6,7 +6,10 @@ export type PixelImage = {
 }
 
 // A texture surface of the original as RGBA bytes.
-export type DecodedTexture = PixelImage
+export type DecodedTexture = PixelImage & {
+  // 1 for the texels equal to the surface's colour key; null when the surface has none.
+  readonly keyedTexels: Uint8Array | null
+}
 
 // The original's frame drawn by the software rasteriser: the colours and, per pixel, which draw and texture put them there.
 export type RasterisedFrame = PixelImage & {
