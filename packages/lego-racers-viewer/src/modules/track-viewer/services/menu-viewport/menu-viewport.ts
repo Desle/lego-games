@@ -96,7 +96,7 @@ export const createMenuViewport = (archive: JamArchive): MenuViewport => {
     world.object.animate(deltaMilliseconds)
     if (command.builder !== null) world.carView().show(command.builder)
     if (command.showcase !== null) world.showcaseStage().show(command.showcase)
-    if (command.cinema !== null) world.cinemaStage().show(command.cinema)
+    if (command.cinema !== null) world.cinemaStage().show(command.cinema, height)
     if (command.driver !== null) {
       const driverView = world.driverView()
       driverView.show(command.driver)
