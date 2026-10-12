@@ -9,6 +9,6 @@ describe('getNativeMenuSurfaceScale', () => {
     const scales = requested.map(getNativeMenuSurfaceScale)
 
     // Assert
-    expect(scales).toEqual([1, 2.25, 3, 8, 1])
+    expect(scales).toEqual([1, 2.25, 3, 3.25, 1])
   })
 })
