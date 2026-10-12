@@ -25,6 +25,9 @@ const getTunePaths = (): readonly string[] =>
     .filter((name) => name.toLowerCase().endsWith('.tun'))
     .map((name) => resolve(ORIGINAL_GAME_DIRECTORY, name))
 
+// Decoding all 50 original tunes takes about 2 s alone and over 5 s on a loaded machine.
+const ALL_TUNES_TIMEOUT_IN_MILLISECONDS = 60_000
+
 describe('decodeMusic', () => {
   it('decodes stereo music to 22050 Hz interleaved stereo', () => {
     // Arrange
@@ -92,7 +95,8 @@ describe('decodeMusic', () => {
         expect(music.storedChannelCount).toBe(2)
         expect(music.samples).toHaveLength(((byteLength - 16) >> 1) * 4)
       }
-    }
+    },
+    ALL_TUNES_TIMEOUT_IN_MILLISECONDS
   )
 
   it.skipIf(!existsSync(ORIGINAL_GAME_DIRECTORY))(

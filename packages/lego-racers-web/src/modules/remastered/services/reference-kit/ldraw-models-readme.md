@@ -43,6 +43,8 @@ A chassis recipe has its own frame: **the corner of the chassis brick's footprin
 - a hand-built car refers to it with the line from the sheet;
 - a car built in the garage whose design names the chassis uses it automatically, in the place the game puts the chassis brick, with the bricks placed on it.
 
+**Grid alignment.** A recipe may be a single real car base. The viewer measures the recipe's box and moves every brick built on it so the game's grid (10 x 6 cells) is centred on the base's studs, cell edges on stud edges, and the first layer rests on the base's deck (the deck height most attachable cells have). Wheels stay at the game's centres; the recipe's own position only has to put the base between them.
+
 A garage car is complete LDraw once its chassis has a recipe. Until then it is drawn by the original (never half and half). **Fallback (a toggle, not the default):** the developer panel's "Chassis without a recipe" (or `?hd&chassis=game`) draws such a chassis from the game's own geometry, converted to an unofficial LDraw part with a stud on every flat cell of its top (the files in `chassis/_fallback/` are the same conversion).
 
 ## Wheel mounts

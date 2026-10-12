@@ -7,7 +7,13 @@ import { Group, Mesh } from 'three'
 import type { Object3D } from 'three'
 import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
 import { createGameBrickMeshes } from './game-brick-meshes.ts'
-import { createLDrawCarDocument, getChassisFileName, LDRAW_TO_STUDS } from './ldraw-car-document.ts'
+import { loadDesignGridOffset } from './chassis-grid-offset-loader.ts'
+import {
+  createLDrawCarDocument,
+  getChassisFileName,
+  LDRAW_TO_STUDS,
+  LDRAW_UNITS_PER_STUD,
+} from './ldraw-car-document.ts'
 import { applyPlasticLook, createStudioLights } from './ldraw-plastic.ts'
 import type { PlasticMesh } from './ldraw-plastic.types.ts'
 import type { LDrawCarDrawing, LDrawCarRequest } from './ldraw-car-drawing.types.ts'
@@ -34,7 +40,8 @@ export const createLDrawCarDrawing = (
 ): LDrawCarDrawing => {
   const database = parseBrickDatabase(archive.readFile(BRICK_DATABASE_PATH))
   const origin = getCarOrigin(database, design)
-  const brickDocument = createLDrawCarDocument(design, origin, new Set(chassisModels.keys()))
+  const chassisReferences = new Set(chassisModels.keys())
+  const brickDocument = createLDrawCarDocument(design, origin, chassisReferences)
   const document = Object.freeze({
     ...brickDocument,
     text: [
@@ -45,28 +52,41 @@ export const createLDrawCarDrawing = (
   const object = new Group()
   object.add(createStudioLights())
   const gameBricks = isLDrawUsed ? document.unmappedBricks : design.bricks
-  object.add(createGameBrickMeshes(archive, database, gameBricks, origin))
+  const gameMeshes = createGameBrickMeshes(archive, database, gameBricks, origin)
+  object.add(gameMeshes)
   const mappedBricks = design.bricks.filter((brick) => !document.unmappedBricks.includes(brick))
   const placeholder = createGameBrickMeshes(archive, database, mappedBricks, origin)
   if (isLDrawUsed) object.add(placeholder)
+  const draw = async () => {
+    const gridOffset = await loadDesignGridOffset(design, chassisModels)
+    const shiftedDocument = createLDrawCarDocument(design, origin, chassisReferences, gridOffset)
+    gameMeshes.position.set(
+      gridOffset.x / LDRAW_UNITS_PER_STUD,
+      gridOffset.z / LDRAW_UNITS_PER_STUD,
+      -gridOffset.y / LDRAW_UNITS_PER_STUD
+    )
+    const model = await parseLDrawModel(
+      [
+        shiftedDocument.text,
+        ...[...chassisModels].map(([name, text]) => `0 FILE ${getChassisFileName(name)}\n${text}`),
+      ].join('\n')
+    )
+    applyPlasticLook(model)
+    onModel?.(model)
+    const holder = new Group()
+    holder.matrixAutoUpdate = false
+    holder.matrix.copy(LDRAW_TO_STUDS)
+    holder.add(model)
+    object.add(holder)
+    object.remove(placeholder)
+    disposeMeshes(placeholder)
+  }
   const settled = isLDrawUsed
-    ? parseLDrawModel(document.text).then(
-        (model) => {
-          applyPlasticLook(model)
-          onModel?.(model)
-          const holder = new Group()
-          holder.matrixAutoUpdate = false
-          holder.matrix.copy(LDRAW_TO_STUDS)
-          holder.add(model)
-          object.add(holder)
-          object.remove(placeholder)
-          disposeMeshes(placeholder)
-        },
-        (error: unknown) =>
-          console.error(
-            'The LDraw library could not build the car; drawing the original bricks',
-            error
-          )
+    ? draw().catch((error: unknown) =>
+        console.error(
+          'The LDraw library could not build the car; drawing the original bricks',
+          error
+        )
       )
     : Promise.resolve()
   return Object.freeze({ object, document, origin, settled })
