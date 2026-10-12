@@ -10,6 +10,7 @@ import type {
 } from '../race-viewport/race-viewport.types.ts'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import { getLocalVisibilityQuery, showVisibleLeaves } from './bsp-visibility.ts'
+import { setSlotMaterial } from './instance-batches.ts'
 import { applyVertexLighting } from './vertex-lighting.ts'
 import type { SceneLights } from './vertex-lighting.types.ts'
 import { createSkeletonInstanceObject } from './skeleton-instance-object.ts'
@@ -67,6 +68,7 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
     textureCache: new Map(),
     materials: new Map<string, Material>(),
     geometries: new Map<string, BufferGeometry>(),
+    slotMeshes: new Map(),
     nextDrawOrder: () => {
       drawOrder += 1
       return drawOrder
@@ -78,7 +80,9 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
   const levelSelectors: ((camera: Vector3Like, view: FrustumView | undefined) => void)[] = []
   const runtimes = new Map<string, InstanceRuntime>()
   const leafSelectors: ((view: FrustumView, worldToLocal: Matrix4) => void)[] = []
+  const instancesByName = new Map<string, SceneInstance>()
   for (const instance of scene.instances.filter(options.includeInstance)) {
+    if (!instancesByName.has(instance.name)) instancesByName.set(instance.name, instance)
     const levelObjects = instance.levels.flatMap((_level, levelIndex) => {
       const levelMesh = getInstanceLevelMesh(scene, instance, levelIndex)
       const instanceObject =
@@ -179,6 +183,15 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
     setSkeletonState: (name: string, state: SkeletonAnimationState) =>
       stateSetters.get(name)?.(state),
     animatedInstanceCount: animators.length,
+    setMaterialSlot: (instanceName, levelIndex, slot, materialName) => {
+      const level = instancesByName.get(instanceName)?.levels[levelIndex]
+      const materialIndex = scene.materials.findLastIndex(
+        (material) => material.name === materialName
+      )
+      if (level === undefined || materialIndex === -1) return false
+      setSlotMaterial(context, level, slot, materialIndex)
+      return true
+    },
     setLights: (lights: SceneLights | null) => applyVertexLighting(group, lights),
     setAnimationState: (state: SkeletonAnimationState) => {
       for (const setState of stateSetters.values()) setState(state)

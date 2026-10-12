@@ -4,3 +4,9 @@ export type LDrawModelIndex = {
   readonly cars: Readonly<Record<string, string>>
   readonly chassis: Readonly<Record<string, string>>
 }
+
+// A model file under the models folder: its path relative to the folder and when it last changed on disk.
+export type LDrawModelFile = {
+  readonly path: string
+  readonly modifiedMilliseconds: number
+}
