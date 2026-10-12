@@ -991,3 +991,12 @@
 00463700 Event53_Setup
 004637c0 Event53_Begin
 00463800 Event53_End
+# Sound objects and mixing (audio sweep)
+00417de0 SoundObject_MixForListener
+00419650 DirectSound_GetVolumeUnits
+00419680 DirectSound_GetPanUnits
+0041b300 SoundBank_PlayAt
+0041b370 SoundBank_CreateSoundObject
+0041ad80 SoundObject_Play
+0041ad90 SoundObject_Stop
+0041ae60 SoundBank_Load

@@ -3,6 +3,7 @@ import {
   compareAudioCalls,
   getIsOriginalPresentationAvailable,
   getOriginalAudioCalls,
+  LOOPED_SOUND_ID_OFFSET,
   readOriginalPresentation,
 } from '@lego-games/lego-racers/presentation-trace'
 import type { AudioCall, AudioFrameCalls } from '@lego-games/lego-racers/presentation-trace'
@@ -19,6 +20,11 @@ import { createPresentationScenario } from './trace-scenarios.ts'
 import type { AudioTraceCase } from './trace-scenarios.types.ts'
 
 const isGamePresent = () => getIsOriginalGamePresent() && getIsOriginalPresentationAvailable()
+
+// The idle engine loop (0x00437540, sound 0x20).
+const IDLE_ENGINE_SOUND_ID = 0x20
+// The loop of the nearest racer (0x0043ccb0).
+const NEAREST_RACER_SOUND_ID = 0x4f
 
 const AUDIO_CASES: readonly AudioTraceCase[] = [
   { name: 'Royal Knights', raceFolder: 'RACEC0R0' },
@@ -61,27 +67,89 @@ describe.skipIf(!isGamePresent())('audio trace', () => {
       }
     )
     const portFrames: AudioFrameCalls[] = []
+    const playingEngineLoops = new Set<string>()
+    const playingEventLoops = new Set<string>()
+    const soundRacerIndices = new Set<number>()
+    let wasNearestRacerHeard = false
 
     // Act
-    const introduction = runPortRace(assets, scenario.frames, (portFrame) => {
-      const { sounds, music } = portFrame.presentation
-      const calls: AudioCall[] = sounds.map((sound) => ({
-        kind: 'sound',
-        soundId: sound.soundId,
-        address: sound.address,
-      }))
-      if (music !== null) {
-        calls.push({ kind: 'music', listIndex: music.listIndex, isLooping: music.isLooping })
-      }
-      portFrames.push({ frame: portFrame.frame, calls })
-    })
+    const introduction = runPortRace(
+      assets,
+      scenario.frames,
+      (portFrame) => {
+        const { sounds, music, loopedSounds, engineLoops } = portFrame.presentation
+        if (soundRacerIndices.size === 0) {
+          const { playerRacerIndices } = portFrame.raceState
+          for (const racerIndex of playerRacerIndices.length === 0 ? [0] : playerRacerIndices) {
+            soundRacerIndices.add(racerIndex)
+            playingEngineLoops.add(`${String(racerIndex)}:idle`)
+          }
+        }
+        const calls: AudioCall[] = sounds.map((sound) => ({
+          kind: 'sound',
+          soundId: sound.soundId,
+          address: sound.address,
+        }))
+        // The turbo and warp hum follow the racer's state (0x00437be0 plays a loop only while slot +0xc says it is not
+        // playing); every other loop belongs to an object that is made and started.
+        for (const loop of loopedSounds) {
+          const isStateDriven = loop.key.startsWith('turbo:') || loop.key.startsWith('warp:')
+          if (!loop.isStart) {
+            playingEventLoops.delete(loop.key)
+          } else if (!isStateDriven || !playingEventLoops.has(loop.key)) {
+            playingEventLoops.add(loop.key)
+            calls.push({
+              kind: 'sound',
+              soundId: loop.soundId + LOOPED_SOUND_ID_OFFSET,
+              address: loop.address,
+            })
+          }
+        }
+        // The loop of the racer nearest to the camera's racer (sound 0x4f, 0x0043c1b0) starts whenever it was silent.
+        const isNearestRacerHeard = portFrame.presentation.nearestRacerSound !== null
+        if (isNearestRacerHeard && !wasNearestRacerHeard) {
+          calls.push({
+            kind: 'sound',
+            soundId: NEAREST_RACER_SOUND_ID + LOOPED_SOUND_ID_OFFSET,
+            address: 'nearest',
+          })
+        }
+        wasNearestRacerHeard = isNearestRacerHeard
+        // An engine or skid loop that was not playing the frame before is a RaceSounds_Get and a play with 1.
+        for (const { racerIndex, loops } of engineLoops) {
+          for (const loop of loops) {
+            const key = `${String(racerIndex)}:${loop.kind}`
+            if (loop.isPlaying && !playingEngineLoops.has(key)) {
+              calls.push({
+                kind: 'sound',
+                soundId: loop.soundId + LOOPED_SOUND_ID_OFFSET,
+                address: 'engine',
+              })
+            }
+            if (loop.isPlaying) playingEngineLoops.add(key)
+            else playingEngineLoops.delete(key)
+          }
+        }
+        if (music !== null) {
+          calls.push({ kind: 'music', listIndex: music.listIndex, isLooping: music.isLooping })
+        }
+        portFrames.push({ frame: portFrame.frame, calls })
+      },
+      scenario.powerUpGrants ?? []
+    )
     const loadCall: AudioCall = {
       kind: 'music',
       listIndex: introduction.listIndex,
       isLooping: introduction.isLooping,
     }
+    // 0x00437540 starts the idle loop of every racer that has sound objects as the track loads.
+    const loadLoopCalls: AudioCall[] = [...soundRacerIndices].map(() => ({
+      kind: 'sound',
+      soundId: IDLE_ENGINE_SOUND_ID + LOOPED_SOUND_ID_OFFSET,
+      address: '0x0043765d',
+    }))
     const comparison = compareAudioCalls(getOriginalAudioCalls(original.audioFrames), [
-      { frame: -1, calls: [loadCall] },
+      { frame: -1, calls: [loadCall, ...loadLoopCalls] },
       ...portFrames,
     ])
 
