@@ -15,6 +15,7 @@ const FIRST_BUILDER_BRICK_ID = 0x800
 export const getDesignChassisName = (design: CarDesign): string | null =>
   design.bricks.find((brick) => brick.piece.id < FIRST_BUILDER_BRICK_ID)?.piece.name ?? null
 
+// The chassis database names its records in lower case, the brick database's pieces in upper case.
 // The wheels of a chassis (Chassis_CreateInstances 0x0041e360: a skeleton instance whose clip 0 is the wheels turning forward) in
 // the files the race reads.
 const wheelsByArchive = new WeakMap<JamArchive, Map<string, RacerDrawingPart>>()
@@ -22,7 +23,7 @@ const wheelsByArchive = new WeakMap<JamArchive, Map<string, RacerDrawingPart>>()
 const readChassisWheels = (archive: JamArchive, chassisName: string): RacerDrawingPart => {
   const names = getBuiltRacerAppearance(
     readRacerDatabases(archive.readFile),
-    chassisName,
+    chassisName.toLowerCase(),
     0
   ).wheelModel
   return {

@@ -26,6 +26,7 @@ import {
   Vector3,
   WebGLRenderer,
 } from 'three'
+import { useLookFromAddress } from '../ldraw-car/ldraw-look.ts'
 import { DEVELOPMENT_JAM_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
 import { createModelObject } from '../../../track-viewer/index.ts'
 import { RacerPartKind } from '../ldraw-racer/ldraw-racer-drawing.types.ts'
@@ -41,6 +42,8 @@ import type {
   GalleryFocus,
   GalleryView,
 } from './ldraw-racer-gallery-page.types.ts'
+
+useLookFromAddress()
 
 const BACKGROUND_COLOR = 0x2b3340
 const FIELD_OF_VIEW = 30

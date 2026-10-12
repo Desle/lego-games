@@ -1,13 +1,13 @@
 import {
+  BufferGeometry,
   CanvasTexture,
   CylinderGeometry,
   DoubleSide,
+  Float32BufferAttribute,
   LinearFilter,
   Mesh,
   MeshStandardMaterial,
-  PlaneGeometry,
 } from 'three'
-import type { BufferGeometry } from 'three'
 import type { TexturePixels } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import { loadHighDefinitionPixels } from '../high-definition-texture/high-definition-texture.ts'
 import type { PictureSource, UvRectangle } from './minifig-surfaces.types.ts'
@@ -124,10 +124,40 @@ export const createFaceDecal = (picture: PictureSource, search: string): Minifig
   return createDecal(picture, geometry, search)
 }
 
-// The front of the torso: the picture over the torso's whole front.
-export const createTorsoDecal = (picture: PictureSource, search: string): MinifigDecal | null => {
-  const geometry = new PlaneGeometry(TORSO_WIDTH, TORSO_HEIGHT)
-  geometry.rotateX(Math.PI)
-  geometry.translate(0, TORSO_HEIGHT / 2, TORSO_FRONT_Z)
-  return createDecal(picture, geometry, search)
+// The front face of the library's torso `973` (LDraw units, y down): 28.69 wide at the shoulders (y 2), 38 from y 29 to the hem (y 32).
+// The picture is clipped to that outline, inset so that no edge reaches onto the arms or the neck.
+const TORSO_FRONT_ROWS = Object.freeze([
+  { y: 2.4, halfWidth: 13.9 },
+  { y: 29, halfWidth: 18.6 },
+  { y: 31.8, halfWidth: 18.6 },
+])
+
+const createTorsoFrontGeometry = (): BufferGeometry => {
+  const vertices = TORSO_FRONT_ROWS.flatMap((row) =>
+    [-row.halfWidth, row.halfWidth].map((x) => ({ x, y: row.y }))
+  )
+  const geometry = new BufferGeometry()
+  geometry.setAttribute(
+    'position',
+    new Float32BufferAttribute(
+      vertices.flatMap((vertex) => [vertex.x, vertex.y, TORSO_FRONT_Z]),
+      3
+    )
+  )
+  geometry.setAttribute(
+    'uv',
+    new Float32BufferAttribute(
+      vertices.flatMap((vertex) => [
+        (vertex.x + TORSO_WIDTH / 2) / TORSO_WIDTH,
+        1 - vertex.y / TORSO_HEIGHT,
+      ]),
+      2
+    )
+  )
+  geometry.setIndex([0, 1, 2, 1, 3, 2, 2, 3, 4, 3, 5, 4])
+  return geometry
 }
+
+// The front of the torso: the picture over the torso's front face, and no further.
+export const createTorsoDecal = (picture: PictureSource, search: string): MinifigDecal | null =>
+  createDecal(picture, createTorsoFrontGeometry(), search)

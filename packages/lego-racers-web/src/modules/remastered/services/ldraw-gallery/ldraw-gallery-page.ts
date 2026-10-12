@@ -8,6 +8,7 @@ import type { BrickDatabase, CarDesign, PlacedBrick } from '@lego-games/lego-rac
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { Object3D } from 'three'
+import { useLookFromAddress } from '../ldraw-car/ldraw-look.ts'
 import {
   Box3,
   Color,
@@ -27,6 +28,8 @@ import { createLDrawPickupDrawing } from '../ldraw-pickup/ldraw-pickup-drawing.t
 import { createLDrawCarDrawing } from '../ldraw-car/ldraw-car-drawing.ts'
 import { GalleryMode, GalleryView } from './ldraw-gallery-page.types.ts'
 import type { GalleryResult, GalleryScene, PieceSheetResult } from './ldraw-gallery-page.types.ts'
+
+useLookFromAddress()
 
 const BACKGROUND_COLOR = 0x2b3340
 const FIELD_OF_VIEW = 32
@@ -120,6 +123,34 @@ const renderCar = async (
     brickCount: car.design.bricks.length,
     unmappedNames,
   }
+}
+
+// The cost of drawing one car: the average milliseconds of a frame at this size, the GPU finished each time (a software renderer in a
+// headless browser only gives the relative cost between looks).
+const measureCarFrame = async (
+  savePath: string,
+  index: number,
+  width: number,
+  height: number,
+  frames: number
+): Promise<number | null> => {
+  const archive = await getArchive()
+  const car = loadSavedCars((path) => archive.readFile(path), savePath)[index]
+  if (car?.design === null || car === undefined) return null
+  const { scene } = await createDesignScene(archive, car.design, GalleryMode.LDRAW)
+  renderer.setSize(width, height, false)
+  renderer.setViewport(0, 0, width, height)
+  renderer.setScissorTest(false)
+  const camera = frameCamera(scene, GalleryView.FRONT, width / height)
+  const pixel = new Uint8Array(4)
+  const context = renderer.getContext()
+  renderer.render(scene, camera)
+  const start = performance.now()
+  for (let frame = 0; frame < frames; frame++) {
+    renderer.render(scene, camera)
+    context.readPixels(0, 0, 1, 1, context.RGBA, context.UNSIGNED_BYTE, pixel)
+  }
+  return (performance.now() - start) / frames
 }
 
 const getSingleBrickDesign = (piece: PlacedBrick['piece']): CarDesign => ({
@@ -230,4 +261,10 @@ const getDesignCount = async (savePath: string): Promise<number> => {
   return loadSavedCars((path) => archive.readFile(path), savePath).length
 }
 
-Object.assign(window, { renderCar, renderPieceSheet, renderEffectSheet, getDesignCount })
+Object.assign(window, {
+  measureCarFrame,
+  renderCar,
+  renderPieceSheet,
+  renderEffectSheet,
+  getDesignCount,
+})
