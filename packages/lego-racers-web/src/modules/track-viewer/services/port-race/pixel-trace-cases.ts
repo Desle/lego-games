@@ -12,8 +12,8 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
       powerUp: { kind: 4, level: 0, grantFrame: 300, useFrame: 305, frameCount: 340 },
       recordFrames: [306, 309, 312, 316, 330],
     },
-    maximumDifferingShare: 0.02,
-    watchedTextures: [{ label: 'oilslk64', maximumDifferingShare: 0.05 }],
+    maximumDifferingShare: 0.01,
+    watchedTextures: [{ label: 'oilslk64', maximumDifferingShare: 0.02 }],
   },
   {
     request: {
@@ -21,18 +21,18 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
       raceFolder: 'RACEC0R0',
       recordFrames: [100, 170, 250, 320],
     },
-    maximumDifferingShare: 0.05,
+    maximumDifferingShare: 0.025,
     watchedTextures: [],
   },
   {
-    // The camera lock of 0x004047b0: before it was ported the scene was displaced (51.5 percent differed). The rest is
-    // edges and the textures the matcher cannot name (pixel-trace.md).
+    // The camera lock of 0x004047b0: before it was ported the scene was displaced (51.5 percent differed). The race start's
+    // black fade (0x00433525, alpha 154 here) is part of the frame; the rest is edges (pixel-trace.md).
     request: {
       name: 'Royal Knights, introduction',
       raceFolder: 'RACEC0R0',
       recordFrames: [5],
     },
-    maximumDifferingShare: 0.015,
+    maximumDifferingShare: 0.005,
     watchedTextures: [],
   },
   {
@@ -42,7 +42,7 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
       isPowerSliding: true,
       recordFrames: [240, 260, 275, 285, 300, 340, 400],
     },
-    maximumDifferingShare: 0.1,
+    maximumDifferingShare: 0.045,
     watchedTextures: [],
   },
   {
@@ -55,11 +55,11 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
       recordFrames: [310, 320, 330, 345, 360, 375],
       powerUp: { kind: 3, level: 3, grantFrame: 300, useFrame: 305, frameCount: 380 },
     },
-    maximumDifferingShare: 0.05,
+    maximumDifferingShare: 0.035,
     watchedTextures: [
-      { label: 'titwat2', maximumDifferingShare: 0.02 },
+      { label: 'titwat2', maximumDifferingShare: 0.005 },
       // The warp portal's picture (`warphole`), which the matcher names by its hash.
-      { label: '69645e3c29b12070', maximumDifferingShare: 0.05 },
+      { label: '69645e3c29b12070', maximumDifferingShare: 0.02 },
     ],
   },
   {
@@ -69,7 +69,7 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
       powerUp: { kind: 4, level: 1, grantFrame: 300, useFrame: 305, frameCount: 460 },
       recordFrames: [390, 400, 420, 440],
     },
-    maximumDifferingShare: 0.02,
+    maximumDifferingShare: 0.006,
     watchedTextures: [],
   },
   {
@@ -79,7 +79,7 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
       isSteering: true,
       recordFrames: [392, 400, 410, 420],
     },
-    maximumDifferingShare: 0.08,
+    maximumDifferingShare: 0.015,
     watchedTextures: [],
   },
 ]

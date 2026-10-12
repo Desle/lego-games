@@ -29,6 +29,7 @@ import {
   getIsSkeletonInstanceFinished,
 } from '../../../world-animation/index.ts'
 import { openPauseMenu } from '../pause-menu/pause-menu.ts'
+import { getRaceWithFinishFade, getRaceWithResultsFade } from '../phase-fade/phase-fade.ts'
 import { PauseMenuMode, PendingAction } from '../../types/pause-menu/pause-menu.ts'
 import { recordPlace, tickPointsRecord } from '../../types/points-record/points-record.ts'
 import { RaceExit } from '../../types/race-exit/race-exit.ts'
@@ -233,9 +234,10 @@ const releasePlayerController = (
 }
 
 // Race_UpdateState5 0x00435180: with a points record the results stay for 5 s (the record's ticker runs on the frame
-// time); without one, or after that, the state timer is cleared and the loop ends. (From 4 s the original also
-// fades the screen out, 0x00494eb0, which is presentation.)
-const stepResults = (step: RaceStepResult, frameMilliseconds: number): RaceStepResult => {
+// time); without one, or after that, the state timer is cleared and the loop ends. From 4 s the screen fades out
+// (0x004351ab, phase-fade).
+const stepResults = (faded: RaceStepResult, frameMilliseconds: number): RaceStepResult => {
+  const step = getStepWith(faded, getRaceWithResultsFade(faded.raceState), [])
   const { raceState } = step
   if (raceState.pointsRecord !== null && raceState.phaseMilliseconds < RESULTS_MILLISECONDS) {
     return getStepWith(
@@ -261,7 +263,8 @@ const stepResults = (step: RaceStepResult, frameMilliseconds: number): RaceStepR
 
 // Race_UpdateState4 0x00434eb0 (without a ghost): after 10 s the racers still running are given the next places
 // in racer order and every racer's place is recorded; before that, racers that finished their laps are placed.
-const stepFinishing = (step: RaceStepResult, frameMilliseconds: number): RaceStepResult => {
+const stepFinishing = (faded: RaceStepResult, frameMilliseconds: number): RaceStepResult => {
+  const step = getStepWith(faded, getRaceWithFinishFade(faded.raceState), [])
   const { raceState } = step
   const racerCount = raceState.racerSet.racers.length
   const indices = Array.from({ length: racerCount }, (_, index) => index)

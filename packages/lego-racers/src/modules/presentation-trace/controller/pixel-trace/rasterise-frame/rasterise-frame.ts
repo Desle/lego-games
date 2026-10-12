@@ -341,6 +341,20 @@ const rasteriseTriangle = (
   }
 }
 
+// The screen fader's quad (0x004905e0) covers the whole viewport without a depth test, so it comes after the scene like the HUD does
+// but is part of the picture.
+const getIsScreenCover = (draw: OriginalDraw, width: number, height: number): boolean => {
+  const xs = draw.vertices.map((vertex) => vertex.x)
+  const ys = draw.vertices.map((vertex) => vertex.y)
+  return (
+    draw.vertices.length > 0 &&
+    Math.min(...xs) <= 0 &&
+    Math.min(...ys) <= 0 &&
+    Math.max(...xs) >= width &&
+    Math.max(...ys) >= height
+  )
+}
+
 const getLastDepthTestedDraw = (frame: OriginalRenderFrame, states: readonly DrawState[]): number =>
   frame.draws.reduce(
     (last, draw, index) => (states[draw.stateIndex]?.isDepthTestEnabled === true ? index : last),
@@ -385,16 +399,20 @@ export const rasteriseFrame = (
   frame.draws.forEach((draw, drawIndex) => {
     const state = states[draw.stateIndex]
     if (state === undefined) return
-    if (!options.isHudIncluded && drawIndex > lastDepthTestedDraw) return
+    if (
+      !options.isHudIncluded &&
+      drawIndex > lastDepthTestedDraw &&
+      !getIsScreenCover(draw, width, height)
+    )
+      return
     const original = draw.textureHash === null ? undefined : textures.get(draw.textureHash)
     if (draw.textureHash !== null && original !== undefined && !decoded.has(draw.textureHash)) {
       decoded.set(draw.textureHash, decodeTexture(original))
     }
-    const isColorKeyed = state.isColorKeyEnabled && original !== undefined && original.colorKey !== null
-    if (isColorKeyed && draw.textureHash !== null && original !== undefined) {
-      if (!keyedDecoded.has(draw.textureHash)) {
-        keyedDecoded.set(draw.textureHash, decodeTexture(original, true))
-      }
+    const isColorKeyed =
+      state.isColorKeyEnabled && original !== undefined && original.colorKey !== null
+    if (isColorKeyed && draw.textureHash !== null && !keyedDecoded.has(draw.textureHash)) {
+      keyedDecoded.set(draw.textureHash, decodeTexture(original, true))
     }
     const context: DrawContext = {
       state,

@@ -34,12 +34,7 @@ export const createDynamicGeometry = (cornerCount: number): BufferGeometry => {
 // The material of a decal: drawn under an alpha of its own (the device's override), so the colour key stays off, and
 // with the depth written.
 export const createDecalMaterial = (scene: Scene, material: SceneMaterial): Material => {
-  const three = createSceneMaterial(
-    material,
-    scene.textures,
-    new Map(),
-    true
-  )
+  const three = createSceneMaterial(material, scene.textures, new Map(), true)
   three.depthWrite = true
   three.depthFunc = LessEqualDepth
   return three

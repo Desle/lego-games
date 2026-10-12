@@ -28,7 +28,7 @@ It then fills the placement:
 
 ## Drawing the shadow (`0x0043fc20`)
 
-The shadow is drawn only when `0x0043fa50` projected it that frame (vehicle flag `0x10`, which Vehicle_Update clears at its end, `0x0043e5f6`). The squared distance from the camera to the decal's position (x and y from the decal, z the centre's z + 6) decides the alpha: up to 2500 (50 units) it is `0xbf`; between 2500 and 10000 it is `0xbf - trunc((distance - 2500) / 7500 * 191)`; from 10000 (100 units) nothing is drawn, nor when the alpha reaches 0. The alpha goes in through the device's override (slot `0xb8`, mode 1), which the original records as the vertex alpha with alpha test off and depth write on (blend source alpha, destination inverse source alpha). The decal's instance sits 0.4 above the track (`0x004af914`, set in `0x00414950`).
+The shadow is drawn only when `0x0043fa50` projected it that frame (vehicle flag `0x10`, which Vehicle_Update clears at its end, `0x0043e5f6`). The squared distance from the camera to the decal's position (x and y from the decal, z the centre's z + 6) decides the alpha: up to 2500 (50 units) it is `0xbf`; between 2500 and 10000 it is `0xbf - trunc((distance - 2500) / 7500 * 191)`; from 10000 (100 units) nothing is drawn, nor when the alpha reaches 0. The alpha goes in through the device's override (slot `0xb8`, mode 1), which the original records as the vertex alpha with alpha test off and depth write on (blend source alpha, destination inverse source alpha). The colour key (state 41) stays on for the keyed pictures, so the port keeps the material's alpha test on a decal (pixel-trace.md, finding 6). The decal's instance sits 0.4 above the track (`0x004af914`, set in `0x00414950`).
 
 ## Verification
 

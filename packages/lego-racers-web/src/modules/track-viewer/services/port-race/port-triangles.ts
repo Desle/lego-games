@@ -43,6 +43,8 @@ const getDrawState = (renderState: SceneRenderState, material: Material): DrawSt
     addressing: renderState.addressing,
     isDepthTestEnabled: material.depthTest,
     isDepthWriteEnabled: material.depthWrite,
+    // The port keys through the alpha test (GolDP.dll 0x100257e0, device flag 0x100).
+    isColorKeyEnabled: renderState.isAlphaTestEnabled,
   })
 
 const getTextureKey = (

@@ -1,5 +1,6 @@
 import type {
   OriginalDraw,
+  OriginalTexture,
   OriginalRenderFrame,
   OriginalRenderState,
   OriginalVertex,
@@ -34,15 +35,15 @@ const getState = (isDepthTested: boolean): OriginalRenderState => ({
   stage: { '0.1': 3 },
 })
 
-const getDraw = (stateIndex: number, depth: number, diffuse: number): OriginalDraw => ({
+const getDraw = (stateIndex: number, depth: number, diffuse: number, size = 8): OriginalDraw => ({
   primitive: TRIANGLE_LIST,
   fvf: 0x1c4,
   stateIndex,
   textureHash: null,
   vertices: [
     getVertex(0, 0, depth, diffuse),
-    getVertex(8, 0, depth, diffuse),
-    getVertex(0, 8, depth, diffuse),
+    getVertex(size, 0, depth, diffuse),
+    getVertex(0, size, depth, diffuse),
   ],
   indices: null,
   clipMatrix: [],
@@ -85,7 +86,7 @@ describe('rasteriseFrame', () => {
 
   it('leaves out the draws after the last depth-tested one unless the HUD is included', () => {
     // Arrange
-    const frame = getFrame([getDraw(0, 0.5, GREEN), getDraw(1, 0, RED)])
+    const frame = getFrame([getDraw(0, 0.5, GREEN), getDraw(1, 0, RED, 6)])
 
     // Act
     const without = rasteriseFrame(frame, NO_TEXTURES, OPTIONS)
@@ -95,5 +96,55 @@ describe('rasteriseFrame', () => {
     const offset = (1 * OPTIONS.width + 1) * 4
     expect([...without.colors.subarray(offset, offset + 3)]).toEqual([0, 255, 0])
     expect([...included.colors.subarray(offset, offset + 3)]).toEqual([255, 0, 0])
+  })
+
+  it('keeps the draws after the last depth-tested one that cover the whole viewport, the screen fader', () => {
+    // Arrange
+    const frame = getFrame([getDraw(0, 0.5, GREEN), getDraw(1, 0, RED)])
+
+    // Act
+    const image = rasteriseFrame(frame, NO_TEXTURES, OPTIONS)
+
+    // Assert
+    const offset = (1 * OPTIONS.width + 1) * 4
+    expect([...image.colors.subarray(offset, offset + 3)]).toEqual([255, 0, 0])
+  })
+
+  it('does not draw the texels inside the surface colour key when the draw has the key state on', () => {
+    // Arrange
+    const texture: OriginalTexture = {
+      hash: 'keyed',
+      width: 2,
+      height: 1,
+      pitch: 4,
+      bitsPerPixel: 16,
+      masks: [0xf800, 0x07e0, 0x001f, 0],
+      colorKey: [0xf800, 0xf800],
+      // Red (0xf800), then green (0x07e0), little-endian.
+      pixels: Uint8Array.of(0x00, 0xf8, 0xe0, 0x07),
+    }
+    const state: OriginalRenderState = {
+      render: { '7': 1, '9': 2, '14': 1, '41': 1 },
+      stage: { '0.1': 4, '0.16': 1, '0.12': 3 },
+    }
+    const draw: OriginalDraw = {
+      ...getDraw(0, 0.5, 0xffffffff),
+      textureHash: 'keyed',
+      vertices: [
+        { ...getVertex(0, 0, 0.5, 0xffffffff), u: 0, v: 0 },
+        { ...getVertex(8, 0, 0.5, 0xffffffff), u: 1, v: 0 },
+        { ...getVertex(0, 8, 0.5, 0xffffffff), u: 0, v: 1 },
+      ],
+    }
+    const frame: OriginalRenderFrame = { frame: 0, viewport: null, states: [state], draws: [draw] }
+
+    // Act
+    const image = rasteriseFrame(frame, new Map([['keyed', texture]]), OPTIONS)
+
+    // Assert
+    const keyedOffset = (1 * OPTIONS.width + 1) * 4
+    const drawnOffset = (1 * OPTIONS.width + 5) * 4
+    expect([...image.colors.subarray(keyedOffset, keyedOffset + 3)]).toEqual([0, 0, 0])
+    expect([...image.colors.subarray(drawnOffset, drawnOffset + 3)]).toEqual([0, 255, 0])
   })
 })

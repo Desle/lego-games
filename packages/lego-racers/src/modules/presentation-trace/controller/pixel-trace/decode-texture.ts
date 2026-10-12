@@ -24,7 +24,10 @@ const getPixelValue = (texture: OriginalTexture, x: number, y: number): number =
 
 // The surface the original handed Direct3D as RGBA bytes: each channel scaled from its mask to 0..255, an absent alpha is opaque.
 // With `isColorKeyApplied`, the texels whose colour lies in the surface's colour key get alpha 0: the device does not draw them.
-export const decodeTexture = (texture: OriginalTexture, isColorKeyApplied = false): DecodedTexture => {
+export const decodeTexture = (
+  texture: OriginalTexture,
+  isColorKeyApplied = false
+): DecodedTexture => {
   const colors = new Uint8ClampedArray(texture.width * texture.height * CHANNEL_COUNT)
   const [redMask = 0, greenMask = 0, blueMask = 0, alphaMask = 0] = texture.masks
   for (let y = 0; y < texture.height; y++) {

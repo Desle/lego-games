@@ -6,7 +6,7 @@ The golden, render and decal traces compare the **data**: simulation state, tria
 
 ## The two images
 
-**Reference.** The emulator records every Direct3D draw of a frame (`render_trace.py`, see [render-trace.md](render-trace.md)): screen-space vertices, indices, the render and stage states, the texture surface. `rasteriseFrame` (`presentation-trace` module, `controller/pixel-trace/`) draws them into 640 x 480 RGBA: pixel centres at +0.5 and the top-left rule, UVs perspective correct with the recorded `1/w`, colours linear in screen space, the 16-bit surfaces decoded through their masks, point or bilinear sampling and wrap or clamp from the stage state, the depth test (less or equal) and write, texture operations select-diffuse, select-texture and modulate, the alpha test and the blend factors, strips and fans as well as lists. Not drawn: the HUD (the draws after the last depth-tested one; the viewer draws the HUD as page elements, not canvas pixels), mip-mapping, the colour key (render state 41), specular. The clear colour is the viewer's, because the original's sky covers the frame.
+**Reference.** The emulator records every Direct3D draw of a frame (`render_trace.py`, see [render-trace.md](render-trace.md)): screen-space vertices, indices, the render and stage states, the texture surface. `rasteriseFrame` (`presentation-trace` module, `controller/pixel-trace/`) draws them into 640 x 480 RGBA: pixel centres at +0.5 and the top-left rule, UVs perspective correct with the recorded `1/w`, colours linear in screen space, the 16-bit surfaces decoded through their masks, point or bilinear sampling and wrap or clamp from the stage state, the depth test (less or equal) and write, texture operations select-diffuse, select-texture and modulate, the alpha test and the blend factors, strips and fans as well as lists. Not drawn: the HUD (the draws after the last depth-tested one, except those that cover the whole viewport, the screen fader's; the viewer draws the HUD as page elements, not canvas pixels), mip-mapping, specular. The colour key (render state 41 with the surface's `SetColorKey`) is applied (finding 6). The clear colour is the viewer's, because the original's sky covers the frame.
 
 **Port.** `pixel-trace-browser.ts` starts a Vite development server of its own (from port 5400 up, never the developer's) and a headless Chrome with its own profile and software WebGL (SwiftShader, so the pixels do not depend on the graphics card), and opens `/?pixel-trace`. In development `main.tsx` installs `window.runPixelTrace` instead of the game (`pixel-trace-harness.ts`). The runner loads the race from the development routes (`LEGO.JAM`, `LEGORacers.exe`) exactly as the trace scenario does, steps it with the scenario's frame times, controls and power-up grants (`runRaceFrames`, shared with the other traces), drives the real `createRaceViewport` (`update`, `showHazards`, `animate`, `render`) at 640 x 480, and copies the canvas into a 2D canvas in the same task to read the pixels. The camera is the port's own chase camera, not the original's matrix: a camera error shows as a difference.
 
@@ -42,7 +42,7 @@ Before this finding the introduction case differed in 51.5 percent of its pixels
 
 **Hypothesis, not traced:** the camera node's orientation slot `+0x24` takes `(forward, up)` in that order (the evidence is the pixels). The release effect of `0x004349a0` (`0x00428390`, `0x004282a0` seed the chase camera from the racer) is not ported: the racers have not moved since the load, so the frozen chase state stands in. A mirrored race is not handled by the lock (the position follows the mirrored instance, the vectors are not mirrored).
 
-**Open, the plain race frame (3.2 percent at frames 100 and 170, 2.2 percent later):** (1) the skid marks (`skid`: 20 to 40 percent of its pixels; the original draws them at 15 to 37, the port at 80 to 95; same cause as the power slide case, the diffuse colour hypothesis above); (2) the two textures the matcher names by hash, `c8a290b0cd5475c2` and `3dabd45342464cf7`, in the upper part of the picture (x 129 to 374, y 5 to 141): the port is about twice as bright (64,65,116 against 33,41,77), the same region differs in the introduction frame, so it is not the camera or the dark-zone colour shift; (3) the unnamed `cfdfc3bfd771fdf7` and `blank` pictures on the road ahead (the port is brighter, 144,134,125 against 95,88,86); (4) a band of `rkfence` at y 194 to 239 (the port is darker and bluer, 56,76,91 against 90,91,94). None of these is the camera.
+The plain race frame's open items of this finding (skid marks, the upper-scene textures, `cfdfc3bfd771fdf7`/`blank`, `rkfence`) were mostly one cause, finding 6.
 
 ## Finding 3: the warp's blue fade was not drawn (the screen fader)
 
@@ -50,7 +50,7 @@ Before the three findings of this and the next two sections the warp case differ
 
 The warp case differed 99.6 percent at frame 320: the original's frame there is one flat colour (0, 0, 99), the tunnel is under a full-screen quad. The quad is the race's **screen fader** (race `+0x27fc`, two entries of 0x18 bytes, `0x00494e10`): `0x0045d780` (the warp's update, vtable slot `+8`) starts an entry of 200 ms, colour (0, 0, 0x64), fading in, when a human's warp is in its starting state with less than 200 ms to go (`0x0045d780` compares the timer before the frame's countdown); `Race_Update` (`0x00435220`) runs the fader's update `0x00494f60` with the frame's step after the power-ups; `0x004905e0` draws every entry in use as a quad over the owner's view with alpha `ftol(255 * (1 - left / total))` (`*(0x004b09c0)` = 255.0; flag bit 1 reverses it for a fade-out). An entry whose clock ran out lives one more update and then resets (`0x00490590`). Alpha per frame at 33 ms: 42, 84, 126, 168, 210, 252, then 255, 255 (original frames 315 to 322, matched). While the player is carried the warp's own draw (`0x0045d940` calls `0x00494fa0` with the fader) and `Race_Render` (`0x004357e0`) both draw it, so it lies over the view twice.
 
-Port: `race/types/screen-fader` (the entries; a differential spec for `0x00490550` and `0x00490590`), `race/controller/warp-fade` (the start, in `updateRace`), `race-presentation` (`screenFades`), `screen-fade-overlay` (the viewer's quads after the scene). Not wired yet, and the fader makes it easy: the race start's fade-in (`0x00433525`, 500 ms) and the finish fades (`0x00434ee8`, `0x004351ab`), the other callers of `0x00494eb0`. The alpha of `0x004905e0` has no differential spec (it draws through the device); the pixel case is its check.
+Port: `race/types/screen-fader` (the entries; a differential spec for `0x00490550` and `0x00490590`), `race/controller/warp-fade` (the start, in `updateRace`), `race-presentation` (`screenFades`), `screen-fade-overlay` (the viewer's quads after the scene). The other callers of `0x00494eb0` are wired in finding 7. The alpha of `0x004905e0` has no differential spec (it draws through the device); the pixel case is its check.
 
 ## Finding 4: the warp changes the field of view (and the viewer ignored the camera's)
 
@@ -60,7 +60,54 @@ Frames 330 to 360 showed the tunnel at the wrong size. `0x0045d940` sets the vie
 
 With the field of view right, the portal (a 75 percent blend) still showed 25 percent too bright: the effective blend weights were 0.92 and 0.28, which add to 1.2 = 1 / 0.81, and 0.81 is the alpha the blend `(source alpha, 1 - source alpha)` leaves in the canvas's own alpha channel (0.75 * 0.75 + 0.25). The canvas is composited, and read back, with its alpha un-premultiplied. Direct3D's surface has no alpha, so the blends of the viewer now keep the surface alpha (`blendSrcAlpha` zero, `blendDstAlpha` one, `KEPT_SURFACE_ALPHA`): every blended material was affected (frame 310: 6.2 to 0.7 percent). With the portal's vertex alpha lowered to 0.5 as an experiment the frame also improved (to 2.7 percent), which is how the double effect first showed.
 
+## Finding 6: the colour key was ignored (the reference drew keyed texels, the decals kept them)
+
+Most of the open colour differences of the race frames were one cause. The textures with the TDB colour key (keyword `0x2c`, flag `0x20`) are uploaded with `SetColorKey` on the surface (`0x1001f330`: the key is `[texture +0x28]`, the packed TDB colour, in the surface format) and the draws have render state 41 (`COLORKEYENABLE`) on: the device does not draw texels in the key. Three places ignored it:
+
+1. **The reference rasteriser** drew every texel. `render_trace.py` now records the key (`com_display.py` `any_SetColorKey`, DDCKEY_SRCBLT) in the texture line (`colorKey`, low and high value, `null` when the surface has none; the stub used to swallow the call), `OriginalTexture.colorKey` carries it, and `decodeTexture(texture, true)` gives the texels in the key alpha 0, which `rasteriseFrame` drops when the draw has state 41 on (a bilinear sample drops only when all four texels are keyed, like the port's alpha test). This was the skid marks of earlier reports: the picture the matcher called `skid` is the racers' shadow pictures (`decal.md`, "Not decals"): a car-shaped picture on a black background that is the key. The reference drew the black rectangle (15 to 37), the viewer, which blends the keyed texels away, drew the road (80 to 95). The upper-scene textures `c8a290b0cd5475c2` (key 46,45,45) and `3dabd45342464cf7` (0,16,82) and the netting of the crane case were the same: the keyed colour was drawn in the reference. A surface with a key exists for every textured material with the flag; the keys read (565 values) equal the TDB's colours (for example `8f20f5b5d6a6b610` 25388 = 99,101,99, `rkfence` 33808 = 129,128,128).
+2. **The decal material** switched the alpha test off (`createDecalMaterial`: "the device's override keeps the colour key off"). The override (`decal.md`: alpha test off, the decal's alpha in the vertices) is true of the recorded state 15, but state 41 is on for the decals and the keyed texels vanish. For a decal with no blend (the oil slick, `oilslk64`: blend off, key 0,0,0) the black texels of the picture were drawn as an opaque black rectangle (2,840 px at frame 306); now the material's own alpha test (GREATER 0 on the texture's keyed alpha) stays on. Shadows and the scars blend, which hid it.
+3. The reference excluded the draws after the last depth-tested one as the HUD; the screen fader's quad (`0x004905e0`) is one of them but part of the picture (finding 7).
+
+**Hypothesis, not traced:** the key applies to bilinear samples only when all four texels are keyed (the port's alpha test passes any non-zero filtered alpha; the reference follows it). Where the original's hardware filtered a keyed edge differently the rows around keyed shapes still differ by single texels (cfdfc3bfd771fdf7, `blank`: a few hundred pixels a frame).
+
+## Finding 7: the race start and finish fades
+
+The remaining callers of the screen fader's `0x00494eb0` (arguments: milliseconds, fade-out flag, colour dword, player), all black over the first player's view (`race/controller/phase-fade`):
+
+| Call         | Where                                                                 | What                                                                                      |
+| ------------ | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `0x00433525` | `Race_LoadTrackContent`, after the fader's two entries (`0x00494e10`) | 500 ms, fade-out flag set: the picture fades in from black at the load                    |
+| `0x00434ee8` | `Race_UpdateState4` (finishing)                                       | state timer over 9,000 ms, no fade running, no points record (`+0x18`): 1,000 ms to black |
+| `0x004351ab` | `Race_UpdateState5` (results)                                         | state timer over 4,000 ms, no fade running: 1,000 ms to black                             |
+
+The fades start in the state functions, `Race_Update` then steps them (`stepRace` already runs the phase before `updateRace`). The introduction case checks the start fade: the original draws it at frame 5 as two triangles covering the screen with diffuse `0x9a000000`, the port's overlay draws the same, and the case fell from 0.71 to 0.10 percent when the fade and the reference's treatment of it were in. The two finish fades are covered by specs only (the pixel cases end before the finish).
+
+## Result of findings 6 and 7
+
+Worst frame of each case (the tolerance of 32 levels), before and after:
+
+| Case                           | Before | After | Threshold now |
+| ------------------------------ | ------ | ----- | ------------- |
+| Royal Knights, oil slick       | 0.84   | 0.59  | 1.0           |
+| Royal Knights (frames 100-320) | 3.4    | 2.01  | 2.5           |
+| Royal Knights, introduction    | 1.26   | 0.10  | 0.5           |
+| Royal Knights, power slide     | 7.7    | 3.86  | 4.5           |
+| Royal Knights, warp            | 4.7    | 2.99  | 3.5           |
+| Royal Knights, barrel scars    | 0.97   | 0.31  | 0.6           |
+| RACEC0R1, crane shadow         | 6.5    | 1.19  | 1.5           |
+
+(percent of the frame's pixels; the before column is the baseline table below as it stood.)
+
+**Still open** (none is a colour operation as far as examined):
+
+- The racers' shadow pictures: the original's `carshad` surfaces are 64 x 64 of two colours (0 and 8, four to five different shapes) while the port's `carshad0..5` hold one shape with 16 (`decal.md` mentions the `carshad1` hash mismatch). The shadows still own 0.3 to 0.5 percent of the frame in every case.
+- The power slide's `graspart` particles: in frame 300 the original draws them over the car (blend 200/255, key) where the port has the car in front (85 percent of the pixels the original paints with the picture differ); with the port's own chase camera in a slide this is likely depth/camera, **hypothesis**, not examined.
+- `aaawatr` after the landing (warp 375): the water's ripples are in another phase (same colours, shifted pattern), a material animation clock, not a colour.
+- The edges of keyed shapes (above), the road ahead (`rkroad4`, 0.3 percent) and the `rkfence` band (the port 15 to 20 percent darker at a few hundred pixels): not traced.
+
 ## Baseline
+
+Before findings 6 and 7 (the table above has the current numbers):
 
 Worst frame of each case at the tolerance of 32 levels (the specs' thresholds are these plus a margin):
 
