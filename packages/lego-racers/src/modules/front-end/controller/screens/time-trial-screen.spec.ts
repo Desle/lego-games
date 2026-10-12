@@ -6,6 +6,7 @@ import { openJamArchive } from '../../../jam-archive/index.ts'
 import { BestTimeKind, createDefaultProfile, recordBestTime } from '../../../save-data/index.ts'
 import type { SaveFile } from '../../../save-data/index.ts'
 import { loadFrontEndResources } from '../../services/load-front-end-resources/load-front-end-resources.ts'
+import type { FrontEndResources } from '../../types/front-end.types.ts'
 import type { FrontEndWidget } from '../../types/front-end-widget.types.ts'
 import type { ScreenRuntime } from '../../types/front-end-screen.types.ts'
 import { getCircuitRaceEntries, TIME_TRIAL_SCREEN } from './race-selection-screens.ts'
@@ -22,9 +23,13 @@ const getTexts = (widgets: readonly FrontEndWidget[]): Readonly<Record<string, s
   )
 
 describe.skipIf(!isPresent)('the best times of the time trial screen', () => {
-  const resources = loadFrontEndResources(openJamArchive(readOriginalJam()))
-  const firstRace = getCircuitRaceEntries(resources, 'c0')[0]
-  const raceIndex = resources.races.entries.findIndex((entry) => entry.name === firstRace?.name)
+  let resources: FrontEndResources
+  let raceIndex = -1
+  beforeAll(() => {
+    resources = loadFrontEndResources(openJamArchive(readOriginalJam()))
+    const firstRace = getCircuitRaceEntries(resources, 'c0')[0]
+    raceIndex = resources.races.entries.findIndex((entry) => entry.name === firstRace?.name)
+  })
 
   const getRuntime = (saveFile: SaveFile | null, screenMilliseconds: number): ScreenRuntime =>
     ({
