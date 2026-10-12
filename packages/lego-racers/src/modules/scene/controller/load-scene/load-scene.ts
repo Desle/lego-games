@@ -56,8 +56,13 @@ const EMPTY_SCENE: Scene = Object.freeze({
 // instances are linked (0x1002e640). Its files are opened relative to its own directory, which the game makes
 // the archive's current directory before loading it (LEGORacers.exe 0x0044c810 into archive +0x1c, read by
 // 0x10031c90).
-const getSceneWithWorld = (archive: JamArchive, scene: Scene, worldPath: string): Scene => {
-  const source = Object.freeze({ archive, directory: getDirectory(worldPath) })
+const getSceneWithWorld = (
+  archive: JamArchive,
+  scene: Scene,
+  worldPath: string,
+  fallbackDirectories: readonly string[]
+): Scene => {
+  const source = Object.freeze({ archive, directory: getDirectory(worldPath), fallbackDirectories })
   const world = readWorld(archive.readFile(worldPath))
   const linkedTextures = linkTextures(source, world.textures, {
     textures: scene.textures,
@@ -116,8 +121,15 @@ const getSceneWithWorld = (archive: JamArchive, scene: Scene, worldPath: string)
 
 // Loads worlds in order into one scene. A race loads several worlds into the same container (LEGORacers.exe
 // 0x00432e20), whose texture and material chains (container +0x38 and +0x3c) every later world searches.
-export const loadScene = (archive: JamArchive, worldPaths: readonly string[]): Scene =>
-  worldPaths.reduce((scene, worldPath) => getSceneWithWorld(archive, scene, worldPath), EMPTY_SCENE)
+export const loadScene = (
+  archive: JamArchive,
+  worldPaths: readonly string[],
+  fallbackDirectories: readonly string[] = []
+): Scene =>
+  worldPaths.reduce(
+    (scene, worldPath) => getSceneWithWorld(archive, scene, worldPath, fallbackDirectories),
+    EMPTY_SCENE
+  )
 
 // Loads more worlds onto a scene that is already loaded: their textures and materials search the earlier ones and
 // shadow them by name, as the game's container chains do.
@@ -126,7 +138,10 @@ export const loadSceneOnto = (
   scene: Scene,
   worldPaths: readonly string[]
 ): Scene =>
-  worldPaths.reduce((current, worldPath) => getSceneWithWorld(archive, current, worldPath), scene)
+  worldPaths.reduce(
+    (current, worldPath) => getSceneWithWorld(archive, current, worldPath, []),
+    scene
+  )
 
 // Every world file in the archive, in archive order.
 export const getWorldPaths = (archive: JamArchive): readonly string[] =>

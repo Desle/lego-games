@@ -1,5 +1,6 @@
 import {
   getActiveCinemaActions,
+  getCinemaActionMilliseconds,
   getCinemaFrame,
   getCinemaLoopMilliseconds,
   parseCinemaDatabase,
@@ -26,15 +27,17 @@ import { createModelSlot } from '../model-slot/model-slot.ts'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import type { SceneLights } from '../scene-object/vertex-lighting.types.ts'
 import type { CinemaStage, UnitVector } from './cinema-stage.types.ts'
+import { getCinemaFilePath } from './cinema-source.ts'
+import { getCinemaCamera } from './cinema-camera.ts'
+import type { CinemaSource } from '@lego-games/lego-racers/front-end'
 
-const CINEMA_DATABASE_PATH = 'MENUDATA\\SINGRACE\\PST.CDB'
 // The champion's figure plays the clips of `MENUDATA\SINGRACE\GUY1.ADB` (one per cinema, the action's flag).
 const FIGURE_ANIMATION_NAME = 'SINGRACE\\GUY1'
 const FIGURE_INSTANCE_NAME = 'guy1'
 
-const readCinemaDatabase = (archive: JamArchive): CinemaDatabase | null => {
+const readCinemaDatabase = (archive: JamArchive, source: CinemaSource): CinemaDatabase | null => {
   try {
-    return parseCinemaDatabase(archive.readFile(CINEMA_DATABASE_PATH))
+    return parseCinemaDatabase(archive.readFile(getCinemaFilePath(source, 'CDB')))
   } catch {
     return null
   }
@@ -108,9 +111,10 @@ export const createCinemaStage = (
   archive: JamArchive,
   three: ThreeScene,
   scene: Scene,
-  worldObject: SceneObject
+  worldObject: SceneObject,
+  source: CinemaSource
 ): CinemaStage => {
-  const database = readCinemaDatabase(archive)
+  const database = readCinemaDatabase(archive, source)
   let shiftedInstanceNames: readonly string[] = []
   const figureSlot = createModelSlot(three)
   const particles = createRaceParticles(scene)
@@ -119,7 +123,7 @@ export const createCinemaStage = (
   const camera = scene.cameras[0]
   const cameraPosition = camera === undefined ? { x: 0, y: 0, z: 0 } : camera.position
 
-  const setSkeletonClip = (action: CinemaAction, milliseconds: number): void => {
+  const setSkeletonClip = (cinema: Cinema, action: CinemaAction, milliseconds: number): void => {
     const instance = scene.instances.find(
       (candidate) => getNameKey(candidate.name) === getNameKey(action.instanceName)
     )
@@ -130,7 +134,7 @@ export const createCinemaStage = (
       advanceSkeletonAnimation(
         createSkeletonAnimationState(animation, action.flag),
         animation,
-        milliseconds
+        getCinemaActionMilliseconds(cinema, action, milliseconds)
       )
     )
   }
@@ -170,8 +174,9 @@ export const createCinemaStage = (
       const actions = cinema === null ? [] : getActiveCinemaActions(cinema, view.milliseconds)
       const loopMilliseconds =
         cinema === null ? 0 : getCinemaLoopMilliseconds(cinema, view.milliseconds)
+      const isFigureReplaced = view.partBytes !== null
       const shownActions = actions.filter(
-        (action) => getNameKey(action.instanceName) !== FIGURE_INSTANCE_NAME
+        (action) => !isFigureReplaced || getNameKey(action.instanceName) !== FIGURE_INSTANCE_NAME
       )
       const activeNames = new Set(shownActions.map((action) => getNameKey(action.instanceName)))
       const children: readonly Object3D[] = worldObject.group.children
@@ -187,7 +192,7 @@ export const createCinemaStage = (
           child.matrix.copy(matrix)
           child.matrixWorldNeedsUpdate = true
         }
-        if (action.kind === 2) setSkeletonClip(action, loopMilliseconds)
+        if (action.kind === 2 && cinema !== null) setSkeletonClip(cinema, action, view.milliseconds)
       }
       const shifts = view.colourShifts
       for (const name of shiftedInstanceNames) {
@@ -201,13 +206,19 @@ export const createCinemaStage = (
         })
       }
       shiftedInstanceNames = shifts.map((shift) => shift.instanceName)
+      const poseCamera = getCinemaCamera(scene, cinema, view.milliseconds) ?? camera
       particles.update(
-        view.emitterPool === null || camera === undefined ? [] : [view.emitterPool],
+        view.emitterPool === null || poseCamera === undefined ? [] : [view.emitterPool],
         {
-          position: camera?.position ?? { x: 0, y: 0, z: 0 },
-          forward: getUnit(camera?.forward ?? { x: 1, y: 0, z: 0 }),
-          up: getUnit(camera?.up ?? { x: 0, y: 0, z: 1 }),
+          position: poseCamera?.position ?? { x: 0, y: 0, z: 0 },
+          forward: getUnit(poseCamera?.forward ?? { x: 1, y: 0, z: 0 }),
+          up: getUnit(poseCamera?.up ?? { x: 0, y: 0, z: 1 }),
         }
+      )
+      worldObject.setLights(
+        cinema === null
+          ? { ambient: [255, 255, 255], directional: [] }
+          : getCinemaLights(cinema, view.milliseconds)
       )
       showFigure(
         view.partBytes,
@@ -217,6 +228,7 @@ export const createCinemaStage = (
           ? { ambient: [255, 255, 255], directional: [] }
           : getCinemaLights(cinema, view.milliseconds)
       )
+      return poseCamera ?? null
     },
   })
 }

@@ -1,5 +1,5 @@
 import type { ActiveCinemaVertexEffect, CinemaEvents } from '../../types/cinema-events.types.ts'
-import type { Cinema, CinemaAction, CinemaDummy } from '../../types/cinema.types.ts'
+import type { Cinema, CinemaAction, CinemaDummy, CinemaTiming } from '../../types/cinema.types.ts'
 
 const MILLISECONDS_PER_SECOND = 1000
 
@@ -16,6 +16,23 @@ export const getCinemaFrame = (cinema: Cinema, milliseconds: number): number =>
   Math.floor(
     (getCinemaLoopMilliseconds(cinema, milliseconds) * cinema.framesPerSecond) /
       MILLISECONDS_PER_SECOND
+  )
+
+// An entry is on the timeline from its start frame for its duration (frames).
+export const getIsOnTimeline = (entry: CinemaTiming, frame: number): boolean =>
+  entry.startFrame <= frame && frame < entry.startFrame + entry.durationFrames
+
+// The time an action has run, in milliseconds of the loop's clock: its animation starts with the action (hypothesis: the
+// start of the entry is the start of the clip).
+export const getCinemaActionMilliseconds = (
+  cinema: Cinema,
+  action: CinemaAction,
+  milliseconds: number
+): number =>
+  Math.max(
+    0,
+    getCinemaLoopMilliseconds(cinema, milliseconds) -
+      (action.startFrame * MILLISECONDS_PER_SECOND) / cinema.framesPerSecond
   )
 
 export const getActiveCinemaActions = (

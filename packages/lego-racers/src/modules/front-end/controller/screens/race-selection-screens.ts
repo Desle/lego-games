@@ -19,6 +19,7 @@ import type {
   ScreenResult,
   ScreenRuntime,
 } from '../../types/front-end-screen.types.ts'
+import { RACE_PREVIEW_SOURCE } from '../race-preview/race-preview.ts'
 import { getRacePreviewColourShifts } from '../race-preview/race-preview-effects.ts'
 import { getUnlockedCircuitMask } from '../profile/profile.ts'
 import { createResult, getClampedStep, MenuSound } from '../screen-helpers/screen-helpers.ts'
@@ -104,6 +105,7 @@ const getRaceCinema = (
     .getDriverDatabase()
     .drivers.find((driver) => driver.name.toLowerCase() === race.thirdName.toLowerCase())
   return {
+    source: RACE_PREVIEW_SOURCE,
     cinemaName: race.secondName,
     milliseconds: runtime.racePreview.cinemaMilliseconds,
     partBytes: champion?.unreadBytes ?? null,

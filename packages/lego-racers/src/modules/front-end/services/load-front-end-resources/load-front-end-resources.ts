@@ -33,6 +33,7 @@ import type {
   FrontEndImage,
   FrontEndResources,
   FrontEndScreenFiles,
+  CinemaSource,
 } from '../../types/front-end.types.ts'
 import type { RacePreviewResources } from '../../types/race-preview.types.ts'
 
@@ -42,9 +43,6 @@ const RACER_SHOWCASE_ANIMATION_PATH = 'MENUDATA\\RSANIM.ADB'
 const MENU_FIGURE_ANIMATION_PATH = 'MENUDATA\\LEGOMAN.ADB'
 const DRIVER_DATABASE_PATH = 'MENUDATA\\PARTDB\\DRIVERS.DDB'
 const BODY_PART_CATALOG_PATH = 'MENUDATA\\PARTDB\\BODYPART.PCB'
-const RACE_PREVIEW_DIRECTORY = 'MENUDATA\\SINGRACE'
-const RACE_PREVIEW_CINEMAS_PATH = 'MENUDATA\\SINGRACE\\PST.CDB'
-const RACE_PREVIEW_EVENTS_PATH = 'MENUDATA\\SINGRACE\\PST.CEB'
 const SEPARATOR = '\\'
 
 const getPath = (...segments: readonly string[]): string => segments.join(SEPARATOR)
@@ -207,31 +205,32 @@ export const loadFrontEndResources = (
     return racerShowcaseAnimation
   }
 
-  let racePreview: RacePreviewResources | null = null
-  const getRacePreview = (): RacePreviewResources => {
-    if (racePreview === null) {
-      const events = parseCinemaEvents(archive.readFile(RACE_PREVIEW_EVENTS_PATH))
-      racePreview = {
-        cinemas: parseCinemaDatabase(archive.readFile(RACE_PREVIEW_CINEMAS_PATH)),
-        events,
-        pools: events.poolNames.map((name) => ({
-          emitters: parseEmitters(
-            archive.readFile(getPath(RACE_PREVIEW_DIRECTORY, `${name.toUpperCase()}.EMB`))
-          ),
-          animation: paths.has(getPath(RACE_PREVIEW_DIRECTORY, `${name.toUpperCase()}.MAB`))
-            ? parseMaterialAnimation(
-                archive.readFile(getPath(RACE_PREVIEW_DIRECTORY, `${name.toUpperCase()}.MAB`))
-              )
-            : null,
-        })),
-      }
+  const cinemaFiles = new Map<string, RacePreviewResources>()
+  const getCinemaFiles = (source: CinemaSource): RacePreviewResources => {
+    const key = `${source.directory}\\${source.fileName}`
+    const cached = cinemaFiles.get(key)
+    if (cached !== undefined) return cached
+    const directory = getPath(MENU_DIRECTORY, source.directory)
+    const events = parseCinemaEvents(archive.readFile(getPath(directory, `${source.fileName}.CEB`)))
+    const loaded: RacePreviewResources = {
+      cinemas: parseCinemaDatabase(archive.readFile(getPath(directory, `${source.fileName}.CDB`))),
+      events,
+      pools: events.poolNames.map((name) => ({
+        emitters: parseEmitters(archive.readFile(getPath(directory, `${name.toUpperCase()}.EMB`))),
+        animation: paths.has(getPath(directory, `${name.toUpperCase()}.MAB`))
+          ? parseMaterialAnimation(
+              archive.readFile(getPath(directory, `${name.toUpperCase()}.MAB`))
+            )
+          : null,
+      })),
     }
-    return racePreview
+    cinemaFiles.set(key, loaded)
+    return loaded
   }
 
   return Object.freeze({
     getBuilderCatalog,
-    getRacePreview,
+    getCinemaFiles,
     getDriverDatabase,
     getMenuFigureAnimation,
     getRacerShowcaseAnimation,

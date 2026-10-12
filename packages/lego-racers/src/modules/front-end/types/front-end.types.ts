@@ -71,8 +71,8 @@ export type FrontEndResources = {
   readonly getMenuFigureAnimation: () => SkeletalAnimation
   // `MENUDATA\RSANIM.ADB` and the idle clips of the racer showcase.
   readonly getRacerShowcaseAnimation: () => RacerShowcaseAnimation
-  // `MENUDATA\SINGRACE\PST.CDB`, `.CEB` and the emitter files they name: the race previews.
-  readonly getRacePreview: () => RacePreviewResources
+  // A cinema file set (`.CDB`, `.CEB` and the emitter files the events name): the race previews and the full-screen cinemas.
+  readonly getCinemaFiles: (source: CinemaSource) => RacePreviewResources
 }
 
 // What the menus read from the machine: the original's input manager (`+0x98` of it counts the controllers).
@@ -257,9 +257,17 @@ export type FrontEndViewportCommand = {
   readonly cinema: RaceCinemaView | null
 }
 
+// A cinema file set of the menus: `MENUDATA\<directory>\<fileName>.CDB` (and its `.CEB` and worlds).
+export type CinemaSource = {
+  readonly directory: string
+  readonly fileName: string
+}
+
 // The race preview a race select shows (`MENUDATA\SINGRACE\PST.CDB`): the cinema of the race (the catalogue's second name)
 // and the milliseconds since the screen opened (hypothesis: the cinema's clock starts with the screen).
 export type RaceCinemaView = {
+  // The files the cinema comes from.
+  readonly source: CinemaSource
   readonly cinemaName: string
   readonly milliseconds: number
   // The five part bytes of the race's champion (the race's third name, looked up in the menus' driver database,
@@ -352,4 +360,9 @@ export type FrontEndStandingRow = {
 export type OpenedScreen = {
   readonly state: FrontEndState
   readonly musicListIndex: number | null
+}
+
+export type ScreenCinema = {
+  readonly source: CinemaSource
+  readonly cinemaName: string
 }

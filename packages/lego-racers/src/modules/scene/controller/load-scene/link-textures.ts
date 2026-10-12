@@ -58,10 +58,16 @@ const getDecodedBitmap = (
 const getLinkedTexture = (source: SceneFileSource, definition: TextureDefinition): SceneTexture => {
   const isTarga = (definition.flags & TARGA_FLAG) !== 0
   const colorKey = (definition.flags & COLOR_KEY_FLAG) === 0 ? null : definition.keyword2cBytes
-  const bitmapPath = getArchivePath(
-    source.directory,
-    getNameWithImageExtension(definition.name, isTarga ? TARGA_EXTENSION : BITMAP_EXTENSION)
+  const fileName = getNameWithImageExtension(
+    definition.name,
+    isTarga ? TARGA_EXTENSION : BITMAP_EXTENSION
   )
+  const ownPath = getArchivePath(source.directory, fileName)
+  const bitmapPath = getIsFilePresent(source, ownPath)
+    ? ownPath
+    : ((source.fallbackDirectories ?? [])
+        .map((directory) => getArchivePath(directory, fileName))
+        .find((path) => getIsFilePresent(source, path)) ?? ownPath)
   const missingBitmapReason = getIsFilePresent(source, bitmapPath)
     ? null
     : MissingBitmapReason.FILE_NOT_FOUND
