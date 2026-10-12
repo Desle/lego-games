@@ -37,6 +37,7 @@ export const getSkeletalAnimation = (animation: Animation): SkeletalAnimation =>
           name: entry.name,
           framesPerMillisecond: entry.keyword2fValue,
           velocity: entry.keyword30Values,
+          boundingSphere: entry.keyword31Values,
           firstTrackIndex: entry.keyword2bValue,
           frameCount: entry.keyword2dValue & UNSIGNED_SHORT_MASK,
           loopLength: entry.keyword2eValue,

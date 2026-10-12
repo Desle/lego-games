@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import {
   installFrontEndPixelHarness,
   installPixelTraceHarness,
+  getIsRaceRecordingRequested,
   postUnsentRecordings,
   RaceView,
 } from './modules/track-viewer/index.ts'
@@ -26,7 +27,7 @@ if (isPixelTracePage) {
   installPixelTraceHarness()
   installFrontEndPixelHarness()
 } else {
-  void postUnsentRecordings()
+  if (getIsRaceRecordingRequested(window.location.search)) void postUnsentRecordings()
   void loadRemastered().then(() =>
     createRoot(rootElement).render(
       <StrictMode>

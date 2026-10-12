@@ -32,20 +32,20 @@ Handlers run, announce (a nested walk of the arrays), and only then store the ne
 
 Classes, vtable (slot 1 begin, 3 end, 5 update), initial state and what the port models. "Effect" means the port reports a `TrackEffect` and the caller (rendering, sound, world animation) does the rest.
 
-| Class | Vtable       | Begin / End / Update            | Initial state | Behaviour                                                                                                                               |
-| ----- | ------------ | ------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| 2A    | `0x004b1c84` | `4642c0` / `4643b0` / `4643e0`  | 1             | Random ambient sound. **Draws**: one at load (`0x004641b0`, timer = v % 1000 + 500); two per expiry while running with chance < 255     |
-| 28    | `0x004b1c00` | `463570` / `4635c0` / `4633f0`  | 1             | Drives a scene object through four animations; reads the object's animation index and flags from the world                              |
-| 29    | `0x004b1be4` | `463230` / `463280` / `463200`  | 1             | Material animation; ends when the world reports it finished                                                                             |
-| 3D    | `0x004b1b0c` | `45eaf0` / `45eb90` / `45ebe0`  | 1             | Particle emitter that follows an object; update retries the emitter until the pool gives one                                            |
-| 42    | `0x004b1aac` | `45e2a0` / `45e320` / base      | 1             | One-shot: begin sets state 5, the next update ends it                                                                                   |
-| 4B    | `0x004b1af0` | `45e880` / `45e8a0` / `45e8d0`  | 4             | Countdown of `keyword 0x49` ms; ends at 0 unless the hold signal (`keyword 0x4c`) is on                                                 |
-| 52    | `0x004b1c3c` | `463990` / `4639b0` / `4639d0`  | 1             | Follows an object (not ported)                                                                                                          |
-| 53    | `0x004b1c20` | `4637c0` / `463800` / base      | 1             | Switches three values of an object (effect)                                                                                             |
-| 4D    | `0x004b1de0` | Fire `465600`, release `465690` | 4             | Sets the racer's lighting (effect)                                                                                                      |
-| 51    | `0x004b1ca4` | Fire `464680`, release `4646e0` | 4             | Puts the racer in zone 0, 1 or 2 (`0x00439b70`, `0x00439ba0`, `0x00439c40`): `track.racer_zone_entered`                                 |
-| 55    | `0x004b1ad4` | Fire `45e6c0`, release `45e6f0` | 4             | Sets and clears the racer's guidance target (`0x00439e60`, `0x00439e90`; this is what sets racer flag `0x8000`)                         |
-| 59    | `0x004b1bc8` | Fire `462fe0`, release `463040` | 1             | While the hold signal (`keyword 0x4c`) is on, a force on the racer's car body: slot `0x40` or `0x48` by `keyword 0x5a` (ends with `+4`) |
+| Class | Vtable       | Begin / End / Update            | Initial state | Behaviour                                                                                                                                              |
+| ----- | ------------ | ------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2A    | `0x004b1c84` | `4642c0` / `4643b0` / `4643e0`  | 1             | Random ambient sound. **Draws**: one at load (`0x004641b0`, timer = v % 1000 + 500); two per expiry while running with chance < 255                    |
+| 28    | `0x004b1c00` | `463570` / `4635c0` / `4633f0`  | 1             | Drives a scene object through four animations; reads the object's animation index and flags from the world                                             |
+| 29    | `0x004b1be4` | `463230` / `463280` / `463200`  | 1             | Material animation; ends when the world reports it finished                                                                                            |
+| 3D    | `0x004b1b0c` | `45eaf0` / `45eb90` / `45ebe0`  | 1             | Particle emitter that follows an object; update retries the emitter until the pool gives one                                                           |
+| 42    | `0x004b1aac` | `45e2a0` / `45e320` / base      | 1             | One-shot: begin sets state 5, the next update ends it                                                                                                  |
+| 4B    | `0x004b1af0` | `45e880` / `45e8a0` / `45e8d0`  | 4             | Countdown of `keyword 0x49` ms; ends at 0 unless the hold signal (`keyword 0x4c`) is on                                                                |
+| 52    | `0x004b1c3c` | `463990` / `4639b0` / `4639d0`  | 1             | Follows an object (not ported)                                                                                                                         |
+| 53    | `0x004b1c20` | `4637c0` / `463800` / base      | 1             | Sets the three level distances of a mesh or skeleton instance: hides it at load, shows it while it runs ([play-test-visuals.md](play-test-visuals.md)) |
+| 4D    | `0x004b1de0` | Fire `465600`, release `465690` | 4             | Sets the racer's lighting (effect)                                                                                                                     |
+| 51    | `0x004b1ca4` | Fire `464680`, release `4646e0` | 4             | Puts the racer in zone 0, 1 or 2 (`0x00439b70`, `0x00439ba0`, `0x00439c40`): `track.racer_zone_entered`                                                |
+| 55    | `0x004b1ad4` | Fire `45e6c0`, release `45e6f0` | 4             | Sets and clears the racer's guidance target (`0x00439e60`, `0x00439e90`; this is what sets racer flag `0x8000`)                                        |
+| 59    | `0x004b1bc8` | Fire `462fe0`, release `463040` | 1             | While the hold signal (`keyword 0x4c`) is on, a force on the racer's car body: slot `0x40` or `0x48` by `keyword 0x5a` (ends with `+4`)                |
 
 Initial flags: 2A, 28, 29: `0x2d` -> 1, `0x3a` -> 2, braced (`0x3c`) -> 4, `0x3f` -> 8 (the event takes the signal's position); 3D, 53: `0x3a` -> 2, braced -> 4; 4D: braced -> 4 and 2, `0x3a` -> 2.
 

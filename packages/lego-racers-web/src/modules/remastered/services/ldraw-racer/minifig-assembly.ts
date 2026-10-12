@@ -110,8 +110,9 @@ export const createMinifigPartPlans = (
     key: MinifigPartKey,
     part: string,
     color: number | string,
-    matrix: Matrix4
-  ): MinifigPartPlan => Object.freeze({ key, part, color, matrix })
+    matrix: Matrix4,
+    isSkin = false
+  ): MinifigPartPlan => Object.freeze({ key, part, color, matrix, isSkin })
   const sides = [
     { side: 'left', arm: '3819', key: MinifigPartKey.LEFT_ARM, handKey: MinifigPartKey.LEFT_HAND },
     {
@@ -147,8 +148,8 @@ export const createMinifigPartPlans = (
       getTranslation(0, TORSO_Y, 0)
     ),
     face === null
-      ? plan(MinifigPartKey.HEAD, PLAIN_HEAD, skinColor, head)
-      : plan(MinifigPartKey.HEAD, face.part, face.colorCode, head),
+      ? plan(MinifigPartKey.HEAD, PLAIN_HEAD, skinColor, head, true)
+      : plan(MinifigPartKey.HEAD, face.part, face.colorCode, head, true),
     ...spec.hats.map((hat) => plan(MinifigPartKey.HEAD, hat.part, hat.colorCode, head)),
     ...sides.flatMap(({ side, arm, key, handKey }) => {
       const armMatrix = getArmMatrix(side, posture)
@@ -159,7 +160,8 @@ export const createMinifigPartPlans = (
           handKey,
           isHook ? '2531' : '3820',
           isHook ? HOOK_COLOR : handColor,
-          armMatrix.clone().multiply(getHandInArmFrame(side))
+          armMatrix.clone().multiply(getHandInArmFrame(side)),
+          !isHook
         ),
       ]
     }),
