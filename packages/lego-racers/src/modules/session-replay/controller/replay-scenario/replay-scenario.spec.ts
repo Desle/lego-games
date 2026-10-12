@@ -46,6 +46,25 @@ describe('the frames the original can be fed', () => {
     })
   })
 
+  it('feeds a demonstration (no local player) to the original as one with no local player', () => {
+    // Arrange
+    const header = {
+      ...HEADER,
+      localPlayerCount: 0,
+      raceFolder: 'RACEC0R1',
+      racerCodes: ['aa', 'bb'],
+    }
+    const recording = { header, frames: [getFrame(), getFrame()] }
+
+    // Act
+    const split = getReplayScenarioSplit(recording)
+    const scenario = getReplayScenario(recording, new Uint8Array(), 'demonstration')
+
+    // Assert
+    expect(split.supportedFrameCount).toBe(2)
+    expect(scenario.localPlayerCount).toBe(0)
+  })
+
   it('feeds every frame of a plain keyboard session', () => {
     // Arrange
     const recording = { header: HEADER, frames: [getFrame(), getFrame()] }

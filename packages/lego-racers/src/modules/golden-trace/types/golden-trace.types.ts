@@ -98,6 +98,7 @@ export type ScenarioRequest = {
   readonly circuitName?: string
   readonly isMirrored?: boolean
   readonly racerCount?: number
+  readonly localPlayerCount?: number
   readonly powerUpGrants?: readonly PowerUpGrant[]
   readonly controller?: TraceController
 }

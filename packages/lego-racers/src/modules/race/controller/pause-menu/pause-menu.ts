@@ -11,8 +11,7 @@ import { clearPointsRecord } from '../../types/points-record/points-record.ts'
 import { RaceExit } from '../../types/race-exit/race-exit.ts'
 import type { RaceEvent, RaceExit as RaceExitValue, RaceState } from '../../types/race.types.ts'
 import type { PauseMenuStep } from './pause-menu.types.ts'
-import { IDLE_RACER_CONTROLS, NO_RACE_CONTACTS } from '../race-world/race-world.ts'
-import { applyPlayerControls } from '../update-race/update-race.ts'
+import { releasePlayerControls } from '../update-race/update-race.ts'
 
 // The menu keys of a frame in which nothing is pressed.
 export const NO_MENU_INPUT: RaceMenuInput = Object.freeze({
@@ -44,10 +43,7 @@ export const openPauseMenu = (
   mode: PauseMenu['mode'],
   pendingAction: PauseMenu['pendingAction']
 ): RaceState => {
-  const released = applyPlayerControls(raceState, {
-    controls: raceState.playerRacerIndices.map(() => IDLE_RACER_CONTROLS),
-    contacts: NO_RACE_CONTACTS,
-  })
+  const released = releasePlayerControls(raceState)
   return Object.freeze({ ...released, pauseMenu: getOpenedMenu(mode, pendingAction) })
 }
 
