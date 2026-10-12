@@ -75,6 +75,7 @@ const advanceBarrel = (
           key: `barrel:${String(effect.id)}`,
           soundId: 0x11,
           address: '0x004533a1',
+          ownerRacer: effect.ownerRacer,
         },
       ]
     )
@@ -150,6 +151,7 @@ const getOilLandingEvents = (effect: PowerUpEffect): readonly PowerUpEvent[] => 
     key: getOilLoopKey(effect),
     soundId: OIL_LOOP_SOUND,
     address: '0x00457440',
+    ownerRacer: effect.ownerRacer,
   },
   ...(effect.ownerRacer === null
     ? []

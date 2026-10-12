@@ -128,6 +128,8 @@ export type PowerUpEvent =
       readonly key: string
       readonly soundId: number
       readonly address: string
+      // The racer whose position the sound is placed at (its owner), or null.
+      readonly ownerRacer: number | null
     }
   | {
       readonly type: 'power_ups.looped_sound_stopped'

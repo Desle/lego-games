@@ -363,6 +363,7 @@ const activateHazard = (
               key: `magnet:${String(effectId)}`,
               soundId: 0x22,
               address: '0x0045623d',
+              ownerRacer: racer,
             },
           ])
         : started
