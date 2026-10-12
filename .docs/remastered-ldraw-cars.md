@@ -24,10 +24,22 @@ It was generated, not typed: for each of the 161 bricks the game's mesh (from `g
 
 Verification: every saved design (`DEFAULT.LRS`, `QBUILD.LRS`: 28 cars) was drawn with the parts and, in wireframe, with the game's mesh over it; the studs, slopes and wedges line up (a gallery page does this, below), and a sheet of every mapped brick next to its part shows the same shapes in the same orientation.
 
+### What the brick names are (tested against Rebrickable's catalogue)
+
+**Hypothesis "a name is a LEGO element ID" is false.** Rebrickable's `elements.csv` has no element `243200`, `300200` and so on, and the piece ids in `LPIECELO.LEB` are just sequential (`5001`...`5219`, chassis `11`...`22`). The names follow three schemes:
+
+- `L<4-digit part number><2 digits>` (28 bricks: `L300200` is part 3002, `L329700` part 3297, `L656400` part 6564). For 20 of them the part of that number matches the game mesh exactly (top-surface error 0.00 to 0.02 plates; all are in the table already). Where the number's part differs from the game's shape (`L241900` is 2419, a plate; `L304500` is 3045; `l248900` is 2489), the game's brick is a variant and the shape-matched part stays. `L81423` ... `L82530` and `L347800` are Racers-only numbers with no catalogue entry.
+- `S00xxx` / `s000xx`: sequential special pieces, no number to look up.
+- `s`/`S` plus a theme word (`sLance`, `sTorch`, `sFlag`, `Spear`, `Sbat`, `sspider`...): composite models, a base brick with the accessory moulded on (the flag stands on a plate, the torch on a brick), not catalogued parts. The 12 chassis (10 x 6 footprint) have no Rebrickable or LDraw equivalent either (no 4 x 10/6 x 10 racer base has the arches and cut-outs).
+
+So the only source that can draw them is composition: the LDraw base brick plus the LDraw minifigure accessory (lance, sword, flag, torch, ...) placed in the brick's frame; not done. A candidate list (name rule, then shape rank) was rerun with a corrected quad triangulation of the game meshes (the quad's vertices are in strip order); it added `L304900` (the 2 x 2 double slope 3049, error 0.67 plates, mirrored).
+
 ### Bricks with no good LDraw match (drawn from the game's own mesh)
 
+The fallback draws the game's faces double-sided in the plastic and also the decals: a face whose material has a picture and is no brick colour (`jt_carw`, `rr_car1`, `rr_logo`, `stw_wt`: headlights, windscreens, logos on the chassis) is drawn with that picture (the engine's own loader, colour-keyed pixels cut out); it was a flat colour before, which read as missing parts. No face is dropped beyond the original's hidden undersides (flags 1, as in `buildCarGeometry`). The gallery has `bottom` and `side` views to check a chassis alone.
+
 - **All 12 chassis** (`JTchas0`, `GM_CHAS0`, `BVBCHA0`, `BBCHAS0`, `CRchas0`, `KKCHAS0`, `DACHAS0`, `DBCHAS0`, `DCCHAS0`, `DDCHAS0`, `RRchas0`, `VVCHAS0`): the Racers chassis are special moulds the library does not have (its car bases are other shapes; the closest plates differ by several plates over the footprint).
-- LEGO Racers themed pieces the library lacks or that no part resembles: the lances, spears, swords, axes, bat, oars, guns, flags, shields, rocket noses, the torch, lamp, wand, idol, spider, jungle gem and the like (every `s...` brick below), the toolbox-shaped windscreen frame `s243200` (the most used unmapped brick: 1 or 2 on about half of the saved cars) and `S243201`, `L304900`, `l248900`, `sdrum`/`scylnder`, the sub-brick `Cylinder` (the stud, never in a design).
+- LEGO Racers themed pieces the library lacks or that no part resembles: the lances, spears, swords, axes, bat, oars, guns, flags, shields, rocket noses, the torch, lamp, wand, idol, spider, jungle gem and the like (every `s...` brick below), the toolbox-shaped windscreen frame `s243200` (the most used unmapped brick: 1 or 2 on about half of the saved cars) and `S243201`, `l248900`, `sdrum`/`scylnder`, the sub-brick `Cylinder` (the stud, never in a design).
 - The exact list, with the closest part and its error, is `UNMAPPED_BRICK_REASONS`.
 - Approximate matches (`heightError` above 0.1 plates) are plain bricks standing in for a printed or decorated one (the game's brick carries a texture the library's part has no pattern for), or a part that is close but not the same (e.g. `S00016` the bracket 99207, `s00019` the Technic brick 80431).
 
