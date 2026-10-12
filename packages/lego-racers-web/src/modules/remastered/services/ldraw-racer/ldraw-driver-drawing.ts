@@ -1,6 +1,6 @@
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import { Group, Matrix4, Quaternion, Vector3 } from 'three'
-import type { RacerPartDrawingRequest } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
+import type { RacerPartDrawingRequest } from './ldraw-racer-drawing.types.ts'
 import { applyPlasticLook } from '../ldraw-car/ldraw-plastic.ts'
 import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
 import { disposeObject } from './dispose-object.ts'

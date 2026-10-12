@@ -12,9 +12,11 @@ import {
   applyHighDefinitionTexture,
   getHighDefinitionVariant,
 } from '../high-definition-texture/high-definition-texture.ts'
-import { createOpponentCarDrawing } from '../opponent-car/opponent-car-drawing.ts'
 import { createLDrawPickupDrawing } from '../ldraw-pickup/ldraw-pickup-drawing.ts'
-import { createLDrawCarDrawing } from '../ldraw-car/ldraw-car-drawing.ts'
+import { loadLDrawModelIndex, getLDrawModelIndex } from '../ldraw-models/ldraw-model-client.ts'
+import { createLDrawRacerCar } from '../ldraw-racer-model/ldraw-racer-car.ts'
+import { createLDrawRacerDriver } from '../ldraw-racer-model/ldraw-racer-driver.ts'
+import { CHAMPION_CAR_CODES, CHASSIS_NAMES } from '../ldraw-racer-model/known-racer-models.ts'
 import {
   getShadowMode,
   getShadowModeFromLabel,
@@ -26,7 +28,6 @@ import {
 import { ShadowMode } from '../real-shadows/shadow-mode.types.ts'
 import { createShadowPass } from '../real-shadows/shadow-pass.ts'
 import { getTrackSun } from '../real-shadows/sun-selection.ts'
-import { createLDrawRacerPartDrawing } from '../ldraw-racer/ldraw-racer-part-drawing.ts'
 import { getAudioVariants, getTextureVariants } from '../texture-variants/texture-variants.ts'
 import { getNativeMenuSurfaceScale } from '../widescreen-display/menu-surface.ts'
 import { getWidescreenDisplay } from '../widescreen-display/widescreen-display.ts'
@@ -37,6 +38,12 @@ export const getIsRemasteredRequested = (search: string): boolean =>
 const BRICKS_PARAMETER = 'bricks'
 const CLASSIC_BRICKS = 'classic'
 const LDRAW_BRICKS = 'LDraw'
+const CHASSIS_PARAMETER = 'chassis'
+const GAME_CHASSIS = 'game'
+
+// A chassis without a recipe in the models folder is drawn from the game's own geometry only when the URL says `chassis=game`.
+const getIsChassisFallbackRequested = (search: string): boolean =>
+  new URLSearchParams(search).get(CHASSIS_PARAMETER) === GAME_CHASSIS
 
 // Built cars are drawn from LDraw parts unless the URL says `bricks=classic`.
 const getIsLDrawRequested = (search: string): boolean =>
@@ -44,7 +51,12 @@ const getIsLDrawRequested = (search: string): boolean =>
 
 // Plugs the remastered features into the viewer's extension points; `?hd=<variant>` picks the texture pack and
 // `audio=<variant>` the audio pack.
-export const registerRemastered = (search: string) => {
+export const registerRemastered = async (search: string) => {
+  await loadLDrawModelIndex()
+  const settings = {
+    search,
+    isChassisFallbackUsed: getIsChassisFallbackRequested(search),
+  }
   const audioVariant = getHighDefinitionAudioVariant(search)
   registerViewerExtension({
     ...NEUTRAL_EXTENSION,
@@ -52,8 +64,10 @@ export const registerRemastered = (search: string) => {
     onPictureCreated: (event) => applyHighDefinitionPicture(event, search),
     getRaceDisplay: getWidescreenDisplay,
     getMenuSurfaceScale: getNativeMenuSurfaceScale,
-    getBuiltCarDrawing: (request) =>
-      getIsLDrawRequested(search) ? createLDrawCarDrawing(request).object : null,
+    getCarDrawing: (request) =>
+      getIsLDrawRequested(search) ? createLDrawRacerCar(request, settings) : null,
+    getDriverDrawing: (request) =>
+      getIsLDrawRequested(search) ? createLDrawRacerDriver(request, search) : null,
     getRaceRenderPass: (request) => {
       const mode = getShadowMode(search)
       if (mode === ShadowMode.CLASSIC) return null
@@ -63,18 +77,13 @@ export const registerRemastered = (search: string) => {
         getTrackSun(search, request.trackKey, request.trackGroup)
       )
     },
-    getCarBodyDrawing: ({ archive, names }) =>
-      getIsLDrawRequested(search)
-        ? (createOpponentCarDrawing(archive, names)?.object ?? null)
-        : null,
     getEffectModelDrawing: (request) =>
       getIsLDrawRequested(search) ? createLDrawPickupDrawing(request) : null,
-    getRacerPartDrawing: (request) =>
-      getIsLDrawRequested(search) ? createLDrawRacerPartDrawing(request, search) : null,
     getSelections: () => [
       `textures=${getHighDefinitionVariant(search)}`,
       `audio=${audioVariant ?? 'none'}`,
       `bricks=${getIsLDrawRequested(search) ? LDRAW_BRICKS : CLASSIC_BRICKS}`,
+      `chassis=${getIsChassisFallbackRequested(search) ? GAME_CHASSIS : 'recipe'}`,
       `shadows=${getShadowMode(search)}`,
     ],
     getSoundReplacement: (context, archivePath) =>
@@ -104,6 +113,15 @@ const selectBricks = (bricks: string | null) => {
   globalThis.location.assign(url.toString())
 }
 
+// Switching the chassis fallback reloads the page too: cars are drawn as they are made.
+const selectChassis = (chassis: string | null) => {
+  const url = new URL(globalThis.location.href)
+  if (chassis === null) url.searchParams.delete(CHASSIS_PARAMETER)
+  else url.searchParams.set(CHASSIS_PARAMETER, GAME_CHASSIS)
+  if (!url.searchParams.has('hd')) url.searchParams.set('hd', '')
+  globalThis.location.assign(url.toString())
+}
+
 // Switching shadows reloads the page: the shadow pass is made with the race.
 const selectShadows = (label: string | null) => {
   const url = new URL(globalThis.location.href)
@@ -112,6 +130,9 @@ const selectShadows = (label: string | null) => {
   globalThis.location.assign(url.toString())
 }
 
+const getModelOption = (name: string, isPresent: boolean): string =>
+  `${name}: ${isPresent ? 'LDraw model' : 'no model'}`
+
 // The developer panel's choices for the remastered layer (offered whether or not it is on).
 export const getRemasteredSelectors = async (
   search: string
@@ -119,6 +140,7 @@ export const getRemasteredSelectors = async (
   const [textureVariants, audioVariants] = await Promise.all([
     getTextureVariants(),
     getAudioVariants(),
+    loadLDrawModelIndex(),
   ])
   return [
     {
@@ -141,10 +163,36 @@ export const getRemasteredSelectors = async (
       onSelected: selectBricks,
     },
     {
+      label: 'Chassis without a recipe (reloads)',
+      options: ['Game geometry'],
+      selected: getIsChassisFallbackRequested(search) ? 'Game geometry' : null,
+      onSelected: selectChassis,
+    },
+    {
       label: 'Shadows (reloads): Classic blobs / Real / Real + scenery',
       options: [REAL_SHADOWS_LABEL, SCENERY_SHADOWS_LABEL],
       selected: getIsRemasteredRequested(search) ? getShadowModeLabel(getShadowMode(search)) : null,
       onSelected: selectShadows,
     },
+    getModelSelector(),
   ]
+}
+
+// Which cars and chassis have a model in the models folder; the list is for reading (the folder is the choice).
+const getModelSelector = (): DevelopmentSelector => {
+  const index = getLDrawModelIndex()
+  const cars = CHAMPION_CAR_CODES.map((code) =>
+    getModelOption(code, index.cars[code] !== undefined)
+  )
+  const chassis = CHASSIS_NAMES.map((name) =>
+    getModelOption(`chassis ${name}`, index.chassis[name] !== undefined)
+  )
+  const carCount = cars.filter((option) => option.endsWith('LDraw model')).length
+  const chassisCount = chassis.filter((option) => option.endsWith('LDraw model')).length
+  return {
+    label: `LDraw models: ${String(carCount)} of ${String(cars.length)} cars, ${String(chassisCount)} of ${String(chassis.length)} chassis`,
+    options: [...cars, ...chassis],
+    selected: null,
+    onSelected: () => undefined,
+  }
 }

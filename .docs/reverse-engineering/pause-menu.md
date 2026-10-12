@@ -16,7 +16,7 @@ Initialised by `Race_LoadTrackContent` through `0x004272c0` (font = race `+0x2d7
 
 Draw `0x00427440` (called from `0x00435920`, in every state's render): a black quad over the surface at alpha `0x40` (`0x004276c0`), then the title at `(width / 2 - textWidth / 2, firstItem - lineHeight)` (moved up by half a line when there is a subtitle, which follows one line below), white; then each item centred, colour `0xff127f7f`; the selected item `0xff24ffff`, drawn only while the blink timer `+0x54` is below 250 ms and the menu still waits for an answer. Blink timer `0x00427420` wraps at 500 ms. Text is drawn at scale 1 at the surface's own pixels (the HUD's 640 × 480 scale is not applied).
 
-Keys `0x00427810`: up (`0x100000c8`, joystick up codes) and down (`0x100000d0`, ...) move the selection with wrap-around; the confirm keys (`0x1000001c` enter, `0x10000039` space, `0x3000000c..f` joystick buttons) clear the waiting flag. The menu has no mouse codes (`0x2....`), so the in-race menus take no mouse input.
+Keys `0x00427810`: up (`0x100000c8`, joystick up codes) and down (`0x100000d0`, ...) move the selection with wrap-around; the confirm keys (`0x1000001c` enter, `0x10000039` space, `0x3000000c..f` joystick buttons) going **down** clear the waiting flag (and from then on the selection keys do nothing). The menu is **answered when the confirm key goes up**: the key-release handler `0x00435cc0` calls `0x004278c0`, which sets the widget state `+0x48` (race `+0x30a0`) to 2 for a confirm key once the waiting flag is clear (found with a real session: the player held Enter for nine frames and the original resumed on the release, the port at the press). A tap is a down and an up in one frame. `RaceMenuInput.isConfirmReleased` carries the release; the viewer's input source queues it on `keyup` (and a gamepad button's release), recordings made before it was recorded get it from the held keys (`getMenuInputWithRelease`). The menu has no mouse codes (`0x2....`), so the in-race menus take no mouse input.
 
 ## Port
 
@@ -24,3 +24,7 @@ Keys `0x00427810`: up (`0x100000c8`, joystick up codes) and down (`0x100000d0`, 
 - The viewer's `createRaceMenuInputSource` hands one key per frame (as `0x00435c00` takes one key per call) and turns the window losing focus into the pause key (application flag `0x4000`).
 - While a menu is open the presentation is stepped with 0 ms (the race is frozen); the controller maps the race's `exit` to the session: quit → `abortSession`, restart → `restartRace` (first race or no circuit) or `requestCircuitRestart` (later races of a circuit), anything else → `finishRace`.
 - The ghost result menu (mode 2) is opened by the race after a time trial's ghost run; the results screens that follow a circuit are the front end's `0x16..0x19` screens (see [front-end.md](front-end.md)).
+
+## Trace
+
+`race.pauseState` is race `+0x30c0` as it is (0 none, 1 pause, 2 results, 3 confirmation); the port's field used to report only 0 or 1, so a real session that asked for a restart or a quit (`racec0r1-pause-confirmation`, `racec2r0-pause-confirmation`) looked like a divergence at the confirmation menu.

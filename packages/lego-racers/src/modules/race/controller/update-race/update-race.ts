@@ -3,7 +3,6 @@ import { advanceSky, switchSkySetting } from '../../../sky/index.ts'
 import { updateTrackHazardsAfterRacers, updateTrackLogicFrame } from '../../../track-logic/index.ts'
 import type { SurfaceSignal } from '../../../track-logic/index.ts'
 import { advanceWorldAnimation } from '../../../world-animation/index.ts'
-import { activateLauncherWarp } from '../../../power-ups/index.ts'
 import { updatePowerUpsWithProjectiles } from '../../../projectiles/index.ts'
 import type { ProjectileWorld } from '../../../projectiles/index.ts'
 import { getRacerSetWithProjectileRegistry } from '../projectile-registry/projectile-registry.ts'
@@ -22,6 +21,7 @@ import {
 import {
   changePowerUps,
   changeTrackLogic,
+  getContextWithMovedCollisionObjects,
   getProjectileContext,
   getRacerSetAfterProjectileEvents,
   getRaceRacerSet,
@@ -132,31 +132,6 @@ export const releasePlayerControls = (state: RaceState): RaceState =>
 // in the simulation, so none.
 const NO_CAMERA_POSITIONS: readonly (readonly [number, number, number])[] = Object.freeze([])
 
-// 0x0048af80 (the warp pad's begin): the pad asks the power-up system for a warp with itself as the launcher
-// (power-up system +0x1998), whose destination and facing the effect takes (0x0045d560's third argument).
-const getRacerSetWithLauncherWarps = (
-  context: RaceState['context'],
-  racerSet: RaceRacerSet,
-  effects: RaceState['trackEffects']
-): RaceRacerSet =>
-  effects.reduce((current, effect) => {
-    if (effect.type !== 'hazard.power_up_activated' || effect.activation !== 'warp') return current
-    const { racerIndex, launcher } = effect
-    const { position, direction } = launcher
-    if (racerIndex === null || position === null || direction === null) return current
-    const [x, y, z] = position
-    const [directionX, directionY, directionZ] = direction
-    return changePowerUps(context, current, (step, powerUpContext) =>
-      activateLauncherWarp(
-        step,
-        powerUpContext,
-        racerIndex,
-        { x, y, z },
-        { x: directionX, y: directionY, z: directionZ }
-      )
-    )
-  }, racerSet)
-
 // Race_Update 0x00435220: the frame's whole time step goes to the power-ups and the players' controllers, then
 // the racers run in sub-steps of at most 40 ms; the worlds, triggers, emitters, events, hazards and timers run
 // first (track-logic) and the hazards that follow the cameras and the sky at the end. Not ported: the tagged
@@ -217,14 +192,17 @@ export const updateRace = (
       )
     )
   )
-  const launched = getRacerSetWithLauncherWarps(
-    counted.context,
-    powered,
-    powered.trackEffects.slice(tagged.trackEffects.length)
-  )
+  const framed: RaceState = Object.freeze({
+    ...counted,
+    context: getContextWithMovedCollisionObjects(
+      counted.context,
+      powered.collisionObjectNames,
+      powered.trackEffects.slice(tagged.trackEffects.length)
+    ),
+  })
   const controlled = counted.isDemonstration
-    ? { controllers: counted.playerControllers, racerSet: launched }
-    : runPlayerControllers(counted, launched, (input, playerIndex) =>
+    ? { controllers: counted.playerControllers, racerSet: powered }
+    : runPlayerControllers(counted, powered, (input, playerIndex) =>
         updatePlayerController(
           input,
           inputs.controls[playerIndex] ?? IDLE_RACER_CONTROLS,
@@ -241,7 +219,7 @@ export const updateRace = (
     (racerSet, subStepMilliseconds) => {
       const steppedSet = getRaceRacerSetOf(
         stepRacerSet({
-          context: counted.context,
+          context: framed.context,
           racerSet,
           stepMilliseconds: subStepMilliseconds,
           dependencies: RACE_STEP_DEPENDENCIES,
@@ -289,7 +267,7 @@ export const updateRace = (
     )
   )
   const progressed = Object.freeze({
-    ...getStateWithProgress(Object.freeze({ ...counted, projectileWorld }), {
+    ...getStateWithProgress(Object.freeze({ ...framed, projectileWorld }), {
       controllers: controlled.controllers,
       racerSet: hazardsFollowed,
     }),

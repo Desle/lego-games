@@ -36,6 +36,7 @@ const getState = (
     mode,
     selection: overrides.selection ?? 0,
     isAnswered: overrides.isAnswered ?? false,
+    isWaiting: false,
     pendingAction: 'none' as const,
     blinkMilliseconds: overrides.blinkMilliseconds ?? 0,
   },

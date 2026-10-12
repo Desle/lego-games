@@ -117,7 +117,7 @@ export const getGameBrickMaterials = (archive: JamArchive): GameBrickMaterials =
   return materials
 }
 
-const getFaceColorIndex = (
+export const getFaceColorIndex = (
   materials: GameBrickMaterials,
   brickColorIndex: number,
   materialIndex: number

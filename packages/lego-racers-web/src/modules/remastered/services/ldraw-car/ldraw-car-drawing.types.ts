@@ -1,3 +1,5 @@
+import type { CarDesign } from '@lego-games/lego-racers/car-builder'
+import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { Group } from 'three'
 import type { CarOrigin, LDrawCarDocument } from './ldraw-car-document.types.ts'
 
@@ -9,9 +11,8 @@ export type LDrawCarDrawing = {
   readonly settled: Promise<void>
 }
 
-// What a car that is not a built design adds: the origin its frame has (a built car's comes from its first brick), and more
-// lines of the LDraw model besides the design's bricks.
-export type LDrawCarDrawingOptions = {
-  readonly origin: CarOrigin | null
-  readonly extraText: string
+// The design a car's drawing is made from, and the archive that has its bricks' meshes.
+export type LDrawCarRequest = {
+  readonly archive: JamArchive
+  readonly design: CarDesign
 }

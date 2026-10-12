@@ -45,6 +45,7 @@ export const CLOSED_PAUSE_MENU: PauseMenu = Object.freeze({
   mode: PauseMenuMode.NONE,
   selection: 0,
   isAnswered: false,
+  isWaiting: false,
   pendingAction: PendingAction.NONE,
   blinkMilliseconds: 0,
 })

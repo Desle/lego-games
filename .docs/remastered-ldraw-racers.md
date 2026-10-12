@@ -1,15 +1,27 @@
 # LDraw wheels and drivers (remastered layer)
 
-With `?hd` in development and Bricks = LDraw (the default), every racer's wheels and driver are drawn from the official LDraw parts library, in the same plastic as the [LDraw cars](remastered-ldraw-cars.md): the player, the computer opponents and the champions, in the race, the Racer Select showcase, the driver editor, the main menu and the race cinemas. Physics, the simulation and the original's skeleton animations are untouched: the LDraw parts follow the poses the viewer already computes. Read [remastered.md](remastered.md) first for the rule. Code: `packages/lego-racers-web/src/modules/remastered/services/ldraw-racer/`.
+With `?hd` in development and Bricks = LDraw (the default), every racer's wheels and driver (and a car with a complete model) are drawn from the official LDraw parts library, in the same plastic as the [LDraw cars](remastered-ldraw-cars.md): the player, the computer opponents and the champions, in the race, the Racer Select showcase, the driver editor, the main menu and the race cinemas. Physics, the simulation and the original's skeleton animations are untouched: the LDraw parts follow the poses the viewer already computes. Read [remastered.md](remastered.md) first for the rule. Code: `packages/lego-racers-web/src/modules/remastered/services/ldraw-racer/`.
 
 ## The neutral hooks (Classic side)
 
-Classic code knows nothing about LDraw. It has one extension point and one helper:
+Classic code knows nothing about LDraw. It has two extension points (`src/shared/viewer-extensions/`) and one helper (`track-viewer/services/racer-drawing`):
 
-- `ViewerExtension.getRacerPartDrawing(request)` (`src/shared/viewer-extensions/`): "something to draw in place of this racer's wheels or driver". The request names the part (`RacerPartKind.WHEELS` or `DRIVER`), the archive, the original's model (its skeleton and animation set) and what identifies it (the model's name, or the five part bytes of a driver the figure builder made). The answer (`RacerPartDrawing`) is an object in the model's frame plus `setAnimationState`, `animate` and `dispose`. With no extension registered it answers `null` and nothing changes.
-- `showRacerPartDrawing` (`track-viewer/services/racer-part-drawing`) is called where Classic makes a racer's wheels or driver: `race-viewport` (all racers), `showcase-stage` (the car's wheels), `driver-view` (the main menu figure, the showcase driver, the driver editor) and `cinema-stage` (the cinema figure). If the extension has a drawing it hides the original's mesh, puts the drawing in the model's scale inside the model's group, and forwards what Classic does to the original: the animation state ("racer pose applied": the wheels' spin and steering, the driver's skeleton pose) and `animate`. The group is moved, leaned and scaled by Classic as before (the model frame with the body's lean, the driver at the seat, the part scale), so the drawing inherits all of it.
+- `getCarDrawing(request)`: a complete car (body, chassis, wheels). The request is the archive, the champion's body code (such as `RRCM`) or the built design (which names its chassis), and the chassis's wheel model. The answer (`CarDrawing`) has an object, `applyPose({ body, wheels, opacity })` and `dispose`. A pose part is what Classic already computes: the group matrix (frame, position, lean, part scale), whether it is drawn, and the animation state of the wheels (spin and steering).
+- `getDriverDrawing(request)`: a complete driver, from the five part bytes or the driver model, with `applyPose({ matrix, isVisible, animationState, opacity })` (the skeleton pose) and `animate`.
+- Either answers `null` for the original, and then the whole piece is the original's, never mixed. `attachCarDrawing` and `attachDriverDrawing` serve the race and the ghosts (parts the viewer moves every frame: the drawing follows their groups); `showCarDrawing` and `showDriverDrawing` serve the places that move a model's group as a whole: the builder (with its wheels), the showcase turntable, the main menu figure, the showcase driver, the driver editor and the cinemas.
+- The ghost of the player's best run is drawn from the same drawings at the alpha of the ghost; the champion's ghost (GHOST.WDB models) stays the original's.
 
-Not drawn: the ghost cars of a time trial (they are semi-transparent through an alpha override of the original's materials) and the champions' car bodies (plain GDB models, not brick designs).
+## Sources of a complete car (`ldraw-racer-model/`)
+
+1. `~/ldraw-models/<CODE>.ldr|.mpd` (a hand-built champion car; `LEGO_LDRAW_MODELS_ROOT` moves the folder), served by the dev route `/__development/ldraw-models/` with an `index.json` read before the first frame. The file is in the car's frame, written in LDraw axes (see the folder's README, generated from `reference-kit/ldraw-models-readme.md`).
+2. The LDraw Official Model Repository: no set of its 1,470 is a LEGO Racers car (checked by name and year, 2026-10), so there is no set-to-car table; a downloaded model can be saved as `<CODE>.mpd`.
+3. A garage car: `createLDrawCarDocument` writes its brick list as the same kind of document, with its chassis part as a reference to `chassis/<CHASSIS>.ldr` (recipe frame: the chassis brick's footprint corner), or, with `?hd&chassis=game`, a converted unofficial part (`ldraw-chassis/chassis-fallback.ts`, studs on every flat cell).
+
+Wheels are added when the file has none (the library sets below, on the original's wheel bones). If it has some (parts of the library's category `Wheel` or `Tyre`), they are found, taken out of the body and each follows the original wheel nearest to it. A minifigure in a file is removed: the driver is its own drawing. The dev panel lists which of the 20 cars and 12 chassis have a model.
+
+## Reference kit
+
+`pnpm --filter @lego-games/lego-racers-web run reference-kit` writes `~/ldraw-models/reference/<CODE>.svg|.txt` for the 20 champions and `reference/chassis/<CHASSIS>.svg|.txt` for the 12 chassis (four orthographic views over a stud grid, dimensions, LDraw colour names, wheel mounts), `~/ldraw-models/README.md`, `_convention-test.ldr` and `chassis/_fallback/*.dat`. A spec (`convention-test-model.spec.ts`) proves the axis conventions.
 
 ## Wheels
 

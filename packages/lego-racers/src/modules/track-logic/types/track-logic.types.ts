@@ -89,7 +89,19 @@ export type TrackEventSet = Readonly<Record<TrackEventKind, readonly TrackEvent[
 
 // What an event or hazard asks of the parts of the game the port does not simulate (rendering, sound, the world's
 // animations) or of the racers; each names the original call.
+export type TrackBoneFrame = {
+  readonly position: Vector3
+  readonly forward: Vector3
+  readonly up: Vector3
+}
+
 export type TrackEffect =
+  | {
+      // 0x004639d0: the 52 event puts a collision world instance on a bone of the object it follows.
+      readonly type: 'track.collision_object_moved'
+      readonly name: string
+      readonly frame: TrackBoneFrame
+    }
   | {
       readonly type: 'track.sound_played'
       readonly identifier: number
@@ -299,6 +311,12 @@ export type TrackSession = HazardBus & {
   // Where a bone of the scene object is in the world now (0x0045ebe0: the bone's chain of transforms, then the object's
   // frame), or null when the object or its skeleton is unknown.
   readonly getObjectBonePosition: (reference: ObjectReference, boneIndex: number) => Vector3 | null
+  // 0x004639d0: a bone's own translation (scaled, carried by the object's frame) with rows 0 and 2 of its rotation
+  // turned by the object's rotation, or null when the object or its skeleton is unknown.
+  readonly getObjectBoneFrame: (
+    reference: ObjectReference,
+    boneIndex: number
+  ) => TrackBoneFrame | null
   // 0x00489660 on the emitter a track event holds.
   readonly setEmitterPosition: (handle: EmitterReference, position: Vector3) => void
   // 0x00463570, 0x004635c0 and 0x004633f0 write the requested animation (+0xd8, the second clip) and the flag word

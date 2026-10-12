@@ -1,5 +1,9 @@
 import type { HazardRacer } from '../../../hazard/index.ts'
-import { getBrickKindCode, getBrickKindFromCode } from '../../../power-ups/index.ts'
+import {
+  activateLauncherWarp,
+  getBrickKindCode,
+  getBrickKindFromCode,
+} from '../../../power-ups/index.ts'
 import type {
   PowerUpContext,
   PowerUpEvent,
@@ -7,6 +11,7 @@ import type {
   RacerPowerUps,
   RacerPowerUpStatus,
 } from '../../../power-ups/index.ts'
+import { getRotationFromFrameAxes } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic } from '../../../simulation-math/index.ts'
 import { NO_EMITTER_POOLS } from '../../../emitter/index.ts'
 import { STATIC_TRACK_WORLD } from '../../../track-logic/index.ts'
@@ -607,6 +612,22 @@ const getRacerSetAfterTrackEffect = (
       ? racerSet
       : getRacerSetWithTaggedPosition(racerSet, effect.racerIndex, effect.triggerIndex)
   }
+  if (effect.type === 'hazard.power_up_activated' && effect.activation === 'warp') {
+    // 0x0048af80 (the warp pad's begin) asks the power-up system for a warp at once, with itself as the launcher
+    // (power-up system +0x1998), whose destination and facing the effect takes (0x0045d560's third argument).
+    const { racerIndex, launcher } = effect
+    const { position, direction } = launcher
+    if (racerIndex === null || position === null || direction === null) return racerSet
+    return changePowerUps(context, racerSet, (step, powerUpContext) =>
+      activateLauncherWarp(
+        step,
+        powerUpContext,
+        racerIndex,
+        { x: position[0], y: position[1], z: position[2] },
+        { x: direction[0], y: direction[1], z: direction[2] }
+      )
+    )
+  }
   if (effect.type === 'track.racer_target_set') {
     if (racerSet.racers[effect.racerIndex] === undefined) return racerSet
     return changeRacer(racerSet, effect.racerIndex, (racer) =>
@@ -676,7 +697,7 @@ export const changeTrackLogic = (
     random: { table: racerSet.trackLogic.random.table, position: racerSet.randomPosition },
     emitters: racerSet.emitters,
   }
-  const track = context.collisionObjects[0]
+  const track = context.collisionObjects[racerSet.racers[0]?.collisionObjectIndices[0] ?? 0]
   const step = run(synced, {
     arithmetic: context.arithmetic,
     world: STATIC_TRACK_WORLD,
@@ -695,4 +716,38 @@ export const changeTrackLogic = (
     (current, effect) => getRacerSetAfterTrackEffect(context, current, effect),
     changed
   )
+}
+
+const getAxes = (vector: readonly [number, number, number]) =>
+  Object.freeze({ x: vector[0], y: vector[1], z: vector[2] })
+
+// 0x004639d0 (the 52 events' update): the collision world instances the track logic moved this frame take their new
+// frames (position, and the rotation the instance's slot +0x40 builds from forward and up).
+export const getContextWithMovedCollisionObjects = (
+  context: RacerSetContext,
+  collisionObjectNames: readonly string[],
+  effects: readonly TrackEffect[]
+): RacerSetContext => {
+  const moves = effects.flatMap((effect) =>
+    effect.type === 'track.collision_object_moved' && collisionObjectNames.includes(effect.name)
+      ? [effect]
+      : []
+  )
+  if (moves.length === 0) return context
+  const collisionObjects = context.collisionObjects.map((object, index) => {
+    const move = moves.findLast((candidate) => collisionObjectNames[index] === candidate.name)
+    return move === undefined
+      ? object
+      : Object.freeze({
+          ...object,
+          frame: Object.freeze({
+            rotation: getRotationFromFrameAxes(context.arithmetic, {
+              first: getAxes(move.frame.forward),
+              third: getAxes(move.frame.up),
+            }),
+            position: getAxes(move.frame.position),
+          }),
+        })
+  })
+  return Object.freeze({ ...context, collisionObjects: Object.freeze(collisionObjects) })
 }

@@ -3,25 +3,16 @@ import {
   getCarOrigin,
   parseBrickDatabase,
 } from '@lego-games/lego-racers/car-builder'
-import { Group, Matrix4, Mesh } from 'three'
+import { Group, Mesh } from 'three'
 import type { Object3D } from 'three'
-import type { BuiltCarDrawingRequest } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
 import { createGameBrickMeshes } from './game-brick-meshes.ts'
-import {
-  createLDrawCarDocument,
-  LDRAW_TO_GAME,
-  LDRAW_UNITS_PER_STUD,
-} from './ldraw-car-document.ts'
+import { createLDrawCarDocument, getChassisFileName, LDRAW_TO_STUDS } from './ldraw-car-document.ts'
 import { applyPlasticLook, createStudioLights } from './ldraw-plastic.ts'
 import type { PlasticMesh } from './ldraw-plastic.types.ts'
-import type { LDrawCarDrawing, LDrawCarDrawingOptions } from './ldraw-car-drawing.types.ts'
+import type { LDrawCarDrawing, LDrawCarRequest } from './ldraw-car-drawing.types.ts'
 
-const LDRAW_TO_STUDS = new Matrix4()
-  .makeScale(1 / LDRAW_UNITS_PER_STUD, 1 / LDRAW_UNITS_PER_STUD, 1 / LDRAW_UNITS_PER_STUD)
-  .multiply(LDRAW_TO_GAME)
-
-const DEFAULT_OPTIONS: LDrawCarDrawingOptions = Object.freeze({ origin: null, extraText: '' })
+const NO_CHASSIS_MODELS: ReadonlyMap<string, string> = new Map()
 
 const getIsPlasticMesh = (object: Object3D): object is PlasticMesh => object instanceof Mesh
 
@@ -36,16 +27,20 @@ const disposeMeshes = (group: Group) => {
 // bricks without an LDraw part show the game's own mesh at once, and so do the others (in the library's plastic) until the
 // library has delivered their parts. When it cannot (no library on the dev server), the whole car stays the game's mesh.
 export const createLDrawCarDrawing = (
-  { archive, design }: BuiltCarDrawingRequest,
+  { archive, design }: LDrawCarRequest,
   isLDrawUsed = true,
-  options: LDrawCarDrawingOptions = DEFAULT_OPTIONS
+  chassisModels: ReadonlyMap<string, string> = NO_CHASSIS_MODELS,
+  onModel: ((model: Group) => void) | null = null
 ): LDrawCarDrawing => {
   const database = parseBrickDatabase(archive.readFile(BRICK_DATABASE_PATH))
-  const origin = options.origin ?? getCarOrigin(database, design)
-  const brickDocument = createLDrawCarDocument(design, origin)
+  const origin = getCarOrigin(database, design)
+  const brickDocument = createLDrawCarDocument(design, origin, new Set(chassisModels.keys()))
   const document = Object.freeze({
     ...brickDocument,
-    text: [brickDocument.text, options.extraText].filter((text) => text !== '').join('\n'),
+    text: [
+      brickDocument.text,
+      ...[...chassisModels].map(([name, text]) => `0 FILE ${getChassisFileName(name)}\n${text}`),
+    ].join('\n'),
   })
   const object = new Group()
   object.add(createStudioLights())
@@ -58,6 +53,7 @@ export const createLDrawCarDrawing = (
     ? parseLDrawModel(document.text).then(
         (model) => {
           applyPlasticLook(model)
+          onModel?.(model)
           const holder = new Group()
           holder.matrixAutoUpdate = false
           holder.matrix.copy(LDRAW_TO_STUDS)
