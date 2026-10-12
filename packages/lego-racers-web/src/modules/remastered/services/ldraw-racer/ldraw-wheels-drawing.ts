@@ -20,7 +20,7 @@ import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-an
 const LDRAW_UNITS_PER_STUD = 20
 const RAW_UNITS_PER_STUD = 64
 const LDRAW_UNITS_PER_RAW_UNIT = LDRAW_UNITS_PER_STUD / RAW_UNITS_PER_STUD
-const TYRE_COLOR_CODE = 0
+const TYRE_COLOR_CODE = 256
 const DEFAULT_RIM_COLOR_CODE = 72
 const DIRECT_COLOR_PREFIX = '0x2'
 const MAXIMUM_COPY_COUNT = 4
@@ -107,7 +107,7 @@ export const createLDrawWheelsDrawing = (
       ...(set.tyrePart === null ? [] : [getPartLine(TYRE_COLOR_CODE, set.tyrePart)]),
       getPartLine(set.rimColorCode ?? hubColorCode, set.rimPart),
     ].join('\n')
-    return getPreparedModel(text, LDrawDetail.HIGH).then(
+    return getPreparedModel(text, LDrawDetail.HIGH, true).then(
       (prepared) => {
         if (isDisposed) return
         for (const placement of placements.filter((candidate) => candidate.set === set)) {

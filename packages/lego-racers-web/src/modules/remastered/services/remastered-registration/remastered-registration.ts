@@ -218,7 +218,7 @@ export const getRemasteredSelectors = async (
       onSelected: selectShadows,
     },
     {
-      label: 'Look (reloads): Manual / Studio / Photo / LEGO Movie',
+      label: 'Look (reloads): Manual / Instructions / Toon / Game / Clay / Retro 1999',
       options: getLookLabels(),
       selected: getIsRemasteredRequested(search)
         ? LOOK_APPEARANCES[getLookPreset(search)].label

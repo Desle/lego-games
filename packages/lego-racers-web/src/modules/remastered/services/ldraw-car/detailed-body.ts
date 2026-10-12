@@ -27,7 +27,7 @@ export const createDetailedBody = (
     const body = createPlasticModel(result.body, volume)
     onWheels?.(
       result.wheels.map((wheel) => ({
-        unit: createPlasticModel(wheel.model, volume),
+        unit: createPlasticModel(wheel.model, volume, true),
         centre: new Vector3(...wheel.centre),
       })),
       detail
