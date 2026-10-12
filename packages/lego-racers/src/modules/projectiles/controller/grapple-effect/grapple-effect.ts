@@ -245,7 +245,10 @@ export const updateGrapple = (
   // The body reads where it is from the model frame (0x00431550, 0x00444820: slot +4), which every hook shares.
   const hookAtFrame = Object.freeze({
     ...countedHook,
-    flight: Object.freeze({ ...countedHook.flight, framePosition: started.world.hookFrame.position }),
+    flight: Object.freeze({
+      ...countedHook.flight,
+      framePosition: started.world.hookFrame.position,
+    }),
   })
   const advance = advanceGrappleHook(
     context.powerUps.arithmetic,
