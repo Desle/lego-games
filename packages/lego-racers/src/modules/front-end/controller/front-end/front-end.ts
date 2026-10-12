@@ -15,7 +15,7 @@ import { createBuilderSession } from '../../../car-builder/index.ts'
 import { getSettingsWithMemory } from '../profile/profile.ts'
 import { getDriverForScreen } from '../driver-base/driver-base.ts'
 import { FrontEndScreen } from '../../types/front-end-screen/front-end-screen.ts'
-import type { ScreenRuntime } from '../../types/front-end-screen.types.ts'
+import type { ScreenNavigation, ScreenRuntime } from '../../types/front-end-screen.types.ts'
 import {
   getInitialSelection,
   getScreenDefinition,
@@ -32,7 +32,9 @@ import type {
   MenuFigureStep,
 } from '../../types/menu-figure/menu-figure-animation.types.ts'
 import {
+  getPendingShowcaseNavigation,
   getStateWithShowcaseOpened,
+  getStateWithShowcaseReaction,
   getStateWithShowcaseStep,
 } from '../front-end-showcase/front-end-showcase.ts'
 import { getFrontEndMusicIndex } from '../front-end-music/front-end-music.ts'
@@ -126,7 +128,53 @@ const getOpenedState = (state: FrontEndState, screenId: number): OpenedScreen =>
   }
 }
 
-// The current screen's answer to the input, if any: the next screen, the race or the exit (0x004812c0, 0x004850a0).
+// The screen asked to go somewhere (0x004812c0, 0x004850a0): the next screen, back, the race or the exit.
+const applyNavigation = (
+  navigated: FrontEndState,
+  navigation: ScreenNavigation,
+  soundNames: readonly string[],
+  resources: FrontEndResources,
+  environment: FrontEndEnvironment
+): FrontEndStep => {
+  const { screens } = navigated
+  const runtime = getRuntime(navigated, resources, environment)
+  switch (navigation.kind) {
+    case 'push': {
+      if (runtime === null) return { state: navigated, soundNames, musicListIndex: null }
+      const screenId = navigation.screenId
+      const next = { screenId, selection: getInitialSelection(screenId, runtime) }
+      const opened = getOpenedState(
+        {
+          ...navigated,
+          screens: [...screens, next],
+          builder: getBuilderForScreen(screenId, navigated.builder, resources),
+          driver: getDriverForScreen(screenId, navigated.settings, resources, environment),
+          screenMilliseconds: 0,
+        },
+        screenId
+      )
+      return { ...opened, soundNames }
+    }
+    case 'pop': {
+      if (screens.length <= 1) return { state: navigated, soundNames, musicListIndex: null }
+      const remaining = screens.slice(0, -1)
+      const opened = getOpenedState(
+        { ...navigated, screens: remaining, screenMilliseconds: 0 },
+        remaining.at(-1)?.screenId ?? FrontEndScreen.MAIN_MENU
+      )
+      return { ...opened, soundNames }
+    }
+    case 'race':
+      return { state: { ...navigated, outcome: 'race' }, soundNames, musicListIndex: null }
+    case 'quit':
+      return { state: { ...navigated, outcome: 'quit' }, soundNames, musicListIndex: null }
+    case 'none':
+      return { state: navigated, soundNames, musicListIndex: null }
+  }
+}
+
+// The current screen's answer to the input, if any. A racer picked on the race select starts his reaction clip and the
+// screen leaves when it has ended (0x00484f40, 0x004869b0).
 const getInputStep = (
   advanced: FrontEndState,
   resources: FrontEndResources,
@@ -139,7 +187,8 @@ const getInputStep = (
     input === null ||
     runtime === null ||
     current === undefined ||
-    advanced.outcome !== 'running'
+    advanced.outcome !== 'running' ||
+    advanced.showcase?.pendingNavigation != null
   ) {
     return { state: advanced, soundNames: [], musicListIndex: null }
   }
@@ -152,51 +201,11 @@ const getInputStep = (
     builder: result.builder,
     driver: result.driver,
   }
-  switch (result.navigation.kind) {
-    case 'push': {
-      const screenId = result.navigation.screenId
-      const next = {
-        screenId,
-        selection: getInitialSelection(screenId, { ...runtime, settings: result.settings }),
-      }
-      const opened = getOpenedState(
-        {
-          ...navigated,
-          screens: [...screens, next],
-          builder: getBuilderForScreen(screenId, navigated.builder, resources),
-          driver: getDriverForScreen(screenId, navigated.settings, resources, environment),
-          screenMilliseconds: 0,
-        },
-        screenId
-      )
-      return { ...opened, soundNames: result.soundNames }
-    }
-    case 'pop': {
-      if (screens.length <= 1) {
-        return { state: navigated, soundNames: result.soundNames, musicListIndex: null }
-      }
-      const remaining = screens.slice(0, -1)
-      const opened = getOpenedState(
-        { ...navigated, screens: remaining, screenMilliseconds: 0 },
-        remaining.at(-1)?.screenId ?? FrontEndScreen.MAIN_MENU
-      )
-      return { ...opened, soundNames: result.soundNames }
-    }
-    case 'race':
-      return {
-        state: { ...navigated, outcome: 'race' },
-        soundNames: result.soundNames,
-        musicListIndex: null,
-      }
-    case 'quit':
-      return {
-        state: { ...navigated, outcome: 'quit' },
-        soundNames: result.soundNames,
-        musicListIndex: null,
-      }
-    case 'none':
-      return { state: navigated, soundNames: result.soundNames, musicListIndex: null }
+  const delayed = getStateWithShowcaseReaction(navigated, result.navigation, resources, environment)
+  if (delayed !== null) {
+    return { state: delayed, soundNames: result.soundNames, musicListIndex: null }
   }
+  return applyNavigation(navigated, result.navigation, result.soundNames, resources, environment)
 }
 
 // The main menu figure (0x00481450, 0x00480e10): its timers and clips run while that screen is the top one, and it
@@ -242,7 +251,11 @@ export const stepFrontEnd = (
     menuFigure: figureStep?.figure ?? state.menuFigure,
   }
   const figureSounds = figureStep?.soundNames ?? []
-  const stepped = getInputStep(advanced, resources, environment, input)
+  const pending = getPendingShowcaseNavigation(advanced, resources)
+  const stepped =
+    pending === null
+      ? getInputStep(advanced, resources, environment, input)
+      : applyNavigation(advanced, pending, [], resources, environment)
   if (
     stepped.state.outcome === 'running' &&
     stepped.state.screens.at(-1)?.screenId === FrontEndScreen.MAIN_MENU &&

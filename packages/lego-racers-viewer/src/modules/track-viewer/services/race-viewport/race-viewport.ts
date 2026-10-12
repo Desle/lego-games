@@ -15,6 +15,7 @@ import type { EmitterPool } from '@lego-games/lego-racers/emitter'
 import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
 import { getCameraFrustum, ORIGINAL_FIELD_OF_VIEW_DEGREES } from './camera-frustum.ts'
 import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
+import { createRaceDecals } from '../race-decals/race-decals.ts'
 import { createRaceParticles } from '../race-particles/race-particles.ts'
 import { createRaceEffects } from '../race-effects/race-effects.ts'
 import { createSceneObject } from '../scene-object/scene-object.ts'
@@ -80,6 +81,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   if (assets.definition.isMirrored) shown.track.group.scale.set(1, -1, 1)
   trackScene.add(shown.track.group)
   const particles = createRaceParticles()
+  const decals = createRaceDecals(trackScene, assets, assets.definition.isMirrored)
   trackScene.add(particles.points)
   if (shown.backdrop !== null) backgroundScene.add(shown.backdrop.group)
   if (shown.sky !== null) backgroundScene.add(shown.sky.mesh)
@@ -166,6 +168,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
       for (const part of [rig.wheels, rig.body, rig.driver])
         if (part !== null) part.group.visible = isShown
     }
+    decals.update(poses, cameraView.position)
     for (const pose of poses) {
       const racerRig = racerRigs[pose.racerIndex]
       if (racerRig === undefined) continue
@@ -234,6 +237,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     },
     dispose: () => {
       particles.dispose()
+      decals.dispose()
       shown.track.dispose()
       shown.backdrop?.dispose()
       shown.sky?.dispose()

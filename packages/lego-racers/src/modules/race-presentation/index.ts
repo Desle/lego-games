@@ -21,5 +21,6 @@ export type {
   RacerEngineLoops,
   RacerPartCentres,
   RacerPose,
+  RacerShadow,
   WarpView,
 } from './types/race-presentation.types.ts'
