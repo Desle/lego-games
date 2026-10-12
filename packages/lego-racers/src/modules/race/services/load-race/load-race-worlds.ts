@@ -4,6 +4,7 @@ import type { EmitterPool } from '../../../emitter/index.ts'
 import { parseMaterialAnimation } from '../../../material-animation/index.ts'
 import type { MaterialAnimation } from '../../../material-animation/index.ts'
 import type { RaceDescription } from '../../../race-description/index.ts'
+import { parseSkeleton } from '../../../skeleton/index.ts'
 import { getSkeletalAnimation } from '../../../skeletal-animation/index.ts'
 import type { TrackEmitters } from '../../../track-logic/index.ts'
 import { parseSky } from '../../../sky/index.ts'
@@ -38,6 +39,9 @@ const loadWorldAnimation = (
       getSkeletalAnimation(
         parseAnimation(readFile(`${folder}${JAM_SEPARATOR}${animation.toUpperCase()}.ADB`))
       )
+    ),
+    skeletons: world.skeletons.map((skeleton) =>
+      parseSkeleton(readFile(`${folder}${JAM_SEPARATOR}${skeleton.toUpperCase()}.SDB`))
     ),
     materialAnimations: world.materialAnimations.map((animation) =>
       parseMaterialAnimation(readFile(`${folder}${JAM_SEPARATOR}${animation.toUpperCase()}.MAB`))

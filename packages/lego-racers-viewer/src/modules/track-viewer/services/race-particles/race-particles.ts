@@ -26,7 +26,9 @@ const createBatch = (scene: Scene, materialName: string): MaterialBatch | null =
   const mesh = new Mesh(geometry, createSceneMaterial(sceneMaterial, scene.textures, new Map()))
   mesh.frustumCulled = false
   mesh.visible = false
-  return { mesh, color: sceneMaterial.diffuseColor }
+  const [red, green, blue, alpha] = sceneMaterial.diffuseColor
+  // A material with an opacity of its own draws with it in the vertex alpha.
+  return { mesh, color: [red, green, blue, sceneMaterial.renderState.diffuseAlpha ?? alpha] }
 }
 
 // The live particles of the race's emitter pools as the billboard quads of the engine (0x00412a50): each quad is
