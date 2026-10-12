@@ -15,13 +15,13 @@ import {
 } from '../../../../shared/emulator/seeded-random.ts'
 import type { FloatSampler } from '../../../../shared/emulator/seeded-random.types.ts'
 import { readOriginalExecutable } from '../../../../shared/testing/original-files.ts'
-import { createFloatArithmetic } from '../../../simulation-math/index.ts'
+import { createFloatArithmetic, IDENTITY_MATRIX3 } from '../../../simulation-math/index.ts'
 import type { Matrix3 } from '../../../simulation-math/index.ts'
 import { readRacerTables } from '../../services/read-racer-tables/read-racer-tables.ts'
 import { createTestCarBody } from '../../types/racer-fixtures/racer-fixtures.ts'
 import { createRacer, createRacerSet, getRacer } from '../../types/racer-state/racer-state.ts'
 import type { Racer, RacerSet } from '../../types/racer.types.ts'
-import { respondToRacerContact } from './racer-contact.ts'
+import { respondToBodyContact, respondToRacerContact } from './racer-contact.ts'
 
 const HANDLER_ADDRESS = 0x00438560
 const RANDOM_CURSOR_ADDRESS = 0x004c6ee4
@@ -127,7 +127,11 @@ const sampleContact = (sampler: FloatSampler): ContactCase => ({
   cursor: sampler.sampleIntegerBelow(1024),
 })
 
-const getRacerWords = (spec: RacerCase, name: string): readonly EmulatorArgument[] => {
+const getRacerWords = (
+  spec: RacerCase,
+  name: string,
+  isBodyOnly = false
+): readonly EmulatorArgument[] => {
   const own = (offset: number): EmulatorArgument => ({ buffer: name, offset })
   const display: EmulatorArgument = { buffer: `${name}Display` }
   const at = (offset: number): number => offset / 4
@@ -153,7 +157,7 @@ const getRacerWords = (spec: RacerCase, name: string): readonly EmulatorArgument
     ...getFloatEntries(BODY_WORD + at(0x74), spec.inertia),
     ...getFloatEntries(BODY_WORD + at(0xcc), [spec.inverseMass]),
     ...getFloatEntries(BODY_WORD + at(0xdc), [spec.fade]),
-    [BODY_WORD + at(0xe0), own(0)],
+    [BODY_WORD + at(0xe0), isBodyOnly ? 0 : own(0)],
     [BODY_WORD + at(0xe4), VTABLES.frame],
     ...getFloatEntries(BODY_WORD + at(0x10c), [1, 0, 0, 0, 1, 0, 0, 0, 1]),
     [BODY_WORD + at(0x13c), display],
@@ -177,14 +181,18 @@ const getReturnPatch = (address: number, argumentBytes: number) => ({
   bytes: [0xc2, argumentBytes, 0],
 })
 
-const getEmulatorCall = (precision: EmulatorPrecision, item: ContactCase): EmulatorCall => ({
+const getEmulatorCall = (
+  precision: EmulatorPrecision,
+  item: ContactCase,
+  isBodyOnly: boolean
+): EmulatorCall => ({
   address: HANDLER_ADDRESS,
   convention: 'thiscall',
   precision,
   arguments: [{ buffer: 'first' }, { buffer: 'event' }],
   buffers: [
     { name: 'first', words: getRacerWords(item.first, 'first'), isRead: true },
-    { name: 'second', words: getRacerWords(item.second, 'second'), isRead: true },
+    { name: 'second', words: getRacerWords(item.second, 'second', isBodyOnly), isRead: true },
     { name: 'firstDisplay', words: getDisplayWords(item.first), isRead: false },
     { name: 'secondDisplay', words: getDisplayWords(item.second), isRead: false },
     { name: 'firstFeedback', words: [1, 0, 0, 0, 0, 0, 0, 0], isRead: true },
@@ -349,7 +357,10 @@ const getOriginalWords = (
   ]
 }
 
-const expectMatchesOriginal = async (precision: EmulatorPrecision): Promise<void> => {
+const expectMatchesOriginal = async (
+  precision: EmulatorPrecision,
+  isBodyOnly: boolean
+): Promise<void> => {
   // Arrange
   const sampler = createFloatSampler(createSeededRandom(0x4385 + precision.length))
   const cases = Array.from({ length: CASE_COUNT }, () => sampleContact(sampler))
@@ -364,38 +375,61 @@ const expectMatchesOriginal = async (precision: EmulatorPrecision): Promise<void
   const session = openEmulatorSession()
 
   // Act
-  const results = await session.callBatch(cases.map((item) => getEmulatorCall(precision, item)))
+  const results = await session.callBatch(
+    cases.map((item) => getEmulatorCall(precision, item, isBodyOnly))
+  )
   await session.close()
   const mismatches = cases.flatMap((item, index) => {
     const transferredTo: number[] = []
     const endedOn: number[] = []
-    const ported = respondToRacerContact(
-      context,
-      createRacerSet([getRacerFromCase(item.first), getRacerFromCase(item.second)], item.cursor, 0),
-      0,
-      1,
-      {
-        depth: item.depth,
-        normal: { x: item.normal[0] ?? 0, y: item.normal[1] ?? 0, z: item.normal[2] ?? 0 },
-        point: { x: item.point[0] ?? 0, y: item.point[1] ?? 0, z: item.point[2] ?? 0 },
+    const contact = {
+      depth: item.depth,
+      normal: { x: item.normal[0] ?? 0, y: item.normal[1] ?? 0, z: item.normal[2] ?? 0 },
+      point: { x: item.point[0] ?? 0, y: item.point[1] ?? 0, z: item.point[2] ?? 0 },
+    }
+    const dependencies = {
+      separateScriptedCarBody: (_context: unknown, racerSet: RacerSet) => racerSet,
+      transferTimedEffect: (_context: unknown, racerSet: RacerSet, receiver: number) => {
+        transferredTo.push(receiver)
+        return racerSet
       },
-      {
-        separateScriptedCarBody: (_context, racerSet) => racerSet,
-        transferTimedEffect: (_context, racerSet, receiver) => {
-          transferredTo.push(receiver)
-          return racerSet
-        },
-        endTimedEffect: (_context, racerSet, racerIndex) => {
-          endedOn.push(racerIndex)
-          return racerSet
-        },
-      }
+      endTimedEffect: (_context: unknown, racerSet: RacerSet, racerIndex: number) => {
+        endedOn.push(racerIndex)
+        return racerSet
+      },
+    }
+    const racerSet = createRacerSet(
+      [getRacerFromCase(item.first), getRacerFromCase(item.second)],
+      item.cursor,
+      0
     )
+    const second = getRacerFromCase(item.second).carBody.rigidBody
+    const ported = isBodyOnly
+      ? respondToBodyContact(
+          context,
+          racerSet,
+          0,
+          {
+            sphere: { centre: second.worldCentreOfMass, radius: 1 },
+            box: {
+              rotation: IDENTITY_MATRIX3,
+              centre: second.worldCentreOfMass,
+              dimensions: { x: 1, y: 1, z: 1 },
+              scale: 1,
+            },
+            linearVelocity: second.linearVelocity,
+            inverseMass: second.inverseMass,
+          },
+          contact,
+          dependencies
+        )
+      : respondToRacerContact(context, racerSet, 0, 1, contact, dependencies)
     const markers = { transferredTo, endedOn }
     const original = results[index]
     const isSame =
       getOriginalWords(original, 'first').join() === getPortWords(ported, 0, markers).join() &&
-      getOriginalWords(original, 'second').join() === getPortWords(ported, 1, markers).join() &&
+      (isBodyOnly ||
+        getOriginalWords(original, 'second').join() === getPortWords(ported, 1, markers).join()) &&
       original?.buffers['cursor']?.[0] === ported.randomPosition
     return isSame ? [] : [index]
   })
@@ -407,16 +441,23 @@ const expectMatchesOriginal = async (precision: EmulatorPrecision): Promise<void
 
   // Assert
   expect(mismatches).toEqual([])
+  if (isBodyOnly) return
   expect(getCount((words) => (words[TRANSFER_MARKER_WORD] ?? 0) !== 0)).toBeGreaterThan(0)
   expect(getCount((words) => (words[0xd70 / 4] ?? 0) !== 0)).toBeGreaterThan(0)
   expect(getCount((words) => (words[BODY_WORD + 0x5e0 / 4] ?? 0) !== 0)).toBeGreaterThan(0)
   expect(getCount((words) => (words[0xd48 / 4] ?? 0) !== 0)).toBeGreaterThan(0)
 }
 
-describe.skipIf(!getIsEmulatorAvailable())('racer contact response against the original', () =>
+describe.skipIf(!getIsEmulatorAvailable())('racer contact response against the original', () => {
   it.each(PRECISIONS)(
     '0x00438560 (type 3 events) matches the original bit for bit in %s precision',
-    (precision) => expectMatchesOriginal(precision),
+    (precision) => expectMatchesOriginal(precision, false),
     TEST_TIMEOUT_IN_MILLISECONDS
   )
-)
+
+  it.each(PRECISIONS)(
+    '0x00438560 with a second shape that belongs to no racer matches the original in %s precision',
+    (precision) => expectMatchesOriginal(precision, true),
+    TEST_TIMEOUT_IN_MILLISECONDS
+  )
+})

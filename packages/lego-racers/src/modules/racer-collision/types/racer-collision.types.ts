@@ -55,3 +55,13 @@ export type AxisResult = {
   readonly firstReach: number
   readonly secondReach: number
 }
+
+// A shape in the racers' collision list (manager list +0x2c) that belongs to no racer: a rigid body whose +0xe0 is 0, such
+// as the hammer's. The sweep reads its figure's sphere (rigid body +4: centre +4..+0xc, radius +0x10) and its box; the
+// response reads the velocity (+0x8) and the inverse mass (+0xcc), and the centre of mass is the box's centre (+0x20).
+export type CollisionBody = {
+  readonly sphere: BoundingSphere
+  readonly box: OrientedBox
+  readonly linearVelocity: Vector3
+  readonly inverseMass: number
+}

@@ -6,6 +6,7 @@ export {
   fireHazardTrigger,
   fireReleaseHazardTrigger,
   forceEndHazards,
+  getHazardCollisionBody,
   getHazardRegisteredSphere,
   releaseHazardTrigger,
   startHazardSignal,
