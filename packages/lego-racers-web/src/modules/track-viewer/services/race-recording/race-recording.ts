@@ -14,6 +14,11 @@ import { postRecordingToInbox } from '../replay-inbox-upload/replay-inbox-upload
 import type { InboxPoster, RaceRecording } from './race-recording.types.ts'
 
 const FILE_EXTENSION = '.replay.jsonl'
+const RECORD_PARAMETER = 'record'
+
+// Races are recorded only when the address asks for it (`?record`): the user is not comparing replays for now.
+export const getIsRaceRecordingRequested = (search: string): boolean =>
+  new URLSearchParams(search).has(RECORD_PARAMETER)
 
 // Records what feeds the deterministic simulation of the race that starts: the settings, the cars, the random cursor and
 // per frame the integer time and the input state. With an extension registered the header says so: drawing and sound

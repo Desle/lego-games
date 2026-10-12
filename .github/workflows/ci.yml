@@ -14,7 +14,8 @@ concurrency:
 
 jobs:
   gate:
-    runs-on: ubuntu-latest
+    # The user's own machines (GitHub-hosted minutes are not available).
+    runs-on: [self-hosted, lego-games]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -34,5 +35,6 @@ jobs:
           GITLEAKS_VERSION: 8.24.3
         run: |
           release="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
-          curl -sSfL "$release/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz -C "$RUNNER_TEMP" gitleaks
+          platform="$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/x64/; s/aarch64/arm64/')"
+          curl -sSfL "$release/gitleaks_${GITLEAKS_VERSION}_${platform}.tar.gz" | tar -xz -C "$RUNNER_TEMP" gitleaks
           PATH="$RUNNER_TEMP:$PATH" gitleaks detect --source . --redact --no-banner --exit-code 1

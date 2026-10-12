@@ -4,3 +4,4 @@ export { installFrontEndPixelHarness } from './controller/front-end-pixel-harnes
 export { postUnsentRecordings } from './services/replay-inbox-upload/replay-inbox-upload.ts'
 export { createModelObject } from './services/model-object/model-object.ts'
 export { loadEffectModel } from './services/race-assets/race-assets.ts'
+export { getIsRaceRecordingRequested } from './services/race-recording/race-recording.ts'

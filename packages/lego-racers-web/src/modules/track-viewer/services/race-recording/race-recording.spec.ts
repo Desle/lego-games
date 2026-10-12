@@ -21,7 +21,7 @@ import {
   NEUTRAL_EXTENSION,
   registerViewerExtension,
 } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
-import { createRaceRecording } from './race-recording.ts'
+import { createRaceRecording, getIsRaceRecordingRequested } from './race-recording.ts'
 import {
   getIsOriginalGamePresent,
   readOriginalExecutable,
@@ -207,4 +207,17 @@ describe('the session recording', () => {
     },
     120_000
   )
+})
+
+describe('getIsRaceRecordingRequested', () => {
+  it('records only when the address asks for it', () => {
+    // Arrange
+    const searches = ['', '?hd', '?record', '?hd&record']
+
+    // Act
+    const requested = searches.map(getIsRaceRecordingRequested)
+
+    // Assert
+    expect(requested).toEqual([false, false, true, true])
+  })
 })
