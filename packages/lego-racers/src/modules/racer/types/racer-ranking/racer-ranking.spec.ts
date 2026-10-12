@@ -89,8 +89,8 @@ describe('rankRacers (0x0043c1b0)', () => {
 
     // Assert: the table values are 1 and 3 for the sounds.
     expect(ranked.sounds).toEqual([
-      { soundId: voiceBase + 1, address: '0x004392ff' },
-      { soundId: voiceBase + 3 + 6, address: '0x004392ff' },
+      { soundId: voiceBase + 1, address: '0x004392ff', racerIndex: 0 },
+      { soundId: voiceBase + 3 + 6, address: '0x004392ff', racerIndex: 1 },
     ])
   })
 

@@ -472,10 +472,11 @@ export type RacerSet = {
   readonly sounds: readonly RacerSound[]
 }
 
-// A sound id of GENERAL.SBK and the return address of the call that plays it.
+// A sound id and the return address of the call that plays it, with the racer it comes from.
 export type RacerSound = {
   readonly soundId: number
   readonly address: string
+  readonly racerIndex: number
 }
 
 // Constant inputs of a race step.

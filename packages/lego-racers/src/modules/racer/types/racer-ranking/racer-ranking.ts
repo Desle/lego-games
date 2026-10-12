@@ -157,6 +157,7 @@ export const playRacerVoice = (
       {
         soundId: racer.voiceBase + voice.value + (isTaunt ? VOICE_VARIANTS : 0),
         address: '0x004392ff',
+        racerIndex,
       },
     ]),
   })
