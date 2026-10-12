@@ -94,6 +94,7 @@ export const loadFrontEndResources = (
       const bitmap = decodeBitmap(archive.readFile(path))
       const isKeyed = (definition.flags & IMAGE_KEYWORD_2B_FLAG) !== 0
       image = Object.freeze({
+        archivePath: path,
         name: key,
         width: bitmap.width,
         height: bitmap.height,
@@ -118,6 +119,7 @@ export const loadFrontEndResources = (
       entry = {
         font,
         image: Object.freeze({
+          archivePath: path,
           name: key,
           width: bitmap.width,
           height: bitmap.height,

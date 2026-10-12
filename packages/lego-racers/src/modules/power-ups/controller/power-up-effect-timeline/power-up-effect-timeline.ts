@@ -311,6 +311,22 @@ const countDown = (
 const getStepWithDraws = (step: PowerUpStep, count: number): PowerUpStep =>
   getStepDraws(step, count).step
 
+// 0x00454b20: the draw goes in the next slot of the wand's ring of 20 jitter values.
+const WAND_JITTER_SLOT_COUNT = 20
+
+const getEffectWithJitterDraws = (
+  effect: PowerUpEffect,
+  values: readonly number[]
+): PowerUpEffect => {
+  const draws = [...effect.jitterDraws]
+  let jitterIndex = effect.jitterIndex
+  for (const value of values) {
+    draws[jitterIndex] = value
+    jitterIndex = jitterIndex + 1 >= WAND_JITTER_SLOT_COUNT ? 0 : jitterIndex + 1
+  }
+  return Object.freeze({ ...effect, jitterDraws: Object.freeze(draws), jitterIndex })
+}
+
 // 0x00454d70 after the countdown: jitter draws, the hold on a struck racer, and sparks (0x00454e50).
 const updateWand = (
   step: PowerUpStep,
@@ -320,12 +336,13 @@ const updateWand = (
 ): PowerUpStep => {
   const effect = getEffect(step, effectId)
   let jitterMilliseconds = (effect.jitterMilliseconds + stepMilliseconds) >>> 0
-  let draws = 0
+  let drawCount = 0
   while (jitterMilliseconds > WAND_JITTER_PERIOD_MILLISECONDS) {
-    draws += 1
+    drawCount += 1
     jitterMilliseconds -= WAND_JITTER_PERIOD_MILLISECONDS
   }
-  const jittered = getStepWithDraws(step, draws)
+  const jitterDraws = getStepDraws(step, drawCount)
+  const jittered = jitterDraws.step
   const heldMilliseconds =
     effect.targetRacer === null
       ? effect.heldMilliseconds
@@ -337,7 +354,7 @@ const updateWand = (
   const isReleased = releasedRacer !== null
   const held = getStepWithEvents(
     getStepWithEffect(jittered, {
-      ...effect,
+      ...getEffectWithJitterDraws(effect, jitterDraws.values),
       jitterMilliseconds,
       heldMilliseconds: isReleased ? 0 : heldMilliseconds,
       targetRacer: isReleased ? null : effect.targetRacer,
@@ -407,8 +424,12 @@ export const updatePowerUpEffects = (
 export const WAND_INITIAL_DRAWS = 20
 
 export const getStepWithInitialWandDraws = (step: PowerUpStep): PowerUpStep =>
-  getStepWithDraws(
-    step,
-    step.world.effects.effects.filter((effect) => effect.kind === PowerUpEffectKind.WAND).length *
-      WAND_INITIAL_DRAWS
-  )
+  step.world.effects.effects
+    .filter((effect) => effect.kind === PowerUpEffectKind.WAND)
+    .reduce((current, wand) => {
+      const draws = getStepDraws(current, WAND_INITIAL_DRAWS)
+      return getStepWithEffect(
+        draws.step,
+        getEffectWithJitterDraws(getEffect(draws.step, wand.id), draws.values)
+      )
+    }, step)

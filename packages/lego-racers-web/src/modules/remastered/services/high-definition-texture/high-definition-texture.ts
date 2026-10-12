@@ -1,11 +1,14 @@
 import { LinearFilter, LinearMipmapLinearFilter } from 'three'
 import { DEVELOPMENT_HIGH_DEFINITION_ROUTE } from './high-definition-route.ts'
 import type {
+  PictureCreatedEvent,
   TextureCreatedEvent,
   TexturePixels,
 } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 
 const DEFAULT_VARIANT = 'ultrasharp'
+// Alpha 0 and 255 of neighbouring original pixels meet in the middle of this many pack pixels' ramp (a larger factor, a thinner ramp).
+const SMOOTH_EDGE_SHARPNESS = 3
 
 export const getIsHighDefinitionEnabled = (search: string): boolean =>
   import.meta.env.DEV && new URLSearchParams(search).has('hd')
@@ -33,6 +36,51 @@ export const getMaskedColors = (pack: TexturePixels, original: TexturePixels): U
   return colors
 }
 
+const getOriginalAlpha = (original: TexturePixels, row: number, column: number): number =>
+  original.colors[(row * original.width + column) * 4 + 3] ?? 255
+
+// The pack's colours with the original's alpha stretched smoothly over the pack's pixels: the original's transparent
+// regions (a colour key) keep a soft, round edge at the pack's resolution, where a nearest mask would be blocky.
+export const getSmoothMaskedColors = (
+  pack: TexturePixels,
+  original: TexturePixels,
+  edgeSharpness: number = SMOOTH_EDGE_SHARPNESS
+): Uint8Array => {
+  const colors = new Uint8Array(pack.colors)
+  const lastRow = original.height - 1
+  const lastColumn = original.width - 1
+  for (let row = 0; row < pack.height; row++) {
+    const originalY = Math.min(
+      Math.max(((row + 0.5) * original.height) / pack.height - 0.5, 0),
+      lastRow
+    )
+    const topRow = Math.floor(originalY)
+    const bottomRow = Math.min(topRow + 1, lastRow)
+    const verticalWeight = originalY - topRow
+    for (let column = 0; column < pack.width; column++) {
+      const originalX = Math.min(
+        Math.max(((column + 0.5) * original.width) / pack.width - 0.5, 0),
+        lastColumn
+      )
+      const leftColumn = Math.floor(originalX)
+      const rightColumn = Math.min(leftColumn + 1, lastColumn)
+      const horizontalWeight = originalX - leftColumn
+      const top =
+        getOriginalAlpha(original, topRow, leftColumn) * (1 - horizontalWeight) +
+        getOriginalAlpha(original, topRow, rightColumn) * horizontalWeight
+      const bottom =
+        getOriginalAlpha(original, bottomRow, leftColumn) * (1 - horizontalWeight) +
+        getOriginalAlpha(original, bottomRow, rightColumn) * horizontalWeight
+      const alpha = top * (1 - verticalWeight) + bottom * verticalWeight
+      const sharpened = Math.min(Math.max((alpha - 127.5) * edgeSharpness + 127.5, 0), 255)
+      colors[(row * pack.width + column) * 4 + 3] = sharpened
+    }
+  }
+  return colors
+}
+
+const getIsTarga = (bitmapPath: string): boolean => /\.tga$/i.test(bitmapPath)
+
 const readPixels = async (url: string): Promise<TexturePixels | null> => {
   const response = await fetch(url)
   if (!response.ok) return null
@@ -54,8 +102,30 @@ export const loadHighDefinitionPixels = async (
   const variant = getHighDefinitionVariant(search)
   const pack = await readPixels(getHighDefinitionUrl(bitmapPath, variant)).catch(() => null)
   if (pack === null) return null
-  return { colors: getMaskedColors(pack, original), width: pack.width, height: pack.height }
+  // A Targa's alpha is a soft gradient (smoke, flames): stretched as is. A bitmap's is a colour key: nearest keeps its edges crisp.
+  const colors = getIsTarga(bitmapPath)
+    ? getSmoothMaskedColors(pack, original, 1)
+    : getMaskedColors(pack, original)
+  return { colors, width: pack.width, height: pack.height }
 }
+
+// The pack's picture for a 2D image or font sheet of the archive (original alpha kept smooth), or null when the pack has none.
+export const loadHighDefinitionPicture = async (
+  archivePath: string,
+  original: TexturePixels,
+  search: string
+): Promise<TexturePixels | null> => {
+  const variant = getHighDefinitionVariant(search)
+  const pack = await readPixels(getHighDefinitionUrl(archivePath, variant)).catch(() => null)
+  if (pack === null) return null
+  return { colors: getSmoothMaskedColors(pack, original), width: pack.width, height: pack.height }
+}
+
+// Swaps a picture of the menus or the HUD for the pack's once it has loaded; the original's shows until then.
+export const applyHighDefinitionPicture = (event: PictureCreatedEvent, search: string) =>
+  void loadHighDefinitionPicture(event.archivePath, event.originalPixels, search).then((pixels) =>
+    pixels === null ? undefined : event.replacePixels(pixels)
+  )
 
 // Swaps a texture's picture for the pack's once it has loaded; the original's picture shows until then.
 export const applyHighDefinitionTexture = (event: TextureCreatedEvent, search: string) => {

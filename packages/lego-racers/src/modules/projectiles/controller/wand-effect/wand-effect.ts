@@ -13,7 +13,8 @@ import type {
   PowerUpStep,
 } from '../../../power-ups/index.ts'
 import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
-import { getWorldWithMotion } from '../../types/projectile-world/projectile-world.ts'
+import { getWandJitter } from '../../types/wand-jitter/wand-jitter.ts'
+import { getMotion, getWorldWithMotion } from '../../types/projectile-world/projectile-world.ts'
 import type {
   ProjectileContext,
   ProjectileStep,
@@ -122,11 +123,21 @@ export const updateWand = (
     }
   )
   const { beam } = drawn
+  if (beam === null) return Object.freeze({ step: updated, world })
+  const effect = getEffect(updated, before.id)
+  const previous = getMotion(world, before.id)
+  const jitter = getWandJitter(context.powerUps.arithmetic, effect.jitterDraws, effect.jitterIndex)
   return Object.freeze({
     step: updated,
-    world:
-      beam === null
-        ? world
-        : getWorldWithMotion(world, before.id, Object.freeze({ kind: 'wand', beam })),
+    world: getWorldWithMotion(
+      world,
+      before.id,
+      Object.freeze({
+        kind: 'wand',
+        beam,
+        jitter,
+        initialJitter: previous?.kind === 'wand' ? (previous.jitter.at(-1)?.[0] ?? null) : null,
+      })
+    ),
   })
 }

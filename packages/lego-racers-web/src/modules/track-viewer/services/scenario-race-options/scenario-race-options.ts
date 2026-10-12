@@ -31,7 +31,5 @@ export const getScenarioRaceOptions = (
   isMirrored: scenario.isMirrored,
   fpuPrecision: FpuPrecision.SINGLE,
   isPlayerChampionCar: true,
-  // The emulator has no sound device, so the original starts no music stream and spares the racing tune's draw.
-  musicTuneCount: 0,
   ghost: getScenarioGhost(scenario, jam),
 })

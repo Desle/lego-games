@@ -5,6 +5,8 @@ export type RaceHudOverlayProps = {
   readonly commands: readonly HudCommand[]
   // Image database name (upper case) → data URL.
   readonly imageUrls: ReadonlyMap<string, string>
+  // Picture pixels per original pixel, by the same names.
+  readonly imageScales: ReadonlyMap<string, number>
   // The HUD's bitmap fonts by HudFont value; null until a race is loaded.
   readonly fonts: HudFonts | null
   // The size of the stage the HUD was laid out for.

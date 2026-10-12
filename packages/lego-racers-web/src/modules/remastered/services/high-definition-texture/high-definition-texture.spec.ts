@@ -4,6 +4,7 @@ import {
   getHighDefinitionUrl,
   getHighDefinitionVariant,
   getMaskedColors,
+  getSmoothMaskedColors,
 } from './high-definition-texture.ts'
 
 describe('getHighDefinitionUrl', () => {
@@ -68,5 +69,19 @@ describe('applyHighDefinitionTexture', () => {
 
     // Assert
     expect(replacePixels).not.toHaveBeenCalled()
+  })
+})
+
+describe('getSmoothMaskedColors', () => {
+  it('stretches the original alpha smoothly over the pack pixels', () => {
+    // Arrange
+    const original = { colors: new Uint8Array([9, 9, 9, 0, 9, 9, 9, 255]), width: 2, height: 1 }
+    const pack = { colors: new Uint8Array(4 * 4).fill(200), width: 4, height: 1 }
+
+    // Act
+    const colors = getSmoothMaskedColors(pack, original, 1)
+
+    // Assert
+    expect([0, 1, 2, 3].map((column) => colors[column * 4 + 3])).toEqual([0, 63, 191, 255])
   })
 })

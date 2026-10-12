@@ -1,5 +1,7 @@
+import type { CarDesign } from '@lego-games/lego-racers/car-builder'
+import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { HudCommand } from '@lego-games/lego-racers/race-hud'
-import type { DataTexture } from 'three'
+import type { DataTexture, Object3D } from 'three'
 
 export type TexturePixels = {
   readonly colors: Uint8Array
@@ -27,6 +29,14 @@ export type TextureCreatedEvent = {
   readonly replacePixels: (pixels: TexturePixels) => void
 }
 
+// A picture the viewer just made from an original bitmap of the archive and draws as a 2D image (a menu image, a font sheet).
+export type PictureCreatedEvent = {
+  readonly archivePath: string
+  readonly originalPixels: TexturePixels
+  // Replaces the picture by another of any size (RGBA, rows top to bottom); the viewer scales what it draws from it.
+  readonly replacePixels: (pixels: TexturePixels) => void
+}
+
 // How the race is laid out on the page: the stage the race and the HUD canvases cover, in page pixels.
 export type RaceDisplay = {
   readonly stageSize: StageSize
@@ -36,6 +46,12 @@ export type RaceDisplay = {
   // True when the stage fills the whole window instead of being scaled into it.
   readonly isFullWindow: boolean
   readonly getHudCommands: (commands: readonly HudCommand[]) => readonly HudCommand[]
+}
+
+// A car built from bricks that the race is about to draw.
+export type BuiltCarDrawingRequest = {
+  readonly archive: JamArchive
+  readonly design: CarDesign
 }
 
 // A choice the developer panel offers for a layer above the original port.
@@ -49,5 +65,15 @@ export type DevelopmentSelector = {
 // What a layer above the original port may change. The viewer draws the original exactly when none is registered.
 export type ViewerExtension = {
   readonly onTextureCreated: (event: TextureCreatedEvent) => void
+  readonly onPictureCreated: (event: PictureCreatedEvent) => void
+  // The scale of the menu surface relative to its 640 x 480 design, given the device pixels the menu covers per design pixel.
+  readonly getMenuSurfaceScale: (devicePixelsPerDesignPixel: number) => number | null
+  // A recording to play in place of the original sound or tune at this archive path; null keeps the original.
+  readonly getSoundReplacement: (
+    context: BaseAudioContext,
+    archivePath: string
+  ) => Promise<AudioBuffer | null>
   readonly getRaceDisplay: (window: WindowMetrics) => RaceDisplay | null
+  // Something to draw in place of the mesh the original builds for a car built from bricks, in that mesh's frame; null keeps the original's.
+  readonly getBuiltCarDrawing: (request: BuiltCarDrawingRequest) => Object3D | null
 }

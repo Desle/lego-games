@@ -7,6 +7,7 @@ import type {
   WarpView,
 } from '@lego-games/lego-racers/race-presentation'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
+import type { RibbonView } from '@lego-games/lego-racers/ribbon'
 import type { Scene } from '@lego-games/lego-racers/scene'
 import type { Mesh, MeshBasicMaterial } from 'three'
 import {
@@ -30,6 +31,7 @@ import { createScreenFadeOverlay } from '../screen-fade-overlay/screen-fade-over
 import { setAlphaOverride } from '../scene-object/alpha-override.ts'
 import { createSceneObject } from '../scene-object/scene-object.ts'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
+import { getBuiltCarDrawing } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
 import { createModelObject } from '../model-object/model-object.ts'
 import { GHOST_WORLD_PATH, WARP_WORLD_PATH } from '../race-assets/race-assets.ts'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
@@ -79,9 +81,18 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   trackScene.add(particles.group)
   if (shown.backdrop !== null) backgroundScene.add(shown.backdrop.group)
   if (shown.sky !== null) backgroundScene.add(shown.sky.mesh)
-  const racerRigs = assets.racerModels.map((models): RacerRig => {
+  const racerRigs = assets.racerModels.map((models, racerIndex): RacerRig => {
     const wheels = createModelObject(models.wheels)
     const body = models.body === null ? null : createModelObject(models.body)
+    const design = assets.definition.racers[racerIndex]?.savedCar?.design ?? null
+    const builtCarDrawing =
+      body === null || design === null
+        ? null
+        : getBuiltCarDrawing({ archive: assets.archive, design })
+    if (body !== null && builtCarDrawing !== null) {
+      body.object.group.visible = false
+      body.group.add(builtCarDrawing)
+    }
     const driver = models.driver === null ? null : createModelObject(models.driver)
     const parts = [wheels, body, driver].filter((part): part is ModelObject => part !== null)
     for (const part of parts) {
@@ -179,6 +190,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   }
   let lastCameraView: CameraView | null = null
   let lastSprites: readonly SpriteView[] = []
+  let lastRibbons: readonly RibbonView[] = []
   const update = (
     allPoses: readonly RacerPose[],
     allCameraView: CameraView,
@@ -202,10 +214,19 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     const cameraView = warpView === null ? allCameraView : warpView.cameraView
     lastCameraView = cameraView
     lastSprites = warpView === null ? effectViews.sprites : []
+    lastRibbons = warpView === null ? effectViews.ribbons : []
     effects.update(
       warpView === null
         ? effectViews
-        : { ...effectViews, effects: [], bricks: [], explosions: [], attachments: [], sprites: [] },
+        : {
+            ...effectViews,
+            effects: [],
+            bricks: [],
+            explosions: [],
+            attachments: [],
+            sprites: [],
+            ribbons: [],
+          },
       cameraView.position,
       poses
     )
@@ -299,7 +320,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     for (const instance of trackWorld.skeletonInstances) {
       if (instance.clip !== null) shown.track.setSkeletonState(instance.name, instance.clip)
     }
-    if (lastCameraView !== null) particles.update(pools, lastCameraView, lastSprites)
+    if (lastCameraView !== null) particles.update(pools, lastCameraView, lastSprites, lastRibbons)
   }
 
   return Object.freeze({

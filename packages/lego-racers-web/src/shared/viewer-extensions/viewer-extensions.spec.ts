@@ -1,8 +1,14 @@
-import { DataTexture } from 'three'
+import { createBuildGrid } from '@lego-games/lego-racers/car-builder'
+import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
+import { DataTexture, Group } from 'three'
 import {
   clearViewerExtensions,
   emitTextureCreated,
+  getBuiltCarDrawing,
+  getMenuSurfaceScale,
+  getSoundReplacement,
   getIsClassic,
+  NEUTRAL_EXTENSION,
   registerViewerExtension,
 } from './viewer-extensions.ts'
 
@@ -14,7 +20,7 @@ describe('viewer extensions', () => {
     const isClassicBefore = getIsClassic()
 
     // Act
-    registerViewerExtension({ onTextureCreated: () => undefined, getRaceDisplay: () => null })
+    registerViewerExtension(NEUTRAL_EXTENSION)
 
     // Assert
     expect([isClassicBefore, getIsClassic()]).toEqual([true, false])
@@ -23,7 +29,7 @@ describe('viewer extensions', () => {
   it('tells every extension about a new texture', () => {
     // Arrange
     const onTextureCreated = vi.fn()
-    registerViewerExtension({ onTextureCreated, getRaceDisplay: () => null })
+    registerViewerExtension({ ...NEUTRAL_EXTENSION, onTextureCreated })
     const event = {
       texture: new DataTexture(new Uint8Array(4), 1, 1),
       bitmapPath: 'A.BMP',
@@ -36,5 +42,48 @@ describe('viewer extensions', () => {
 
     // Assert
     expect(onTextureCreated).toHaveBeenCalledWith(event)
+  })
+
+  it('keeps the menu surface at its design with no opinion, and takes the first extension that has one', () => {
+    // Arrange
+    const classicScale = getMenuSurfaceScale(3)
+    registerViewerExtension(NEUTRAL_EXTENSION)
+    registerViewerExtension({ ...NEUTRAL_EXTENSION, getMenuSurfaceScale: () => 2.5 })
+
+    // Act
+    const scale = getMenuSurfaceScale(3)
+
+    // Assert
+    expect([classicScale, scale]).toEqual([1, 2.5])
+  })
+
+  it('plays the first replacement sound an extension has', async () => {
+    // Arrange
+    const buffer = {} as AudioBuffer
+    registerViewerExtension(NEUTRAL_EXTENSION)
+    registerViewerExtension({
+      ...NEUTRAL_EXTENSION,
+      getSoundReplacement: () => Promise.resolve(buffer),
+    })
+
+    // Act
+    const replacement = await getSoundReplacement({} as BaseAudioContext, 'A.PCM')
+
+    // Assert
+    expect(replacement).toBe(buffer)
+  })
+
+  it('draws a built car as the original does until an extension offers a drawing', () => {
+    // Arrange
+    const request = { archive: {} as JamArchive, design: { bricks: [], grid: createBuildGrid() } }
+    const drawing = new Group()
+    registerViewerExtension(NEUTRAL_EXTENSION)
+    const isOriginalKept = getBuiltCarDrawing(request) === null
+
+    // Act
+    registerViewerExtension({ ...NEUTRAL_EXTENSION, getBuiltCarDrawing: () => drawing })
+
+    // Assert
+    expect([isOriginalKept, getBuiltCarDrawing(request)]).toEqual([true, drawing])
   })
 })

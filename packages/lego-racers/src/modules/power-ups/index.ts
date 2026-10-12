@@ -13,6 +13,7 @@ export {
   releaseEffectEmitter,
   startEffectEmitter,
 } from './controller/effect-emitters/effect-emitters.ts'
+export type { EffectEmitterOwner } from './controller/effect-emitters/effect-emitters.types.ts'
 export {
   endProjectileFlight,
   hitRacerWithProjectile,
