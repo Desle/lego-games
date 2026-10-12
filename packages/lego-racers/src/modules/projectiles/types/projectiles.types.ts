@@ -9,7 +9,15 @@ export type LineProbeHit = {
   readonly normal: Vector3
 }
 
-export type LineProbe = (start: Vector3, end: Vector3) => LineProbeHit | null
+// 0x0041f730 starts and stops the signal of a hit material with flag 0x10 (material +0x18) at the hit point, whether or
+// not the hit counts; the handler is that pair of calls.
+export type SurfaceSignalHandler = (identifier: number, point: Vector3) => void
+
+export type LineProbe = (
+  start: Vector3,
+  end: Vector3,
+  onSurfaceSignal?: SurfaceSignalHandler
+) => LineProbeHit | null
 
 // What a racer reports about itself to the flights: its frame position (racer +0x5c, slot 4) and the fields the
 // launch routines read.

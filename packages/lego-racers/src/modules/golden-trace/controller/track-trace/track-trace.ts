@@ -98,6 +98,9 @@ export const getTrackFields: TraceFieldProvider = (raceState) => {
       hazard.identifier >>> 0,
       hazard.lifecycle,
     ]),
+    'track.surfaces': [...raceState.surfaces.trackMaterials.values()].map(
+      (material) => material.flags >>> 0
+    ),
     'track.triggers.main': trackLogic.triggers.main.flatMap((trigger) => [
       trigger.flags & 3,
       trigger.racerMask >>> 0,

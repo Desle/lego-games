@@ -890,3 +890,8 @@
 004a4cf0 CinemaVertexEffect_Stop
 004a4d10 CinemaVertexEffect_Update
 004a4da0 CinemaVertexEffect_Apply
+0048ef70 Hazard34_Begin
+0048efe0 Hazard34_End
+0048f030 Hazard34_Update
+0048e5a0 Hazard2E_TurnOn
+0048e600 Hazard2E_TurnOff
