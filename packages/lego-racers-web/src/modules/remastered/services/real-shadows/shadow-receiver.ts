@@ -26,26 +26,44 @@ uniform float shadowTexel;
 uniform float shadowMapTexel;
 uniform float shadowDepthBias;
 uniform float shadowStrength;
+uniform float isBakedShadowEnabled;
+uniform mat4 bakedShadowMatrix;
+uniform highp sampler2DShadow bakedShadowMap;
+uniform float bakedShadowTexel;
+uniform vec2 bakedShadowMapTexel;
+uniform float bakedShadowDepthBias;
+
+// Nine hardware-filtered comparisons around the point; 1 where the map does not reach.
+float getMapVisibility(highp sampler2DShadow map, vec3 coordinates, vec2 mapTexel, float depthBias) {
+  if (coordinates.z >= 1.0 || coordinates.z <= 0.0 || coordinates.x < 0.0 || coordinates.x > 1.0 || coordinates.y < 0.0 || coordinates.y > 1.0) return 1.0;
+  float visibility = 0.0;
+  for (int row = -1; row <= 1; row++) {
+    for (int column = -1; column <= 1; column++) {
+      vec2 offset = vec2(float(column), float(row)) * mapTexel * 1.25;
+      visibility += texture(map, vec3(coordinates.xy + offset, coordinates.z - depthBias));
+    }
+  }
+  return visibility / 9.0;
+}
 
 // How much of the baked brightness remains where the sun is blocked: the baked light is ambient + diffuse * cos, so a
-// surface that faces the sun by cos keeps ambient / (ambient + diffuse * cos) of it.
+// surface that faces the sun by cos keeps ambient / (ambient + diffuse * cos) of it. The live map (cars, hazards) fades out
+// smoothly towards its rim; the baked map (the static scenery of the whole track) has no rim inside the track.
 float getShadowShade() {
   vec3 normal = normalize(cross(dFdx(vShadowWorld), dFdy(vShadowWorld)));
   float cosine = dot(normal, sunDirection);
   float remaining = ambientShare / (ambientShare + (1.0 - ambientShare) * max(cosine, 0.0));
   vec4 clip = shadowMatrix * vec4(vShadowWorld + normal * shadowTexel * 2.0, 1.0);
-  vec3 coordinates = clip.xyz * 0.5 + 0.5;
-  float edge = 1.0 - smoothstep(0.7, 0.98, max(abs(clip.x), abs(clip.y)));
-  if (coordinates.z >= 1.0 || coordinates.z <= 0.0 || edge <= 0.0) return 1.0;
-  float visibility = 0.0;
-  for (int row = -1; row <= 1; row++) {
-    for (int column = -1; column <= 1; column++) {
-      vec2 offset = vec2(float(column), float(row)) * shadowMapTexel * 1.25;
-      visibility += texture(shadowMap, vec3(coordinates.xy + offset, coordinates.z - shadowDepthBias));
-    }
+  float edge = 1.0 - smoothstep(0.35, 0.95, length(clip.xy));
+  float visibility = 1.0;
+  if (edge > 0.0) {
+    visibility = mix(1.0, getMapVisibility(shadowMap, clip.xyz * 0.5 + 0.5, vec2(shadowMapTexel), shadowDepthBias), edge);
   }
-  visibility /= 9.0;
-  return mix(1.0, mix(remaining, 1.0, visibility), edge * shadowStrength);
+  if (isBakedShadowEnabled > 0.5) {
+    vec4 bakedClip = bakedShadowMatrix * vec4(vShadowWorld + normal * bakedShadowTexel * 1.5, 1.0);
+    visibility = min(visibility, getMapVisibility(bakedShadowMap, bakedClip.xyz * 0.5 + 0.5, bakedShadowMapTexel, bakedShadowDepthBias));
+  }
+  return mix(1.0, mix(remaining, 1.0, visibility), shadowStrength);
 }
 `
 

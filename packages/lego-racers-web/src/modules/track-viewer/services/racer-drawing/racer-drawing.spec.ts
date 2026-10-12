@@ -40,6 +40,7 @@ const createCarDrawing = () => ({
   object: new Group(),
   applyPose: vi.fn<(pose: CarDrawingPose) => void>(),
   dispose: vi.fn(),
+  onFailed: vi.fn<(listener: () => void) => void>(),
 })
 
 const createDriverDrawing = () => ({
@@ -138,5 +139,36 @@ describe('racer drawings', () => {
       host.children.length,
       drawing.dispose.mock.calls.length,
     ]).toEqual([[1, 2, 3], false, 0.5, false, 0, 1])
+  })
+
+  it('shows the original car again when the drawing fails to build', () => {
+    // Arrange
+    const { model } = createModel()
+    const drawing = createCarDrawing()
+    registerViewerExtension({ ...NEUTRAL_EXTENSION, getCarDrawing: () => drawing })
+    showCarDrawing(model, carRequest)
+    const [listener] = drawing.onFailed.mock.calls[0] ?? []
+
+    // Act
+    listener?.()
+
+    // Assert
+    expect([model.object.group.visible, model.group.children.length]).toEqual([true, 0])
+  })
+
+  it('shows the original parts again when the drawing of a car in a race fails to build', () => {
+    // Arrange
+    const wheels = createModel()
+    const drawing = createCarDrawing()
+    registerViewerExtension({ ...NEUTRAL_EXTENSION, getCarDrawing: () => drawing })
+    const host = new Group()
+    attachCarDrawing({ wheels: wheels.model, body: null }, carRequest, host)
+    const [listener] = drawing.onFailed.mock.calls[0] ?? []
+
+    // Act
+    listener?.()
+
+    // Assert
+    expect([wheels.model.object.group.visible, host.children.length]).toEqual([true, 0])
   })
 })

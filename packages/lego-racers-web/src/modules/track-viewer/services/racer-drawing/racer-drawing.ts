@@ -67,6 +67,11 @@ export const attachCarDrawing = (
   host.add(drawing.object)
   const wheelsHolder = createStateHolder()
   const bodyHolder = createStateHolder()
+  drawing.onFailed(() => {
+    host.remove(drawing.object)
+    Object.assign(parts.wheels.object.group, { visible: true })
+    if (parts.body !== null) Object.assign(parts.body.object.group, { visible: true })
+  })
   const wheels = takeOver(parts.wheels, wheelsHolder, () => {
     host.remove(drawing.object)
     drawing.dispose()
@@ -121,6 +126,10 @@ export const showCarDrawing = (model: ModelObject, request: CarDrawingRequest): 
   object.group.visible = false
   group.add(drawing.object)
   drawing.applyPose({ body: getRestingPose(), wheels: getRestingPose(), opacity: SOLID_OPACITY })
+  drawing.onFailed(() => {
+    group.remove(drawing.object)
+    object.group.visible = true
+  })
   return {
     group,
     object: {
