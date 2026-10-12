@@ -20,6 +20,7 @@ import {
   updateHazardsAfterRacers,
 } from '../../../hazard/index.ts'
 import type { HazardSession, HazardStore } from '../../../hazard/index.ts'
+import { getFrameTransformedPoint } from '../../../simulation-math/index.ts'
 import { getBonePosition, getRestPose, getSkeletonPose } from '../../../skeletal-animation/index.ts'
 import { drawRandomScaledRange, drawRandomValue } from '../../../random-table/index.ts'
 import {
@@ -460,12 +461,25 @@ export const createTrackSession = (
         : getSkeletonPose(getRestPose(instance.skeleton), instance.animation, instance.clip)
     const local = getBonePosition(context.arithmetic, instance.skeleton, pose, boneIndex)
     if (local === null) return null
-    const { add, storeFloat } = context.arithmetic
-    return [
-      storeFloat(add(instance.position[0], local[0])),
-      storeFloat(add(instance.position[1], local[1])),
-      storeFloat(add(instance.position[2], local[2])),
-    ]
+    const { multiply, storeFloat } = context.arithmetic
+    const scaled = {
+      x: storeFloat(multiply(local[0], instance.scale)),
+      y: storeFloat(multiply(local[1], instance.scale)),
+      z: storeFloat(multiply(local[2], instance.scale)),
+    }
+    const moved = getFrameTransformedPoint(
+      context.arithmetic,
+      {
+        rotation: instance.rotation,
+        position: {
+          x: instance.position[0],
+          y: instance.position[1],
+          z: instance.position[2],
+        },
+      },
+      scaled
+    )
+    return [moved.x, moved.y, moved.z]
   }
 
   const setEventEmitterPosition = (handle: EmitterReference, position: Vector3): void => {

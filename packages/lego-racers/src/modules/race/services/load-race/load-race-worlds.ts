@@ -8,7 +8,9 @@ import { parseSkeleton } from '../../../skeleton/index.ts'
 import { getSkeletalAnimation } from '../../../skeletal-animation/index.ts'
 import type { TrackEmitters } from '../../../track-logic/index.ts'
 import { parseSky } from '../../../sky/index.ts'
+import { parseModel } from '../../../model/index.ts'
 import { readWorld } from '../../../world/index.ts'
+import type { World } from '../../../world/index.ts'
 import { createWorldAnimation, EMPTY_WORLD_ANIMATION } from '../../../world-animation/index.ts'
 import type { RaceSkyDefinition } from '../../types/race.types.ts'
 import type { ReadFile } from './load-race.types.ts'
@@ -22,6 +24,21 @@ const TRACK_EMITTER_COUNT = 4
 
 // The race description names text files (`.wdf`, `.emt`); the loaders read the binary twin, whose extension ends in b.
 const getBinaryName = (name: string): string => `${name.slice(0, -1)}b`.toUpperCase()
+
+// The scale (model +0x38) of the models the skeleton instances show: an emitter that follows one of their bones scales the
+// bone's position by it. Models no skeleton instance uses keep 1.
+const getMeshScales = (readFile: ReadFile, folder: string, world: World): readonly number[] => {
+  const used = new Set(
+    world.skeletonInstances.flatMap((instance) =>
+      instance.levels.map((level) => level.meshIndex).filter((index) => index >= 0)
+    )
+  )
+  return world.meshes.map((mesh, index) =>
+    used.has(index)
+      ? parseModel(readFile(`${folder}${JAM_SEPARATOR}${mesh.toUpperCase()}.GDB`)).scale
+      : 1
+  )
+}
 
 // 0x00432e20: the world is read from its folder; the files its lists name sit in the same folder, as `.ADB` and
 // `.MAB` (the list loader replaces the `.adf` and `.maf` it appends).
@@ -40,6 +57,7 @@ const loadWorldAnimation = (
         parseAnimation(readFile(`${folder}${JAM_SEPARATOR}${animation.toUpperCase()}.ADB`))
       )
     ),
+    meshScales: getMeshScales(readFile, folder, world),
     skeletons: world.skeletons.map((skeleton) =>
       parseSkeleton(readFile(`${folder}${JAM_SEPARATOR}${skeleton.toUpperCase()}.SDB`))
     ),

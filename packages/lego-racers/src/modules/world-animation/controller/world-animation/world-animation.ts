@@ -1,5 +1,6 @@
 import { createSkeletonAnimationState } from '../../../skeletal-animation/index.ts'
 import type { SkeletalAnimation } from '../../../skeletal-animation/index.ts'
+import { getInstanceRotation } from '../../../scene/index.ts'
 import type { Skeleton } from '../../../skeleton/index.ts'
 import type {
   BspTreeInstance,
@@ -88,12 +89,14 @@ const getUsedSkeletonLevels = (instance: SkeletonInstance): readonly SkeletonLev
 const createSkeletonInstance = (
   instance: SkeletonInstance,
   animations: readonly SkeletalAnimation[],
-  skeletons: readonly Skeleton[]
+  skeletons: readonly Skeleton[],
+  meshScales: readonly number[]
 ): SkeletonInstanceRuntime => {
   const used = getUsedSkeletonLevels(instance)
   const levels = used.map((level): InstanceLevel => ({
     animationIndex: level.animationIndex,
     skeletonIndex: level.skeletonIndex,
+    meshIndex: level.meshIndex,
     squaredDistance: getSquaredDistance(level.distance),
   }))
   const nearest = getSortedLevels(levels)[0]
@@ -110,6 +113,8 @@ const createSkeletonInstance = (
   return Object.freeze({
     name: instance.name,
     animation,
+    rotation: getInstanceRotation(instance.forward, instance.up),
+    scale: meshScales[nearest?.meshIndex ?? -1] ?? 1,
     skeleton: nearest === undefined ? null : (skeletons[nearest.skeletonIndex] ?? null),
     clip,
     isAnimated: clip !== null,
@@ -138,6 +143,7 @@ const createMeshInstance = (instance: MeshInstance): MeshInstanceRuntime =>
         .map((level) => ({
           animationIndex: -1,
           skeletonIndex: -1,
+          meshIndex: level.meshIndex,
           squaredDistance: getSquaredDistance(level.distance),
         }))
     ),
@@ -196,7 +202,14 @@ export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation
   return Object.freeze({
     skeletonInstances: Object.freeze(
       world.skeletonInstances.map((instance) =>
-        getMirrored(createSkeletonInstance(instance, input.animations, input.skeletons ?? []))
+        getMirrored(
+          createSkeletonInstance(
+            instance,
+            input.animations,
+            input.skeletons ?? [],
+            input.meshScales ?? []
+          )
+        )
       )
     ),
     meshInstances: Object.freeze(

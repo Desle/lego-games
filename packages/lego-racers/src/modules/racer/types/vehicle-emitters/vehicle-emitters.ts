@@ -7,8 +7,8 @@ import {
   spawnEmitter,
 } from '../../../emitter/index.ts'
 import type { EmitterPool, EmitterReference } from '../../../emitter/index.ts'
-import { drawRandomValue } from '../../../random-table/index.ts'
-import type { FloatArithmetic } from '../../../simulation-math/index.ts'
+import { drawRandomLowByte } from '../../../random-table/index.ts'
+import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 import { getRacer, setRacer, setRandomPosition } from '../racer-state/racer-state.ts'
 import type { Racer, RacerBoundary, RacerSet, RacerSetContext, Vehicle } from '../racer.types.ts'
 import {
@@ -20,7 +20,16 @@ import {
   SKID_IMAGE_NAME,
   TURBO_SKID_IMAGE_NAME,
 } from '../vehicle-skids/vehicle-skids.ts'
-import type { SpawnedVehicleEmitter } from './vehicle-emitters.types.ts'
+import {
+  getBoostSmokePosition,
+  getDustPosition,
+  getEmitterVelocityOffset,
+  getRearRightWheelAnchor,
+  getTireSmokePosition,
+  getWheelAnchor,
+  placeVehicleEmitter,
+} from './vehicle-emitter-placement.ts'
+import type { RandomBit, SpawnedVehicleEmitter } from './vehicle-emitters.types.ts'
 
 const COMPUTER_CONTROLLER = 2
 const RACER_TUMBLING_FLAG = 0x8
@@ -62,11 +71,12 @@ const spawnVehicleEmitter = (
   arithmetic: FloatArithmetic,
   racerSet: RacerSet,
   isCommonPool: boolean,
-  name: string
+  name: string,
+  position: Vector3 | null = null
 ): SpawnedVehicleEmitter => {
   const pool = getPoolOf(racerSet, isCommonPool)
   if (pool === null || !getHasEmitterDefinition(pool, name)) return { racerSet, reference: null }
-  const spawn = spawnEmitter(arithmetic, pool, name, { position: null, orientation: null })
+  const spawn = spawnEmitter(arithmetic, pool, name, { position, orientation: null })
   return {
     racerSet: getRacerSetWithPool(racerSet, isCommonPool, spawn.pool),
     reference: spawn.handleIndex === null ? null : { isCommonPool, handleIndex: spawn.handleIndex },
@@ -120,7 +130,16 @@ export const startVehicleDust = (
     DUST_BLOCKING_WHEELS.some((wheelIndex) => vehicle.wheelEmitters[wheelIndex] !== null)
   if (isBlocked) return racerSet
   const spawned = spawnVehicleEmitter(context.arithmetic, racerSet, true, 'dust')
-  return setVehicle(spawned.racerSet, racerIndex, (current) => ({
+  const racer = getRacer(spawned.racerSet, racerIndex)
+  const placed = placeVehicleEmitter(
+    context.arithmetic,
+    spawned.racerSet,
+    spawned.reference,
+    racer,
+    getRearRightWheelAnchor(racer),
+    null
+  )
+  return setVehicle(placed, racerIndex, (current) => ({
     ...current,
     dustEmitter: spawned.reference,
   }))
@@ -134,7 +153,16 @@ export const startVehicleBoostSmoke = (
 ): RacerSet => {
   if (getRacer(racerSet, racerIndex).vehicle.boostEmitter !== null) return racerSet
   const spawned = spawnVehicleEmitter(context.arithmetic, racerSet, true, 'carsmke')
-  return setVehicle(spawned.racerSet, racerIndex, (current) => ({
+  const racer = getRacer(spawned.racerSet, racerIndex)
+  const placed = placeVehicleEmitter(
+    context.arithmetic,
+    spawned.racerSet,
+    spawned.reference,
+    racer,
+    getBoostSmokePosition(context.arithmetic, racer),
+    null
+  )
+  return setVehicle(placed, racerIndex, (current) => ({
     ...current,
     boostEmitter: spawned.reference,
   }))
@@ -152,7 +180,18 @@ export const startVehicleTireSmoke = (
     racer.vehicle.tireSmokeEmitter === null
       ? spawnVehicleEmitter(context.arithmetic, racerSet, true, 'tiresmk')
       : { racerSet, reference: racer.vehicle.tireSmokeEmitter }
-  return setVehicle(spawned.racerSet, racerIndex, (current) => ({
+  const placed =
+    racer.vehicle.tireSmokeEmitter === null
+      ? placeVehicleEmitter(
+          context.arithmetic,
+          spawned.racerSet,
+          spawned.reference,
+          racer,
+          getRearRightWheelAnchor(racer),
+          null
+        )
+      : spawned.racerSet
+  return setVehicle(placed, racerIndex, (current) => ({
     ...current,
     tireSmokeEmitter: spawned.reference,
     skids: getSkidsStarted(current.skids, racer.carBody.rigidBody.flags),
@@ -262,7 +301,16 @@ export const setVehicleWheelEmitter = (
     isCommonPool || isTrackPool
       ? spawnVehicleEmitter(context.arithmetic, stopped, isCommonPool, name)
       : { racerSet: stopped, reference: null }
-  return setVehicle(spawned.racerSet, racerIndex, (current) => ({
+  const racer = getRacer(spawned.racerSet, racerIndex)
+  const placed = placeVehicleEmitter(
+    context.arithmetic,
+    spawned.racerSet,
+    spawned.reference,
+    racer,
+    getWheelAnchor(racer, wheelIndex),
+    null
+  )
+  return setVehicle(placed, racerIndex, (current) => ({
     ...current,
     wheelEmitters: current.wheelEmitters.map((emitter, index) =>
       index === wheelIndex ? spawned.reference : emitter
@@ -303,11 +351,11 @@ const getIsReferenceExhausted = (
   return (getEmitterBornCount(pool, reference.handleIndex) ?? 0) > maximumBornCount
 }
 
-const drawCursor = (context: RacerSetContext, racerSet: RacerSet): RacerSet =>
-  setRandomPosition(
-    racerSet,
-    drawRandomValue(context.tables.randomTable, racerSet.randomPosition).position
-  )
+// One draw of the random cursor: the low byte's second bit.
+const drawBit = (context: RacerSetContext, racerSet: RacerSet): RandomBit => {
+  const draw = drawRandomLowByte(context.tables.randomTable, racerSet.randomPosition)
+  return { racerSet: setRandomPosition(racerSet, draw.position), isSet: (draw.value & 2) !== 0 }
+}
 
 // The emitter part of Vehicle_Update 0x0043e070 (after the driver update): the wheel spin starts and stops the tire
 // smoke, a racer that tumbles stops it, a landing after 400 ms in the air puts down dust, and the dust, boost smoke
@@ -341,8 +389,31 @@ export const updateVehicleEmitters = (
       ? stopVehicleTireSmoke(cooled, racerIndex)
       : cooled
   const skidded = getRacerAfterSkids(context, stopped, racerIndex, stepMilliseconds)
-  const landed = getRacerAfterLanding(context, skidded, racerIndex)
+  const wheeled = getRacerWithWheelEmittersPlaced(context, skidded, racerIndex)
+  const landed = getRacerAfterLanding(context, wheeled, racerIndex)
   return updateRunningEmitters(context, landed, racerIndex)
+}
+
+// 0x0043e1d3: the surface emitters of the wheels follow their wheels with a share of the car's velocity.
+const getRacerWithWheelEmittersPlaced = (
+  context: RacerSetContext,
+  racerSet: RacerSet,
+  racerIndex: number
+): RacerSet => {
+  const racer = getRacer(racerSet, racerIndex)
+  const velocityOffset = getEmitterVelocityOffset(context.arithmetic, racer)
+  return racer.vehicle.wheelEmitters.reduce(
+    (current, reference, wheelIndex) =>
+      placeVehicleEmitter(
+        context.arithmetic,
+        current,
+        reference,
+        racer,
+        getWheelAnchor(racer, wheelIndex),
+        velocityOffset
+      ),
+    racerSet
+  )
 }
 
 // 0x0043f1e0: while the tire smoke runs, the wheels' marks follow the ground and the car.
@@ -374,7 +445,13 @@ const getRacerAfterLanding = (
     airborneTime > LANDING_AIRBORNE_MILLISECONDS || (vehicle.flags & LANDING_PENDING_FLAG) !== 0
   const isLanding = isArmed && groundedWheelCount > vehicle.previousGroundedWheelCount
   const spawned = isLanding
-    ? spawnVehicleEmitter(context.arithmetic, racerSet, true, 'carland').racerSet
+    ? spawnVehicleEmitter(
+        context.arithmetic,
+        racerSet,
+        true,
+        'carland',
+        racer.carBody.rigidBody.displayFrame.position
+      ).racerSet
     : racerSet
   const armedFlags =
     airborneTime > LANDING_AIRBORNE_MILLISECONDS
@@ -387,35 +464,64 @@ const getRacerAfterLanding = (
   }))
 }
 
+// 0x0043e33e: the dust, the boost smoke and the tire smoke live on and follow the car: the dust is let go after 9 births,
+// the boost smoke after 3; the dust and the tire smoke each draw once for the wheel they sit at.
 const updateRunningEmitters = (
   context: RacerSetContext,
   racerSet: RacerSet,
   racerIndex: number
 ): RacerSet => {
   const { dustEmitter, boostEmitter, tireSmokeEmitter } = getRacer(racerSet, racerIndex).vehicle
-  const dusted =
-    dustEmitter === null
-      ? racerSet
-      : getIsReferenceExhausted(racerSet, dustEmitter, DUST_MAXIMUM_BORN_COUNT)
-        ? setVehicle(
-            releaseVehicleEmitter(racerSet, dustEmitter, false),
-            racerIndex,
-            (vehicle) => ({
-              ...vehicle,
-              dustEmitter: null,
-            })
-          )
-        : drawCursor(context, racerSet)
-  const boosted =
-    boostEmitter === null
-      ? dusted
-      : getIsReferenceExhausted(dusted, boostEmitter, BOOST_SMOKE_MAXIMUM_BORN_COUNT)
-        ? setVehicle(releaseVehicleEmitter(dusted, boostEmitter, false), racerIndex, (vehicle) => ({
-            ...vehicle,
-            boostEmitter: null,
-          }))
-        : dusted
-  return tireSmokeEmitter === null ? boosted : drawCursor(context, boosted)
+  const dusted = ((): RacerSet => {
+    if (dustEmitter === null) return racerSet
+    if (getIsReferenceExhausted(racerSet, dustEmitter, DUST_MAXIMUM_BORN_COUNT)) {
+      return setVehicle(
+        releaseVehicleEmitter(racerSet, dustEmitter, false),
+        racerIndex,
+        (vehicle) => ({ ...vehicle, dustEmitter: null })
+      )
+    }
+    const drawn = drawBit(context, racerSet)
+    const racer = getRacer(drawn.racerSet, racerIndex)
+    return placeVehicleEmitter(
+      context.arithmetic,
+      drawn.racerSet,
+      dustEmitter,
+      racer,
+      getDustPosition(racer, drawn.isSet),
+      getEmitterVelocityOffset(context.arithmetic, racer)
+    )
+  })()
+  const boosted = ((): RacerSet => {
+    if (boostEmitter === null) return dusted
+    if (getIsReferenceExhausted(dusted, boostEmitter, BOOST_SMOKE_MAXIMUM_BORN_COUNT)) {
+      return setVehicle(
+        releaseVehicleEmitter(dusted, boostEmitter, false),
+        racerIndex,
+        (vehicle) => ({ ...vehicle, boostEmitter: null })
+      )
+    }
+    const racer = getRacer(dusted, racerIndex)
+    return placeVehicleEmitter(
+      context.arithmetic,
+      dusted,
+      boostEmitter,
+      racer,
+      getBoostSmokePosition(context.arithmetic, racer),
+      getEmitterVelocityOffset(context.arithmetic, racer)
+    )
+  })()
+  if (tireSmokeEmitter === null) return boosted
+  const drawn = drawBit(context, boosted)
+  const racer = getRacer(drawn.racerSet, racerIndex)
+  return placeVehicleEmitter(
+    context.arithmetic,
+    drawn.racerSet,
+    tireSmokeEmitter,
+    racer,
+    getTireSmokePosition(racer, drawn.isSet),
+    getEmitterVelocityOffset(context.arithmetic, racer)
+  )
 }
 
 const DRIVER_FULL_THROTTLE_FLAG = 0x1

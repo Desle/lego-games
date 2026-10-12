@@ -12,6 +12,7 @@ export type {
   GeometryFiles,
   ModelGeometry,
 } from './controller/load-geometry-scene/load-geometry-scene.types.ts'
+export { getInstanceRotation } from './types/instance-rotation/instance-rotation.ts'
 export { getWorldPaths, loadScene, loadSceneOnto } from './controller/load-scene/load-scene.ts'
 export {
   COMMON_DIRECTORY,
