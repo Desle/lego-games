@@ -6,3 +6,9 @@ export type SpawnedVehicleEmitter = {
   readonly racerSet: RacerSet
   readonly reference: EmitterReference | null
 }
+
+// The racer set after a draw of the random cursor, and whether the draw's second bit is set.
+export type RandomBit = {
+  readonly racerSet: RacerSet
+  readonly isSet: boolean
+}

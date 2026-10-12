@@ -13,6 +13,7 @@ export {
   releaseAllEmitters,
   releaseEmitter,
   releaseEmitterImmediately,
+  setEmitterBasis,
   setEmitterOrientation,
   setEmitterPosition,
   setEmitterVelocityOffset,
