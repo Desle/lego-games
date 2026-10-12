@@ -20,6 +20,8 @@ import {
 import { playRacerVoice } from '../racer-ranking/racer-ranking.ts'
 import { getRacerVolume } from '../racer-volume/racer-volume.ts'
 import { updateVehicleEmitters } from '../vehicle-emitters/vehicle-emitters.ts'
+import { createVehicleSkids } from '../vehicle-skids/vehicle-skids.ts'
+import type { VehicleWheelMarks } from '../vehicle-skids/vehicle-skids.types.ts'
 import { getVehicleLean } from './vehicle-lean.ts'
 import { getRacer, setRacer, setRandomPosition } from '../racer-state/racer-state.ts'
 import type {
@@ -74,13 +76,19 @@ const hasId = (id: number, ids: readonly number[]): boolean => ids.includes(id)
 // The flags 0x0043a780 leaves: 0x0043db60 sets 2 and the reset itself 4.
 const INITIAL_VEHICLE_FLAGS = 6
 
+const NO_WHEEL_MARKS: VehicleWheelMarks = Object.freeze({
+  points: Object.freeze([ZERO_VECTOR3, ZERO_VECTOR3, ZERO_VECTOR3, ZERO_VECTOR3]),
+  widths: Object.freeze([0, 0] as const),
+})
+
 // 0x0043d5a0 and 0x0043d7a0: nothing is watched, no emitter exists, the car model frame is the identity and the driver
 // sits at the origin until the first update. `lookMilliseconds` is the draw 0x0043d7a0 makes (`% 2000`, +0x388).
 export const createVehicle = (
   driverFigure: Figure = createFigure([], null),
   seatPoint: Vector3 = ZERO_VECTOR3,
   lookMilliseconds = 0,
-  bodyBounds: FigureBounds | null = null
+  bodyBounds: FigureBounds | null = null,
+  wheelMarks: VehicleWheelMarks = NO_WHEEL_MARKS
 ): Vehicle =>
   Object.freeze({
     driverFigure,
@@ -98,6 +106,7 @@ export const createVehicle = (
     wheelEmitters: Object.freeze([null, null, null, null]),
     wheelEmitterNames: Object.freeze(['', '', '', '']),
     previousGroundedWheelCount: 0,
+    skids: createVehicleSkids(wheelMarks),
     seatPoint,
     bodyRotation: IDENTITY_MATRIX3,
     forwardLean: 0,
@@ -423,5 +432,5 @@ export const updateVehicle: RacerBoundary = (context, racerSet, racerIndex, step
       }),
     })
   )
-  return updateVehicleEmitters(context, measured, racerIndex)
+  return updateVehicleEmitters(context, measured, racerIndex, stepMilliseconds)
 }

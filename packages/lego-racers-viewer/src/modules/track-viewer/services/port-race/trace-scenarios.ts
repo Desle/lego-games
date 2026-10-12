@@ -1,6 +1,7 @@
 import {
   createTraceScenario,
   getIdleFrames,
+  getPowerSlideFrames,
   getSteeringSweepFrames,
   holdBindings,
 } from '@lego-games/lego-racers/golden-trace'
@@ -53,6 +54,7 @@ const getRequestFrames = (request: TraceScenarioRequest): readonly TraceFrameInp
         ])[0]?.scanCodes ?? [],
     }))
   }
+  if (request.isPowerSliding === true) return getPowerSlideFrames()
   return request.isSteering === true ? getSteeringSweepFrames() : getIdleFrames(AUDIO_FRAME_COUNT)
 }
 

@@ -7,6 +7,7 @@ import type { RouteFollower, RubberBand } from '../../racer-ai/index.ts'
 import type { BoundingSphere } from '../../racer-collision/index.ts'
 import type { CarRigidBody } from '../../racer-physics/index.ts'
 import type { RandomTable, RandomTablePosition } from '../../random-table/index.ts'
+import type { VehicleSkids } from './vehicle-skids/vehicle-skids.types.ts'
 import type { FloatArithmetic, Matrix3, Quaternion, Vector3 } from '../../simulation-math/index.ts'
 
 // The two lookup tables in LEGORacers.exe that the racer code reads.
@@ -288,6 +289,8 @@ export type Vehicle = {
   // +0x230..+0x23c and +0x240..: the surface emitter of each wheel and the name it runs under (0x0043dd50).
   readonly wheelEmitters: readonly (EmitterReference | null)[]
   readonly wheelEmitterNames: readonly string[]
+  // +0x1a0..+0x224: the wheels' skid marks (0x0043f1e0).
+  readonly skids: VehicleSkids
   // +0x3cc: the wheels on the ground at the previous update, which a landing is measured against.
   readonly previousGroundedWheelCount: number
   // +0x3c's model part (+0x78): the car body's bounding sphere in the model frame (0x100278c0), null while the

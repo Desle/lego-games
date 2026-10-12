@@ -40,6 +40,7 @@ const animation: SkeletalAnimation = Object.freeze({
 const createInstance = (overrides: Partial<SkeletonInstanceRuntime>): SkeletonInstanceRuntime => ({
   name: 'hammer',
   animation,
+  skeleton: null,
   clip: createSkeletonAnimationState(animation, 0),
   isAnimated: true,
   otherFlags: 0,

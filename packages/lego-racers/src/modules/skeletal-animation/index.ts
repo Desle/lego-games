@@ -3,6 +3,7 @@ export {
   getBoneRotation,
   IDENTITY_BONE_ROTATION,
 } from './controller/get-bone-rotation/get-bone-rotation.ts'
+export { getBonePosition } from './controller/get-bone-position/get-bone-position.ts'
 export { getInstancePosition } from './controller/get-instance-position/get-instance-position.ts'
 export { getSkeletalAnimation } from './controller/get-skeletal-animation/get-skeletal-animation.ts'
 export {

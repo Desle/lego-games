@@ -68,6 +68,7 @@ export const getWarpView = (
     colourShift: getDisplayedColourShift(racer),
     partCentres: null,
     shadow: null,
+    skids: racer.vehicle.skids,
     isOffTrack: false,
   })
   const racerView = Object.freeze({

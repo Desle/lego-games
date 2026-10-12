@@ -1,5 +1,6 @@
 import { createSkeletonAnimationState } from '../../../skeletal-animation/index.ts'
 import type { SkeletalAnimation } from '../../../skeletal-animation/index.ts'
+import type { Skeleton } from '../../../skeleton/index.ts'
 import type {
   BspTreeInstance,
   MeshInstance,
@@ -86,11 +87,13 @@ const getUsedSkeletonLevels = (instance: SkeletonInstance): readonly SkeletonLev
 
 const createSkeletonInstance = (
   instance: SkeletonInstance,
-  animations: readonly SkeletalAnimation[]
+  animations: readonly SkeletalAnimation[],
+  skeletons: readonly Skeleton[]
 ): SkeletonInstanceRuntime => {
   const used = getUsedSkeletonLevels(instance)
   const levels = used.map((level): InstanceLevel => ({
     animationIndex: level.animationIndex,
+    skeletonIndex: level.skeletonIndex,
     squaredDistance: getSquaredDistance(level.distance),
   }))
   const nearest = getSortedLevels(levels)[0]
@@ -107,6 +110,7 @@ const createSkeletonInstance = (
   return Object.freeze({
     name: instance.name,
     animation,
+    skeleton: nearest === undefined ? null : (skeletons[nearest.skeletonIndex] ?? null),
     clip,
     isAnimated: clip !== null,
     otherFlags: getFlags(instance) | (used.length > 0 ? FLAG_LEVEL_SET_UP : 0),
@@ -133,6 +137,7 @@ const createMeshInstance = (instance: MeshInstance): MeshInstanceRuntime =>
         .filter((level) => level.meshIndex >= 0)
         .map((level) => ({
           animationIndex: -1,
+          skeletonIndex: -1,
           squaredDistance: getSquaredDistance(level.distance),
         }))
     ),
@@ -191,7 +196,7 @@ export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation
   return Object.freeze({
     skeletonInstances: Object.freeze(
       world.skeletonInstances.map((instance) =>
-        getMirrored(createSkeletonInstance(instance, input.animations))
+        getMirrored(createSkeletonInstance(instance, input.animations, input.skeletons ?? []))
       )
     ),
     meshInstances: Object.freeze(

@@ -92,6 +92,7 @@ describe('stepRace', () => {
       const instance = {
         name: 'camera',
         animation,
+        skeleton: null,
         clip: { ...clip, clip: { ...clip.clip, timeInFrames } },
         isAnimated: true,
         otherFlags: 0,

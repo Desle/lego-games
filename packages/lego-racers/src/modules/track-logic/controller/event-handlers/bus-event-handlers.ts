@@ -115,6 +115,15 @@ const getWithEmitterFlag = (event: TrackEvent): TrackEvent =>
     ? event
     : { ...event, flags: (event.flags | EMITTER_HELD_FLAG) >>> 0 }
 
+// 0x0045ebe0: an emitter that has an object moves to the object's bone every update.
+const followObject = (event: TrackEvent, session: TrackSession): void => {
+  if (event.kind !== TrackEventKind.KIND_3D || event.emitterHandle === null) return
+  const { objectReference, keyword54Integer } = event.record
+  if (objectReference === null) return
+  const position = session.getObjectBonePosition(objectReference, keyword54Integer)
+  if (position !== null) session.setEmitterPosition(event.emitterHandle, position)
+}
+
 // 0x0045eaf0, 0x0045eb90, 0x0045ebe0: a particle emitter that follows an object (the object is not ported).
 export const HANDLERS_3D: TrackEventHandlers = Object.freeze({
   ...IDLE_HANDLERS,
@@ -148,8 +157,13 @@ export const HANDLERS_3D: TrackEventHandlers = Object.freeze({
   },
   update: (event, session) => {
     const base = endIfRequested(event, session)
-    if (base.state === TrackEventState.INACTIVE || base.emitterHandle !== null) return base
-    return getWithEmitterFlag({ ...base, emitterHandle: getEmitterHandle(base, session) })
+    if (base.state === TrackEventState.INACTIVE) return base
+    const held =
+      base.emitterHandle !== null
+        ? base
+        : getWithEmitterFlag({ ...base, emitterHandle: getEmitterHandle(base, session) })
+    followObject(held, session)
+    return held
   },
 })
 

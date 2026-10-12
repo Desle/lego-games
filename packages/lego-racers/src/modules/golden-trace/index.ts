@@ -9,6 +9,7 @@ export { getRouteDrivingFrames } from './controller/route-driving/route-driving.
 export {
   createTraceScenario,
   getIdleFrames,
+  getPowerSlideFrames,
   getSteeringSweepFrames,
   getWeavingFrames,
   holdBindings,
