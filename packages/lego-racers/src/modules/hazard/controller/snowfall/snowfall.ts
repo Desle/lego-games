@@ -1,3 +1,5 @@
+import { setEmitterBasis, setEmitterPosition, getEmitterBasis } from '../../../emitter/index.ts'
+import { getNormalizedVector3 } from '../../../simulation-math/index.ts'
 import type { HazardBehavior } from '../../types/hazard-behavior.types.ts'
 import type { SnowfallData } from '../../types/hazard-data.types.ts'
 import { HazardKeyword } from '../../types/hazard-keyword/hazard-keyword.ts'
@@ -17,6 +19,14 @@ import {
 const EMITTER_MAXIMUM_MILLISECONDS = 1000
 const EMITTER_NAME = 'snow'
 const UINT32_MODULUS = 0x1_0000_0000
+// 0x004b461c and 0x004b4620: how far in front of the camera the flakes are made, and the weight of the camera's second
+// row in the height.
+const CAMERA_DISTANCE = 100
+const SECOND_ROW_HEIGHT = -40
+// The flakes are spread over 200 units across the view: the table value modulo 200, less 100.
+const SPREAD_UNITS = 200
+const SPREAD_HALF = 100
+const WORLD_UP = Object.freeze({ x: 0, y: 0, z: 1 })
 
 const getIsSnowfallData = (data: HazardInstance['data']): data is SnowfallData =>
   data.keyword === HazardKeyword.HAZARD_2F
@@ -58,6 +68,7 @@ export const SNOWFALL: HazardBehavior = Object.freeze({
           emitterHandle: null,
           milliseconds: 0,
           isEnabled: false,
+          placementValue: 0,
         } satisfies SnowfallData),
       })
     ),
@@ -87,8 +98,41 @@ export const SNOWFALL: HazardBehavior = Object.freeze({
     const { data } = instance
     if (!getIsSnowfallData(data)) return instance
     const withFlag = getWithData(instance, { ...data, isEnabled: true })
-    // 0x0048eb70 draws once to place the flakes (a value below 200, centred on the camera).
-    if (data.emitterHandle !== null) session.drawRandomValue()
-    return withFlag
+    // 0x0048eb70 draws once to place the flakes across the view (followCameras uses the value).
+    if (data.emitterHandle === null) return withFlag
+    return getWithData(withFlag, { ...data, isEnabled: true, placementValue: session.drawRandomValue() })
+  },
+  // The rest of 0x0048eb70: the emitter faces along the camera's horizontal heading and sits 100 in front of it (and
+  // 40 against its second row up), moved across the view by the drawn value.
+  followCameras: (instance, session, cameras) => {
+    const { data } = instance
+    const camera = cameras[0]
+    const pool = session.getEmitters()
+    if (!getIsSnowfallData(data) || data.emitterHandle === null || camera === undefined || pool === null) {
+      return instance
+    }
+    const { add, multiply, storeFloat, subtract } = session.arithmetic
+    const { position, forward, second } = camera
+    const across = (data.placementValue % SPREAD_UNITS) - SPREAD_HALF
+    const heading = getNormalizedVector3(session.arithmetic, { x: forward.x, y: forward.y, z: 0 })
+    const centre = {
+      x: storeFloat(add(multiply(CAMERA_DISTANCE, forward.x), position.x)),
+      y: storeFloat(add(multiply(CAMERA_DISTANCE, forward.y), position.y)),
+      z: storeFloat(
+        add(add(multiply(CAMERA_DISTANCE, forward.z), position.z), multiply(SECOND_ROW_HEIGHT, second.z))
+      ),
+    }
+    const placed = Object.freeze({
+      x: storeFloat(add(multiply(heading.y, across), centre.x)),
+      y: storeFloat(add(multiply(subtract(0, heading.x), across), centre.y)),
+      z: centre.z,
+    })
+    const faced = setEmitterBasis(
+      pool,
+      data.emitterHandle,
+      getEmitterBasis(session.arithmetic, heading, WORLD_UP)
+    )
+    session.setEmitters(setEmitterPosition(faced, data.emitterHandle, placed))
+    return instance
   },
 })

@@ -1,7 +1,7 @@
 import type { EmitterPool } from '../../emitter/index.ts'
 import type { LineProbe } from '../../projectiles/index.ts'
 import type { RandomTable, RandomTablePosition } from '../../random-table/index.ts'
-import type { FloatArithmetic } from '../../simulation-math/index.ts'
+import type { FloatArithmetic, Vector3 as FrameVector } from '../../simulation-math/index.ts'
 import type { WorldAnimation } from '../../world-animation/index.ts'
 import type { HazardData } from './hazard-data.types.ts'
 import type { Hazard, Vector3 } from './hazard.types.ts'
@@ -110,6 +110,14 @@ export type HazardBus = {
     parameter: Vector3 | null
   ) => void
   readonly stopSignal: (identifier: number, parameter: Vector3 | null) => void
+}
+
+// A camera's frame as the hazards that follow it read it (0x0048eb70 calls the frame's vtable +0x40 for the position and
+// +0x1c for the rows at +0x30 and +0x20): the position, the forward row and the second row.
+export type HazardCameraFrame = {
+  readonly position: FrameVector
+  readonly forward: FrameVector
+  readonly second: FrameVector
 }
 
 export type HazardSession = HazardBus & {

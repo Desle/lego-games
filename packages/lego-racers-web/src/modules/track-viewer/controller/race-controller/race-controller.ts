@@ -40,6 +40,7 @@ import {
   PauseMenuMode,
   RaceExit,
   stepRace,
+  getRaceWithHazardsAtCamera,
 } from '@lego-games/lego-racers/race'
 import type { RaceState } from '@lego-games/lego-racers/race'
 import { getRacerControls } from '@lego-games/lego-racers/race-input'
@@ -468,6 +469,7 @@ export const useRaceController = (): RaceController => {
           hudContext
         )
         presentation = frame.presentation
+        raceState = getRaceWithHazardsAtCamera(raceState, frame.cameraView)
         for (const sound of frame.sounds) audio.playSound(sound)
         audio.setEngineLoops(frame.engineLoops, frame.cameraView.position)
         if (frame.music !== null) audio.playMusic(frame.music)

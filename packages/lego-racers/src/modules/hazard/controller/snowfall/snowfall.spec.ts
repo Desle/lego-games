@@ -78,6 +78,27 @@ describe('the snowfall', () => {
     expect(test.getDrawCount()).toBe(1)
   })
 
+  it('places the emitter 100 in front of the camera, spread across the view by the drawn value (0x0048eb70)', () => {
+    // Arrange
+    const { test, loaded } = createLoaded()
+    const made = SNOWFALL.update(loaded, test.session, 33)
+    const drawn = SNOWFALL.updateAfterRacers(made, test.session, [])
+    const camera = {
+      position: { x: 10, y: 20, z: 30 },
+      forward: { x: 0, y: 1, z: 0 },
+      second: { x: 0, y: 0, z: -1 },
+    }
+
+    // Act
+    SNOWFALL.followCameras(drawn, test.session, [camera])
+
+    // Assert
+    const across = (drawn.data as { placementValue: number }).placementValue % 200 - 100
+    const emitter = test.getEmitters()?.instances[0]
+    expect(emitter?.position).toEqual({ x: 10 + across, y: 120, z: 70 })
+    expect(emitter?.basis).toEqual([0, 1, 0, -1, 0, 0, 0, 0, 1])
+  })
+
   it('lets go of its emitter when it ends', () => {
     // Arrange
     const { test, loaded } = createLoaded()

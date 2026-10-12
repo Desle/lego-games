@@ -101,6 +101,9 @@ export type SnowfallData = {
   readonly milliseconds: number
   // +0x1c
   readonly isEnabled: boolean
+  // The table value the last hook drew to place the flakes across the view (0x0048eb70): the placement uses it once the
+  // frame's camera is known.
+  readonly placementValue: number
 }
 
 // 0x30 (0x0048e680): a vent that smokes.

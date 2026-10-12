@@ -1,4 +1,5 @@
 import type { EnumValues } from '../../../shared/types/enum.types.ts'
+import type { HazardCameraFrame } from '../../hazard/index.ts'
 import type {
   Event28,
   Event29,
@@ -348,6 +349,7 @@ export type TrackSession = HazardBus & {
   // Hazards_Update 0x0048add0 and the hazards' camera update 0x0048ae00 after the racers.
   readonly updateHazards: (milliseconds: number) => void
   readonly updateHazardsAfterRacers: (cameraPositions: readonly Vector3[]) => void
+  readonly followCameras: (cameras: readonly HazardCameraFrame[]) => void
   // Timers_Update 0x00464dd0 and the registry's time list (0x0042fc10).
   readonly updateTimers: (milliseconds: number) => void
   // Triggers_Update: the environment triggers, then the main triggers, release what nobody touched.
