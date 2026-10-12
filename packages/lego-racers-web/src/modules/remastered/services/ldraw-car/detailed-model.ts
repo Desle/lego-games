@@ -1,13 +1,14 @@
 import { Material, Mesh } from 'three'
 import type { Group } from 'three'
 import { LDrawDetail } from '../ldraw-library/ldraw-library-loader.types.ts'
+import { getIsStudLogoShown, getModelDetail } from '../ldraw-library/stud-logos.ts'
 import { measureWork } from '../performance-monitor/performance-monitor.ts'
 import { deserializeModel, requestParsedModel } from '../ldraw-worker/ldraw-parse-client.ts'
 import type { SerializedModel } from '../ldraw-worker/ldraw-parse.types.ts'
 import { precompileShaders } from './shader-precompiler.ts'
 import { DetailSwitch, markDetailEdges } from './detail-switch.ts'
 import { getActiveLook } from './ldraw-look.ts'
-import { getLookNeedsShader } from './ldraw-look-shader.ts'
+import { getLookNeedsOcclusion } from './ldraw-look-shader.ts'
 import { createOcclusionVolume } from './ldraw-occlusion.ts'
 import type { OcclusionVolume } from './ldraw-occlusion.types.ts'
 import { applyPlasticLook } from './ldraw-plastic.ts'
@@ -18,15 +19,16 @@ const getIsMaterial = (value: unknown): value is Material => value instanceof Ma
 const preparedModels = new Map<string, Promise<Group>>()
 
 // Whether the active look wants the occlusion grid baked with the model.
-export const getIsOcclusionBaked = (): boolean => getLookNeedsShader(getActiveLook())
+export const getIsOcclusionBaked = (): boolean => getLookNeedsOcclusion(getActiveLook())
 
 // A model a worker has built as plastic of the active look, its edge lines marked so the shadow pass can leave them out.
 export const createPlasticModel = (
   model: SerializedModel,
-  volume: OcclusionVolume | null
+  volume: OcclusionVolume | null,
+  isWheel = false
 ): Group => {
   const group = deserializeModel(model)
-  measureWork('look', () => applyPlasticLook(group, volume))
+  measureWork('look', () => applyPlasticLook(group, volume, isWheel))
   markDetailEdges(group)
   return group
 }
@@ -34,8 +36,13 @@ export const createPlasticModel = (
 // A model of the library as the plastic of the active look, merged into a few objects, made once for each text and detail however
 // many cars, drivers and races use it (a part is parsed, baked and uploaded once). What it holds is shared: take a copy with
 // `instantiateModel`.
-export const getPreparedModel = (text: string, detail: LDrawDetail): Promise<Group> => {
-  const key = `${detail}|${text}`
+export const getPreparedModel = (
+  text: string,
+  askedDetail: LDrawDetail,
+  isWheel = false
+): Promise<Group> => {
+  const detail = getModelDetail(askedDetail)
+  const key = `${detail}|${String(isWheel)}|${text}`
   const existing = preparedModels.get(key)
   if (existing !== undefined) return existing
   const prepared = requestParsedModel({
@@ -46,7 +53,8 @@ export const getPreparedModel = (text: string, detail: LDrawDetail): Promise<Gro
   }).then(async (result) => {
     const model = createPlasticModel(
       result.body,
-      result.grid === null ? null : createOcclusionVolume(result.grid)
+      result.grid === null ? null : createOcclusionVolume(result.grid),
+      isWheel
     )
     await precompileShaders(model)
     return model
@@ -106,7 +114,9 @@ export const createDetailedPart = (
     onInstance?.(copy)
     return copy
   }
-  object.setHighLoader(() => getPreparedModel(text, LDrawDetail.HIGH).then(instantiate))
+  if (getIsStudLogoShown()) {
+    object.setHighLoader(() => getPreparedModel(text, LDrawDetail.HIGH).then(instantiate))
+  }
   const shown = getPreparedModel(text, LDrawDetail.LOW).then((prepared) =>
     object.setLow(instantiate(prepared))
   )

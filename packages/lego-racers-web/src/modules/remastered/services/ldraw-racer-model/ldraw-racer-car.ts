@@ -75,7 +75,7 @@ const loadChassisModels = async (
   return new Map(texts.filter((entry): entry is readonly [string, string] => entry !== null))
 }
 
-const getReferencedChassisNames = (text: string): readonly string[] => {
+export const getReferencedChassisNames = (text: string): readonly string[] => {
   const known = Object.keys(getLDrawModelIndex().chassis)
   const referenced = text
     .split('\n')
@@ -141,6 +141,18 @@ export const createLDrawRacerCar = (
     else upgradeWheels(foundWheels, wheels)
   }
   const sourceName = source.kind === 'design' ? `${source.chassis.name}.ldr` : source.file
+  const buildWheels = () => {
+    if (getIsDisposed()) return
+    const partRequest = getPartRequest(request)
+    live.wheels =
+      foundWheels.length > 0
+        ? createFileWheelsDrawing(foundWheels, partRequest)
+        : createLDrawWheelsDrawing(partRequest)
+    if (live.wheels === null) return
+    wheelsScaled.add(live.wheels.object)
+    if (live.state !== null) live.wheels.setAnimationState(live.state)
+    setDrawingOpacity(object, live.opacity)
+  }
   const buildBody = async (): Promise<boolean> => {
     if (source.kind === 'design') {
       const name = source.chassis.name.toLowerCase()
@@ -152,14 +164,17 @@ export const createLDrawRacerCar = (
         )
         return false
       }
+      // A built car keeps every part: the loader files its composite bricks' lances and swords under `Minifig`.
       const drawing = createLDrawCarDrawing(
         { archive: request.archive, design: request.design },
         true,
         chassisModels,
-        keepModelParts,
+        null,
         false
       )
       bodyHolder.add(drawing.object)
+      // The wheels come with the placeholder bricks, so a car never stands without them while its parts load.
+      buildWheels()
       await drawing.shown
       return true
     }
@@ -188,25 +203,14 @@ export const createLDrawRacerCar = (
     bodyHolder.add(holder)
     return true
   }
-  const buildWheels = () => {
-    if (getIsDisposed()) return
-    const partRequest = getPartRequest(request)
-    live.wheels =
-      foundWheels.length > 0
-        ? createFileWheelsDrawing(foundWheels, partRequest)
-        : createLDrawWheelsDrawing(partRequest)
-    if (live.wheels === null) return
-    wheelsScaled.add(live.wheels.object)
-    if (live.state !== null) live.wheels.setAnimationState(live.state)
-    setDrawingOpacity(object, live.opacity)
-  }
   const settle = (isBuilt: boolean) => {
     if (isBuilt || getIsDisposed()) return
     failureListeners.forEach((listener) => listener())
   }
   void buildBody()
     .then((isBuilt) => {
-      if (isBuilt) buildWheels()
+      if (isBuilt && live.wheels === null) buildWheels()
+      if (isBuilt) setDrawingOpacity(object, live.opacity)
       settle(isBuilt)
     })
     .catch((error: unknown) => {
