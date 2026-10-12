@@ -8,7 +8,12 @@ import { updatePowerUpsWithProjectiles } from '../../../projectiles/index.ts'
 import type { ProjectileWorld } from '../../../projectiles/index.ts'
 import { getRacerSetWithProjectileRegistry } from '../projectile-registry/projectile-registry.ts'
 import { getRaceTimeStep, updateRacePhysics } from '../../../racer-physics/index.ts'
-import { applyRacerControls, stepRacerSet, updatePlayerController } from '../../../racer/index.ts'
+import {
+  applyRacerControls,
+  releaseAllBindings,
+  stepRacerSet,
+  updatePlayerController,
+} from '../../../racer/index.ts'
 import type { RaceInputs, RaceRacerSet, RaceState } from '../../types/race.types.ts'
 import {
   RACE_PLAYER_CONTROLLER_DEPENDENCIES,
@@ -114,6 +119,13 @@ export const applyPlayerControls = (state: RaceState, inputs: RaceInputs): RaceS
     runPlayerControllers(state, getRaceRacerSet(state, NO_RACE_CONTACTS), (input, playerIndex) =>
       applyRacerControls(input, inputs.controls[playerIndex] ?? IDLE_RACER_CONTROLS)
     )
+  )
+
+// 0x00430c20 for every local player (the pause menu opens): each binding is released, held or not.
+export const releasePlayerControls = (state: RaceState): RaceState =>
+  getStateWithProgress(
+    state,
+    runPlayerControllers(state, getRaceRacerSet(state, NO_RACE_CONTACTS), releaseAllBindings)
   )
 
 // The hazards that follow the cameras (0x0048ae00) are given the players' camera positions; the port keeps no camera
