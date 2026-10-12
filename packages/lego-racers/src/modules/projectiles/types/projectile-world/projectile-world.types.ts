@@ -71,6 +71,9 @@ export type EffectMotion =
 export type ProjectileWorld = {
   // Indexed by effect id; null until the effect has launched.
   readonly motions: readonly (EffectMotion | null)[]
+  // Indexed by effect id: the rocket body's wobble angle (+0xbc), which 0x00423980 does not reset, so a rocket that takes
+  // over an effect continues the angle of the one before it.
+  readonly rocketWobbleAngles: readonly number[]
   // The events of the update in progress; updatePowerUpsWithProjectiles starts them empty.
   readonly events: readonly ProjectileEvent[]
   // The explosions of power-up system +0x193c ("Explsn") and +0x1940 ("spikexp"), and the debris at +0x18bc.

@@ -35,7 +35,11 @@ import {
   retargetHomingFlight,
 } from '../../types/homing-flight/homing-flight.ts'
 import type { HomingFlight, HomingTarget } from '../../types/homing-flight/homing-flight.types.ts'
-import { getMotion, getWorldWithMotion } from '../../types/projectile-world/projectile-world.ts'
+import {
+  getMotion,
+  getWorldWithMotion,
+  getWorldWithRocketWobbleAngle,
+} from '../../types/projectile-world/projectile-world.ts'
 import type {
   ProjectileContext,
   ProjectileStep,
@@ -269,11 +273,15 @@ const getFlownRocket = (
       : motion.frameRotation
   return Object.freeze({
     step: resolved.step,
-    world: getWorldWithRocket(current.world, effectId, {
-      ...motion,
-      frameRotation,
-      homing: Object.freeze({ ...advance.homing, flight: resolved.flight }),
-    }),
+    world: getWorldWithRocketWobbleAngle(
+      getWorldWithRocket(current.world, effectId, {
+        ...motion,
+        frameRotation,
+        homing: Object.freeze({ ...advance.homing, flight: resolved.flight }),
+      }),
+      effectId,
+      advance.homing.wobbleAngle
+    ),
   })
 }
 
@@ -335,7 +343,10 @@ export const updateRocket = (
       ...motion,
       framePosition: launchFrame.position,
       frameRotation: launchFrame.rotation,
-      homing: launched.homing,
+      homing: Object.freeze({
+        ...launched.homing,
+        wobbleAngle: world.rocketWobbleAngles[before.id] ?? 0,
+      }),
     }
     current = Object.freeze({
       step: withTarget,

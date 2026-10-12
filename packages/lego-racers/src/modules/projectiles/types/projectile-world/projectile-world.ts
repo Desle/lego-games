@@ -13,6 +13,7 @@ import type { EffectMotion, ProjectileWorld } from './projectile-world.types.ts'
 export const createProjectileWorld = (step: PowerUpStep): ProjectileWorld =>
   Object.freeze({
     motions: Object.freeze(step.world.effects.effects.map(() => null)),
+    rocketWobbleAngles: Object.freeze(step.world.effects.effects.map(() => 0)),
     events: Object.freeze([]),
     explosions: createExplosionPool(NORMAL_EXPLOSION_COUNT, NORMAL_EXPLOSION_PARAMETERS),
     spikedExplosions: createExplosionPool(SPIKED_EXPLOSION_COUNT, SPIKED_EXPLOSION_PARAMETERS),
@@ -31,6 +32,18 @@ export const getWorldWithMotion = (
     ...world,
     motions: Object.freeze(
       world.motions.map((current, index) => (index === effectId ? motion : current))
+    ),
+  })
+
+export const getWorldWithRocketWobbleAngle = (
+  world: ProjectileWorld,
+  effectId: number,
+  angle: number
+): ProjectileWorld =>
+  Object.freeze({
+    ...world,
+    rocketWobbleAngles: Object.freeze(
+      world.rocketWobbleAngles.map((current, index) => (index === effectId ? angle : current))
     ),
   })
 
