@@ -63,7 +63,7 @@ const getFlightRacer = (x: number, overrides: Partial<FlightRacer> = {}): Flight
   boundingRadius: 2,
   beamRadius: 2,
   routeNodeIndex: null,
-  rocketHeading: { x: 1, y: 0, z: 0 },
+  displayRotation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
   isComputer: false,
   ...overrides,
 })
@@ -89,6 +89,12 @@ const getContexts = (
       racers: [getFlightRacer(0), getFlightRacer(360, flightOverrides)],
       route: [],
       rocketLaunchMilliseconds: [100, 100, 100],
+      rocketLaunchBones: [0, 1, 2].map(() => ({
+        position: { x: 0, y: 0, z: 0 },
+        firstAxis: { x: 1, y: 0, z: 0 },
+        thirdAxis: { x: 0, y: 0, z: 1 },
+      })),
+      rocketModelScale: 1,
       debrisAnimations: [[200], [200], [200], [200]],
       probe,
     },

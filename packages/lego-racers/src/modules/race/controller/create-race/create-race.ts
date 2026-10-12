@@ -293,6 +293,7 @@ export const createRace = (definition: RaceDefinition): RaceState => {
   const registryEntries = getRegistryEntries(
     definition.arithmetic,
     {
+      arithmetic: definition.arithmetic,
       registryObjects,
       trackLogic,
       powerUpStep,

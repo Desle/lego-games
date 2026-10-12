@@ -11,9 +11,15 @@ import type {
   PowerUpEffect,
   PowerUpStep,
 } from '../../../power-ups/index.ts'
-import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
-import type { Vector3 } from '../../../simulation-math/index.ts'
 import {
+  getFrameRotatedVector,
+  getFrameTransformedPoint,
+  getRotationFromFrameAxes,
+  ZERO_VECTOR3,
+} from '../../../simulation-math/index.ts'
+import type { Frame, Matrix3, Vector3 } from '../../../simulation-math/index.ts'
+import {
+  BallisticFlightState,
   createBallisticFlight,
   launchFlightAtPoint,
   launchFlightAtRacer,
@@ -136,14 +142,52 @@ const getWorldWithRocket = (
   motion: RocketMotion
 ): ProjectileStep['world'] => getWorldWithMotion(world, effectId, motion)
 
+// The missile figure's scale (+0x58) before anything changes it.
+const FIGURE_SCALE = 1
+
+const getRowOf = (rotation: Matrix3, row: number): Vector3 =>
+  Object.freeze({
+    x: rotation[row * 3] ?? 0,
+    y: rotation[row * 3 + 1] ?? 0,
+    z: rotation[row * 3 + 2] ?? 0,
+  })
+
+// 0x00456db0 (state 2 -> 3, from 0x00456e75): the figure still holds the owner's frame of the last animation step; the
+// launch bone's position (scaled by the model's scale times the figure's) is carried through it, its two axes are
+// turned by it, and the figure takes the position and the axes (0x00410900: normalized, the third made orthogonal).
+const getLaunchFrame = (
+  context: ProjectileContext,
+  rocketIndex: number,
+  ownerFrame: Frame
+): Frame => {
+  const bone = context.rocketLaunchBones[rocketIndex]
+  if (bone === undefined) return ownerFrame
+  const { arithmetic } = context.powerUps
+  const { multiply, storeFloat } = arithmetic
+  const scale = multiply(context.rocketModelScale, FIGURE_SCALE)
+  const scaled = Object.freeze({
+    x: storeFloat(multiply(bone.position.x, scale)),
+    y: storeFloat(multiply(bone.position.y, scale)),
+    z: storeFloat(multiply(bone.position.z, scale)),
+  })
+  return Object.freeze({
+    rotation: getRotationFromFrameAxes(arithmetic, {
+      first: getFrameRotatedVector(arithmetic, ownerFrame, bone.firstAxis),
+      third: getFrameRotatedVector(arithmetic, ownerFrame, bone.thirdAxis),
+    }),
+    position: getFrameTransformedPoint(arithmetic, ownerFrame, scaled),
+  })
+}
+
 // 0x00456db0 state 2 (the animation is over): the rocket leaves its owner at the target or the point ahead and starts
 // to home (0x00423980).
 const getLaunchedRocket = (
   context: ProjectileContext,
   effect: PowerUpEffect,
   owner: number,
-  framePosition: Vector3
+  frame: Frame
 ): LaunchedRocket => {
+  const framePosition = frame.position
   const { arithmetic } = context.powerUps
   const ownerRacer = context.racers[owner]
   if (ownerRacer === undefined) throw new RangeError(`No racer at index ${String(owner)}`)
@@ -171,10 +215,11 @@ const getLaunchedRocket = (
           isLeadLimited: false,
         })
   return {
+    frame,
     homing: createHomingFlight(
       arithmetic,
       flight,
-      ownerRacer.rocketHeading,
+      getRowOf(frame.rotation, 0),
       ownerRacer.routeNodeIndex,
       context.route
     ),
@@ -214,10 +259,19 @@ const getFlownRocket = (
     advance.result,
     () => getHomingVelocity(advance.homing)
   )
+  // 0x004568f0: while it still flies, the figure turns to the heading and keeps its third axis (0x00410900).
+  const frameRotation =
+    advance.result === BallisticFlightState.FLYING
+      ? getRotationFromFrameAxes(arithmetic, {
+          first: advance.homing.heading,
+          third: getRowOf(motion.frameRotation, 2),
+        })
+      : motion.frameRotation
   return Object.freeze({
     step: resolved.step,
     world: getWorldWithRocket(current.world, effectId, {
       ...motion,
+      frameRotation,
       homing: Object.freeze({ ...advance.homing, flight: resolved.flight }),
     }),
   })
@@ -238,12 +292,14 @@ export const updateRocket = (
   const owner = before.ownerRacer
   const status = context.powerUps.racers[owner]
   const existing = getRocketMotion(world, before.id)
-  if (status === undefined) return Object.freeze({ step, world })
+  const ownerRotation = context.racers[owner]?.displayRotation
+  if (status === undefined || ownerRotation === undefined) return Object.freeze({ step, world })
   let current: ProjectileStep = Object.freeze({ step, world })
   let motion: RocketMotion = existing ?? {
     kind: 'rocket',
     launchElapsedMilliseconds: 0,
     framePosition: status.position,
+    frameRotation: ownerRotation,
     homing: null,
   }
   if (before.state === EffectState.STARTING) {
@@ -254,17 +310,27 @@ export const updateRocket = (
       ...motion,
       launchElapsedMilliseconds,
       framePosition: isAnimationOver ? motion.framePosition : status.position,
+      frameRotation: isAnimationOver ? motion.frameRotation : ownerRotation,
     }
     if (!isAnimationOver) {
       return Object.freeze({ step, world: getWorldWithRocket(world, before.id, motion) })
     }
-    const launched = getLaunchedRocket(context, before, owner, motion.framePosition)
+    const launchFrame = getLaunchFrame(context, before.rocketIndex, {
+      rotation: motion.frameRotation,
+      position: motion.framePosition,
+    })
+    const launched = getLaunchedRocket(context, before, owner, launchFrame)
     const advanced = advancePowerUpEffect(step, context.powerUps, before.id)
     const withTarget = getStepWithEffect(advanced, {
       ...getEffect(advanced, before.id),
       targetRacer: launched.targetRacer,
     })
-    motion = { ...motion, homing: launched.homing }
+    motion = {
+      ...motion,
+      framePosition: launchFrame.position,
+      frameRotation: launchFrame.rotation,
+      homing: launched.homing,
+    }
     current = Object.freeze({
       step: withTarget,
       world: getWorldWithRocket(world, before.id, motion),

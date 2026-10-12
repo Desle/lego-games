@@ -67,7 +67,12 @@ export type {
   ProjectileStep,
   ProjectileWorld,
 } from './types/projectile-world/projectile-world.types.ts'
-export type { FlightRacer, LineProbe, LineProbeHit } from './types/projectiles.types.ts'
+export type {
+  FlightRacer,
+  LineProbe,
+  LineProbeHit,
+  RocketLaunchBone,
+} from './types/projectiles.types.ts'
 export {
   getPointMovedAlongRoute,
   getWarpLandingPosition,

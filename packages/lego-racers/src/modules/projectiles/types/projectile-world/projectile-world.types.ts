@@ -1,5 +1,5 @@
 import type { PowerUpContext, PowerUpEffect, PowerUpStep } from '../../../power-ups/index.ts'
-import type { Vector3 } from '../../../simulation-math/index.ts'
+import type { Matrix3, Vector3 } from '../../../simulation-math/index.ts'
 import type { ProjectileEvent } from '../projectile-event/projectile-event.types.ts'
 import type { BallisticFlight } from '../ballistic-flight/ballistic-flight.types.ts'
 import type { HomingFlight } from '../homing-flight/homing-flight.types.ts'
@@ -8,7 +8,7 @@ import type { ExplosionPool } from '../explosion/explosion.types.ts'
 import type { GrappleHook } from '../grapple-hook/grapple-hook.types.ts'
 import type { RouteNode } from '../route-movement/route-movement.types.ts'
 import type { WandBeam } from '../wand-beam/wand-beam.types.ts'
-import type { FlightRacer, LineProbe } from '../projectiles.types.ts'
+import type { FlightRacer, LineProbe, RocketLaunchBone } from '../projectiles.types.ts'
 
 // The movement state of one pooled effect: the body the original keeps inside the effect object.
 export type BallisticMotion = {
@@ -47,8 +47,10 @@ export type RocketMotion = {
   readonly kind: 'rocket'
   // Milliseconds of the launch animation played so far (state 2).
   readonly launchElapsedMilliseconds: number
-  // The missile model's position: the owner's, until the rocket launches.
+  // The missile figure's frame: the owner's display frame while the launch animation plays, then the one 0x00456db0
+  // builds from the launch bone, whose first axis follows the heading and whose third axis it keeps.
   readonly framePosition: Vector3
+  readonly frameRotation: Matrix3
   readonly homing: HomingFlight | null
 }
 
@@ -81,6 +83,10 @@ export type ProjectileContext = {
   readonly route: readonly RouteNode[]
   // How long each rocket's launch animation lasts (model data the port does not read): rocket 0, 1 and 2.
   readonly rocketLaunchMilliseconds: readonly number[]
+  // The launch bone of each rocket's clip and the missile model's scale (model +0x38): 0x00456db0 places the launched
+  // rocket's frame with them.
+  readonly rocketLaunchBones: readonly RocketLaunchBone[]
+  readonly rocketModelScale: number
   // The lengths of the debris animations (model data the port does not read).
   readonly debrisAnimations: DebrisAnimations
   readonly probe: LineProbe

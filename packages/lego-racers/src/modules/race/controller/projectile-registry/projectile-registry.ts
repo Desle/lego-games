@@ -4,9 +4,14 @@ import { ExplosionState } from '../../../projectiles/index.ts'
 import type { ExplosionPool } from '../../../projectiles/index.ts'
 import { getBoundingInterval } from '../../../racer-collision/index.ts'
 import type { BoundingSphere } from '../../../racer-collision/index.ts'
+import type { ModelBounds } from '../../../model/index.ts'
 import type { RegistryEntry } from '../../../projectiles/index.ts'
-import { getFloatFromBits, ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
-import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
+import {
+  getFloatFromBits,
+  getFrameTransformedPoint,
+  ZERO_VECTOR3,
+} from '../../../simulation-math/index.ts'
+import type { FloatArithmetic, Frame, Vector3 } from '../../../simulation-math/index.ts'
 import {
   touchProjectileExplosions,
   touchProjectileFlights,
@@ -35,10 +40,31 @@ const MAGNET_HEIGHT = 30
 // 0x00429xxx registrations: type 4, flags 1, no call limit, no interval.
 const REGISTRATION_FLAGS = 0x1
 
+const FIGURE_SCALE = 1
+
 const ORIGIN_SPHERE: BoundingSphere = Object.freeze({ centre: ZERO_VECTOR3, radius: 0 })
 
 const getSphere = (centre: Vector3, radius: number): BoundingSphere =>
   Object.freeze({ centre, radius })
+
+// 0x0040e0b0 for a figure that does not play (flag 0x10000 clear): the model's bounds centre and radius times the figure's
+// scale (+0x58, 1 here), the centre carried through the figure's frame (slot +0x2c).
+const getFigureSphere = (
+  arithmetic: FloatArithmetic,
+  frame: Frame,
+  bounds: ModelBounds
+): BoundingSphere => {
+  const { multiply, storeFloat } = arithmetic
+  const scaled = Object.freeze({
+    x: storeFloat(multiply(FIGURE_SCALE, bounds.centre.x)),
+    y: storeFloat(multiply(FIGURE_SCALE, bounds.centre.y)),
+    z: storeFloat(multiply(FIGURE_SCALE, bounds.centre.z)),
+  })
+  return getSphere(
+    getFrameTransformedPoint(arithmetic, frame, scaled),
+    storeFloat(multiply(FIGURE_SCALE, bounds.radius))
+  )
+}
 
 const getEffectOf = (source: RegistrySource, effectId: number): PowerUpEffect | undefined =>
   source.powerUpStep.world.effects.effects[effectId]
@@ -71,7 +97,11 @@ const getFlightSphere = (source: RegistrySource, effect: PowerUpEffect): Boundin
     )
   }
   if (motion.kind === 'rocket' && motion.homing !== null) {
-    return getSphere(motion.homing.flight.framePosition, shapeBounds.rocket.radius)
+    return getFigureSphere(
+      source.arithmetic,
+      { rotation: motion.frameRotation, position: motion.homing.flight.framePosition },
+      shapeBounds.rocket
+    )
   }
   return ORIGIN_SPHERE
 }
