@@ -113,8 +113,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
             RacerPartKind.DRIVER,
             {
               modelName: racer?.appearance.driverModel?.modelName ?? null,
-              partBytes:
-                racer?.savedCar == null ? null : getDriverPartBytes(racer.savedCar.record),
+              partBytes: racer?.savedCar == null ? null : getDriverPartBytes(racer.savedCar.record),
             }
           )
     const parts = [wheels, body, driver].filter((part): part is ModelObject => part !== null)

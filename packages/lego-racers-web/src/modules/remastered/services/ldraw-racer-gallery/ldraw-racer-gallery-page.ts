@@ -75,12 +75,20 @@ const renderer = new WebGLRenderer({ canvas, antialias: true, preserveDrawingBuf
 renderer.outputColorSpace = LinearSRGBColorSpace
 renderer.setClearColor(new Color(BACKGROUND_COLOR))
 
-let archivePromise: Promise<JamArchive> | null = null
-const getArchive = (): Promise<JamArchive> => {
-  archivePromise ??= fetch(DEVELOPMENT_JAM_ROUTE)
-    .then((response) => response.arrayBuffer())
-    .then((buffer) => openJamArchive(new Uint8Array(buffer)))
-  return archivePromise
+const loadArchive = async (): Promise<JamArchive> => {
+  const response = await fetch(DEVELOPMENT_JAM_ROUTE)
+  return openJamArchive(new Uint8Array(await response.arrayBuffer()))
+}
+const archivePromise = loadArchive()
+const getArchive = () => archivePromise
+
+// A blank canvas of this size that drawing into parts of it keeps.
+const clearSheet = (width: number, height: number) => {
+  renderer.setSize(width, height, false)
+  renderer.setScissorTest(true)
+  renderer.setViewport(0, 0, width, height)
+  renderer.setScissor(0, 0, width, height)
+  renderer.clear()
 }
 
 const getFramedCamera = (
@@ -250,11 +258,7 @@ const renderCatalogueSheet = async (
   cell: number
 ): Promise<number> => {
   const rows = Math.ceil(indices.length / columns)
-  renderer.setSize(columns * cell, rows * cell, false)
-  renderer.setScissorTest(true)
-  renderer.setViewport(0, 0, columns * cell, rows * cell)
-  renderer.setScissor(0, 0, columns * cell, rows * cell)
-  renderer.clear()
+  clearSheet(columns * cell, rows * cell)
   for (const [position, index] of indices.entries()) {
     const partBytes = base.map((value, byteIndex) =>
       byteIndex === SLOT_POSITIONS[slot] ? index : value
@@ -286,9 +290,7 @@ const getDriverNames = async (): Promise<readonly string[]> => {
 }
 
 // A driver of the race's database as the race draws him: the fixed model of his name on the pelvis skeleton, in the clip he sits in.
-const createRaceDriver = async (
-  driverName: string
-): Promise<GalleryDriver | null> => {
+const createRaceDriver = async (driverName: string): Promise<GalleryDriver | null> => {
   const archive = await getArchive()
   const appearance = getChampionRacerAppearance(readRacerDatabases(archive.readFile), driverName, 0)
   if (appearance.driverModel === null) return null
@@ -300,7 +302,11 @@ const createRaceDriver = async (
   const animation = model.scene.animations[0]?.animation
   if (drawing === null || animation === undefined) return null
   drawing.setAnimationState(
-    advanceSkeletonAnimation(createSkeletonAnimationState(animation, RACE_DRIVER_CLIP), animation, 0)
+    advanceSkeletonAnimation(
+      createSkeletonAnimationState(animation, RACE_DRIVER_CLIP),
+      animation,
+      0
+    )
   )
   await drawing.settled
   return { scene: createSceneOf(model, drawing, false), drawing }
@@ -328,11 +334,7 @@ const renderDriverSheet = async (
 ): Promise<readonly string[]> => {
   const names = await getDriverNames()
   const rows = Math.ceil(names.length / columns)
-  renderer.setSize(columns * cell, rows * cell, false)
-  renderer.setScissorTest(true)
-  renderer.setViewport(0, 0, columns * cell, rows * cell)
-  renderer.setScissor(0, 0, columns * cell, rows * cell)
-  renderer.clear()
+  clearSheet(columns * cell, rows * cell)
   for (const [position, name] of names.entries()) {
     const driver = await createDriverOfName(name, figure)
     if (driver === null) continue
@@ -365,14 +367,24 @@ const renderChampion = async (
   const driver = await createRaceDriver(driverName)
   if (wheels === null || driver === null) return false
   await wheels.settled
-  renderer.setSize(width, height, false)
-  renderer.setScissorTest(true)
-  renderer.setViewport(0, 0, width, height)
-  renderer.setScissor(0, 0, width, height)
-  renderer.clear()
+  clearSheet(width, height)
   const wheelScene = createSceneOf(wheelModel, wheels, false)
-  drawIn(wheelScene, getFramedCamera(wheelScene, VIEW_DIRECTIONS[view], width / 2 / height, null), 0, 0, width / 2, height)
-  drawIn(driver.scene, getFramedCamera(driver.scene, VIEW_DIRECTIONS[view], width / 2 / height, null), width / 2, 0, width / 2, height)
+  drawIn(
+    wheelScene,
+    getFramedCamera(wheelScene, VIEW_DIRECTIONS[view], width / 2 / height, null),
+    0,
+    0,
+    width / 2,
+    height
+  )
+  drawIn(
+    driver.scene,
+    getFramedCamera(driver.scene, VIEW_DIRECTIONS[view], width / 2 / height, null),
+    width / 2,
+    0,
+    width / 2,
+    height
+  )
   return true
 }
 
@@ -385,11 +397,7 @@ const renderWheelSheet = async (
   const archive = await getArchive()
   const chassisList = parseChassisDatabase(archive.readFile(CHASSIS_DATABASE_PATH)).chassis
   const rows = Math.ceil(chassisList.length / columns)
-  renderer.setSize(columns * cell, rows * cell, false)
-  renderer.setScissorTest(true)
-  renderer.setViewport(0, 0, columns * cell, rows * cell)
-  renderer.setScissor(0, 0, columns * cell, rows * cell)
-  renderer.clear()
+  clearSheet(columns * cell, rows * cell)
   for (const [position, chassis] of chassisList.entries()) {
     const names = chassis.variants[0]
     if (names === undefined) continue

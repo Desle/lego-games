@@ -38,6 +38,18 @@ const getIsOpaque = (bitmap: SceneBitmap, pixel: number): boolean =>
 const packColor = ([red = 0, green = 0, blue = 0]: readonly number[]): number =>
   (red << 16) | (green << 8) | blue
 
+// The pixel columns and rows a part of a bitmap covers (at least one of each).
+const getPixelBounds = (bitmap: SceneBitmap, region: BitmapRegion | null) => {
+  const left = Math.floor((region?.left ?? 0) * bitmap.width)
+  const top = Math.floor((region?.top ?? 0) * bitmap.height)
+  return {
+    left,
+    top,
+    right: Math.max(left + 1, Math.ceil((region?.right ?? 1) * bitmap.width)),
+    bottom: Math.max(top + 1, Math.ceil((region?.bottom ?? 1) * bitmap.height)),
+  }
+}
+
 // The average colour of the opaque pixels of a bitmap (of a part of it) that are not darker than the threshold, as 0xRRGGBB; null when
 // there are none.
 export const getAverageColor = (
@@ -45,10 +57,7 @@ export const getAverageColor = (
   minimumBrightness = 0,
   region: BitmapRegion | null = null
 ): number | null => {
-  const left = Math.floor((region?.left ?? 0) * bitmap.width)
-  const right = Math.max(left + 1, Math.ceil((region?.right ?? 1) * bitmap.width))
-  const top = Math.floor((region?.top ?? 0) * bitmap.height)
-  const bottom = Math.max(top + 1, Math.ceil((region?.bottom ?? 1) * bitmap.height))
+  const { left, right, top, bottom } = getPixelBounds(bitmap, region)
   const sums = [0, 0, 0]
   let count = 0
   for (let row = top; row < bottom; row += 1) {
@@ -93,10 +102,7 @@ export const getDominantColor = (
   bitmap: SceneBitmap,
   region: BitmapRegion | null = null
 ): number | null => {
-  const left = Math.floor((region?.left ?? 0) * bitmap.width)
-  const right = Math.max(left + 1, Math.ceil((region?.right ?? 1) * bitmap.width))
-  const top = Math.floor((region?.top ?? 0) * bitmap.height)
-  const bottom = Math.max(top + 1, Math.ceil((region?.bottom ?? 1) * bitmap.height))
+  const { left, right, top, bottom } = getPixelBounds(bitmap, region)
   const part: SceneBitmap = {
     width: right - left,
     height: bottom - top,
@@ -105,7 +111,9 @@ export const getDominantColor = (
         const pixel = Math.floor(index / RGBA_STRIDE)
         const column = left + (pixel % (right - left))
         const row = top + Math.floor(pixel / (right - left))
-        return bitmap.colors[(row * bitmap.width + column) * RGBA_STRIDE + (index % RGBA_STRIDE)] ?? 0
+        return (
+          bitmap.colors[(row * bitmap.width + column) * RGBA_STRIDE + (index % RGBA_STRIDE)] ?? 0
+        )
       })
     ),
   }
@@ -113,7 +121,10 @@ export const getDominantColor = (
 }
 
 // The most common colour of a bitmap's opaque pixels that is not darker than the threshold (a hub on a dark tyre), null when there is none.
-export const getDominantBrightColor = (bitmap: SceneBitmap, minimumBrightness: number): number | null =>
+export const getDominantBrightColor = (
+  bitmap: SceneBitmap,
+  minimumBrightness: number
+): number | null =>
   getColorShares(bitmap).find(
     ({ color }) => Math.max(color >> 16, (color >> 8) & 0xff, color & 0xff) >= minimumBrightness
   )?.color ?? null

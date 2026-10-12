@@ -28,7 +28,9 @@ const getPlanParts = (spec: MinifigSpec, posture: MinifigPosture) =>
 
 // Where the figure's own down (LDraw's +y, the way a hanging limb points) goes in a part's place.
 const getHangingDirection = (key: MinifigPartKey, posture: MinifigPosture): Vector3 => {
-  const plan = createMinifigPartPlans(createSpec(), posture).find((candidate) => candidate.key === key)
+  const plan = createMinifigPartPlans(createSpec(), posture).find(
+    (candidate) => candidate.key === key
+  )
   if (plan === undefined) throw new Error(`The figure has no ${key}`)
   return new Vector3(0, 1, 0).transformDirection(plan.matrix)
 }

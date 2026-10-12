@@ -8,7 +8,7 @@ import {
 } from '@lego-games/lego-racers/skeletal-animation'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import { Matrix4 } from 'three'
-import type { SkeletonPoseSampler } from './skeleton-pose.types.ts'
+import type { PoseControls, SkeletonPoseSampler } from './skeleton-pose.types.ts'
 
 const MATRIX_SIZE = 16
 const FIRST_CLIP_INDEX = 0
@@ -44,5 +44,26 @@ export const createSkeletonPoseSampler = (model: ModelScene): SkeletonPoseSample
         : createSkeletonAnimationState(animation, clipIndex),
     advance: (state: SkeletonAnimationState, deltaMilliseconds: number) =>
       advanceSkeletonAnimation(state, animation, deltaMilliseconds),
+  })
+}
+
+// What the viewer calls on a drawing: the animation state the original is posed with, or whole milliseconds of the part's own clock
+// (from the state the original starts it in); each ends in `onPose` with the state to show, or null for the rest pose.
+export const createPoseControls = (
+  sampler: SkeletonPoseSampler,
+  onPose: (state: SkeletonAnimationState | null) => void
+): PoseControls => {
+  let state = sampler.createState()
+  onPose(state)
+  return Object.freeze({
+    setAnimationState: (next: SkeletonAnimationState) => {
+      state = next
+      onPose(state)
+    },
+    animate: (deltaMilliseconds: number) => {
+      if (state === null) return
+      state = sampler.advance(state, deltaMilliseconds)
+      onPose(state)
+    },
   })
 }

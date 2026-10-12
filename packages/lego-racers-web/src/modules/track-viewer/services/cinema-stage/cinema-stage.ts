@@ -154,13 +154,10 @@ export const createCinemaStage = (
     const figure = figureSlot.show(partBytes.join(':'), () => {
       const model = loadMenuDriverScene(archive, partBytes, FIGURE_ANIMATION_NAME)
       figureAnimation = model.scene.animations[0]?.animation ?? null
-      return showRacerPartDrawing(
-        createModelObject(model),
-        model,
-        archive,
-        RacerPartKind.DRIVER,
-        { modelName: null, partBytes }
-      )
+      return showRacerPartDrawing(createModelObject(model), model, archive, RacerPartKind.DRIVER, {
+        modelName: null,
+        partBytes,
+      })
     })
     figure.group.matrix.copy(getActionMatrix(action))
     figure.group.matrixWorldNeedsUpdate = true

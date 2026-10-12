@@ -14,3 +14,8 @@ export type SkeletonPoseSampler = {
     deltaMilliseconds: number
   ) => SkeletonAnimationState
 }
+
+export type PoseControls = {
+  readonly setAnimationState: (state: SkeletonAnimationState) => void
+  readonly animate: (deltaMilliseconds: number) => void
+}

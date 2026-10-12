@@ -12,7 +12,7 @@ import type { MinifigPartPlan } from './minifig-assembly.types.ts'
 import { getMinifigRig } from './minifig-rig.ts'
 import type { MinifigAttachment, MinifigRig } from './minifig-rig.types.ts'
 import { createMinifigSpec, getDriverPartBytes } from './minifig-spec.ts'
-import { createSkeletonPoseSampler } from './skeleton-pose.ts'
+import { createPoseControls, createSkeletonPoseSampler } from './skeleton-pose.ts'
 import type { SkeletonPoseSampler } from './skeleton-pose.types.ts'
 import { ensureStudioLights } from './studio-scene-lights.ts'
 
@@ -149,32 +149,23 @@ export const createLDrawDriverDrawing = (
     entry.decal.mesh.position.set(0, entry.y, 0)
     holders.get(entry.key)?.add(entry.decal.mesh)
   }
-  let state: SkeletonAnimationState | null = sampler.createState()
-  const pose = () => {
-    const pose = getRestOrPose(sampler, state)
+  const pose = (state: SkeletonAnimationState | null) => {
+    const posed = getRestOrPose(sampler, state)
     for (const [key, holder] of holders) {
       holder.matrix
-        .copy(getAttachmentMatrix(rig.attachments[key], sampler.restMatrices, pose))
+        .copy(getAttachmentMatrix(rig.attachments[key], sampler.restMatrices, posed))
         .multiply(figureFrame)
       holder.matrixWorldNeedsUpdate = true
     }
     ensureStudioLights(object, rig.posture === MinifigPosture.STANDING)
   }
-  pose()
+  const controls = createPoseControls(sampler, pose)
   return Object.freeze({
     settled: Promise.all([...loads, ...decals.map((entry) => entry?.decal?.settled)]).then(
       () => undefined
     ),
     object,
-    setAnimationState: (next: SkeletonAnimationState) => {
-      state = next
-      pose()
-    },
-    animate: (deltaMilliseconds: number) => {
-      if (state === null) return
-      state = sampler.advance(state, deltaMilliseconds)
-      pose()
-    },
+    ...controls,
     dispose: () => {
       isDisposed = true
       for (const group of loadedGroups) disposeObject(group)

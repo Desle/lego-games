@@ -1,7 +1,8 @@
 import type { Scene } from 'three'
 import type { LDrawRacerPartDrawing } from '../ldraw-racer/ldraw-racer-drawing.types.ts'
 
-export type GalleryView = 'front' | 'side' | 'top' | 'rear' | 'threeQuarter' | 'figureFront' | 'figureRear'
+export type GalleryView =
+  'front' | 'side' | 'top' | 'rear' | 'threeQuarter' | 'figureFront' | 'figureRear'
 
 // Which skeleton and parts a driver is made for: the race's seated driver or the menus' standing figure.
 export type GalleryFigure = 'race' | 'menu'

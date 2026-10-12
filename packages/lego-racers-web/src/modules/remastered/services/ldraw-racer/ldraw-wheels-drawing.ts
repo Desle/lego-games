@@ -5,7 +5,7 @@ import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
 import { applyPlasticLook } from '../ldraw-car/ldraw-plastic.ts'
 import { disposeObject } from './dispose-object.ts'
 import { getBatchSurfaces, getDominantBrightColor } from './model-surface.ts'
-import { createSkeletonPoseSampler } from './skeleton-pose.ts'
+import { createPoseControls, createSkeletonPoseSampler } from './skeleton-pose.ts'
 import { getWheelSet } from './ldraw-wheel-sets.ts'
 import { ensureStudioLights } from './studio-scene-lights.ts'
 import { findWheels } from './wheel-analysis.ts'
@@ -115,8 +115,7 @@ export const createLDrawWheelsDrawing = (
       (error: unknown) => console.error('The LDraw library could not build the wheels', error)
     )
   })
-  let state: SkeletonAnimationState | null = sampler.createState()
-  const pose = () => {
+  const pose = (state: SkeletonAnimationState | null) => {
     const matrices = state === null ? sampler.restMatrices : sampler.getMatrices(state)
     for (const { wheel, holder, local } of placements) {
       const bone = matrices[wheel.boneIndex]
@@ -126,19 +125,11 @@ export const createLDrawWheelsDrawing = (
     }
     ensureStudioLights(object)
   }
-  pose()
+  const controls = createPoseControls(sampler, pose)
   return Object.freeze({
     settled: Promise.all(loads).then(() => undefined),
     object,
-    setAnimationState: (next: SkeletonAnimationState) => {
-      state = next
-      pose()
-    },
-    animate: (deltaMilliseconds: number) => {
-      if (state === null) return
-      state = sampler.advance(state, deltaMilliseconds)
-      pose()
-    },
+    ...controls,
     dispose: () => {
       isDisposed = true
       for (const group of loadedGroups) disposeObject(group)

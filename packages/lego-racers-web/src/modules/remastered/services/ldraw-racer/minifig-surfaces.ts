@@ -14,7 +14,12 @@ const FRONT_NORMAL_X = 0.5
 const FALLBACK_COLOR = 0xf2cd37
 // The face card of `ICB_CHAR.GCB`'s `heads` (four triangles on the face bone) shows this part of the 64 x 64 face picture, and is 32 raw
 // units wide and 20 high: the same on all 30 faces (read off their triangles).
-const FACE_RECTANGLE: UvRectangle = Object.freeze({ left: 0.27, right: 0.722, bottom: 0.375, top: 0.688 })
+const FACE_RECTANGLE: UvRectangle = Object.freeze({
+  left: 0.27,
+  right: 0.722,
+  bottom: 0.375,
+  top: 0.688,
+})
 const FACE_WIDTH = 32
 const FACE_HEIGHT = 20
 const TWO_TONE_DOMINANT_SHARE = 0.85
@@ -59,10 +64,7 @@ const getUvRectangle = (
 }
 
 // The size of the triangles' surface across the figure (y) and up it (z), raw model units.
-const getSurfaceSize = (
-  mesh: SceneMesh,
-  triangles: readonly SurfaceTriangle[]
-): SurfaceSize => {
+const getSurfaceSize = (mesh: SceneMesh, triangles: readonly SurfaceTriangle[]): SurfaceSize => {
   const vertices = triangles.flatMap((triangle) => triangle.vertices)
   const [low, high] = getBounds(vertices.map((vertex) => mesh.positions[vertex * 3 + 1] ?? 0))
   const [bottom, top] = getBounds(vertices.map((vertex) => mesh.positions[vertex * 3 + 2] ?? 0))
