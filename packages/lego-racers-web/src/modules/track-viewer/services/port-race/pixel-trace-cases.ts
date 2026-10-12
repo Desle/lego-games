@@ -84,6 +84,19 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
     ],
   },
   {
+    // The demonstration lap passes the track's tree sprites (world keyword 0x37, GolDP.dll 0x10009a70): before they were
+    // drawn their picture (`rktree`, named `rndtree` by the matcher) was missing from both frames.
+    request: {
+      name: 'Royal Knights, world sprites',
+      raceFolder: 'RACEC0R0',
+      localPlayerCount: 0,
+      frameCount: 345,
+      recordFrames: [250, 340],
+    },
+    maximumDifferingShare: 0.03,
+    watchedTextures: [{ label: 'rndtree', maximumDifferingShare: 0.04 }],
+  },
+  {
     request: {
       name: 'Royal Knights, barrel scars',
       raceFolder: 'RACEC0R0',

@@ -67,4 +67,31 @@ describe.skipIf(!isGamePresent())('play-test visuals', () => {
       [1478, 1490, 1550].map((frame) => [frame, 0, 0])
     )
   })
+
+  it('turns the power-up bricks with their clip, as the original does (0x00457900, 0x0045a490)', async () => {
+    // Arrange: frames 12 apart (396 ms, half a turn of the 800 ms clip) with bricks in view
+    const request = {
+      name: 'Alien Rally Asteroid, brick spin',
+      raceFolder: 'RACEC2R3',
+      recordFrames: [250, 262],
+      watched: [{ label: 'bricks', originalTexture: '^pup', portSource: '^PUBRICKY/' }],
+    }
+
+    // Act
+    const result = await runRenderComparison(request)
+
+    // Assert: the port's brick triangles moved between the frames and every one has a partner in the original at both
+    const [first, second] = result.watched
+    const distance = Math.hypot(
+      (first?.portCentre[0] ?? 0) - (second?.portCentre[0] ?? 0),
+      (first?.portCentre[1] ?? 0) - (second?.portCentre[1] ?? 0),
+      (first?.portCentre[2] ?? 0) - (second?.portCentre[2] ?? 0)
+    )
+    const mismatches = result.groups.filter(
+      (group) => /^PUBRICKY\//.test(group.source) && group.kind !== 'state'
+    )
+    expect(first?.portCount).toBeGreaterThan(0)
+    expect(distance).toBeGreaterThan(0.01)
+    expect(mismatches.map((group) => `${group.kind} ${group.source}`)).toEqual([])
+  })
 })

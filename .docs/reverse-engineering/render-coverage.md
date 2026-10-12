@@ -93,11 +93,10 @@ Ranked by visibility (pixels x frames), in groups with one likely cause; "never 
 - Evidence (mismatch table, texture/UV/colour kinds on shared triangles): `water01/titwater` (tit, tit2) 1,677 triangles with UV `(1.9393, 0.3319) -> (1.4136, 0.3319)`: the port's `u` stays at 1.4136 while the original's runs on; `pswater/pswater` (psp) 839; `rkwater2/rktrans` (rkr) 185 (`v` stuck at 0.1640); `fallls/iawater` (igp) 120; `wtrfall/aaawatr`, `pool/aaawatr3`, `amazon/aaaamzon` (ama) 203 + 110 + 464; `falls/dffall` (dfd) 189; `energy1/2 araenrgy` (aar) 250; `mmlava/mmlava`, `lava01/02` (mmm, att) 381 + 133; `warpent/warpent` and `arrow1/4 rrcurb` (rr) 186 + 285; `DT0FLA1/2 burn2` flames 1,520 (small phase shifts, 0.003 in `v`: the port's scroll runs a frame or two off); `SHEOUT0..2/sbfan` 1,800 (the fan UVs drift). See the animated-material table below.
 - Likely cause: UV scroll of mesh instances (`Instance_ApplyVelocity` `0x10027f40` adds `dt` x the scroll rates to the instance shorts `+0x60`, `+0x62`, [skeletal-animation.md](skeletal-animation.md)) is not applied to the viewer's track materials, except for the effects it already scrolls (`race-effects.ts`). **Hypothesis**: not verified against the scroll data of one instance.
 
-### 4. World sprites (`0x37`) are never drawn
+### 4. World sprites (`0x37`): fixed
 
-- Evidence: the `World` sprite list (`0x1002d950`: count `+0x6c`, 0x38-byte records at `+0x70`) is parsed (`world` module, `Sprite`) and their material animations started by the sim, but no viewer code builds them. The original draws them: `rndtree` (royal knights sprite `rktree`, 8 sprites; 202 triangles in rkr/rkr2, 272,000 px), `adtorch` (dad 54, frk 15 torches; 313 triangles, 234,000 px), `aranbula`, `araastrd`, `ararobot` (aar/aar2: 13 sprites, 330 triangles, about 480,000 px), `aaaspidr` (ama, 3), `skullhd`/`skullhd2` (frk, 3 + 7), `bushtree` and `atsklpst` (att: `bshtre` 3 + `mate2205` 16), `radar` (mmm: `mmradish`), `mmplanet`, `mmplane2`, `dfmoon` (dfd, 1), `ip_lmp`, `ip_llt02` (ipp: 3 + 4), `ktcbl` (frk). Each of these has `portSources` empty in every race. Sprite counts per world come from the `.WDB` lists (RACEC0R0 `RRTRK.WDB` 8, RACEC0R2 54, RACEC0R3 4, RACEC1R0 1, RACEC1R2 3, RACEC1R3 7, RACEC2R0 26, RACEC2R2 19, RACEC2R3 13; none in RACEC0R1, 1R1, 2R1, 3R0).
-- Candidates: loader `0x1002d950`; keywords `0x39` material name, `0x31` position, `0x38` vector (flag 2), `0x3a`/`0x3b`/`0x3c` floats (size and distance, default `FLT_MAX`), `0x2b`, `0x3e` (material animation link, `0x1002e250` `World_LinkSpriteMaterialAnimation`, `0x10017ac0`); sprite attachment to a camera `0x004047b0` (not ported). **The draw function is not located yet** (task: find the reader of world `+0x6c`/`+0x70` in the world draw and record the billboard rule: size, facing, distance cut). The sprite material animation (flame flipbooks of `adtorch`) then comes from item 6's mechanism.
-- Size: medium (a billboard mesh per sprite in the viewer's scene builder, plus the facing rule).
+- Done: the draw (`Renderer_DrawSprite` `0x10009a70`, called per sprite by `World_DrawSprites` `0x10018270` after the world's instances) is located and ported: position, facing (a camera-facing rectangle; with the `0x38` axis it turns around the axis), size, distance limit, white vertex colours, the diagonal, the texture row order and the draw order. See [world-sprite.md](world-sprite.md) (it also corrects the old guess that `0x004047b0` has to do with sprites: it is the camera lock). Of the sprites' original triangles every one the port draws has its partner at the same corners, texture coordinates and colour in forward and mirrored races (`rkr`, `rkr2`, `mmm`, `mmm2`, `dad`, `frk`, `aar2`, `dfd` re-swept); the case `Royal Knights, world sprites` (pixel trace) and `world-sprite.trace.spec.ts` hold it.
+- Left: the flame flipbooks of `adtorch` (item 6's mechanism), the colour-key state (`isAlphaTestEnabled`, finding 9 of render-trace.md), and the race preview's four sprites in the front end.
 
 ### 5. Screen overlays outside the world comparison
 
@@ -151,7 +150,7 @@ Ranked by visibility (pixels x frames), in groups with one likely cause; "never 
 
 ## Task list (one fix each)
 
-1. World sprites: build billboards; find the draw rule (item 4). Medium; largest absent set of props (18 races).
+1. ~~World sprites~~ (item 4): done, see [world-sprite.md](world-sprite.md).
 2. Apply MAB rows to the scene materials (item 6); fixes the last race's wall lights and the sprite flame flipbooks.
 3. Apply instance UV scroll to the track materials and check the clock phase (item 3).
 4. Sky: material texture, depth, colour keyframes (item 1); first separate the sky from the cars in the sweep.

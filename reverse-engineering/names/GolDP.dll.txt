@@ -117,6 +117,15 @@
 10002c90 Bone_TransformDirection
 10002a00 Bone_GetAxes
 10025da0 MaterialAnimationEntry_Start
+10018270 World_DrawSprites
+10009a70 Renderer_DrawSprite
+10014e50 Sprite_BuildBillboardMatrix
+10014ff0 Sprite_DrawQuad
+10029e30 Sprite_SetMaterialAndSize
+10029e90 Sprite_SetMaterialAssignment
+10029fa0 Sprite_GetIsWithinDistance
+1002a020 Sprite_GetMaterial
+10029df0 Sprite_Constructor
 10023ef0 SkeletonInstance_UpdateBoundingSphere
 100240b0 SkeletonInstance_GetVisibility
 1002bc20 Frustum_TestSphere

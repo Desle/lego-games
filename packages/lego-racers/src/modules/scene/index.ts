@@ -52,6 +52,7 @@ export type {
   SceneRenderState,
   SceneRotation,
   SceneSkeleton,
+  SceneSprite,
   SceneTexture,
   SceneVector,
 } from './types/scene.types.ts'
