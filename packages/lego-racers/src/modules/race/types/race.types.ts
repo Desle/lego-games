@@ -27,6 +27,7 @@ import type {
   RacerPowerUpAbilities,
 } from '../../power-ups/index.ts'
 import type { SavedCar } from '../../car-builder/index.ts'
+import type { CameraFovEffect } from './camera-fov-effect/camera-fov-effect.types.ts'
 import type { PowerUpPlacements } from '../../power-up/index.ts'
 import type { RacerAppearance, RacerFigures } from '../../racer-appearance/index.ts'
 import type {
@@ -66,6 +67,8 @@ export type RaceRacerDefinition = {
   readonly preferredPowerUpLevel: number
   // Description +0x74 → racer +0xd40.
   readonly voiceBase: number
+  // Description +0x78 → racer +0xd54: the engine sounds' scale.
+  readonly engineSoundValue: number
   // The files the car is drawn from, and the figures (wheels, driver) that 0x0043d7a0 binds to them.
   readonly appearance: RacerAppearance
   readonly figures: RacerFigures
@@ -208,6 +211,8 @@ export type RaceState = {
   readonly playerRacerIndices: readonly number[]
   // Race +0x258, stride 0x74.
   readonly playerControllers: readonly PlayerController[]
+  // Camera +0x134..+0x148 of each local player: the field-of-view effect, which draws from the random table.
+  readonly cameraFovEffects: readonly CameraFovEffect[]
   // Race +0x6dc: the power-ups, and the events they raised that Race_Update has not handed on yet.
   readonly powerUpStep: PowerUpStep
   readonly powerUpSetups: readonly RaceRacerPowerUpSetup[]
@@ -318,6 +323,8 @@ export type RaceEvent =
   | { readonly type: 'race.resumed' }
   | { readonly type: 'race.power_up'; readonly event: PowerUpEvent }
   | { readonly type: 'race.projectile'; readonly event: ProjectileEvent }
+  // A sound the racers' passes played (0x00443b80).
+  | { readonly type: 'race.racer_sound'; readonly soundId: number; readonly address: string }
   | { readonly type: 'race.track_effect'; readonly effect: TrackEffect }
 
 export type RaceStepResult = {

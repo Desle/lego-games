@@ -9,8 +9,20 @@ export {
   getCountdownSound,
   getPowerSlideSound,
   getRaceEventSounds,
+  getSkidStartSound,
   POWER_UP_SOUND_SITES,
 } from './controller/race-sounds/race-sounds.ts'
+export {
+  INITIAL_ENGINE_SOUND_STATE,
+  stepEngineSounds,
+} from './controller/engine-sounds/engine-sounds.ts'
+export type {
+  EngineLoop,
+  EngineLoopKind,
+  EngineSoundInput,
+  EngineSoundState,
+  EngineSoundStep,
+} from './controller/engine-sounds/engine-sounds.types.ts'
 export { SoundBankKind } from './types/sound-bank-kind/sound-bank-kind.ts'
 export type {
   MusicCue,

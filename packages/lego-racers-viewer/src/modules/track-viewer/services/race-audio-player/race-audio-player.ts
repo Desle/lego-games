@@ -1,5 +1,7 @@
 import { decodeMusic, decodeSoundEffect } from '@lego-games/lego-racers/audio'
 import type { MusicCue, SoundRequest } from '@lego-games/lego-racers/race-audio'
+import type { RacerEngineLoops } from '@lego-games/lego-racers/race-presentation'
+import type { Vector3 } from '@lego-games/lego-racers/simulation-math'
 import { RACE_MUSIC_VOLUME, SoundBankKind } from '@lego-games/lego-racers/race-audio'
 import { COMMON_DIRECTORY } from '@lego-games/lego-racers/scene'
 import {
@@ -8,7 +10,11 @@ import {
   SILENT_PLAYER,
 } from '../audio-buffer/audio-buffer.ts'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
-import type { RaceAudioPlayer } from './race-audio-player.types.ts'
+import type { PlayingSound, RaceAudioPlayer } from './race-audio-player.types.ts'
+
+const MINIMUM_HEARING_DISTANCE = 30
+const MAXIMUM_HEARING_DISTANCE = 300
+const MINIMUM_PLAYBACK_RATE = 0.05
 
 // The race's sound effects (`.PCM` in LEGO.JAM, the entries of GENERAL.SBK and the track's bank) and its music
 // (`.tun` files), decoded by the audio module and played through Web Audio. Music loops as the cue says; a new
@@ -48,6 +54,50 @@ export const createRaceAudioPlayer = (assets: RaceAssets): RaceAudioPlayer => {
   }
 
   let isDisposed = false
+  // Racer +0xd9c..+0xda8: every racer's loops, by racer and kind. The sound objects hear within 30 to 300 units
+  // (0x004b0958, 0x004b095c): full volume inside the first, none beyond the second.
+  const loops = new Map<string, PlayingSound>()
+  const stopLoop = (key: string) => {
+    loops.get(key)?.source.stop()
+    loops.delete(key)
+  }
+  const setEngineLoops = (racers: readonly RacerEngineLoops[], listener: Vector3) => {
+    if (isDisposed) return
+    for (const { racerIndex, position, loops: racerLoops } of racers) {
+      const distance = Math.hypot(
+        position.x - listener.x,
+        position.y - listener.y,
+        position.z - listener.z
+      )
+      const hearing = Math.min(
+        Math.max(
+          (MAXIMUM_HEARING_DISTANCE - distance) /
+            (MAXIMUM_HEARING_DISTANCE - MINIMUM_HEARING_DISTANCE),
+          0
+        ),
+        1
+      )
+      for (const loop of racerLoops) {
+        const key = `${String(racerIndex)}:${loop.kind}`
+        if (!loop.isPlaying) {
+          stopLoop(key)
+          continue
+        }
+        const known = loops.get(key)
+        const path = getSoundPath({ soundId: loop.soundId, location: loop.location, address: '' })
+        const buffer = path === null ? null : getSoundBuffer(path)
+        if (known === undefined && buffer !== null) {
+          const created = start(buffer, true, 0)
+          loops.set(key, created)
+        }
+        const current = loops.get(key)
+        if (current === undefined) continue
+        current.gain.gain.value = loop.volume * hearing
+        current.source.playbackRate.value = Math.max(loop.pitch, MINIMUM_PLAYBACK_RATE)
+      }
+    }
+  }
+
   const start = (buffer: AudioBuffer, isLooping: boolean, volume: number) => {
     const source = context.createBufferSource()
     const gain = context.createGain()
@@ -56,7 +106,7 @@ export const createRaceAudioPlayer = (assets: RaceAssets): RaceAudioPlayer => {
     gain.gain.value = volume
     source.connect(gain).connect(context.destination)
     source.start()
-    return source
+    return { source, gain }
   }
 
   return Object.freeze({
@@ -79,10 +129,12 @@ export const createRaceAudioPlayer = (assets: RaceAssets): RaceAudioPlayer => {
         createAudioBuffer(context, decoded.samples, decoded.channelCount, decoded.sampleRate),
         cue.isLooping,
         Math.min(RACE_MUSIC_VOLUME, 1)
-      )
+      ).source
     },
+    setEngineLoops,
     dispose: () => {
       isDisposed = true
+      for (const key of [...loops.keys()]) stopLoop(key)
       music?.stop()
       void context.close()
     },

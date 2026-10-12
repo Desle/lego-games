@@ -35,6 +35,7 @@ export const HANDLERS_2A: TrackEventHandlers = Object.freeze({
       session.emit({
         type: 'track.sound_played',
         identifier: positioned.identifier,
+        soundNumber: positioned.record.keyword2cInteger,
         position: positioned.position,
       })
       return positioned
@@ -63,6 +64,7 @@ export const HANDLERS_2A: TrackEventHandlers = Object.freeze({
       session.emit({
         type: 'track.sound_played',
         identifier: base.identifier,
+        soundNumber: base.kind === TrackEventKind.KIND_2A ? base.record.keyword2cInteger : 0,
         position: base.position,
       })
     }

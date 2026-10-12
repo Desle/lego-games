@@ -88,7 +88,7 @@ describe('usePowerUp', () => {
     const used = usePowerUp(step, CONTEXT, 0, NO_ABILITIES)
 
     // Assert
-    expect(used.events.at(-1)).toEqual({ type: 'power_ups.racer_taunted', racer: 0 })
+    expect(used.events.at(-1)).toMatchObject({ type: 'power_ups.racer_taunted', racer: 0 })
   })
 
   it('uses the brick at the enhancement level, then releases the enhancement bricks (0x00439100)', () => {

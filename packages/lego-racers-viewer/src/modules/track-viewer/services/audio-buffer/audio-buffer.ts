@@ -27,5 +27,6 @@ export const SILENT_PLAYER = Object.freeze({
   resume: () => undefined,
   playSound: () => undefined,
   playMusic: () => undefined,
+  setEngineLoops: () => undefined,
   dispose: () => undefined,
 })

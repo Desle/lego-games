@@ -402,6 +402,7 @@ export const useRaceController = (): RaceController => {
         )
         presentation = frame.presentation
         for (const sound of frame.sounds) audio.playSound(sound)
+        audio.setEngineLoops(frame.engineLoops, frame.cameraView.position)
         if (frame.music !== null) audio.playMusic(frame.music)
         viewport.update(
           getRacerPoses(raceState),

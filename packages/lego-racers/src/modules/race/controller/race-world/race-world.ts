@@ -116,6 +116,7 @@ export const getRacerSetOf = (racerSet: RaceRacerSet): RacerSet =>
     registryEntries: racerSet.registryEntries,
     registryContacts: racerSet.registryContacts,
     emitters: racerSet.emitters,
+    sounds: racerSet.sounds,
   })
 
 // What a racer tells the power-ups about itself (the flags at racer +0xd04, car body +0x6c0 and driver +0x14).

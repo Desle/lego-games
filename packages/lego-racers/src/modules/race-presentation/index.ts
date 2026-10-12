@@ -18,6 +18,7 @@ export type {
   HudContext,
   RacePresentation,
   RacePresentationFrame,
+  RacerEngineLoops,
   RacerPartCentres,
   RacerPose,
   RacerShadow,

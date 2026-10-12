@@ -90,7 +90,13 @@ export type TrackEventSet = Readonly<Record<TrackEventKind, readonly TrackEvent[
 // What an event or hazard asks of the parts of the game the port does not simulate (rendering, sound, the world's
 // animations) or of the racers; each names the original call.
 export type TrackEffect =
-  | { readonly type: 'track.sound_played'; readonly identifier: number; readonly position: Vector3 }
+  | {
+      readonly type: 'track.sound_played'
+      readonly identifier: number
+      // The sound id the event plays (event +0x3c, a track bank id from 3000).
+      readonly soundNumber: number
+      readonly position: Vector3
+    }
   | { readonly type: 'track.looped_sound_started'; readonly identifier: number }
   | { readonly type: 'track.looped_sound_stopped'; readonly identifier: number }
   | {

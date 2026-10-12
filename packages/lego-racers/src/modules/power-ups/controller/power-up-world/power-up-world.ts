@@ -1,3 +1,5 @@
+import type { PowerUpEvent } from '../../events/power-up.events.types.ts'
+import { BrickState } from '../../types/power-up-effect-kind/power-up-effect-kind.ts'
 import { NO_EMITTER_POOLS } from '../../../emitter/index.ts'
 import { getIsBrickCollectable, getTouchedBrick } from '../../types/brick-base/brick-base.ts'
 import {
@@ -91,23 +93,33 @@ export const updatePowerUps = (
   const brickSpinAngle = getIsBelowOrEqual(spin, FULL_TURN)
     ? storeFloat(spin)
     : storeFloat(subtract(spin, FULL_TURN))
-  const bricksUpdated = Object.freeze({
-    ...step,
-    world: Object.freeze({
-      ...step.world,
-      bricks: Object.freeze(
-        step.world.bricks.map((brick) =>
-          advancePowerUpBrick(context.arithmetic, brick, stepMilliseconds)
-        )
-      ),
-      enhancementBricks: Object.freeze(
-        step.world.enhancementBricks.map((brick) =>
-          advanceEnhancementBrick(context.arithmetic, brick, stepMilliseconds)
-        )
-      ),
-      brickSpinAngle,
+  const advancedBricks = step.world.bricks.map((brick) =>
+    advancePowerUpBrick(context.arithmetic, brick, stepMilliseconds)
+  )
+  // 0x00457710: a brick that starts to appear plays sound 0xe (once the race is on).
+  const appearEvents: readonly PowerUpEvent[] = advancedBricks.flatMap((brick, index) =>
+    brick.isSoundEnabled &&
+    brick.state === BrickState.APPEARING &&
+    step.world.bricks[index]?.state !== BrickState.APPEARING
+      ? [{ type: 'power_ups.sound_played' as const, soundId: 0xe, address: '0x0045780f' }]
+      : []
+  )
+  const bricksUpdated = getStepWithEvents(
+    Object.freeze({
+      ...step,
+      world: Object.freeze({
+        ...step.world,
+        bricks: Object.freeze(advancedBricks),
+        enhancementBricks: Object.freeze(
+          step.world.enhancementBricks.map((brick) =>
+            advanceEnhancementBrick(context.arithmetic, brick, stepMilliseconds)
+          )
+        ),
+        brickSpinAngle,
+      }),
     }),
-  })
+    appearEvents
+  )
   return recyclePowerUpEffects(updateEffects(bricksUpdated, context, stepMilliseconds))
 }
 
@@ -133,8 +145,19 @@ export const touchPowerUpBricks = (
       getStatusIsWarping(context, contact.racer)
     )
     const withRacer = getStepWithRacer(current, contact.racer, touch.racer)
+    // 0x00457820: the touch plays 0x31, or 0x48 when the racer already held a brick, once the race is on.
+    const sounded =
+      touch.isCollected && brick.isSoundEnabled
+        ? getStepWithEvents(withRacer, [
+            {
+              type: 'power_ups.sound_played',
+              soundId: getRacer(current, contact.racer).heldBrickKind === null ? 0x31 : 0x48,
+              address: '0x004578c1',
+            },
+          ])
+        : withRacer
     return Object.freeze({
-      ...withRacer,
+      ...sounded,
       world: Object.freeze({
         ...withRacer.world,
         bricks: Object.freeze(
@@ -167,10 +190,20 @@ export const touchEnhancementBricks = (
     const collect = getRacerWithEnhancement(racer, current.world.random, contact.brick)
     if (!collect.isAccepted) return touched
     const withRacer = getStepWithRacer(
-      Object.freeze({
-        ...touched,
-        world: Object.freeze({ ...touched.world, random: collect.random }),
-      }),
+      getStepWithEvents(
+        Object.freeze({
+          ...touched,
+          world: Object.freeze({ ...touched.world, random: collect.random }),
+        }),
+        // 0x00439420: the brick's sound is 0xb plus the level the racer had.
+        [
+          {
+            type: 'power_ups.sound_played',
+            soundId: racer.enhancementLevel + 0xb,
+            address: '0x00439465',
+          },
+        ]
+      ),
       contact.racer,
       collect.racer
     )

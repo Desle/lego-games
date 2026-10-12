@@ -100,7 +100,10 @@ export type PowerUpEvent =
       readonly racer: number
       readonly directions: readonly Vector3[]
     }
+  // A sound the power-up code plays through the race's sound player (0x00443b50, 0x00443b80); `address` is the return
+  // address of the call.
+  | { readonly type: 'power_ups.sound_played'; readonly soundId: number; readonly address: string }
   // 0x00439240: a driver voice.
   | { readonly type: 'power_ups.voice'; readonly racer: number; readonly sound: number }
   // 0x00439c90 (Racer_Taunt): using with nothing held plays sound racer +0xd23 and notifies the event system.
-  | { readonly type: 'power_ups.racer_taunted'; readonly racer: number }
+  | { readonly type: 'power_ups.racer_taunted'; readonly racer: number; readonly sound: number }

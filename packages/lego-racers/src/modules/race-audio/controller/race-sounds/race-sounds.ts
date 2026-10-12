@@ -54,6 +54,11 @@ const getPowerUpEventSounds = (event: PowerUpEvent): readonly SoundRequest[] => 
     case 'power_ups.racer_shield_struck':
       return [createRequest(event.sound, '0x0043a2df')]
     // 0x00439240: a driver voice (1000 + r % 6, + 6 for a taunt).
+    // 0x00439c90 (Racer_Taunt) plays the racer's taunt sound.
+    case 'power_ups.racer_taunted':
+      return [createRequest(event.sound, '0x00439cd0')]
+    case 'power_ups.sound_played':
+      return [createRequest(event.soundId, event.address)]
     case 'power_ups.voice':
       return [createRequest(event.sound, '0x004392ff')]
     // 0x0045cd70: the turbo's level sound and the shared turbo sound.
@@ -82,6 +87,11 @@ const getPowerUpEventSounds = (event: PowerUpEvent): readonly SoundRequest[] => 
 // (0x00439404 plays the start sound); the power-up events play the sounds of the functions that raise them.
 export const getRaceEventSounds = (event: RaceEvent): readonly SoundRequest[] => {
   if (event.type === 'race.power_up') return getPowerUpEventSounds(event.event)
+  if (event.type === 'race.racer_sound') return [createRequest(event.soundId, event.address)]
+  // 0x004642c0 and 0x004643e0: a track event (2A) plays its sound from the track bank (the id is the event's own, 3000 and up).
+  if (event.type === 'race.track_effect' && event.effect.type === 'track.sound_played') {
+    return [createRequest(event.effect.soundNumber, '0x004644aa')]
+  }
   if (
     event.type === 'race.phase_changed' &&
     event.from === RacePhase.INTRODUCTION &&
@@ -100,6 +110,9 @@ export const COUNTDOWN_SOUND_IDS = Object.freeze({
   second: COUNTDOWN_SECOND_SOUND,
   go: GO_SOUND,
 })
+
+// 0x00437d40: the skid begins with sound 2.
+export const getSkidStartSound = (): SoundRequest => createRequest(2, '0x00438450')
 
 // 0x00439870 and 0x004397c0: a player's power slide starts and stops with a sound.
 export const getPowerSlideSound = (isStarting: boolean): SoundRequest =>

@@ -2,6 +2,7 @@ import {
   activatePowerUp,
   advanceComputerPowerUpUse,
   BrickKind,
+  getTauntSoundId,
   keepPermanentTurbo,
   touchEnhancementBricks,
   touchPowerUpBricks,
@@ -212,11 +213,22 @@ const guidePlayer: RacerBoundary = (context, racerSet, racerIndex, stepMilliseco
       : racer
   )
 
+// Racer_Taunt 0x00439c90 from 0x004377f0: the racer plays its taunt sound (racer +0xd23, 0x00439cd0); the signal it then
+// sends to the event bus (0x00462580, identifier 999) is not ported.
+const playTaunt: RacerBoundary = (_context, racerSet, racerIndex) =>
+  Object.freeze({
+    ...racerSet,
+    sounds: Object.freeze([
+      ...racerSet.sounds,
+      { soundId: getTauntSoundId(getRacer(racerSet, racerIndex).voiceBase), address: '0x00439cd0' },
+    ]),
+  })
+
 // RacerSetStepDependencies for a race. Wired: the car rigid body and the scripted car body with the car body's contact
 // filter and surface values, the collision manager with the registry (triggers and bricks), the computer's power-up
 // use and the permanent turbo, the player's wrong-way warning, the driver's route following 0x004203b0, the vehicle
 // 0x0043e070, the timed effect and the car body effect. Audio and presentation (sounds, camera, effects) keep the
-// racer's stand-in. Still stubs: the taunt 0x00439c90 and the contact sound.
+// racer's stand-in. Still stubs: the contact notification.
 export const RACE_STEP_DEPENDENCIES: RacerSetStepDependencies = Object.freeze({
   followDriverRoute,
   stepRigidBody: stepRacerRigidBodyWithContacts,
@@ -229,7 +241,7 @@ export const RACE_STEP_DEPENDENCIES: RacerSetStepDependencies = Object.freeze({
   considerComputerPowerUp: considerPowerUp,
   endCarBodyEffect,
   endTimedEffect,
-  tauntNearestRacer: keepRacerSetNotYetPorted,
+  tauntNearestRacer: playTaunt,
   updatePlayerGuidance: guidePlayer,
   notifyRacerContact: keepRacerSetNotYetPorted,
   triggerPowerUpEffect: keepTurbo,
