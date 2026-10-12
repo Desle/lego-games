@@ -11,6 +11,15 @@ import { drawRandomValue } from '../../../random-table/index.ts'
 import type { FloatArithmetic } from '../../../simulation-math/index.ts'
 import { getRacer, setRacer, setRandomPosition } from '../racer-state/racer-state.ts'
 import type { Racer, RacerBoundary, RacerSet, RacerSetContext, Vehicle } from '../racer.types.ts'
+import {
+  getSkidCooldownsStepped,
+  getSkidsStarted,
+  getSkidsStepped,
+  getSkidsStopped,
+  getSkidsWithImageName,
+  SKID_IMAGE_NAME,
+  TURBO_SKID_IMAGE_NAME,
+} from '../vehicle-skids/vehicle-skids.ts'
 import type { SpawnedVehicleEmitter } from './vehicle-emitters.types.ts'
 
 const COMPUTER_CONTROLLER = 2
@@ -146,6 +155,7 @@ export const startVehicleTireSmoke = (
   return setVehicle(spawned.racerSet, racerIndex, (current) => ({
     ...current,
     tireSmokeEmitter: spawned.reference,
+    skids: getSkidsStarted(current.skids, racer.carBody.rigidBody.flags),
     flags: current.flags | TIRE_SMOKE_RUNNING_FLAG,
   }))
 }
@@ -160,6 +170,7 @@ export const stopVehicleTireSmoke = (racerSet: RacerSet, racerIndex: number): Ra
   return setVehicle(released, racerIndex, (current) => ({
     ...current,
     tireSmokeEmitter: null,
+    skids: getSkidsStopped(current.skids),
     flags: current.flags & ~TIRE_SMOKE_RUNNING_FLAG,
   }))
 }
@@ -170,6 +181,7 @@ export const stopVehicleTireSmoke = (racerSet: RacerSet, racerIndex: number): Ra
 export const stopVehicleEffectsForWarp = (racerSet: RacerSet, racerIndex: number): RacerSet =>
   setVehicle(stopVehicleTireSmoke(racerSet, racerIndex), racerIndex, (vehicle) => ({
     ...vehicle,
+    skids: getSkidsWithImageName(vehicle.skids, SKID_IMAGE_NAME),
     flags: vehicle.flags & ~WARP_CLEARED_VEHICLE_FLAGS,
   }))
 
@@ -187,7 +199,12 @@ export const startVehicleTurboEffects = (
     startVehicleDust(context, racerSet, racerIndex),
     racerIndex
   )
-  return racer.turboLevel === 0 ? smoking : startVehicleTireSmoke(context, smoking, racerIndex)
+  if (racer.turboLevel === 0) return smoking
+  const named = setVehicle(smoking, racerIndex, (current) => ({
+    ...current,
+    skids: getSkidsWithImageName(current.skids, TURBO_SKID_IMAGE_NAME),
+  }))
+  return startVehicleTireSmoke(context, named, racerIndex)
 }
 
 // 0x0043fd90: the wheels spin up; a racer that is not a computer starts its tire smoke.
@@ -299,7 +316,8 @@ const drawCursor = (context: RacerSetContext, racerSet: RacerSet): RacerSet =>
 export const updateVehicleEmitters = (
   context: RacerSetContext,
   racerSet: RacerSet,
-  racerIndex: number
+  racerIndex: number,
+  stepMilliseconds: number
 ): RacerSet => {
   const first = getRacer(racerSet, racerIndex)
   if ((first.flags & RACER_DISABLED_FLAG) !== 0) return racerSet
@@ -312,14 +330,34 @@ export const updateVehicleEmitters = (
     : isWheelSpinFlagged
       ? stopVehicleWheelSpin(racerSet, racerIndex)
       : racerSet
-  const afterSpin = getRacer(spun, racerIndex)
+  const cooled = setVehicle(spun, racerIndex, (vehicle) => ({
+    ...vehicle,
+    skids: getSkidCooldownsStepped(vehicle.skids, stepMilliseconds),
+  }))
+  const afterSpin = getRacer(cooled, racerIndex)
   const stopped =
     (afterSpin.flags & RACER_TUMBLING_FLAG) !== 0 &&
     (afterSpin.vehicle.flags & TIRE_SMOKE_RUNNING_FLAG) !== 0
-      ? stopVehicleTireSmoke(spun, racerIndex)
-      : spun
-  const landed = getRacerAfterLanding(context, stopped, racerIndex)
+      ? stopVehicleTireSmoke(cooled, racerIndex)
+      : cooled
+  const skidded = getRacerAfterSkids(context, stopped, racerIndex, stepMilliseconds)
+  const landed = getRacerAfterLanding(context, skidded, racerIndex)
   return updateRunningEmitters(context, landed, racerIndex)
+}
+
+// 0x0043f1e0: while the tire smoke runs, the wheels' marks follow the ground and the car.
+const getRacerAfterSkids = (
+  context: RacerSetContext,
+  racerSet: RacerSet,
+  racerIndex: number,
+  stepMilliseconds: number
+): RacerSet => {
+  const racer = getRacer(racerSet, racerIndex)
+  if ((racer.vehicle.flags & TIRE_SMOKE_RUNNING_FLAG) === 0) return racerSet
+  return setVehicle(racerSet, racerIndex, (vehicle) => ({
+    ...vehicle,
+    skids: getSkidsStepped(context.arithmetic, racer, stepMilliseconds),
+  }))
 }
 
 // The landing of Vehicle_Update: more than 400 ms airborne arms it, the next update with more wheels on the ground

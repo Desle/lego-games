@@ -169,3 +169,10 @@ export type {
   RacerSetStepInput,
   RacerTables,
 } from './types/racer.types.ts'
+export type {
+  VehicleSkids,
+  VehicleSkidStep,
+  VehicleSkidWheel,
+  VehicleWheelMarks,
+} from './types/vehicle-skids/vehicle-skids.types.ts'
+export { SKID_IMAGE_NAME, TURBO_SKID_IMAGE_NAME } from './types/vehicle-skids/vehicle-skids.ts'
