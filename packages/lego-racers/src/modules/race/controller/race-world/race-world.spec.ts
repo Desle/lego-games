@@ -180,3 +180,82 @@ describe('zones (0x00464680)', () => {
     })
   })
 })
+
+describe('barrier hazards (0x0048f030, 0x0048e5a0, 0x0048e600)', () => {
+  const getBarrierRaceSet = (): RaceRacerSet => {
+    const racerSet = getRaceRacerSet(createFixtureRace(), NO_RACE_CONTACTS)
+    const shootme = {
+      name: 'shootme',
+      flags: 0x11,
+      firstInteger: 0,
+      secondInteger: 0,
+      thirdInteger: 0,
+      fourthInteger: 7,
+      firstVector: [0, 0, 0],
+      secondVector: [0, 0, 0],
+      fifthInteger: 0,
+      sixthInteger: 0,
+      seventhInteger: 0,
+      linkedName: null,
+      firstFloat: 0,
+      secondFloat: 0,
+      thirdFloat: 0,
+      fourthFloat: 0,
+      fifthFloat: 0,
+    } as const
+    return Object.freeze({
+      ...racerSet,
+      surfaces: Object.freeze({
+        ...racerSet.surfaces,
+        trackMaterials: new Map([[shootme.name, shootme]]),
+      }),
+    })
+  }
+
+  const changeBarrier = (racerSet: RaceRacerSet, isSolid: boolean): RaceRacerSet =>
+    changeTrackLogic({ ...createFixtureRace().context }, racerSet, (trackLogic) => ({
+      state: trackLogic,
+      effects: [{ type: 'hazard.collision_object_changed', name: 'shootme', isSolid }],
+    }))
+
+  it('opens the named track material to cars and projectiles when the hazard says it is not solid', () => {
+    // Arrange
+    const racerSet = getBarrierRaceSet()
+
+    // Act
+    const opened = changeBarrier(racerSet, false)
+
+    // Assert
+    expect(opened.surfaces.trackMaterials.get('shootme')?.flags).toBe(0x30011)
+    expect(racerSet.surfaces.trackMaterials.get('shootme')?.flags).toBe(0x11)
+  })
+
+  it('closes it again when the hazard says it is solid', () => {
+    // Arrange
+    const opened = changeBarrier(getBarrierRaceSet(), false)
+
+    // Act
+    const closed = changeBarrier(opened, true)
+
+    // Assert
+    expect(closed.surfaces.trackMaterials.get('shootme')?.flags).toBe(0x11)
+  })
+
+  it('changes nothing for a material the race does not have', () => {
+    // Arrange
+    const racerSet = getBarrierRaceSet()
+
+    // Act
+    const changed = changeTrackLogic(
+      { ...createFixtureRace().context },
+      racerSet,
+      (trackLogic) => ({
+        state: trackLogic,
+        effects: [{ type: 'hazard.collision_object_changed', name: 'missing', isSolid: false }],
+      })
+    )
+
+    // Assert
+    expect(changed.surfaces).toBe(racerSet.surfaces)
+  })
+})

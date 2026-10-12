@@ -5,7 +5,11 @@ import {
 } from '../../../racer-ai/index.ts'
 import { createPowerUpWorld, setBrickSoundsEnabled } from '../../../power-ups/index.ts'
 import { getRaceModeRacerFlags, getRacerPowerUpAbilities } from '../../../racer-setup/index.ts'
-import { createProjectileWorld, createTrackLineProbe } from '../../../projectiles/index.ts'
+import {
+  createProjectileWorld,
+  createTrackLineProbe,
+  NO_PROBE_SURFACE,
+} from '../../../projectiles/index.ts'
 import type { GroundQuery } from '../../../power-ups/index.ts'
 import {
   createCarBody,
@@ -199,7 +203,11 @@ const getTrackGroundQuery = (definition: RaceDefinition): GroundQuery | null => 
     track === undefined
       ? null
       : ((): GroundQuery => {
-          const probe = createTrackLineProbe(definition.arithmetic, track.volume, () => false)
+          const probe = createTrackLineProbe(
+            definition.arithmetic,
+            track.volume,
+            () => NO_PROBE_SURFACE
+          )
           return (start, end) => probe(start, end)?.point ?? null
         })()
   groundQueries.set(definition, query)

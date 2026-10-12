@@ -57,7 +57,7 @@ A trigger (`0x58` bytes main, `0x3c` environment) is a registry entry (sphere); 
 
 - Main `Fire` (`0x00463c70`): a racer whose lap differs from `secondInteger` (flag `0x4000`) is ignored; `objectName` (flag `0x2000`) touches a tagged position (`0x0045e520`, effect); then `0x00464f40` (first touch announces `firstInteger` with `StartSignal` and sets flag 2; flag 1 = touched) and, for a racer new to the trigger (`+0x3c` mask against last frame's `+0x40`), `FireTrigger(id, racer)`.
 - `Triggers_Update` (list vtable `+0x10`, `0x00465450`): every trigger's vtable `+0xc`: environment `0x00464ef0` (a trigger nobody touched stops its signal with `StopSignal`), main `0x00463c00` (the same, then `ReleaseTrigger(id, racer)` for racers inside last frame and not now, then the masks shift). Environment triggers first, then main.
-- Not ported: the projectile contact (`contact type 2`, `0x0045b9a0`), and the registry's overlap detection itself (`0x0042fd10`): the caller delivers `TrackTriggerContact`s.
+- Not ported: the registry contact type 2 (`0x0045b9a0`; no shipped trigger file sets the flag `0x2c` that registers for it). The projectiles' hit on a surface with a signal (`0x0041f730`) is ported: [surface-signals.md](surface-signals.md), and the registry's overlap detection itself (`0x0042fd10`): the caller delivers `TrackTriggerContact`s.
 
 ## Timers and the registry's time list
 

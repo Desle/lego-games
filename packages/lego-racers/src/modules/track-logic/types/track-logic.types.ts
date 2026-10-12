@@ -260,6 +260,13 @@ export type TrackLogicInput = {
   readonly emitters?: TrackEmitters
 }
 
+// The signals the projectiles' line probes started and stopped earlier in the frame (0x0041f730, in the power-ups'
+// update, which runs after the worlds' animation and before the triggers).
+export type SurfaceSignal = {
+  readonly identifier: number
+  readonly position: Vector3
+}
+
 export type TrackLogicStep = {
   readonly state: TrackLogicState
   readonly effects: readonly TrackEffect[]

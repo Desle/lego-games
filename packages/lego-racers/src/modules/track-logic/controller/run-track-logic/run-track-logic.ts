@@ -1,5 +1,6 @@
 import type { Vector3 } from '../../../event/index.ts'
 import type {
+  SurfaceSignal,
   TrackLogicContext,
   TrackLogicState,
   TrackLogicStep,
@@ -34,16 +35,22 @@ export const updateTrackEvents = (
   milliseconds: number
 ): TrackLogicStep => runTrackLogic(state, context, (session) => session.updateEvents(milliseconds))
 
-// The track logic's part of Race_Update 0x00435220, in its order: the worlds' animation (0x00416090), Triggers_Update
-// (environment, then main), Emitters_Update (both pools), Events_Update, Hazards_Update, Timers_Update.
+// The track logic's part of Race_Update 0x00435220, in its order: the worlds' animation (0x00416090), the surface
+// signals of the power-ups' probes, Triggers_Update (environment, then main), Emitters_Update (both pools),
+// Events_Update, Hazards_Update, Timers_Update.
 export const updateTrackLogicFrame = (
   state: TrackLogicState,
   context: TrackLogicContext,
   milliseconds: number,
-  racerCount: number
+  racerCount: number,
+  surfaceSignals: readonly SurfaceSignal[] = []
 ): TrackLogicStep =>
   runTrackLogic(state, context, (session) => {
     session.advanceWorlds(milliseconds)
+    surfaceSignals.forEach(({ identifier, position }) => {
+      session.startSignal(identifier, position)
+      session.stopSignal(identifier, position)
+    })
     session.updateTriggers(racerCount)
     session.updateEmitters(milliseconds)
     session.updateEvents(milliseconds)

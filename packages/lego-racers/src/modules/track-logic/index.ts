@@ -14,6 +14,7 @@ export {
   TrackEventState,
 } from './types/track-event-state/track-event-state.ts'
 export type {
+  SurfaceSignal,
   TrackEffect,
   TrackEvent,
   TrackEventAction,
