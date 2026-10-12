@@ -203,6 +203,7 @@ const SCENE: Scene = {
       rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     },
   ],
+  sprites: [],
   cameras: [],
   ambientLights: [],
   directionalLights: [],
@@ -297,5 +298,28 @@ describe('createSceneObject', () => {
     expect(material.depthTest).toBe(false)
     expect(material.depthWrite).toBe(false)
     expect(mesh.renderOrder).toBe(1)
+  })
+
+  it('swaps the material of a slot for every batch that reads it (a material animation write)', () => {
+    // Arrange
+    const sceneWithSecondMaterial: Scene = {
+      ...SCENE,
+      materials: [MATERIAL, { ...MATERIAL, name: 'moss' }],
+    }
+    const sceneObject = createSceneObject(sceneWithSecondMaterial, TRACK_OPTIONS)
+    const mesh = sceneObject.group.children[0]!.children[0] as Mesh
+    const first = mesh.material
+
+    // Act
+    const isSwapped = sceneObject.setMaterialSlot('rock01', 0, 0, 'moss')
+    const isUnknownMaterialSwapped = sceneObject.setMaterialSlot('rock01', 0, 0, 'lava')
+    const isUnknownInstanceSwapped = sceneObject.setMaterialSlot('missing', 0, 0, 'moss')
+
+    // Assert
+    expect(isSwapped).toBe(true)
+    expect(isUnknownMaterialSwapped).toBe(false)
+    expect(isUnknownInstanceSwapped).toBe(false)
+    expect(mesh.material).not.toBe(first)
+    sceneObject.dispose()
   })
 })

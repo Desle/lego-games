@@ -12,3 +12,9 @@ export type BaseBounds = {
   readonly minimumZ: number
   readonly maximumZ: number
 }
+
+// The edges of a row of studs along one axis, in LDraw units.
+export type StudSpan = {
+  readonly minimum: number
+  readonly maximum: number
+}

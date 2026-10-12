@@ -170,6 +170,21 @@ export type SceneInstance = {
   readonly rotation: SceneRotation
 }
 
+// A world sprite (`0x37`, GolDP.dll 0x1002d950): a rectangle that turns to the camera, drawn after the world's instances.
+export type SceneSprite = {
+  // The world that defined the sprite.
+  readonly worldPath: string
+  // Null when the material assignment's entry does not exist (the sprite then draws nothing).
+  readonly materialIndex: number | null
+  readonly position: SceneVector
+  // Keyword 0x38: the axis the sprite turns around instead of facing the camera whole; null faces it whole.
+  readonly axis: SceneVector | null
+  readonly width: number
+  readonly height: number
+  // The sprite is drawn only when the squared distance to the camera does not exceed this (infinity for "always").
+  readonly squaredDistance: number
+}
+
 export type SceneCamera = {
   readonly name: string
   readonly position: SceneVector
@@ -202,6 +217,7 @@ export type Scene = {
   readonly skeletons: readonly SceneSkeleton[]
   readonly animations: readonly SceneAnimation[]
   readonly instances: readonly SceneInstance[]
+  readonly sprites: readonly SceneSprite[]
   readonly cameras: readonly SceneCamera[]
   readonly ambientLights: readonly SceneAmbientLight[]
   readonly directionalLights: readonly SceneDirectionalLight[]

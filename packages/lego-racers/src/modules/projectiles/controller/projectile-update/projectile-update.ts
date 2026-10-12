@@ -16,6 +16,7 @@ import type {
   PowerUpEffect,
   PowerUpStep,
 } from '../../../power-ups/index.ts'
+import type { Vector3 } from '../../../simulation-math/index.ts'
 import { BallisticFlightState } from '../../types/ballistic-flight/ballistic-flight.ts'
 import {
   getMotion,
@@ -41,7 +42,7 @@ import { updateGrapple } from '../grapple-effect/grapple-effect.ts'
 import { getIsSpeedNearZero } from '../../types/turbo-early-end/turbo-early-end.ts'
 import {
   createMagnetMotion,
-  getHazardPlacement,
+  getHazardLanding,
   getMagnetLandingBoost,
   getMagnetPull,
 } from '../../types/magnet-pull/magnet-pull.ts'
@@ -288,6 +289,9 @@ const updateGrappleWithSmoke: EffectUpdate = (step, world, context, before, step
       })
 }
 
+// 0x00452ae0 reads the owner's route node (racer +0xcc4) plane normal, or +x without one.
+const FORWARD_WITHOUT_ROUTE: Vector3 = Object.freeze({ x: 1, y: 0, z: 0 })
+
 // 0x004573a0 and 0x00452ae0: the slick or the curse lands on the ground under the racer it was thrown from (0x00456360)
 // as it leaves state 2.
 const updateHazard: EffectUpdate = (step, world, context, before, stepMilliseconds) => {
@@ -297,6 +301,12 @@ const updateHazard: EffectUpdate = (step, world, context, before, stepMillisecon
   const racer = placedRacer === null ? undefined : context.racers[placedRacer]
   const isLanding = before.state === EffectState.STARTING && after.state === EffectState.ACTIVE
   if (!isLanding || racer === undefined) return Object.freeze({ step: counted, world })
+  const landing = getHazardLanding(
+    context.powerUps.arithmetic,
+    racer.position,
+    context.powerUps.getGroundPoint
+  )
+  const routeNode = racer.routeNodeIndex === null ? undefined : context.route[racer.routeNodeIndex]
   return Object.freeze({
     step: counted,
     world: getWorldWithMotion(
@@ -304,11 +314,10 @@ const updateHazard: EffectUpdate = (step, world, context, before, stepMillisecon
       before.id,
       Object.freeze({
         kind: 'hazard',
-        position: getHazardPlacement(
-          context.powerUps.arithmetic,
-          racer.position,
-          context.powerUps.getGroundPoint
-        ),
+        position: landing.position,
+        groundNormal: landing.normal,
+        routeNormal: routeNode?.normal ?? FORWARD_WITHOUT_ROUTE,
+        landingMilliseconds: stepMilliseconds,
       })
     ),
   })

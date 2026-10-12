@@ -1,4 +1,4 @@
-import { MinifigPartKey, MinifigPosture } from './minifig-assembly.types.ts'
+import { MinifigPosture } from './minifig-assembly.types.ts'
 import { getMinifigRig } from './minifig-rig.ts'
 
 const SEATED_BONES = ['rrpelvis', 'torso', 'arm_l', 'arm_r', 'dummy01', 'head']
@@ -35,9 +35,17 @@ describe('getMinifigRig', () => {
     const rig = getMinifigRig(SEATED_BONES)
 
     // Assert
-    expect([rig?.posture, rig?.attachments[MinifigPartKey.HEAD]]).toEqual([
-      MinifigPosture.SEATED,
-      { kind: 'bone', boneIndex: 4 },
+    expect([rig?.posture, rig?.torsoIndex, rig?.headIndex]).toEqual([MinifigPosture.SEATED, 1, 4])
+  })
+
+  it("points a seated driver's legs forward with the pelvis and his arms with their bones", () => {
+    // Arrange / Act
+    const rig = getMinifigRig(SEATED_BONES)
+
+    // Assert
+    expect([rig?.limbs.legs.left, rig?.limbs.arms.right.kind]).toEqual([
+      { kind: 'bone', boneIndex: 0, bindDirection: [0, 0, -1] },
+      'bone',
     ])
   })
 
@@ -46,26 +54,38 @@ describe('getMinifigRig', () => {
     const rig = getMinifigRig(STANDING_BONES)
 
     // Assert
-    expect([rig?.posture, rig?.attachments[MinifigPartKey.LEFT_ARM]]).toEqual([
+    expect([rig?.posture, rig?.limbs.arms.left]).toEqual([
       MinifigPosture.STANDING,
       {
         kind: 'chord',
         startIndex: STANDING_BONES.indexOf('l_sh2296'),
         endIndex: STANDING_BONES.indexOf('l_wr2329'),
-        outwardSign: 1,
       },
     ])
   })
 
-  it('splays the right arm the other way and gives a hand the line of its arm', () => {
+  it('lets a leg follow the line from its thigh to its ankle', () => {
     // Arrange / Act
     const rig = getMinifigRig(STANDING_BONES)
 
     // Assert
-    expect(rig?.attachments[MinifigPartKey.RIGHT_HAND]).toBe(
-      rig?.attachments[MinifigPartKey.RIGHT_ARM]
-    )
-    expect(rig?.attachments[MinifigPartKey.RIGHT_ARM]).toMatchObject({ outwardSign: -1 })
+    expect(rig?.limbs.legs.right).toEqual({
+      kind: 'chord',
+      startIndex: STANDING_BONES.indexOf('r_th2269'),
+      endIndex: STANDING_BONES.indexOf('r_an2272'),
+    })
+  })
+
+  it('twists the hands only when the skeleton has an elbow, a wrist and a hand on each side', () => {
+    // Arrange / Act
+    const withoutRightElbow = getMinifigRig(STANDING_BONES)
+    const complete = getMinifigRig([...STANDING_BONES, 'r_el2323'])
+
+    // Assert
+    expect([withoutRightElbow?.wrists, complete?.wrists?.right.forearmIndex]).toEqual([
+      null,
+      STANDING_BONES.length,
+    ])
   })
 
   it('knows no other skeleton', () => {

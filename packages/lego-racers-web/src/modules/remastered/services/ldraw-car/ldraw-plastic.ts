@@ -17,18 +17,23 @@ import type { Material, Object3D, Texture } from 'three'
 import type { StandardMesh } from './ldraw-plastic.types.ts'
 import { PLASTIC_APPEARANCE } from './ldraw-plastic.constants.ts'
 import { getActiveLook } from './ldraw-look.ts'
+import { LookEdges, LookShading, MaterialCategory } from './ldraw-look.types.ts'
 import type { LookAppearance } from './ldraw-look.types.ts'
-import { applyLookShader, getLookNeedsShader } from './ldraw-look-shader.ts'
+import { applyLookShader, getLookNeedsOcclusion, getLookNeedsShader } from './ldraw-look-shader.ts'
 import { bakeOcclusionVolume } from './ldraw-occlusion.ts'
 import type { OcclusionVolume } from './ldraw-occlusion.types.ts'
+import { getMaterialCategory, getMaterialSurface } from './ldraw-material-category.ts'
 
 // The decals are colour-keyed pictures: a keyed pixel has alpha 0.
 const DECAL_ALPHA_TEST = 0.5
+// The library's plain colours: roughness 0.3 (a material made here from a colour is plastic, not rubber).
+const LIBRARY_PLASTIC_ROUGHNESS = 0.3
 const ENVIRONMENT_FACE_SIZE = 64
 const CUBE_FACE_COUNT = 6
 const TOP_FACE_INDEX = 2
 const BOTTOM_FACE_INDEX = 3
 
+const encodedEdgeMaterials = new WeakSet<LineBasicMaterial>()
 const environments = new Map<boolean, CubeTexture>()
 
 const drawEnvironmentFace = (faceIndex: number, isStudio: boolean): HTMLCanvasElement | null => {
@@ -92,20 +97,36 @@ const getEnvironment = (isStudio: boolean): CubeTexture | null => {
   return texture
 }
 
-// The manual look outlines the bricks; the others drop the outlines, and the photographic ones keep the same lines as pale
-// catch-lights along the brick edges, where moulded plastic catches the light.
-const styleEdges = (materials: ReadonlySet<LineBasicMaterial>, look: LookAppearance) => {
+// The manual look dims and darkens the edge lines; the photo look turns them into pale additive catch-lights along the brick
+// edges, where moulded plastic catches the light (not on rubber, which is matte: its lines are dimmed); the instructions draw them
+// in the library's edge colour (a black part gets a grey edge), the toon look as black ink, and the other looks not at all.
+const styleEdges = (
+  materials: ReadonlySet<LineBasicMaterial>,
+  rubberMaterials: ReadonlySet<LineBasicMaterial>,
+  look: LookAppearance
+) => {
   for (const material of materials) {
-    if (look.catchLightOpacity > 0) {
+    const isRubberCatchLight = look.edges === LookEdges.CATCH_LIGHT && rubberMaterials.has(material)
+    if (look.edges === LookEdges.DIMMED || isRubberCatchLight) {
+      material.transparent = true
+      material.opacity = PLASTIC_APPEARANCE.edgeOpacity
+      material.color.lerp(new Color(0x000000), PLASTIC_APPEARANCE.edgeDarkening)
+    } else if (look.edges === LookEdges.CATCH_LIGHT && isConditionalLineMaterial(material)) {
+      // A conditional line is a curved part's silhouette (spokes, tyres, studs), not a moulded edge: it catches no light.
+      material.visible = false
+    } else if (look.edges === LookEdges.CATCH_LIGHT) {
       material.color.set(0xffffff)
       material.transparent = true
       material.opacity = look.catchLightOpacity
       material.blending = AdditiveBlending
       material.depthWrite = false
-    } else if (look.isEdgeVisible) {
-      material.transparent = true
-      material.opacity = PLASTIC_APPEARANCE.edgeOpacity
-      material.color.lerp(new Color(0x000000), PLASTIC_APPEARANCE.edgeDarkening)
+    } else if (look.edges === LookEdges.LIBRARY) {
+      // The renderer has no colour management: the edge colour is shown as the library names it, like the plastic of these looks.
+      // The library shares a colour's line material between models, so it is encoded once.
+      if (!encodedEdgeMaterials.has(material)) material.color.convertLinearToSRGB()
+      encodedEdgeMaterials.add(material)
+    } else if (look.edges === LookEdges.INK) {
+      material.color.set(0x000000)
     } else {
       material.visible = false
     }
@@ -114,17 +135,21 @@ const styleEdges = (materials: ReadonlySet<LineBasicMaterial>, look: LookAppeara
 
 const createPlasticMaterial = (
   source: MeshStandardMaterial,
-  look: LookAppearance
+  look: LookAppearance,
+  category: MaterialCategory,
+  volume: OcclusionVolume | null = null,
+  isWheel = false
 ): MeshPhysicalMaterial => {
-  const isMetal = source.metalness > 0.5
+  const surface = getMaterialSurface(category, source, look, isWheel)
   const material = new MeshPhysicalMaterial({
     color: source.color,
-    roughness: isMetal ? source.roughness : look.roughness,
-    metalness: source.metalness,
-    clearcoat: isMetal ? 0 : look.clearcoat,
+    roughness: surface.roughness,
+    metalness: surface.metalness,
+    clearcoat: surface.clearcoat,
     clearcoatRoughness: look.clearcoatRoughness,
-    envMap: getEnvironment(look.isEnvironmentStudio),
-    envMapIntensity: look.environmentIntensity,
+    envMap: surface.environmentIntensity > 0 ? getEnvironment(look.isEnvironmentStudio) : null,
+    envMapIntensity: surface.environmentIntensity,
+    flatShading: look.shading === LookShading.RETRO,
     transparent: source.transparent,
     opacity: source.opacity,
     depthWrite: source.depthWrite,
@@ -135,6 +160,8 @@ const createPlasticMaterial = (
     vertexColors: source.vertexColors,
   })
   material.name = source.name
+  if (getLookNeedsShader(look))
+    applyLookShader(material, look, volume, category === MaterialCategory.RUBBER)
   return material
 }
 
@@ -143,13 +170,17 @@ const createPlasticMaterial = (
 const getIsStandardMesh = (object: Object3D): object is StandardMesh =>
   object instanceof Mesh && object.material instanceof MeshStandardMaterial
 
+const createLibraryPlastic = (color: number): MeshStandardMaterial =>
+  new MeshStandardMaterial({ color, roughness: LIBRARY_PLASTIC_ROUGHNESS, side: DoubleSide })
+
 export const createPlasticMaterialFromColor = (color: number): MeshPhysicalMaterial =>
-  createPlasticMaterial(new MeshStandardMaterial({ color, side: DoubleSide }), getActiveLook())
+  createPlasticMaterial(createLibraryPlastic(color), getActiveLook(), MaterialCategory.PLASTIC)
 
 export const createPlasticMaterialFromTexture = (map: Texture): MeshPhysicalMaterial => {
   const material = createPlasticMaterial(
-    new MeshStandardMaterial({ color: 0xffffff, side: DoubleSide }),
-    getActiveLook()
+    createLibraryPlastic(0xffffff),
+    getActiveLook(),
+    MaterialCategory.PLASTIC
   )
   material.map = map
   material.alphaTest = DECAL_ALPHA_TEST
@@ -159,34 +190,55 @@ export const createPlasticMaterialFromTexture = (map: Texture): MeshPhysicalMate
 const isConditionalLineMaterial = (material: unknown): material is LineBasicMaterial =>
   material instanceof Object && Reflect.get(material, 'isConditionalLineMaterial') === true
 
-export const applyPlasticLook = (model: Object3D) => {
+const getLineMaterials = (object: Object3D): readonly LineBasicMaterial[] => {
+  const materials: unknown = Reflect.get(object, 'material')
+  return (Array.isArray(materials) ? materials : [materials]).filter(
+    (material): material is LineBasicMaterial =>
+      material instanceof LineBasicMaterial || isConditionalLineMaterial(material)
+  )
+}
+
+// The library names a colour's edge materials after it (`Rubber_Black - Edge`, `Rubber_Black - Conditional Edge`).
+const getIsEdgeOf = (line: LineBasicMaterial, colorNames: ReadonlySet<string>): boolean =>
+  colorNames.has(line.name.split(' - ')[0] ?? '')
+
+// `bakedVolume` is the occlusion grid a worker has baked for the model, as a texture; left out, the model is baked here. A wheel's
+// rim is plastic like the rest, but its thin spokes face the studio at every angle as the wheel turns, so in a glossy look they
+// would read as white: pass `isWheel` for a wheel's model and its plastic takes less of the reflected studio.
+export const applyPlasticLook = (
+  model: Object3D,
+  bakedVolume?: OcclusionVolume | null,
+  isWheel = false
+) => {
   const look = getActiveLook()
   const plasticBySource = new Map<Material, MeshPhysicalMaterial>()
-  const edgeMaterials = new Set<LineBasicMaterial>()
   const meshes: StandardMesh[] = []
+  const lines: Object3D[] = []
   model.traverse((child) => {
-    if (getIsStandardMesh(child)) {
-      meshes.push(child)
-      return
-    }
-    const lineMaterials: unknown = Reflect.get(child, 'material')
-    for (const material of Array.isArray(lineMaterials) ? lineMaterials : [lineMaterials]) {
-      if (material instanceof LineBasicMaterial || isConditionalLineMaterial(material))
-        edgeMaterials.add(material)
-    }
+    if (getIsStandardMesh(child)) meshes.push(child)
+    else if (getLineMaterials(child).length > 0) lines.push(child)
   })
-  const volume: OcclusionVolume | null = getLookNeedsShader(look)
-    ? bakeOcclusionVolume(model)
-    : null
+  const volume: OcclusionVolume | null =
+    bakedVolume !== undefined
+      ? bakedVolume
+      : getLookNeedsOcclusion(look)
+        ? bakeOcclusionVolume(model)
+        : null
+  const rubberNames = new Set<string>()
   for (const mesh of meshes) {
-    const plastic = plasticBySource.get(mesh.material) ?? createPlasticMaterial(mesh.material, look)
-    if (volume !== null && !plasticBySource.has(mesh.material)) {
-      applyLookShader(plastic, look, volume)
-    }
+    const category = getMaterialCategory(mesh.material)
+    if (category === MaterialCategory.RUBBER) rubberNames.add(mesh.material.name)
+    const plastic =
+      plasticBySource.get(mesh.material) ??
+      createPlasticMaterial(mesh.material, look, category, volume, isWheel)
     plasticBySource.set(mesh.material, plastic)
     mesh.material = plastic
   }
-  styleEdges(edgeMaterials, look)
+  const edgeMaterials = new Set(lines.flatMap(getLineMaterials))
+  const rubberEdgeMaterials = new Set(
+    [...edgeMaterials].filter((material) => getIsEdgeOf(material, rubberNames))
+  )
+  styleEdges(edgeMaterials, rubberEdgeMaterials, look)
 }
 
 // Key light from above and the front left, a cooler fill from the right, a sky and ground tint, and the studio in the plastic.

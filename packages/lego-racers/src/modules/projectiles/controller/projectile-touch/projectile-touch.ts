@@ -1,4 +1,5 @@
 import { EffectState, getEffect, touchHazardEffect } from '../../../power-ups/index.ts'
+import { getCurseTrackFrame } from '../../types/curse-frame/curse-frame.ts'
 import type { PowerUpStep } from '../../../power-ups/index.ts'
 import { touchBallisticFlight } from '../../types/ballistic-flight/ballistic-flight.ts'
 import { getIsWithinMagnetCaptureRange } from '../../types/magnet-pull/magnet-pull.ts'
@@ -84,12 +85,17 @@ export const touchProjectileHazards = (
       magnet !== null && racer !== undefined
         ? getIsWithinMagnetCaptureRange(context.powerUps.arithmetic, magnet, racer.position)
         : false
+    const curseFrame =
+      motion?.kind === 'hazard' ? getCurseTrackFrame(context.powerUps.arithmetic, motion) : null
     const touched = touchHazardEffect(
       current.step,
       context.powerUps,
       contact.effect,
       contact.racer,
-      isWithinRange
+      isWithinRange,
+      curseFrame === null
+        ? null
+        : Object.freeze({ position: curseFrame.floatingPosition, rotation: curseFrame.rotation })
     )
     const isReachingMagnetHit =
       contact.racer !== effect.ownerRacer &&

@@ -46,6 +46,14 @@ export type SceneObject = {
   // Advances every animated instance by this many whole milliseconds.
   readonly animate: (deltaMilliseconds: number) => void
   readonly animatedInstanceCount: number
+  // Puts the material the scene names into a slot of the material table of an instance's level (LEGORacers.exe
+  // 0x00410750, which the material animations of 0x004104c0 call); false when the instance, level or material is unknown.
+  readonly setMaterialSlot: (
+    instanceName: string,
+    levelIndex: number,
+    slot: number,
+    materialName: string
+  ) => boolean
   // Lights the skeleton models that have normals and no vertex colours with these lights again (null: none, as in a race).
   readonly setLights: (lights: SceneLights | null) => void
   // Poses every skeleton instance from this animation state (a racer's figure, whose clock the race keeps).
@@ -78,8 +86,15 @@ export type SceneObjectContext = {
   readonly textureCache: TextureCache
   readonly materials: Map<string, Material>
   readonly geometries: Map<string, BufferGeometry>
+  // The batch meshes that read each slot of a material table, for the material animations that rewrite the slot.
+  readonly slotMeshes: Map<string, readonly SlotMesh[]>
   // Counts the meshes created so far, for the background's draw order.
   readonly nextDrawOrder: () => number
+}
+
+export type SlotMesh = {
+  readonly mesh: Mesh
+  readonly source: SceneMesh
 }
 
 // An instance as three.js objects, with the function that moves it if it is animated.

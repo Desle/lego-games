@@ -1,3 +1,4 @@
+import type { Vector3 } from '../../../simulation-math/index.ts'
 import type { ProjectileEvent } from '../projectile-event/projectile-event.types.ts'
 import type { FlightRacer } from '../projectiles.types.ts'
 import type { MagnetMotion } from '../projectile-world/projectile-world.types.ts'
@@ -18,4 +19,11 @@ export type MagnetPull = {
   readonly events: readonly ProjectileEvent[]
   // 0x0045b690 and 0x00439730 end this racer's turbo.
   readonly turboEndedRacer: number | null
+}
+
+// Where 0x00456360 puts a hazard: the ground point 1 up (the position itself on a miss) and the normal of the triangle it
+// hit, or null on a miss.
+export type HazardLanding = {
+  readonly position: Vector3
+  readonly normal: Vector3 | null
 }

@@ -16,6 +16,27 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
     watchedTextures: [{ label: 'oilslk64', maximumDifferingShare: 0.05 }],
   },
   {
+    // The computers use curses from frame 164; the player drives into one at 191 and wears the curse figure from then on.
+    // Before the curse was drawn, none of its pictures (`curse1` and the green rings) was on the screen.
+    request: {
+      name: 'Royal Knights, curse hit',
+      raceFolder: 'RACEC0R0',
+      recordFrames: [190, 192, 215, 230, 260, 290],
+      powerUp: {
+        kind: 4,
+        level: 3,
+        grantFrame: 162,
+        useFrame: 1000,
+        frameCount: 320,
+        grantedRacers: [1, 2, 3, 4, 5],
+      },
+    },
+    // The worst frames (190, 192) are the tire smoke (`csmoke`) of the cars at the start, not the curse.
+    maximumDifferingShare: 0.08,
+    // The curse's picture (`curse1`), which the matcher names by its hash.
+    watchedTextures: [{ label: 'ee51a0cde6ae2c1d', maximumDifferingShare: 0.06 }],
+  },
+  {
     request: {
       name: 'Royal Knights',
       raceFolder: 'RACEC0R0',
@@ -63,6 +84,19 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
     ],
   },
   {
+    // The demonstration lap passes the track's tree sprites (world keyword 0x37, GolDP.dll 0x10009a70): before they were
+    // drawn their picture (`rktree`, named `rndtree` by the matcher) was missing from both frames.
+    request: {
+      name: 'Royal Knights, world sprites',
+      raceFolder: 'RACEC0R0',
+      localPlayerCount: 0,
+      frameCount: 345,
+      recordFrames: [250, 340],
+    },
+    maximumDifferingShare: 0.03,
+    watchedTextures: [{ label: 'rndtree', maximumDifferingShare: 0.04 }],
+  },
+  {
     request: {
       name: 'Royal Knights, barrel scars',
       raceFolder: 'RACEC0R0',
@@ -103,6 +137,24 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
     },
     maximumDifferingShare: 0.02,
     watchedTextures: [],
+  },
+  {
+    // The final race's wall lights are the material flipbook of TEST.MAB: the animation rewrites two slots of the
+    // track model's material table (LEGORacers.exe 0x004104c0, 0x00410750) and the lights cycle through rrlite1 to rrlite8.
+    request: {
+      name: 'RACEC3R0, wall lights',
+      raceFolder: 'RACEC3R0',
+      recordFrames: [100, 170, 200, 230, 260],
+    },
+    // Before the flipbook the lights stayed on rrlite4 and rrlite8 and 9.2 percent of the pixels the original paints with
+    // rrlite1 to rrlite3 differed (1.4 percent now). The worst frame is the skid marks (pixel-trace.md).
+    maximumDifferingShare: 0.055,
+    watchedTextures: [
+      { label: 'rrlite1', maximumDifferingShare: 0.03 },
+      { label: 'rrlite2', maximumDifferingShare: 0.03 },
+      { label: 'rrlite3', maximumDifferingShare: 0.03 },
+      { label: 'rrlite4', maximumDifferingShare: 0.03 },
+    ],
   },
   {
     // The champion ghost drives from the start line (GHOST.GHB, drawn from GHOST.WDB); the player idles behind it.

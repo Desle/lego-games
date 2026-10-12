@@ -167,6 +167,14 @@ const TURBO_MODEL_NAMES = [
   ],
 ]
 
+// POWERUP.WDB lists a curse's instances curse, cgreen and cgreen2 (the files CURSE, CGREEN and GREEN); 0x0045aeb0 looks
+// them up by those names.
+const CURSE_MODEL_NAMES = [
+  ['CURSE', 'curse'],
+  ['CGREEN', 'cgreen'],
+  ['GREEN', 'cgreen2'],
+] as const
+
 // POWERUP.WDB lists the four shields (instances shield0..3) on one skeleton and animation, the one of SHEOUT0.
 const SHIELD_MODEL_NAMES = ['SHEOUT0', 'SHEOUT1', 'SHEOUT2', 'SHEOUT3']
 
@@ -308,6 +316,11 @@ const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
         scroll: getInstanceTextureScroll(archive, instanceName ?? ''),
       }))
     ),
+    curse: CURSE_MODEL_NAMES.map(([name, instanceName]) => ({
+      model: loadEffectModel(archive, name, true),
+      animations: getFigureAnimations(archive.readFile(getRacerFilePath(name, 'ADB'))),
+      scroll: getInstanceTextureScroll(archive, instanceName),
+    })),
     shields: SHIELD_MODEL_NAMES.map((name) => loadEffectModel(archive, name, true, 'SHEOUT0')),
     shieldAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('SHEOUT0', 'ADB'))),
     powerUpBricks: Object.freeze(

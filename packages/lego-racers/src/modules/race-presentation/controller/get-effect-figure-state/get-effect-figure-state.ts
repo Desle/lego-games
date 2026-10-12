@@ -18,6 +18,19 @@ const getAdvancedFigure = (figure: Figure, remainingMilliseconds: number): Figur
         remainingMilliseconds - STEP_MILLISECONDS
       )
 
+// A looping clip repeats every period / rate milliseconds, so the milliseconds past whole turns change nothing: replaying
+// them one 33 ms step at a time overflowed the stack (and took longer every frame) once a brick had run for minutes.
+const getMillisecondsInTurn = (
+  animation: FigureAnimation | undefined,
+  elapsedMilliseconds: number
+): number => {
+  if (animation === undefined || animation.rate <= 0 || animation.period <= 0) {
+    return elapsedMilliseconds
+  }
+  const turnMilliseconds = animation.period / animation.rate
+  return elapsedMilliseconds - Math.floor(elapsedMilliseconds / turnMilliseconds) * turnMilliseconds
+}
+
 // An effect's figure (0x0040d550 bound to its skeleton instance, then 0x0040dad0 plays an animation, looping unless the
 // loop flag is cleared) after the milliseconds its effect has updated it (figure slot 4, 0x0040dd60) as the animation
 // state the pose sampling reads.
@@ -30,5 +43,12 @@ export const getEffectFigureState = (
     ...played,
     flags: (played.flags | FIGURE_PLAYS_FLAG) & (request.isLooping ? ~0 : ~FIGURE_LOOPS_FLAG),
   })
-  return getFigureAnimationState(getAdvancedFigure(playing, request.elapsedMilliseconds))
+  return getFigureAnimationState(
+    getAdvancedFigure(
+      playing,
+      request.isLooping
+        ? getMillisecondsInTurn(animations[request.animationId], request.elapsedMilliseconds)
+        : request.elapsedMilliseconds
+    )
+  )
 }
