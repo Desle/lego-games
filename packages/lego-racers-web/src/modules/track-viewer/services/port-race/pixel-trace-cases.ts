@@ -12,7 +12,7 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
       powerUp: { kind: 4, level: 0, grantFrame: 300, useFrame: 305, frameCount: 340 },
       recordFrames: [306, 309, 312, 316, 330],
     },
-    maximumDifferingShare: 0.03,
+    maximumDifferingShare: 0.012,
     watchedTextures: [{ label: 'oilslk64', maximumDifferingShare: 0.05 }],
   },
   {
