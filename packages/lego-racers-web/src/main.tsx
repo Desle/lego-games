@@ -13,7 +13,7 @@ const loadRemastered = async () => {
   if (!import.meta.env.DEV) return
   const remastered = await import('./modules/remastered/index.ts')
   if (remastered.getIsRemasteredRequested(window.location.search)) {
-    remastered.registerRemastered(window.location.search)
+    await remastered.registerRemastered(window.location.search)
   }
 }
 

@@ -1,11 +1,11 @@
 import type { Object3D } from 'three'
 import type {
-  BuiltCarDrawingRequest,
-  CarBodyDrawingRequest,
   EffectModelDrawingRequest,
   PictureCreatedEvent,
-  RacerPartDrawing,
-  RacerPartDrawingRequest,
+  CarDrawing,
+  CarDrawingRequest,
+  DriverDrawing,
+  DriverDrawingRequest,
   TextureCreatedEvent,
   ViewerExtension,
 } from './viewer-extensions.types.ts'
@@ -17,10 +17,9 @@ export const NEUTRAL_EXTENSION: ViewerExtension = Object.freeze({
   getRaceDisplay: () => null,
   getMenuSurfaceScale: () => null,
   getSoundReplacement: () => Promise.resolve(null),
-  getBuiltCarDrawing: () => null,
-  getCarBodyDrawing: () => null,
   getEffectModelDrawing: () => null,
-  getRacerPartDrawing: () => null,
+  getCarDrawing: () => null,
+  getDriverDrawing: () => null,
   getSelections: () => [],
 })
 
@@ -69,22 +68,6 @@ export const getSoundReplacement = async (
   return null
 }
 
-export const getBuiltCarDrawing = (request: BuiltCarDrawingRequest): Object3D | null => {
-  for (const extension of registeredExtensions) {
-    const drawing = extension.getBuiltCarDrawing(request)
-    if (drawing !== null) return drawing
-  }
-  return null
-}
-
-export const getCarBodyDrawing = (request: CarBodyDrawingRequest): Object3D | null => {
-  for (const extension of registeredExtensions) {
-    const drawing = extension.getCarBodyDrawing(request)
-    if (drawing !== null) return drawing
-  }
-  return null
-}
-
 export const getEffectModelDrawing = (request: EffectModelDrawingRequest): Object3D | null => {
   for (const extension of registeredExtensions) {
     const drawing = extension.getEffectModelDrawing(request)
@@ -93,9 +76,17 @@ export const getEffectModelDrawing = (request: EffectModelDrawingRequest): Objec
   return null
 }
 
-export const getRacerPartDrawing = (request: RacerPartDrawingRequest): RacerPartDrawing | null => {
+export const getCarDrawing = (request: CarDrawingRequest): CarDrawing | null => {
   for (const extension of registeredExtensions) {
-    const drawing = extension.getRacerPartDrawing(request)
+    const drawing = extension.getCarDrawing(request)
+    if (drawing !== null) return drawing
+  }
+  return null
+}
+
+export const getDriverDrawing = (request: DriverDrawingRequest): DriverDrawing | null => {
+  for (const extension of registeredExtensions) {
+    const drawing = extension.getDriverDrawing(request)
     if (drawing !== null) return drawing
   }
   return null

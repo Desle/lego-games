@@ -1,6 +1,6 @@
 import type { Group } from 'three'
 import { Group as ThreeGroup, Matrix4, Vector3 } from 'three'
-import type { RacerPartDrawingRequest } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
+import type { RacerPartDrawingRequest } from './ldraw-racer-drawing.types.ts'
 import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
 import { applyPlasticLook } from '../ldraw-car/ldraw-plastic.ts'
 import { disposeObject } from './dispose-object.ts'

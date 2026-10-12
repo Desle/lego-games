@@ -45,6 +45,20 @@ const getBrick = (piece: BrickPiece, placement: Partial<PlacedBrick>): PlacedBri
 })
 
 describe('createLDrawCarDocument', () => {
+  it('refers to the recipe file of a chassis it is told has one, in the footprint corner frame', () => {
+    // Arrange
+    const design = {
+      bricks: [getBrick(getPiece('KKchas0', 10, 6), { x: 1, y: 2 })],
+      grid: createBuildGrid(),
+    }
+
+    // Act
+    const { text, unmappedBricks } = createLDrawCarDocument(design, ORIGIN, new Set(['kkchas0']))
+
+    // Assert
+    expect([text, unmappedBricks]).toEqual(['1 4 20 0 40 1 0 0 0 1 0 0 0 1 kkchas0.ldr', []])
+  })
+
   it('places a 2 x 2 brick two studs along x and one along y as an LDraw line in LDraw axes', () => {
     // Arrange
     const design = {
