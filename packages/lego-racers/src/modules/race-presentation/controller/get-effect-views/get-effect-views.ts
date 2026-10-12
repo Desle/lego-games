@@ -277,12 +277,14 @@ const getRibbonViews = (raceState: RaceState): readonly RibbonView[] => {
     const effect = effects[effectId]
     const motion = raceState.projectileWorld.motions[effectId]
     if (effect === undefined || !DRAWN_STATES.includes(effect.state)) return []
-    if (
-      effect.kind === PowerUpEffectKind.WAND &&
-      motion?.kind === 'wand'
-    ) {
+    if (effect.kind === PowerUpEffectKind.WAND && motion?.kind === 'wand') {
       return [
-        getWandRibbon(raceState.context.arithmetic, motion.beam, motion.jitter, motion.initialJitter),
+        getWandRibbon(
+          raceState.context.arithmetic,
+          motion.beam,
+          motion.jitter,
+          motion.initialJitter
+        ),
       ]
     }
     if (

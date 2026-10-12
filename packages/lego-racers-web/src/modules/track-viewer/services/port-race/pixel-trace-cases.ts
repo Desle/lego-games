@@ -73,6 +73,28 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
     watchedTextures: [],
   },
   {
+    // The grapple's hook flies at 305, latches or misses and the rope retracts: frames 307 to 320 show the tether strip.
+    request: {
+      name: 'Royal Knights, grapple',
+      raceFolder: 'RACEC0R0',
+      powerUp: { kind: 1, level: 1, grantFrame: 300, useFrame: 305, frameCount: 340 },
+      recordFrames: [307, 312, 316, 320, 330],
+    },
+    maximumDifferingShare: 0.015,
+    watchedTextures: [{ label: 'rope', maximumDifferingShare: 0.1 }],
+  },
+  {
+    // The wand's beam grows from the muzzle at 305 and holds for 7 seconds: the lightning strip faces the camera.
+    request: {
+      name: 'Royal Knights, wand',
+      raceFolder: 'RACEC0R0',
+      powerUp: { kind: 1, level: 2, grantFrame: 300, useFrame: 305, frameCount: 340 },
+      recordFrames: [307, 312, 320, 326, 335],
+    },
+    maximumDifferingShare: 0.015,
+    watchedTextures: [{ label: 'lightng', maximumDifferingShare: 0.08 }],
+  },
+  {
     request: {
       name: 'RACEC0R1, crane shadow',
       raceFolder: 'RACEC0R1',

@@ -1,13 +1,16 @@
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 
-// 0x004b15d4 (1 / 1023), 0x004af58c (0.5) and 0x004b1554 (5): the jitter float a random table value becomes
-// (0x00454b20).
+// 0x004b15d4 (1 / 1023): the jitter float a random table value becomes (0x00454b20).
 const TABLE_VALUE_SCALE = Math.fround(1 / 1023)
+// 0x004af58c: half.
 const HALF = 0.5
+// 0x004b1554: the jitter's range.
 const JITTER_RANGE = 5
-// 0x00454bb0: the beam has four segments of five rings; each ring takes a value of the wand's ring of 20.
+// 0x00454bb0 (the loop counter 4): the beam has four segments.
 const SEGMENT_COUNT = 4
+// 0x00454c3f..0x00454c66 (the array 0x004c7608 to 0x004c7644): five rings a segment.
 const RINGS_PER_SEGMENT = 5
+// 0x00454b71 (compare with 0x14) and 0x00454c43 (0x13): the wand's ring holds 20 values.
 const SLOT_COUNT = 20
 
 // 0x00454b20: the jitter float of one random table value.

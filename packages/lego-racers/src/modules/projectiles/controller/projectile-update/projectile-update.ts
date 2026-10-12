@@ -10,7 +10,12 @@ import {
   updatePowerUpEffect,
   updatePowerUps,
 } from '../../../power-ups/index.ts'
-import type { PowerUpContext, PowerUpEffect, PowerUpStep } from '../../../power-ups/index.ts'
+import type {
+  EffectEmitterOwner,
+  PowerUpContext,
+  PowerUpEffect,
+  PowerUpStep,
+} from '../../../power-ups/index.ts'
 import { BallisticFlightState } from '../../types/ballistic-flight/ballistic-flight.ts'
 import {
   getMotion,
@@ -92,10 +97,29 @@ const flyCannon: EffectUpdate = (step, world, context, before, stepMilliseconds)
   )
 }
 
+// The racer whose frame an effect's smoke follows (the effect's +0x24).
+const getEmitterOwner = (
+  context: ProjectileContext,
+  ownerRacer: number | null
+): EffectEmitterOwner | null => {
+  const racer = ownerRacer === null ? undefined : context.racers[ownerRacer]
+  return racer === undefined
+    ? null
+    : { position: racer.position, rotation: racer.displayRotation, velocity: racer.velocity }
+}
+
 // The tail of 0x00451b50: the smoke is let go once its emitter has born enough particles.
 const updateCannon: EffectUpdate = (step, world, context, before, stepMilliseconds) => {
   const flown = flyCannon(step, world, context, before, stepMilliseconds)
-  return Object.freeze({ step: checkEffectEmitter(flown.step, before.id), world: flown.world })
+  return Object.freeze({
+    step: checkEffectEmitter(
+      flown.step,
+      before.id,
+      context.powerUps.arithmetic,
+      getEmitterOwner(context, before.ownerRacer)
+    ),
+    world: flown.world,
+  })
 }
 
 // 0x00452ff0 (barrel vtable slot 2): the flight first, then the countdown (0x004513a0), whose advance (0x00453240)
@@ -253,7 +277,15 @@ const updateGrappleWithSmoke: EffectUpdate = (step, world, context, before, step
   const flown = updateGrapple(step, world, context, before, stepMilliseconds)
   return before.state === EffectState.FINISHED
     ? flown
-    : Object.freeze({ step: checkEffectEmitter(flown.step, before.id), world: flown.world })
+    : Object.freeze({
+        step: checkEffectEmitter(
+          flown.step,
+          before.id,
+          context.powerUps.arithmetic,
+          getEmitterOwner(context, before.ownerRacer)
+        ),
+        world: flown.world,
+      })
 }
 
 // 0x004573a0 and 0x00452ae0: the slick or the curse lands on the ground under the racer it was thrown from (0x00456360)

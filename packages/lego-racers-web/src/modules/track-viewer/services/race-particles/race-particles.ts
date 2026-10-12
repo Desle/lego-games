@@ -15,27 +15,44 @@ import { Group, Mesh, type Material } from 'three'
 import { createDynamicGeometry } from '../dynamic-mesh/dynamic-mesh.ts'
 import { createSceneMaterial } from '../scene-object/scene-material.ts'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
-import type { MaterialBatch, RaceParticles } from './race-particles.types.ts'
+import type { BatchCorner, MaterialBatch, RaceParticles } from './race-particles.types.ts'
 
 const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
 
 // Ten emitters of the common pool and fourteen of the track's, sixteen particles each, two triangles a particle.
 const MAXIMUM_CORNERS = 24 * 16 * QUAD_TRIANGLE_CORNERS.length * 3
 const BYTE_MAXIMUM = 255
+const WHITE_VERTEX_COLOR: readonly [number, number, number, number] = Object.freeze([
+  BYTE_MAXIMUM,
+  BYTE_MAXIMUM,
+  BYTE_MAXIMUM,
+  BYTE_MAXIMUM,
+])
 
-const createBatch = (scenes: readonly Scene[], materialName: string): MaterialBatch | null => {
+const createBatch = (
+  scenes: readonly Scene[],
+  materialName: string,
+  isRowOrderKept: boolean
+): MaterialBatch | null => {
   const scene = scenes.find((candidate) =>
     candidate.materials.some((material) => material.name === materialName)
   )
   const sceneMaterial = scene?.materials.findLast((candidate) => candidate.name === materialName)
   if (scene === undefined || sceneMaterial === undefined) return null
   const geometry = createDynamicGeometry(MAXIMUM_CORNERS)
-  const mesh = new Mesh(geometry, createSceneMaterial(sceneMaterial, scene.textures, new Map()))
+  const mesh = new Mesh(
+    geometry,
+    createSceneMaterial(sceneMaterial, scene.textures, new Map(), isRowOrderKept)
+  )
   mesh.frustumCulled = false
   mesh.visible = false
   const [red, green, blue, alpha] = sceneMaterial.diffuseColor
   // A material with an opacity of its own draws with it in the vertex alpha.
-  return { mesh, color: [red, green, blue, sceneMaterial.renderState.diffuseAlpha ?? alpha] }
+  return {
+    mesh,
+    color: [red, green, blue, sceneMaterial.renderState.diffuseAlpha ?? alpha],
+    isDiffuseWhite: sceneMaterial.renderState.isDiffuseWhite,
+  }
 }
 
 // The live particles of the race's emitter pools as the billboard quads of the engine (0x00412a50): each quad is
@@ -43,9 +60,9 @@ const createBatch = (scenes: readonly Scene[], materialName: string): MaterialBa
 export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => {
   const group = new Group()
   const batches = new Map<string, MaterialBatch | null>()
-  const getBatch = (materialName: string): MaterialBatch | null => {
+  const getBatch = (materialName: string, isRowOrderKept = false): MaterialBatch | null => {
     if (!batches.has(materialName)) {
-      const batch = createBatch(scenes, materialName)
+      const batch = createBatch(scenes, materialName, isRowOrderKept)
       batches.set(materialName, batch)
       if (batch !== null) group.add(batch.mesh)
     }
@@ -73,7 +90,7 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
     const addCorner = (
       batch: MaterialBatch,
       corner: number,
-      source: { x: number; y: number; z: number; u: number; v: number },
+      source: BatchCorner,
       color: readonly [number, number, number, number]
     ) => {
       const positions = batch.mesh.geometry.getAttribute('position') as BufferAttribute
@@ -104,7 +121,7 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
       counts.set(quad.materialName, corner)
     }
     for (const ribbon of ribbons) {
-      const batch = getBatch(ribbon.materialName)
+      const batch = getBatch(ribbon.materialName, true)
       if (batch === null) continue
       let corner = counts.get(ribbon.materialName) ?? 0
       const corners = getRibbonCorners(
@@ -114,7 +131,13 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
       )
       for (const source of corners) {
         if (corner >= MAXIMUM_CORNERS) continue
-        addCorner(batch, corner, { ...source.position, u: source.u, v: source.v }, source.color)
+        // A texture-only material (the tether) takes no colour from its vertices.
+        addCorner(
+          batch,
+          corner,
+          { ...source.position, u: source.u, v: source.v },
+          batch.isDiffuseWhite ? WHITE_VERTEX_COLOR : source.color
+        )
         corner += 1
       }
       counts.set(ribbon.materialName, corner)

@@ -2,6 +2,7 @@ import { getRibbonSkin, TETHER_RIBBON_SHAPE } from '../../../ribbon/index.ts'
 import type { RibbonRequest, RibbonSegment, RibbonView } from '../../../ribbon/index.ts'
 import { BallisticFlightState, ROPE_START_HEIGHT } from '../../../projectiles/index.ts'
 import type { GrappleHook } from '../../../projectiles/index.ts'
+import type { TetherFeed } from './get-tether-ribbon.types.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 
 // 0x004b02e0: the rope's points lie at fifths of the way, and the clock that places them on the arc runs in fifths.
@@ -19,11 +20,6 @@ const INNER_POINT_COUNT = 4
 // The tether is drawn in this material (0x00453cd0 looks up "tether").
 export const TETHER_MATERIAL_NAME = 'tether'
 
-type TetherFeed = {
-  readonly owner: Vector3
-  readonly hook: GrappleHook
-}
-
 const getRopeStart = (arithmetic: FloatArithmetic, owner: Vector3): Vector3 =>
   Object.freeze({
     x: owner.x,
@@ -36,6 +32,14 @@ const getStoredDifference = (arithmetic: FloatArithmetic, to: Vector3, from: Vec
     x: arithmetic.storeFloat(arithmetic.subtract(to.x, from.x)),
     y: arithmetic.storeFloat(arithmetic.subtract(to.y, from.y)),
     z: arithmetic.storeFloat(arithmetic.subtract(to.z, from.z)),
+  })
+
+// A fifth of the way from the owner to the hook, each component stored (0x00444690, 0x00444820).
+const getFifthOf = (arithmetic: FloatArithmetic, difference: Vector3): Vector3 =>
+  Object.freeze({
+    x: arithmetic.storeFloat(arithmetic.multiply(difference.x, FIFTH)),
+    y: arithmetic.storeFloat(arithmetic.multiply(difference.y, FIFTH)),
+    z: arithmetic.storeFloat(arithmetic.multiply(difference.z, FIFTH)),
   })
 
 // The height of the hook's arc after `seconds` of its flight (the same polynomial as 0x00431550).
@@ -108,11 +112,7 @@ const getRetractingRequest = (arithmetic: FloatArithmetic, feed: TetherFeed): Ri
   const start = getRopeStart(arithmetic, feed.owner)
   const target = feed.hook.hookTarget
   const difference = getStoredDifference(arithmetic, target, start)
-  const step = Object.freeze({
-    x: storeFloat(multiply(difference.x, FIFTH)),
-    y: storeFloat(multiply(difference.y, FIFTH)),
-    z: storeFloat(multiply(difference.z, FIFTH)),
-  })
+  const step = getFifthOf(arithmetic, difference)
   const bulge = storeFloat(multiply(feed.hook.tension, RETRACTING_BULGE_PER_TENSION))
   const points: Vector3[] = []
   let point: Vector3 = start
@@ -140,11 +140,7 @@ const getLatchedRequest = (arithmetic: FloatArithmetic, feed: TetherFeed): Ribbo
   const start = getRopeStart(arithmetic, feed.owner)
   const hookPosition = hook.flight.framePosition
   const difference = getStoredDifference(arithmetic, hookPosition, start)
-  const step = Object.freeze({
-    x: storeFloat(multiply(difference.x, FIFTH)),
-    y: storeFloat(multiply(difference.y, FIFTH)),
-    z: storeFloat(multiply(difference.z, FIFTH)),
-  })
+  const step = getFifthOf(arithmetic, difference)
   const increment = storeFloat(
     multiply(multiply(hook.flight.durationMilliseconds, FIFTH), SECONDS_PER_MILLISECOND)
   )

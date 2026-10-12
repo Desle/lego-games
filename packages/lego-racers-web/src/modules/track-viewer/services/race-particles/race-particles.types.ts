@@ -22,4 +22,15 @@ export type RaceParticles = {
 export type MaterialBatch = {
   readonly mesh: Mesh
   readonly color: readonly [number, number, number, number]
+  // The material draws its texture alone (the vertices' colours are white).
+  readonly isDiffuseWhite: boolean
+}
+
+// A corner written into a batch: its place in the world and its picture coordinates.
+export type BatchCorner = {
+  readonly x: number
+  readonly y: number
+  readonly z: number
+  readonly u: number
+  readonly v: number
 }

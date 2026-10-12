@@ -80,3 +80,23 @@ export type RibbonView = {
   readonly skin: RibbonSkin
   readonly isFacingCamera: boolean
 }
+
+// A point with the colour it carries (0x00494ad0 interpolates both).
+export type ColoredPoint = {
+  readonly point: Vector3
+  readonly color: RibbonColor
+}
+
+// A ring about to be laid: its centre in the segment's frame, its colour and the jitter it takes.
+export type PlacedRing = {
+  readonly center: Vector3
+  readonly color: RibbonColor
+  readonly jitter: Vector3 | null
+}
+
+// The strip while 0x00494870 builds it.
+export type RibbonBuild = {
+  rings: RibbonRing[]
+  bones: Bone[]
+  pairs: [number, number][]
+}

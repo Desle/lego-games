@@ -204,7 +204,15 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     effects.update(
       warpView === null
         ? effectViews
-        : { ...effectViews, effects: [], bricks: [], explosions: [], attachments: [], sprites: [], ribbons: [] },
+        : {
+            ...effectViews,
+            effects: [],
+            bricks: [],
+            explosions: [],
+            attachments: [],
+            sprites: [],
+            ribbons: [],
+          },
       cameraView.position,
       poses
     )

@@ -8,6 +8,9 @@ import {
 import type { FloatArithmetic, Frame, Vector3 } from '../../../simulation-math/index.ts'
 import type {
   Bone,
+  ColoredPoint,
+  PlacedRing,
+  RibbonBuild,
   RibbonColor,
   RibbonCorner,
   RibbonRequest,
@@ -15,12 +18,6 @@ import type {
   RibbonShape,
   RibbonSkin,
 } from '../ribbon.types.ts'
-
-type RibbonBuild = {
-  rings: RibbonSkin['rings'][number][]
-  bones: Bone[]
-  pairs: [number, number][]
-}
 
 // 0x004b47a4: a segment shorter than the square root of this is not laid (0x00494870, 0x00494140).
 const MINIMUM_SQUARED_SEGMENT_LENGTH = Math.fround(0.02)
@@ -30,17 +27,6 @@ const WORLD_UP: Vector3 = Object.freeze({ x: 0, y: 0, z: 1 })
 const ALTERNATIVE_UP: Vector3 = Object.freeze({ x: 1, y: 0, z: 0 })
 // 0x004b47a4 compares squares; 0x004af388 is the 1.0 of the dot product test in 0x00493ea0.
 const PARALLEL_DOT = 1
-
-type PlacedRing = {
-  readonly center: Vector3
-  readonly color: RibbonColor
-  readonly jitter: Vector3 | null
-}
-
-type ColoredPoint = {
-  readonly point: Vector3
-  readonly color: RibbonColor
-}
 
 const getLerpedByte = (arithmetic: FloatArithmetic, from: number, to: number, t: number): number =>
   (from + Math.trunc(arithmetic.multiply(to - from, t))) & 0xff
