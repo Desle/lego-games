@@ -6,6 +6,7 @@ const getProps = (overrides: Partial<DevelopmentPanelProps> = {}): DevelopmentPa
   isRaceRunning: false,
   onTrackViewerOpened: vi.fn(),
   onRaceStopped: vi.fn(),
+  onRecordingDownloaded: vi.fn(),
   onOverlayClosed: vi.fn(),
   ...overrides,
 })
@@ -35,11 +36,13 @@ describe('DevelopmentPanel', () => {
     // Act
     fireEvent.click(screen.getByRole('button', { name: 'Track viewer' }))
     fireEvent.click(screen.getByRole('button', { name: /Stop the race/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Download the last session recording/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
 
     // Assert
     expect(props.onTrackViewerOpened).toHaveBeenCalledTimes(1)
     expect(props.onRaceStopped).toHaveBeenCalledTimes(1)
+    expect(props.onRecordingDownloaded).toHaveBeenCalledTimes(1)
     expect(props.onOverlayClosed).toHaveBeenCalledTimes(1)
   })
 })

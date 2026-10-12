@@ -33,6 +33,7 @@ export {
   abortSession,
   finishRace,
   getCircuitOutcome,
+  getRaceLoadOptions,
   getIsFirstRace,
   recordRaceStep,
   requestCircuitRestart,
