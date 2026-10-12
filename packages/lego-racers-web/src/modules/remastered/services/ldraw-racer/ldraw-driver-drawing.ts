@@ -1,8 +1,13 @@
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import { Group, Matrix4 } from 'three'
 import type { RacerPartDrawingRequest } from './ldraw-racer-drawing.types.ts'
-import { applyPlasticLook } from '../ldraw-car/ldraw-plastic.ts'
-import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
+import {
+  createMaterialSet,
+  getPreparedModel,
+  instantiateModel,
+} from '../ldraw-car/detailed-model.ts'
+import type { MaterialSet } from '../ldraw-car/detailed-model.types.ts'
+import { LDrawDetail } from '../ldraw-library/ldraw-library-loader.types.ts'
 import { restoreDisplayColors } from './skin-colors.ts'
 import { disposeObject } from './dispose-object.ts'
 import type { LDrawRacerPartDrawing } from './ldraw-racer-drawing.types.ts'
@@ -76,18 +81,19 @@ export const createLDrawDriverDrawing = (
       return [key, holder]
     })
   )
-  const loadedGroups: Group[] = []
-  let isDisposed = false
+  const materials = createMaterialSet()
+  const skinMaterials: MaterialSet[] = []
   const loads = plans.map((plan) =>
-    parseLDrawModel(getPartText(plan)).then(
-      (model) => {
-        if (isDisposed) return
-        applyPlasticLook(model)
-        if (plan.isSkin) restoreDisplayColors(model)
-        loadedGroups.push(model)
+    getPreparedModel(getPartText(plan), LDrawDetail.HIGH).then(
+      (prepared) => {
         const placed = new Group()
         placed.matrixAutoUpdate = false
         placed.matrix.copy(plan.matrix)
+        // A flesh part has its colours changed once on its own copies of the materials, which no other part shares.
+        const partMaterials = plan.isSkin ? createMaterialSet() : materials
+        if (plan.isSkin) skinMaterials.push(partMaterials)
+        const model = instantiateModel(prepared, partMaterials)
+        if (plan.isSkin) restoreDisplayColors(model)
         placed.add(model)
         holders.get(plan.key)?.add(placed)
       },
@@ -132,8 +138,8 @@ export const createLDrawDriverDrawing = (
     object,
     ...controls,
     dispose: () => {
-      isDisposed = true
-      for (const group of loadedGroups) disposeObject(group)
+      materials.dispose()
+      for (const skin of skinMaterials) skin.dispose()
       for (const entry of decals) {
         if (entry?.decal == null) continue
         disposeObject(entry.decal.mesh)
