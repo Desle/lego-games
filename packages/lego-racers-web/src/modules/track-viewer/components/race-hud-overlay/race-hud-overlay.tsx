@@ -10,6 +10,7 @@ import type { RaceHudOverlayProps } from './race-hud-overlay.types.ts'
 const RaceHudOverlay = ({
   commands,
   imageUrls,
+  imageScales,
   fonts,
   width,
   height,
@@ -42,12 +43,13 @@ const RaceHudOverlay = ({
       commands,
       fonts,
       loadedImages,
+      imageScales,
       painter,
       width,
       height,
       isImagePainted: false,
     })
-  }, [commands, fonts, height, loadedImages, painter, pixelRatio, width])
+  }, [commands, fonts, height, imageScales, loadedImages, painter, pixelRatio, width])
   return (
     <div className="pointer-events-none absolute inset-0" data-testid="race-hud">
       <canvas

@@ -57,6 +57,7 @@ import {
   DEVELOPMENT_GAME_FILE_ROUTE,
   DEVELOPMENT_JAM_ROUTE,
 } from '../../../../shared/development-jam/development-jam-route.ts'
+import { watchHudPictures } from '../../services/hud-pictures/hud-pictures.ts'
 import { createHudImageUrls, getHudContext } from '../../services/hud-resources/hud-resources.ts'
 import { getDevelopmentJam } from '../../services/jam-file/jam-file.ts'
 import { createRaceAudioPlayer } from '../../services/race-audio-player/race-audio-player.ts'
@@ -93,6 +94,7 @@ const INITIAL_SCREEN: RaceScreen = Object.freeze({
   phase: null,
   hudCommands: [],
   hudImageUrls: new Map(),
+  hudImageScales: new Map(),
   hudFonts: null,
   lapCount: 0,
   menuScreenId: FrontEndScreen.MAIN_MENU,
@@ -409,9 +411,19 @@ export const useRaceController = (): RaceController => {
       status: RaceStatus.RUNNING,
       phase: raceState.phase,
       hudImageUrls,
+      hudImageScales: new Map(),
       hudFonts: assets.hudFonts,
       lapCount: raceState.lapCount,
     })
+
+    watchHudPictures(assets, (pictures) =>
+      setScreen((previous) => ({
+        ...previous,
+        hudImageUrls: pictures.imageUrls,
+        hudImageScales: pictures.imageScales,
+        hudFonts: pictures.fonts,
+      }))
+    )
 
     const onFrame = (time: number) => {
       animationFrame = requestAnimationFrame(onFrame)
