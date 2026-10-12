@@ -94,3 +94,7 @@ All sixteen cells of the grid match with `POWER_UP_COMPUTERS=1`. What the regist
 - Sound-driven random draws (`tauntNearestRacer`, `updateRacerSounds`) are stand-ins: a draw is missing or extra after some hits (wand, frame 199).
 - `racec0r3` shows a track event difference at frame 797 (`track.events.2a[61]`) that the random cursor used to hide.
 - Brick colours per kind belong to the render-trace branch (PR 37): `pbrickP`, `pbrickS`, `pbrickT`, `pbrickM` (`0x00458a80`, `0x0045ba90`).
+
+## Taunt signal (fix/taunt-signal)
+
+`Racer_Taunt` (`0x00439c90`, from `0x004377f0` and `0x00439100`) plays the taunt sound and then calls `0x00462580(bus = racer +0xadc, 999, 999, display frame position)`, the bus's start/stop signal: every track event whose identifier is 999 begins (`0x0045ee50`) and ends (`0x0045ee70`). The port runs it through the track session's `startStopSignal`. No traced race has an event with identifier 999, so no trace changes; a hand-made event with that identifier now fires when a racer taunts.

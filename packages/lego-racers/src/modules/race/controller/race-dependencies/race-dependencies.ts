@@ -213,16 +213,30 @@ const guidePlayer: RacerBoundary = (context, racerSet, racerIndex, stepMilliseco
       : racer
   )
 
-// Racer_Taunt 0x00439c90 from 0x004377f0: the racer plays its taunt sound (racer +0xd23, 0x00439cd0); the signal it then
-// sends to the event bus (0x00462580, identifier 999) is not ported.
-const playTaunt: RacerBoundary = (_context, racerSet, racerIndex) =>
-  Object.freeze({
+// Racer_Taunt 0x00439c90 from 0x004377f0: the racer plays its taunt sound (racer +0xd23, 0x00439cd0), then sends the
+// start/stop signal 999 (0x00462580) from its display frame's position to the event bus.
+const TAUNT_SIGNAL_IDENTIFIER = 999
+
+const playTaunt: RacerBoundary = (context, racerSet, racerIndex) => {
+  const racer = getRacer(racerSet, racerIndex)
+  const { position } = racer.carBody.rigidBody.displayFrame
+  const sounded = Object.freeze({
     ...racerSet,
     sounds: Object.freeze([
       ...racerSet.sounds,
-      { soundId: getTauntSoundId(getRacer(racerSet, racerIndex).voiceBase), address: '0x00439cd0' },
+      { soundId: getTauntSoundId(racer.voiceBase), address: '0x00439cd0' },
     ]),
   })
+  return changeTrackLogic(context, getRaceRacerSetOf(sounded), (trackLogic, trackContext) =>
+    runTrackLogic(trackLogic, trackContext, (session) =>
+      session.startStopSignal(TAUNT_SIGNAL_IDENTIFIER, TAUNT_SIGNAL_IDENTIFIER, [
+        position.x,
+        position.y,
+        position.z,
+      ])
+    )
+  )
+}
 
 // RacerSetStepDependencies for a race. Wired: the car rigid body and the scripted car body with the car body's contact
 // filter and surface values, the collision manager with the registry (triggers and bricks), the computer's power-up
