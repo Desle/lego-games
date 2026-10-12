@@ -86,17 +86,26 @@ const getLegMatrix = (posture: MinifigPosture): Matrix4 =>
         new Matrix4().set(1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1)
       )
 
+const PLAIN_HEAD = '3626b'
+const PLAIN_TORSO = '973'
+const HOOK_COLOR = 8
+
 // The library's parts of a driver put together as a minifigure in the posture of the skeleton's bind pose: hips and legs (the sitting
 // legs are the standing ones turned forward about the hips, as the library's own sitting assembly does it), the torso, arms and hands
-// (the hook for the left hand of a hook torso), the head and its hat. Everything is in the figure's own frame: LDraw axes, the hips'
-// origin, y down.
+// (the hook for the left hand of a hook torso), the head and its hats. A part the spec has a library print for is that print in the
+// library's colour; the rest is the plain part in the colour of the game's picture. Everything is in the figure's own frame: LDraw axes,
+// the hips' origin, y down.
 export const createMinifigPartPlans = (
   spec: MinifigSpec,
   posture: MinifigPosture
 ): readonly MinifigPartPlan[] => {
-  const { surfaces } = spec
+  const { surfaces, torso, face, legs } = spec
   const leg = getLegMatrix(posture)
   const head = getTranslation(0, HEAD_Y, 0)
+  const skinColor = getDirectColor(surfaces.skinColor)
+  const legsColor = getDirectColor(surfaces.legsColor)
+  const armColor = torso === null ? getDirectColor(surfaces.armColor) : torso.armColorCode
+  const handColor = torso === null ? skinColor : torso.handColorCode
   const plan = (
     key: MinifigPartKey,
     part: string,
@@ -113,30 +122,43 @@ export const createMinifigPartPlans = (
     },
   ] as const
   return Object.freeze([
-    plan(MinifigPartKey.HIPS, '3815b', getDirectColor(surfaces.hipsColor), new Matrix4()),
-    plan(MinifigPartKey.LEFT_LEG, '3817b', getDirectColor(surfaces.legsColor), leg),
-    spec.isPegLegs
-      ? plan(MinifigPartKey.RIGHT_LEG, '2532', 6, leg)
-      : plan(MinifigPartKey.RIGHT_LEG, '3816b', getDirectColor(surfaces.legsColor), leg),
+    plan(
+      MinifigPartKey.HIPS,
+      '3815b',
+      legs === null ? getDirectColor(surfaces.hipsColor) : legs.hipsColorCode,
+      new Matrix4()
+    ),
+    plan(
+      MinifigPartKey.LEFT_LEG,
+      legs?.leftLeg.part ?? '3817b',
+      legs?.leftLeg.colorCode ?? legsColor,
+      leg
+    ),
+    plan(
+      MinifigPartKey.RIGHT_LEG,
+      legs?.rightLeg.part ?? '3816b',
+      legs?.rightLeg.colorCode ?? legsColor,
+      leg
+    ),
     plan(
       MinifigPartKey.TORSO,
-      '973',
-      getDirectColor(surfaces.torsoColor),
+      torso?.part ?? PLAIN_TORSO,
+      torso === null ? getDirectColor(surfaces.torsoColor) : torso.torsoColorCode,
       getTranslation(0, TORSO_Y, 0)
     ),
-    plan(MinifigPartKey.HEAD, '3626b', getDirectColor(surfaces.skinColor), head),
-    ...(spec.hat === null
-      ? []
-      : [plan(MinifigPartKey.HEAD, spec.hat.part, spec.hat.colorCode, head)]),
+    face === null
+      ? plan(MinifigPartKey.HEAD, PLAIN_HEAD, skinColor, head)
+      : plan(MinifigPartKey.HEAD, face.part, face.colorCode, head),
+    ...spec.hats.map((hat) => plan(MinifigPartKey.HEAD, hat.part, hat.colorCode, head)),
     ...sides.flatMap(({ side, arm, key, handKey }) => {
       const armMatrix = getArmMatrix(side, posture)
       const isHook = spec.isHookTorso && side === 'left'
       return [
-        plan(key, arm, getDirectColor(surfaces.armColor), armMatrix),
+        plan(key, arm, armColor, armMatrix),
         plan(
           handKey,
           isHook ? '2531' : '3820',
-          isHook ? 8 : getDirectColor(surfaces.skinColor),
+          isHook ? HOOK_COLOR : handColor,
           armMatrix.clone().multiply(getHandInArmFrame(side))
         ),
       ]
