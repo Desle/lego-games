@@ -1,4 +1,9 @@
-import type { EffectViews, EffectView, RacerPose } from '@lego-games/lego-racers/race-presentation'
+import type {
+  AttachmentView,
+  EffectViews,
+  EffectView,
+  RacerPose,
+} from '@lego-games/lego-racers/race-presentation'
 import type { Matrix3 } from '@lego-games/lego-racers/simulation-math'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import type { Scene as ThreeScene } from 'three'
@@ -9,6 +14,7 @@ import type { FigureAnimation } from '@lego-games/lego-racers/racer'
 import type { Vector3Like } from '../race-viewport/race-viewport.types.ts'
 import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
 import { getEffectFigureState } from '@lego-games/lego-racers/race-presentation'
+import { setAlphaOverride } from '../scene-object/alpha-override.ts'
 import { getReversedModel } from '../model-object/reverse-faces.ts'
 import { getFrameMatrix, getUprightRotation } from '../frame-matrix/frame-matrix.ts'
 import { createModelObject } from '../model-object/model-object.ts'
@@ -75,9 +81,47 @@ const getTurboPosition = (pose: RacerPose): Vector3Like => {
   }
 }
 
+// 0x0045d150 draws the two flames with the device's alpha override: 0 until the last 50 ms of the starting state, then
+// 255; while the turbo ends it fades with the timer from 700 ms (191) to 350 ms (0). The active state draws them as modelled.
+const TURBO_FLAME_VISIBLE_MILLISECONDS = 50
+const TURBO_ENDING_FADE_MILLISECONDS = 350
+const TURBO_ENDING_ALPHA_SCALE = new DataView(new Uint32Array([0x3b3b3ee7]).buffer).getFloat32(
+  0,
+  true
+)
+const TURBO_ALPHA_MAXIMUM = 255
+// 0x004b0b4c: the fade's full scale, a flame ending is 191 at its most opaque.
+const TURBO_ENDING_ALPHA_PEAK = 191
+const getTurboFlameAlpha = (attachment: AttachmentView): number | null => {
+  if (attachment.state === 'starting') {
+    return attachment.timerMilliseconds <= TURBO_FLAME_VISIBLE_MILLISECONDS
+      ? TURBO_ALPHA_MAXIMUM
+      : 0
+  }
+  if (attachment.state !== 'ending') return null
+  const fade = Math.max(attachment.timerMilliseconds - TURBO_ENDING_FADE_MILLISECONDS, 0)
+  return Math.trunc(Math.fround(fade * TURBO_ENDING_ALPHA_SCALE) * TURBO_ENDING_ALPHA_PEAK)
+}
+
+// 0x00421850: the figure's scale grows from 0.05 (0x004b0148) to the explosion's end scale of 1 with the growth progress
+// (never past 1) and its opacity falls from 255 to 0 with it.
+const EXPLOSION_FIGURE_START_SCALE = 0.05
+const EXPLOSION_FIGURE_END_SCALE = 1
+const EXPLOSION_ALPHA_MAXIMUM = 255
+const getExplosionFigureScale = (progress: number): number =>
+  Math.min(
+    Math.fround(
+      Math.fround(EXPLOSION_FIGURE_END_SCALE - EXPLOSION_FIGURE_START_SCALE) * progress +
+        EXPLOSION_FIGURE_START_SCALE
+    ),
+    1
+  )
+const getExplosionFigureAlpha = (progress: number): number =>
+  Math.trunc(Math.max(Math.fround((1 - progress) * EXPLOSION_ALPHA_MAXIMUM), 0))
+
 const MILLISECONDS_PER_SECOND = 1000
-// Hypothesis, measured against the render trace (turbo levels 0 to 2): the turbo's figures have advanced one frame more
-// than the effect's timer shows, and their texture scroll runs about two frames behind it.
+// Hypothesis, measured against the render trace (turbo levels 0 to 2): once the turbo is active its figures have advanced one
+// frame more than the effect's timer shows, and their texture scroll runs about two frames behind it.
 const TURBO_ANIMATION_LEAD_MILLISECONDS = 33
 const TURBO_SCROLL_LAG_MILLISECONDS = 71
 const setTextureScroll = (
@@ -144,6 +188,7 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
     rocket: createPool(scene, models.rocket),
     barrel: createPool(scene, models.barrel),
     magnet: createPool(scene, models.magnet),
+    plainExplosion: createPool(scene, models.plainExplosion),
     spikedExplosion: createPool(scene, models.spikedExplosion),
     enhancementBrick: createPool(scene, models.enhancementBrick),
   }
@@ -242,37 +287,40 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
         if (attachment.kind !== 'turbo') continue
         figures.forEach((pool, figureIndex) => {
           const isFlame = figureIndex > 0
-          // 0x0045d150: the flames are drawn with alpha 0 until the last 50 ms of the starting state.
-          if (isFlame && attachment.state === 'starting' && attachment.timerMilliseconds > 50)
-            return
           const copy = pool.use()
+          setAlphaOverride(copy.group, isFlame ? getTurboFlameAlpha(attachment) : null)
           copy.group.matrix.copy(getFrameMatrix(getTurboRotation(pose), getTurboPosition(pose)))
           const animations = figureModels[figureIndex]?.animations
           setTextureScroll(
             copy,
             figureModels[figureIndex]?.scroll ?? [0, 0],
-            attachment.elapsedMilliseconds - TURBO_SCROLL_LAG_MILLISECONDS
+            attachment.state === 'starting'
+              ? attachment.elapsedMilliseconds
+              : attachment.elapsedMilliseconds - TURBO_SCROLL_LAG_MILLISECONDS
           )
           if (animations !== undefined) {
             const isStarting = attachment.state === 'starting'
             copy.object.setAnimationState(
               getEffectFigureState(animations, {
                 animationId: attachment.state === 'ending' ? 2 : isStarting ? 0 : 1,
-                isLooping: true,
-                elapsedMilliseconds: isStarting
-                  ? 0
-                  : attachment.elapsedMilliseconds + TURBO_ANIMATION_LEAD_MILLISECONDS,
+                isLooping: attachment.state !== 'ending',
+                elapsedMilliseconds:
+                  attachment.elapsedMilliseconds +
+                  (isStarting ? 0 : TURBO_ANIMATION_LEAD_MILLISECONDS),
               })
             )
           }
         })
       }
       for (const explosion of views.explosions) {
-        if (!explosion.isSpiked) continue
-        const copy = pools.spikedExplosion.use()
+        // 0x00421ae0: only a growing explosion draws its figure; a fading one leaves its scar (a decal).
+        if (explosion.isFading) continue
+        const copy = (explosion.isSpiked ? pools.spikedExplosion : pools.plainExplosion).use()
+        const scale = getExplosionFigureScale(explosion.progress)
         copy.group.matrix
           .copy(getHeadingMatrix(null, explosion.position))
-          .multiply(new Matrix4().makeScale(explosion.scale, explosion.scale, explosion.scale))
+          .multiply(new Matrix4().makeScale(scale, scale, scale))
+        setAlphaOverride(copy.group, getExplosionFigureAlpha(explosion.progress))
       }
     },
     dispose: () => {

@@ -1,5 +1,6 @@
-import type { BoxContact } from '../../../racer-collision/index.ts'
+import type { BoxContact, CollisionBody } from '../../../racer-collision/index.ts'
 import { CarRigidBodyFlag, moveOutOfContact } from '../../../racer-physics/index.ts'
+import type { CarRigidBody } from '../../../racer-physics/index.ts'
 import { drawRandomValue } from '../../../random-table/index.ts'
 import { getFloatFromBits, getNormalizedVector3 } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Matrix3, Vector3 } from '../../../simulation-math/index.ts'
@@ -19,6 +20,7 @@ import {
   setRandomPosition,
 } from '../../types/racer-state/racer-state.ts'
 import type {
+  ImpulseBody,
   Racer,
   RacerCollisionDependencies,
   RacerSet,
@@ -105,14 +107,12 @@ const getAngularTerm = (
 // both through the FIRST body's world inverse inertia.
 const getImpulse = (
   arithmetic: FloatArithmetic,
-  first: Racer,
-  second: Racer,
+  body: CarRigidBody,
+  other: ImpulseBody,
   contact: BoxContact
 ): number => {
   const { add, subtract, multiply, divide, storeFloat } = arithmetic
   const { normal, point } = contact
-  const body = first.carBody.rigidBody
-  const other = second.carBody.rigidBody
   const relativeX = subtract(body.linearVelocity.x, other.linearVelocity.x)
   const relativeY = subtract(body.linearVelocity.y, other.linearVelocity.y)
   const relativeZ = subtract(body.linearVelocity.z, other.linearVelocity.z)
@@ -263,6 +263,67 @@ const attackRacer = (
   )
 }
 
+// 0x00438560 type 3, the first checks: a racer that is disabled (flag 0x10) or whose car body is flagged takes no hit.
+const getIsBlocked = (racer: Racer): boolean =>
+  (racer.flags & RACER_DISABLED_FLAG) !== 0 ||
+  (racer.carBody.rigidBody.flags & CarRigidBodyFlag.FLAGGED) !== 0
+
+// 0x00438560 type 3, 0x00438694: the first car body is moved out by depth · normal (car body slot 0x00429680).
+const getSeparatedRacerSet = (
+  context: RacerSetContext,
+  racerSet: RacerSet,
+  firstIndex: number,
+  contact: BoxContact,
+  dependencies: RacerCollisionDependencies
+): RacerSet => {
+  const { arithmetic } = context
+  const { multiply, storeFloat } = arithmetic
+  const { normal, depth } = contact
+  const displacement = Object.freeze({
+    x: storeFloat(multiply(depth, normal.x)),
+    y: storeFloat(multiply(normal.y, depth)),
+    z: storeFloat(multiply(normal.z, depth)),
+  })
+  const first = getRacer(racerSet, firstIndex)
+  if (first.carBody.isScripted) {
+    return dependencies.separateScriptedCarBody(context, racerSet, firstIndex, displacement)
+  }
+  if (dependencies.separateFreeCarBody !== undefined) {
+    return dependencies.separateFreeCarBody(context, racerSet, firstIndex, displacement)
+  }
+  return updateRacer(racerSet, firstIndex, (racer) =>
+    Object.freeze({
+      ...racer,
+      carBody: Object.freeze({
+        ...racer.carBody,
+        rigidBody: moveOutOfContact(
+          arithmetic,
+          racer.carBody.rigidBody,
+          displacement,
+          getRacerCollisionObjects(context, racer)
+        ),
+      }),
+    })
+  )
+}
+
+// What a hit does to the racer that takes it: the impulse along the normal on its car body and the force feedback
+// (0x004220e0).
+const getHitRacerSet = (
+  arithmetic: FloatArithmetic,
+  racerSet: RacerSet,
+  racerIndex: number,
+  normal: Vector3,
+  impulse: number
+): RacerSet =>
+  updateRacer(racerSet, racerIndex, (racer) =>
+    Object.freeze({
+      ...racer,
+      carBody: addCarBodyImpulse(arithmetic, racer.carBody, normal, impulse),
+      forceFeedback: getRestartedForceFeedback(racer.forceFeedback, HIT_STRENGTH),
+    })
+  )
+
 // 0x00438560, type 3 event (thiscall on the first racer's listener): the response to two car bodies in contact.
 // The first car body is moved out by depth · normal, then an impulse along the normal changes both
 // velocities; computers fade, the slower human gets a voice line, and racers with flag 0x1 or a timed
@@ -277,54 +338,21 @@ export const respondToRacerContact = (
   dependencies: RacerCollisionDependencies
 ): RacerSet => {
   const { arithmetic } = context
-  const { subtract, multiply, storeFloat, getIsBelow, getIsEqual } = arithmetic
+  const { subtract, storeFloat, getIsBelow, getIsEqual } = arithmetic
   const initialFirst = getRacer(racerSet, firstIndex)
   const initialSecond = getRacer(racerSet, secondIndex)
-  if ((initialFirst.flags & RACER_DISABLED_FLAG) !== 0) return racerSet
-  if ((initialSecond.flags & RACER_DISABLED_FLAG) !== 0) return racerSet
-  if ((initialFirst.carBody.rigidBody.flags & CarRigidBodyFlag.FLAGGED) !== 0) return racerSet
-  if ((initialSecond.carBody.rigidBody.flags & CarRigidBodyFlag.FLAGGED) !== 0) return racerSet
-  const { normal, depth } = contact
-  const displacement = Object.freeze({
-    x: storeFloat(multiply(depth, normal.x)),
-    y: storeFloat(multiply(normal.y, depth)),
-    z: storeFloat(multiply(normal.z, depth)),
-  })
-  // 0x00429680
-  const separated = initialFirst.carBody.isScripted
-    ? dependencies.separateScriptedCarBody(context, racerSet, firstIndex, displacement)
-    : dependencies.separateFreeCarBody !== undefined
-      ? dependencies.separateFreeCarBody(context, racerSet, firstIndex, displacement)
-      : updateRacer(racerSet, firstIndex, (racer) =>
-          Object.freeze({
-            ...racer,
-            carBody: Object.freeze({
-              ...racer.carBody,
-              rigidBody: moveOutOfContact(
-                arithmetic,
-                racer.carBody.rigidBody,
-                displacement,
-                getRacerCollisionObjects(context, racer)
-              ),
-            }),
-          })
-        )
+  if (getIsBlocked(initialFirst) || getIsBlocked(initialSecond)) return racerSet
+  const separated = getSeparatedRacerSet(context, racerSet, firstIndex, contact, dependencies)
   const first = getRacer(separated, firstIndex)
   const second = getRacer(separated, secondIndex)
-  const impulse = getImpulse(arithmetic, first, second, contact)
-  const hitFirst = updateRacer(separated, firstIndex, (racer) =>
-    Object.freeze({
-      ...racer,
-      carBody: addCarBodyImpulse(arithmetic, racer.carBody, normal, impulse),
-      forceFeedback: getRestartedForceFeedback(racer.forceFeedback, HIT_STRENGTH),
-    })
-  )
-  const hit = updateRacer(hitFirst, secondIndex, (racer) =>
-    Object.freeze({
-      ...racer,
-      carBody: addCarBodyImpulse(arithmetic, racer.carBody, normal, -impulse),
-      forceFeedback: getRestartedForceFeedback(racer.forceFeedback, HIT_STRENGTH),
-    })
+  const impulse = getImpulse(arithmetic, first.carBody.rigidBody, second.carBody.rigidBody, contact)
+  const { normal } = contact
+  const hit = getHitRacerSet(
+    arithmetic,
+    getHitRacerSet(arithmetic, separated, firstIndex, normal, impulse),
+    secondIndex,
+    normal,
+    -impulse
   )
   // 0x00438aac..0x00438bec
   const hitFirstRacer = getRacer(hit, firstIndex)
@@ -408,4 +436,31 @@ export const respondToRacerContact = (
     )
   current = mark(firstIndex)
   return mark(secondIndex)
+}
+
+// 0x00438560, type 3 event with a second shape that belongs to no racer (its +0xe0 is 0, the hammer's body): the first
+// car body is moved out and takes the impulse alone, the hit is played (0x004220e0) and the function returns before
+// anything that needs a second racer: no fade, voice, sparks, attack, timed effect or contact flag.
+export const respondToBodyContact = (
+  context: RacerSetContext,
+  racerSet: RacerSet,
+  racerIndex: number,
+  body: CollisionBody,
+  contact: BoxContact,
+  dependencies: RacerCollisionDependencies
+): RacerSet => {
+  const { arithmetic } = context
+  if (getIsBlocked(getRacer(racerSet, racerIndex))) return racerSet
+  const separated = getSeparatedRacerSet(context, racerSet, racerIndex, contact, dependencies)
+  const impulse = getImpulse(
+    arithmetic,
+    getRacer(separated, racerIndex).carBody.rigidBody,
+    {
+      linearVelocity: body.linearVelocity,
+      inverseMass: body.inverseMass,
+      worldCentreOfMass: body.box.centre,
+    },
+    contact
+  )
+  return getHitRacerSet(arithmetic, separated, racerIndex, contact.normal, impulse)
 }

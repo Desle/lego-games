@@ -157,6 +157,7 @@ export type {
   PlayerControllerState,
   Racer,
   RacerBoundary,
+  CollisionBodyNode,
   RacerCollisionDependencies,
   RacerPassDependencies,
   ColourShift,

@@ -1,4 +1,6 @@
 import type { BallisticFlight } from '../../projectiles/index.ts'
+import type { SkeletonInstanceRuntime } from '../../world-animation/index.ts'
+import type { CollisionBody } from '../../racer-collision/index.ts'
 import type { Vector3 } from './hazard.types.ts'
 import type { HazardSphere, InstanceReference } from './hazard-runtime.types.ts'
 
@@ -143,6 +145,14 @@ export type HammerData = {
   readonly keyword: 0x3e
   // +0x1e8: the hammer's skeleton instance.
   readonly instance: InstanceReference | null
+  // +0x200: the name starts with "rk", so the box's axes follow the root bone's rows.
+  readonly isFollowingAxes: boolean
+  // The clip the instance had at the previous update: the bones hold the pose they were given when the instance was last
+  // drawn (GolDP.dll 0x10023580), which is the frame before.
+  readonly posedClip: SkeletonInstanceRuntime['clip']
+  // The rigid body at +0x10 (a box of the file's size, mass 20,000) and the figure at +0xf4 whose sphere it sweeps with;
+  // 0x0048be70 moves both every update.
+  readonly body: CollisionBody
 }
 
 // 0x43 (0x0048c440): launches a cannonball from a skeleton instance at intervals.

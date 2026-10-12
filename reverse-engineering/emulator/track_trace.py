@@ -66,6 +66,36 @@ def read_hazards(machine, race: int, fields: dict) -> None:
     fields["track.hazards"] = words
 
 
+HAMMER_VTABLE = 0x004B42F0
+
+
+def read_hammers(machine, race: int, fields: dict) -> None:
+    """The Royal Knights hammer (hazard class 0x3e): whether its node is registered (+0x1f0), its rigid body (the
+    centre of mass +0x30, the inverse mass +0xdc, the dimensions +0xe0, the scale +0xec) and its figure (+0xf4: the
+    position, the radius, the interval along x and the rotation)."""
+    hazards = race + HAZARDS_OFFSET
+    count = machine.read_u32(hazards)
+    array = machine.read_u32(hazards + 4)
+    words = []
+    for index in range(count):
+        hazard = machine.read_u32(array + 4 * index)
+        if machine.read_u32(hazard) != HAMMER_VTABLE:
+            continue
+        words.append(1 if machine.read_u32(hazard + 0x1F0) != 0 else 0)
+        words += read_words(machine, hazard + 0x30, 3)
+        words += read_words(machine, hazard + 0xDC, 1)
+        words += read_words(machine, hazard + 0xE0, 3)
+        words += read_words(machine, hazard + 0xEC, 1)
+        words += read_words(machine, hazard + 0xF8, 3)
+        words += read_words(machine, hazard + 0x104, 1)
+        words += read_words(machine, hazard + 0x108, 2)
+        words += read_words(machine, hazard + 0x11C, 9)
+        instance = machine.read_u32(hazard + 0x1E8)
+        words += read_words(machine, instance + 0x28, 9)
+        words += read_words(machine, instance + 0x4C, 3)
+    fields["track.hammers"] = words
+
+
 def read_surfaces(machine, race: int, fields: dict) -> None:
     materials = race + TRACK_MATERIALS_OFFSET
     count = machine.read_u32(materials + 0xC)
@@ -174,6 +204,7 @@ def snapshot_track_fields(machine, race: int, racer_count: int) -> dict:
     fields = {}
     read_events(machine, race, fields)
     read_hazards(machine, race, fields)
+    read_hammers(machine, race, fields)
     read_surfaces(machine, race, fields)
     read_triggers(machine, race, fields)
     read_timers(machine, race, fields)

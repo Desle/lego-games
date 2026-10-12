@@ -96,6 +96,7 @@ export const createRacerSet = (
     rubberBand: createRubberBand(rubberBandBias),
     randomPosition,
     collisionOrder: Object.freeze(racers.map((_, index) => racers.length - 1 - index)),
+    collisionBodies: Object.freeze([]),
     registryEntries: Object.freeze([]),
     registryContacts: Object.freeze([]),
     emitters,

@@ -927,3 +927,8 @@
 00490190 HazardCrane_Update
 00490330 HazardCrane_ProjectShadow
 00490460 HazardCrane_DrawShadow
+0048be50 HazardHammer_End
+0048be70 HazardHammer_Update
+0048bbf0 HazardHammer_Load
+0043ab10 CollisionManager_AnswerShapes
+004513d0 Listener_DoNothing

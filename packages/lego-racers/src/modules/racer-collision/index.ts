@@ -9,5 +9,6 @@ export type {
   BoundingSphere,
   BoxContact,
   BoxOverlap,
+  CollisionBody,
   OrientedBox,
 } from './types/racer-collision.types.ts'
