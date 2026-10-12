@@ -2,6 +2,7 @@ import { compareRenderFrame } from './compare-render-frame.ts'
 import { getClippedPolygon } from './clipped-polygon/clipped-polygon.ts'
 import { projectWorldTriangle } from './screen-projection.ts'
 import type {
+  ClippedPolygon,
   DrawnTriangle,
   RenderFrameInput,
   ScreenMatrix,
@@ -33,6 +34,17 @@ const getRootInput = (
   tolerances: input.tolerances,
 })
 
+const getRootPolygons = (
+  input: RootComparisonInput,
+  triangles: readonly WorldTriangle[],
+  matrix: ScreenMatrix,
+  space: 'world' | 'local'
+): readonly ClippedPolygon[] =>
+  triangles.flatMap((triangle) => {
+    const polygon = getClippedPolygon(triangle, matrix, space, input.viewport)
+    return polygon === null ? [] : [polygon]
+  })
+
 // The original draws most of the world with the identity as model matrix, but a car part or the warp's tunnel with a
 // matrix of its own (its frame times the camera's). Every object tree of the port takes, in turn, the candidate matrix
 // and the space (the world's or its own) under which it lands on the most of the original's triangles that no earlier
@@ -54,7 +66,8 @@ export const compareRenderFrameByRoot = (input: RootComparisonInput): RootCompar
         const comparison = compareRenderFrame(
           getRootInput(input, remaining, getProjected(own, matrix, space))
         )
-        if (comparison.matchedCount > chosen.matchedCount) {
+        const isBetter = comparison.matchedCount > chosen.matchedCount
+        if (isBetter) {
           chosen = { root, candidateIndex, space, matchedCount: comparison.matchedCount }
           chosenMatched = comparison.matchedOriginals
         }
@@ -72,10 +85,7 @@ export const compareRenderFrameByRoot = (input: RootComparisonInput): RootCompar
     const matrix = input.candidates[choice.candidateIndex]
     return matrix === undefined
       ? []
-      : getTriangles(choice.root).flatMap((triangle) => {
-          const polygon = getClippedPolygon(triangle, matrix, choice.space, input.viewport)
-          return polygon === null ? [] : [polygon]
-        })
+      : getRootPolygons(input, getTriangles(choice.root), matrix, choice.space)
   })
   return Object.freeze({
     ...compareRenderFrame(getRootInput(input, input.original, port)),

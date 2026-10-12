@@ -50,6 +50,7 @@ const createMesh = (drums: readonly Drum[]): SceneMesh => {
     colors: null,
     normals: null,
     materialIndices: [0],
+    boundingSphere: null,
     drawBatches: [
       {
         materialSlot: 0,

@@ -1,6 +1,6 @@
 import type { Scene, SceneInstance } from '@lego-games/lego-racers/scene'
 import { SceneInstanceKind } from '@lego-games/lego-racers/scene'
-import { Box3, Group, Mesh } from 'three'
+import { Box3, Group, Mesh, Vector3 } from 'three'
 import type { BufferGeometry, Material, Matrix4 } from 'three'
 import { applyColourShift, getMeshGeometries } from './colour-shift.ts'
 import type {
@@ -10,7 +10,7 @@ import type {
 } from '../race-viewport/race-viewport.types.ts'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import { getLocalVisibilityQuery, showVisibleLeaves } from './bsp-visibility.ts'
-import { setSlotMaterial } from './instance-batches.ts'
+import { getInstanceMatrix, setSlotMaterial } from './instance-batches.ts'
 import { applyVertexLighting } from './vertex-lighting.ts'
 import type { SceneLights } from './vertex-lighting.types.ts'
 import { createSkeletonInstanceObject } from './skeleton-instance-object.ts'
@@ -118,25 +118,36 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
     }
     if (levelObjects.length > 0 && !options.isBackground) {
       const fileDistances = instance.levels.map((level) => level.squaredDistance)
+      const instanceMatrix = getInstanceMatrix(instance, false)
+      const localPosition = new Vector3().setFromMatrixPosition(instanceMatrix)
+      // GolDP.dll 0x10027ea0: the sphere of the instance's first level mesh, carried by the instance's frame.
+      const meshSphere = scene.meshes[instance.levels[0]?.meshIndex ?? -1]?.boundingSphere ?? null
+      const localSphereCentre =
+        meshSphere === null
+          ? null
+          : new Vector3(meshSphere.centre.x, meshSphere.centre.y, meshSphere.centre.z).applyMatrix4(
+              instanceMatrix
+            )
       levelSelectors.push((camera, view) => {
         const runtime = runtimes.get(instance.name)
         const distances = runtime?.levelSquaredDistances ?? fileDistances
-        const sphere = runtime?.sphere ?? null
-        // An instance the simulation neither hides nor culls by a sphere keeps its level 0 unless it has several levels.
-        const isTracked =
-          levelObjects.length > 1 ||
-          sphere !== null ||
-          distances.some((distance, index) => distance !== (fileDistances[index] ?? distance))
-        const centre = sphere?.centre ?? runtime?.position ?? instance.position
+        const sphere =
+          runtime?.sphere ??
+          (meshSphere === null || localSphereCentre === null
+            ? null
+            : { centre: localSphereCentre.clone().applyMatrix4(group.matrixWorld), radius: meshSphere.radius })
+        const position = runtime?.position ?? localPosition.clone().applyMatrix4(group.matrixWorld)
+        // 0x100240b0 measures a skeleton instance from its sphere's centre, 0x10027d80 a mesh instance from its position.
+        const centre =
+          instance.kind === SceneInstanceKind.SKELETON ? (sphere?.centre ?? position) : position
         const squaredDistance =
           (camera.x - centre.x) ** 2 + (camera.y - centre.y) ** 2 + (camera.z - centre.z) ** 2
         const distanceLevel = getLevelIndex(distances, squaredDistance)
-        const selected = !isTracked
-          ? 0
-          : distanceLevel !== null &&
-              sphere !== null &&
-              view !== undefined &&
-              !getIsSphereInFrustum(view, sphere.centre, sphere.radius)
+        const selected =
+          distanceLevel !== null &&
+          sphere !== null &&
+          view !== undefined &&
+          !getIsSphereInFrustum(view, sphere.centre, sphere.radius)
             ? null
             : distanceLevel
         for (const { levelIndex, instanceObject } of levelObjects) {
@@ -171,6 +182,7 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
       for (const geometry of getMeshGeometries(group)) applyColourShift(geometry, shift)
     },
     selectLevels: (camera: Vector3Like, view?: FrustumView) => {
+      group.updateWorldMatrix(true, false)
       for (const select of levelSelectors) select(camera, view)
     },
     setInstanceRuntime: (name: string, runtime: InstanceRuntime) => runtimes.set(name, runtime),
