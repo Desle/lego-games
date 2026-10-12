@@ -14,16 +14,18 @@ const FRAME_MILLISECONDS = 33
 describe.skipIf(!(getIsOriginalJamPresent() && getIsOriginalExecutablePresent()))(
   'advanceRacePreviewEmitters',
   () => {
-    const resources = loadFrontEndResources(openJamArchive(readOriginalJam())).getRacePreview()
-    const randomTable = loadRandomTable(readOriginalExecutable())
-    const iceWorld = resources.cinemas.cinemas.find((cinema) => cinema.name === 'space2') ?? null
+    const getFiles = () => ({
+      resources: loadFrontEndResources(openJamArchive(readOriginalJam())).getRacePreview(),
+      randomTable: loadRandomTable(readOriginalExecutable()),
+    })
 
     it('starts the two snow emitters of the ice world and draws from the random table', () => {
       // Arrange
+      const { resources, randomTable } = getFiles()
       const input = {
         previous: null,
         resources,
-        cinema: iceWorld,
+        cinema: resources.cinemas.cinemas.find((cinema) => cinema.name === 'space2') ?? null,
         previousMilliseconds: 0,
         milliseconds: FRAME_MILLISECONDS,
         frameMilliseconds: FRAME_MILLISECONDS,
@@ -44,11 +46,11 @@ describe.skipIf(!(getIsOriginalJamPresent() && getIsOriginalExecutablePresent())
 
     it('has no emitters in a cinema without a snow dummy, and none on a screen without a preview', () => {
       // Arrange
-      const castle = resources.cinemas.cinemas.find((cinema) => cinema.name === 'castle1') ?? null
+      const { resources, randomTable } = getFiles()
       const input = {
         previous: null,
         resources,
-        cinema: castle,
+        cinema: resources.cinemas.cinemas.find((cinema) => cinema.name === 'castle1') ?? null,
         previousMilliseconds: 0,
         milliseconds: FRAME_MILLISECONDS,
         frameMilliseconds: FRAME_MILLISECONDS,
