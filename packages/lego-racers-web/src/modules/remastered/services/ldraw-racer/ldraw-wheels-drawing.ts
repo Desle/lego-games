@@ -1,10 +1,12 @@
 import type { SceneMesh } from '@lego-games/lego-racers/scene'
-import type { Group } from 'three'
 import { Group as ThreeGroup, Matrix4, Vector3 } from 'three'
 import type { RacerPartDrawingRequest } from './ldraw-racer-drawing.types.ts'
-import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
-import { applyPlasticLook } from '../ldraw-car/ldraw-plastic.ts'
-import { disposeObject } from './dispose-object.ts'
+import { LDrawDetail } from '../ldraw-library/ldraw-library-loader.types.ts'
+import {
+  createMaterialSet,
+  getPreparedModel,
+  instantiateModel,
+} from '../ldraw-car/detailed-model.ts'
 import { getBatchSurfaces } from './model-surface.ts'
 import { createPoseControls, createSkeletonPoseSampler } from './skeleton-pose.ts'
 import { getWheelSet } from './ldraw-wheel-sets.ts'
@@ -98,22 +100,20 @@ export const createLDrawWheelsDrawing = (
       .multiply(new Matrix4().makeScale(scale, scale, scale))
     return { wheel, holder, set, local, copyCount }
   })
-  const loadedGroups: Group[] = []
+  const materials = createMaterialSet()
   let isDisposed = false
   const loads = [...new Set(placements.map((placement) => placement.set))].map((set) => {
     const text = [
       ...(set.tyrePart === null ? [] : [getPartLine(TYRE_COLOR_CODE, set.tyrePart)]),
       getPartLine(set.rimColorCode ?? hubColorCode, set.rimPart),
     ].join('\n')
-    return parseLDrawModel(text).then(
-      (model) => {
+    return getPreparedModel(text, LDrawDetail.HIGH).then(
+      (prepared) => {
         if (isDisposed) return
-        applyPlasticLook(model)
-        loadedGroups.push(model)
         for (const placement of placements.filter((candidate) => candidate.set === set)) {
           // A drum as wide as several tyres (two wheels fused in the original's model) is several tyres side by side.
           for (let copy = 0; copy < placement.copyCount; copy += 1) {
-            const clone = model.clone()
+            const clone = instantiateModel(prepared, materials)
             clone.position.z = (copy - (placement.copyCount - 1) / 2) * set.width
             placement.holder.add(clone)
           }
@@ -139,7 +139,7 @@ export const createLDrawWheelsDrawing = (
     ...controls,
     dispose: () => {
       isDisposed = true
-      for (const group of loadedGroups) disposeObject(group)
+      materials.dispose()
     },
   })
 }

@@ -11,7 +11,12 @@ import {
   Vector3,
 } from 'three'
 import type { BufferGeometry, Object3D, Matrix4 } from 'three'
-import type { GeometryMesh, ModelMesh, OcclusionVolume } from './ldraw-occlusion.types.ts'
+import type {
+  GeometryMesh,
+  ModelMesh,
+  OcclusionGrid,
+  OcclusionVolume,
+} from './ldraw-occlusion.types.ts'
 
 export const OCCLUSION_POSITION_ATTRIBUTE = 'occlusionPosition'
 export const OCCLUSION_NORMAL_ATTRIBUTE = 'occlusionNormal'
@@ -96,8 +101,8 @@ const blurVolume = (source: Uint8Array, counts: Vector3): Uint8Array => {
 }
 
 // Bakes the model's surface into a grid and gives each mesh the position and normal of its vertices in the model's frame, which
-// is what the plastic's shader needs to look up the grid. Null when the model has no mesh.
-export const bakeOcclusionVolume = (model: Object3D): OcclusionVolume | null => {
+// is what the plastic's shader needs to look up the grid. Null when the model has no mesh. Plain data, so it can run in a worker.
+export const bakeOcclusionGrid = (model: Object3D): OcclusionGrid | null => {
   model.updateMatrixWorld(true)
   const inverseRoot = model.matrixWorld.clone().invert()
   const meshes: ModelMesh[] = []
@@ -145,7 +150,19 @@ export const bakeOcclusionVolume = (model: Object3D): OcclusionVolume | null => 
     geometry.setAttribute(OCCLUSION_POSITION_ATTRIBUTE, new BufferAttribute(positions, 3))
     geometry.setAttribute(OCCLUSION_NORMAL_ATTRIBUTE, new BufferAttribute(normals, 3))
   }
-  const texture = new Data3DTexture(blurVolume(data, counts), counts.x, counts.y, counts.z)
+  return Object.freeze({
+    data: blurVolume(data, counts),
+    counts: counts.toArray(),
+    origin: origin.toArray(),
+    size: counts.clone().multiplyScalar(cell).toArray(),
+    cell,
+  })
+}
+
+// The grid as the texture the plastic's shader samples.
+export const createOcclusionVolume = (grid: OcclusionGrid): OcclusionVolume => {
+  const [countX, countY, countZ] = grid.counts
+  const texture = new Data3DTexture(grid.data, countX, countY, countZ)
   texture.format = RedFormat
   texture.type = UnsignedByteType
   texture.minFilter = LinearFilter
@@ -157,8 +174,13 @@ export const bakeOcclusionVolume = (model: Object3D): OcclusionVolume | null => 
   texture.needsUpdate = true
   return Object.freeze({
     texture,
-    origin,
-    size: counts.clone().multiplyScalar(cell),
-    cell,
+    origin: new Vector3(...grid.origin),
+    size: new Vector3(...grid.size),
+    cell: grid.cell,
   })
+}
+
+export const bakeOcclusionVolume = (model: Object3D): OcclusionVolume | null => {
+  const grid = bakeOcclusionGrid(model)
+  return grid === null ? null : createOcclusionVolume(grid)
 }

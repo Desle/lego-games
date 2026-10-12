@@ -3,6 +3,7 @@ import {
   applyHighDefinitionTexture,
   getHighDefinitionUrl,
   getHighDefinitionVariant,
+  getMaximumTextureSize,
   getMaskedColors,
   getSmoothMaskedColors,
 } from './high-definition-texture.ts'
@@ -83,5 +84,35 @@ describe('getSmoothMaskedColors', () => {
 
     // Assert
     expect([0, 1, 2, 3].map((column) => colors[column * 4 + 3])).toEqual([0, 63, 191, 255])
+  })
+})
+
+describe('getMaximumTextureSize', () => {
+  it('caps the pack on a phone and a tablet and leaves a desktop alone', () => {
+    // Arrange
+    const phone = { touchPointCount: 5, screenWidth: 390, screenHeight: 844 }
+    const tablet = { touchPointCount: 5, screenWidth: 1024, screenHeight: 1366 }
+    const desktop = { touchPointCount: 0, screenWidth: 2560, screenHeight: 1440 }
+
+    // Act
+    const sizes = [phone, tablet, desktop].map((device) => getMaximumTextureSize('?hd', device))
+
+    // Assert
+    expect(sizes).toEqual([1024, 1024, Infinity])
+  })
+
+  it('takes the size the address asks for, and no limit for 0', () => {
+    // Arrange
+    const desktop = { touchPointCount: 0, screenWidth: 2560, screenHeight: 1440 }
+    const phone = { touchPointCount: 5, screenWidth: 390, screenHeight: 844 }
+
+    // Act
+    const sizes = [
+      getMaximumTextureSize('?hd&maxtexture=512', desktop),
+      getMaximumTextureSize('?hd&maxtexture=0', phone),
+    ]
+
+    // Assert
+    expect(sizes).toEqual([512, Infinity])
   })
 })

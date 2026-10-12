@@ -1,20 +1,39 @@
-import type { MinifigPartKey, MinifigPosture } from './minifig-assembly.types.ts'
+import type { MinifigPosture } from './minifig-assembly.types.ts'
+import type { MinifigSide } from './minifig-geometry.types.ts'
 
-// A part follows one bone, or the straight line between two (an arm or a leg that is one rigid piece follows the bone that starts it
-// and ends where the next one starts, so bending the elbow or the knee moves it to the hand or the ankle).
-export type MinifigAttachment =
-  | { readonly kind: 'bone'; readonly boneIndex: number }
+// Which way a leg or an arm points: the turn of one bone applied to the way the limb points in the bind pose (a direction of the
+// figure's frame, LDraw axes), or the straight line between two bones (an arm or a leg that is one rigid piece points from the bone
+// that starts it to the one where it ends, so bending the elbow or the knee moves it to the hand or the ankle).
+export type MinifigLimbAttachment =
   | {
-      readonly kind: 'chord'
-      readonly startIndex: number
-      readonly endIndex: number
-      // 1 or -1 for an arm that splays outward (to the left or right) as it hangs, as the library's own arms do; 0 for none.
-      readonly outwardSign: number
+      readonly kind: 'bone'
+      readonly boneIndex: number
+      readonly bindDirection: readonly [number, number, number]
     }
+  | { readonly kind: 'chord'; readonly startIndex: number; readonly endIndex: number }
+
+// The twist of a hand: its bone's turn about the forearm, relative to the forearm's bone.
+export type MinifigWristAttachment = {
+  readonly forearmIndex: number
+  readonly wristIndex: number
+  readonly handIndex: number
+}
+
+export type MinifigLimbs = {
+  readonly legs: Readonly<Record<MinifigSide, MinifigLimbAttachment>>
+  readonly arms: Readonly<Record<MinifigSide, MinifigLimbAttachment>>
+}
 
 export type MinifigRig = {
   readonly posture: MinifigPosture
-  // The z of the figure's frame that the skeleton's bind pose gives the hips' origin, raw model units.
+  // The z of the figure's frame that the skeleton's bind pose gives the hips' origin (the top of the hips), raw model units.
   readonly hipsHeight: number
-  readonly attachments: Readonly<Record<MinifigPartKey, MinifigAttachment>>
+  // The bone that carries the figure: the hip axle follows it.
+  readonly pelvisIndex: number
+  // The bone the torso (and the hips, one rigid piece with it) turns with.
+  readonly torsoIndex: number
+  readonly headIndex: number
+  readonly limbs: MinifigLimbs
+  // Null for a skeleton without hand bones: the hands keep their place on the arms.
+  readonly wrists: Readonly<Record<MinifigSide, MinifigWristAttachment>> | null
 }
