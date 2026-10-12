@@ -346,8 +346,9 @@ export const stepRacePresentation = (
     cameraView: cameraUpdate.view,
     warpView,
     fieldOfViewDegrees:
-      raceState.cameraFovEffects[raceState.playerRacerIndices.indexOf(presentation.playerRacerIndex)]
-        ?.fov ?? INITIAL_FIELD_OF_VIEW_DEGREES,
+      raceState.cameraFovEffects[
+        raceState.playerRacerIndices.indexOf(presentation.playerRacerIndex)
+      ]?.fov ?? INITIAL_FIELD_OF_VIEW_DEGREES,
     screenFades: getScreenFadeViews(
       raceState,
       raceState.playerRacerIndices.indexOf(presentation.playerRacerIndex),

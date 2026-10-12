@@ -50,14 +50,13 @@ export const getScreenFaderAfterUpdate = (
   return updateScreenFader(started, stepMilliseconds)
 }
 
-export const getWarpStates = (
-  powerUpStep: PowerUpStep,
-  racerIndex: number
-): WarpStates => {
+export const getWarpStates = (powerUpStep: PowerUpStep, racerIndex: number): WarpStates => {
   const { effects, activeEffectIds } = powerUpStep.world.effects
   const owned = activeEffectIds.flatMap((effectId) => {
     const effect = effects[effectId]
-    return effect?.kind === PowerUpEffectKind.WARP && effect.ownerRacer === racerIndex ? [effect] : []
+    return effect?.kind === PowerUpEffectKind.WARP && effect.ownerRacer === racerIndex
+      ? [effect]
+      : []
   })
   return Object.freeze({
     isStarting: owned.some((effect) => effect.state === EffectState.STARTING),

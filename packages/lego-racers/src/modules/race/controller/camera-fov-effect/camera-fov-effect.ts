@@ -105,7 +105,8 @@ export const getCameraFovEffectWithWarp = (
   isWarpStarting: boolean,
   isWarpCarrying: boolean
 ): CameraFovEffect => {
-  if (isWarpStarting) return Object.freeze({ ...effect, baseFov: INITIAL_FOV + WARP_STARTING_FOV_BOOST })
+  if (isWarpStarting)
+    return Object.freeze({ ...effect, baseFov: INITIAL_FOV + WARP_STARTING_FOV_BOOST })
   if (isWarpCarrying) return Object.freeze({ ...effect, baseFov: INITIAL_FOV, fov: INITIAL_FOV })
   return effect
 }
