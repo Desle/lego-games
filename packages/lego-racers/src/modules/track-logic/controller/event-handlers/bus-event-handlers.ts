@@ -243,15 +243,29 @@ export const HANDLERS_52: TrackEventHandlers = Object.freeze({
   },
 })
 
-// 0x004637c0, 0x00463800: switches three values of an object (not ported).
+// 0x004637c0 (begin) and 0x00463800 (end): the object's three level distances become the ones saved when the event was
+// made, or -1 (hidden). A plain event shows the object while it runs; a braced one (0x3c) hides it while it runs.
+const HIDDEN_LEVEL_DISTANCES = Object.freeze([-1, -1, -1])
+const setObjectVisible = (event: TrackEvent, session: TrackSession, isVisible: boolean): void => {
+  if (event.kind !== TrackEventKind.KIND_53 || event.record.objectReference === null) return
+  const { savedLevelSquaredDistances } = event
+  if (savedLevelSquaredDistances === null) return
+  session.setObjectLevelDistances(
+    event.record.objectReference,
+    isVisible ? savedLevelSquaredDistances : HIDDEN_LEVEL_DISTANCES
+  )
+}
+
 export const HANDLERS_53: TrackEventHandlers = Object.freeze({
   ...IDLE_HANDLERS,
   begin: (event, session) => {
     emitAction(session, event, 'begin')
+    setObjectVisible(event, session, !event.record.isBraced)
     return getWithState(event, TrackEventState.RUNNING)
   },
   end: (event, session) => {
     emitAction(session, event, 'end')
+    setObjectVisible(event, session, event.record.isBraced)
     return getWithState(event, TrackEventState.INACTIVE)
   },
 })

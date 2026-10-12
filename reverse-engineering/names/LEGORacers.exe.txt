@@ -974,3 +974,13 @@
 00452a00 Curse_Update
 00452a40 Curse_DrawFloatingFigure
 00452a80 Curse_DrawRings
+0045a7b0 PowerUps_Draw
+0045a8a0 PowerUps_DrawBlended
+00457900 PowerUpBrick_DrawBody
+00457930 PowerUpBrick_DrawTrail
+00453b30 Brick_DrawBodyInstance
+00453b90 Brick_DrawTrailInstance
+00461070 Events_LoadSection53
+00463700 Event53_Setup
+004637c0 Event53_Begin
+00463800 Event53_End

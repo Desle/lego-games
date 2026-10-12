@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs'
 import { getIsOriginalPresentationAvailable } from '@lego-games/lego-racers/presentation-trace'
 import { getIsOriginalGamePresent } from './original-game-files.ts'
+import { BARRIER_REQUEST } from './play-test-visual-cases.ts'
 import { runRenderComparison } from './render-comparison.ts'
 import type { TraceScenarioRequest } from './trace-scenarios.types.ts'
 
@@ -61,6 +62,8 @@ const RENDER_CASES: readonly TraceScenarioRequest[] = [
   { name: 'RACEC0R3', raceFolder: 'RACEC0R3', recordFrames: RECORD_FRAMES },
   { name: 'RACEC1R0', raceFolder: 'RACEC1R0', recordFrames: RECORD_FRAMES },
   { name: 'RACEC3R0', raceFolder: 'RACEC3R0', recordFrames: RECORD_FRAMES },
+  { name: 'RACEC2R3', raceFolder: 'RACEC2R3', recordFrames: RECORD_FRAMES },
+  BARRIER_REQUEST,
   // The barrel (oil 4/1) explodes at frame 387 into the spiked explosion, and a computer racer's brick debris flies at
   // 491 to 521 (a warp case, nothing in these cases touches that racer).
   {
@@ -134,7 +137,7 @@ describe.skipIf(!isGamePresent())('render trace', () => {
       writeFileSync(
         groupsPath,
         `${JSON.stringify(result.totals)}\n${result.groups
-          .slice(0, 40)
+          .slice(0, 400)
           .map(
             (group) =>
               `${group.kind} ${group.source} x${String(group.count)} frames ${group.frames.join(',')}: ${group.firstDetail}`

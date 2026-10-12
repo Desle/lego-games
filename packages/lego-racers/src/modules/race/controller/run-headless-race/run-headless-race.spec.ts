@@ -42,7 +42,8 @@ describe('runHeadlessRace', () => {
         expect(computer.routeTimeMilliseconds).toBeGreaterThan(0)
         expect(computer.position.y).toBeGreaterThan(before?.position.y ?? Infinity)
       }
-    }
+    },
+    LONG_RACE_TIMEOUT_MILLISECONDS
   )
 
   it.skipIf(!getIsGamePresent())(

@@ -70,7 +70,13 @@ Of the original's 718,421 triangles in the trusted frames, 129,241 (18 percent) 
 
 Ranked by visibility (pixels x frames), in groups with one likely cause; "never drawn" means no port object uses the texture in any race.
 
-### 1. Sky dome: textured and depth-tested in the original, untextured and unbuffered in the port
+### 1. Sky dome: **resolved, a measurement artifact** (the port's draw state is the original's)
+
+- **Checked against the original's draws** (`render-trace-sky-and-fade.trace.spec.ts`, races `RACEC0R0`, `RACEC1R0`, `RACEC3R0`, frame 100): the original's first draws of a frame (before the first depth-tested one) are the dome, in the state `Z_ENABLE` 0, `Z_WRITE_ENABLE` 0, colour operation select-diffuse, vertex colours only (blue `95,95,255` at the top to `250,250,120` at the horizon in `RACEC0R0`); the texture the matcher names (`e0b579ecb2425186`, `skid`, `unknown eea37d3f06eea066`) is only whatever the device had bound last. The port's `/skymat` triangles are `select_diffuse`, no texture, no depth test or write: the same state. The "texture, UV, depth, colour mismatch" lines below pair port dome triangles with unrelated original triangles at nearby positions.
+- **Why the dome counts as unmatched:** the original's driver clips the dome against the viewport (16 triangles at frame 100 of `RACEC0R0`, corners at x 640, y 0 that no port corner has) while the port draws whole triangles, so no triangle has a partner; pixels agree: the sky region of the Royal Knights case differs from the original by 2 levels on average (corner pixels 93,93,255 against 94,94,255). The ring colours are the keyframes of `0x0041ccb0` (ported).
+- Cars' vertex-coloured bodies (below) are still the computer-car divergence of the measurement.
+
+(Original text of the item, kept for the record:)
 
 - Evidence: the original's vertex-coloured, stale-texture draws (`unknown eea37d3f06eea066 256x256`, state `opaque/select_diffuse`: 8,755 of 16,856 triangles unmatched, 58 M px) and the `skid` label (the sky texture and shadows match `skid` best, [decal.md](decal.md)): `skid` opaque/select_diffuse 5,023 of 8,224 and `skid` blend/modulate 2,402 of 4,052 unmatched, about 130 to 260 triangles in nearly every frame. The port's `/skymat` object is the extra (3,310 triangles in 175 frames) and the mismatch table says why: texture `ac389648b9db3c0c -> none` (967 triangles in 172 frames), UVs `(0.75, 0.5) -> (0, 0)`, `colorOperation modulate -> select_diffuse`, depth test and write `true -> false`, diffuse `243,243,243 -> 0,0,0` (sampled frames; the sky also animates through keyframes, `0x0041ccb0`).
 - Likely cause: the dome's material `skymat` loses its texture in the viewer (`sky-object`), is drawn without depth, and its colour keyframes (`Sky_Update` `0x0041ccb0`, ported as `advanceSky`/`getSkyVertexColors`) are not what the original draws at those times. pixel-trace.md already lists the sky's brightness as open.
@@ -95,7 +101,7 @@ Ranked by visibility (pixels x frames), in groups with one likely cause; "never 
 
 ### 5. Screen overlays outside the world comparison
 
-- **Race start fade-in** (all 20 races whose frame 5 is trusted; 40 triangles, 6.1 M px): a full-screen `blend/select_diffuse` quad at frame 5 (depth 1.0). It is the screen fader entry `0x00433525` (500 ms fade-in at race start); pixel-trace.md says "Not wired yet". The finish fades (`0x00434ee8`, `0x004351ab`) were not seen at finish +5 and +60 (the fade is later); a longer finish capture would show them.
+- **Race start fade-in** (all 20 races whose frame 5 is trusted; 40 triangles, 6.1 M px): a full-screen `blend/select_diffuse` quad at frame 5 (depth 1.0). It is the screen fader entry `0x00433525` (500 ms fade-in at race start). **Resolved: it is drawn** (pixel-trace.md finding 6; the viewer's `screen-fade-overlay`, after the scene), the sweep's world comparison never sees it. `render-trace-sky-and-fade.trace.spec.ts` compares the port's alpha with the original's quad on frames 3, 5, 8, 12, 15, 16, 17, 18 of `RACEC0R0` (demonstration and one player): 187, 154, 103, 36, 0, 0, then none, identical (black, source alpha over inverse source alpha, no depth). The finish fades are wired (pixel-trace.md finding 9). The finish fades (`0x00434ee8`, `0x004351ab`) were not seen at finish +5 and +60 (the fade is later); a longer finish capture would show them.
 - **Minimap** (`128x128` blend quad at 497,337-625,465, depth 1.0, one new texture per race: `unknown 58f7dfb50eb30ee5` in rkr, `52a6ec68e660cf8e` aar ...): HUD `0x004249b0`; the port's HUD draws a minimap (`race-hud`, compared by the HUD comparison of render-trace.md), not by the world list; the texture is built at race load, so it is "unknown" here. Not a gap.
 
 ### 6. Material flipbook animation (MAB) is not applied to the track: the last race's wall lights
@@ -105,7 +111,13 @@ Ranked by visibility (pixels x frames), in groups with one likely cause; "never 
 - Same mechanism, other tracks (their `TEST.MAB`): RACEC1R0 (17 materials), RACEC1R2 (2), RACEC2R0 (about 140), RACEC0R3 `MGMMN.MAB` (18), RACEC0R2 `BLOWUP.MAB` (11, the sphinx) and the sprites' flame flipbooks (`adtorch`).
 - Size: medium (apply the row to the scene material's texture each frame; the textures of the chain are loaded).
 
-### 7. The last race's planet: another texture, UV, colour and depth state
+### 7. The last race's planet: only the texture scroll differs
+
+- **Checked against the original's draws** (`RACEC3R0`, frames 60 to 600; case `RACEC3R0, sky and planet` in `pixel-trace-cases.ts`): the original draws the planet (`planet`, 64x64, mesh in the backdrop world) after the dome in the state depth test and write off, modulate, vertex colours `0c2128`-ish (dark blue); the port's planet triangles have the same texture, colour and state (mean colour of the planet region 12.5,37.6 against 13.6,37.7 on frame 250). The "texture, colour, depth" mismatches below pair port planet triangles with unrelated original triangles on frames where the camera differs (frames 5 and 250); the 4,046 "extra" triangles are the whole sphere against the original's viewport-clipped ones.
+- **What really differs: `u` scrolls in the original and is constant in the port.** The same planet triangle has `u` 3.4588, 3.8414, 3.6251 on frames 60, 100, 600 in the original and 2.8752 on every frame in the port: 0.009565 per 33 ms frame (0.29 per second), wrapping, frame `n` showing the scroll of `n + 1` steps. This is the instance texture scroll of `Instance_ApplyVelocity` `0x10027f40` (item 3): **not fixed here** (the UV scroll task owns it); when it lands, the case's threshold can drop.
+- Also seen: at frame 5 of `RACEC3R0` (player scenario) the original's camera shows the starting tunnel without the cars, the port's shows the cars (38 percent of the frame differs); the Royal Knights introduction matches since the camera lock (`0x004047b0`), so the final race's introduction camera is **open**.
+
+(Original text of the item:)
 
 - `planet/planet` (rr, rr2): the original's planet triangles (1,054 of 1,442 `planet` modulate unmatched) pair with port triangles of another texture (`texture pupgree2/pupred2 -> planet`), UVs `(0, 0.75) -> (1.8486, 1.3789)` (1,430 triangles), diffuse `243,243,243 -> 41,151,187`, depth `true -> false`; the port also draws 4,046 `planet/planet` triangles the original does not pair. A skeleton or UV animation of the planet (rotation) is not advanced like the original, or the dome is drawn at the wrong depth state (hypothesis). Candidates: `0x10027f40` (instance UV scroll), `0x10023b10` (skeleton instance step); see item 3.
 

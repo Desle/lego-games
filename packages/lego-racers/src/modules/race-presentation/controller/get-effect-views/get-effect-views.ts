@@ -403,6 +403,7 @@ export const getEffectViews = (raceState: RaceState): EffectViews => {
       ...getBrickViews(world.enhancementBricks, true),
     ]),
     spinAngle: world.brickSpinAngle,
+    brickClockMilliseconds: world.brickClockMilliseconds,
     effects: Object.freeze(views),
     explosions: Object.freeze([
       ...getExplosionViews(raceState.projectileWorld.explosions, false),

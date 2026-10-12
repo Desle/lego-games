@@ -116,3 +116,6 @@
 10026d10 SkeletonInstance_TransformDirection
 10002c90 Bone_TransformDirection
 10002a00 Bone_GetAxes
+10023ef0 SkeletonInstance_UpdateBoundingSphere
+100240b0 SkeletonInstance_GetVisibility
+1002bc20 Frustum_TestSphere

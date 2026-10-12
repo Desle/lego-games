@@ -34,6 +34,12 @@ export type SkeletonInstanceRuntime = {
   readonly levelSquaredDistances: readonly number[]
 }
 
+// The sphere an animated skeleton instance is culled by (GolDP.dll 0x10023ef0): its centre in the world and its radius.
+export type SkeletonInstanceSphere = {
+  readonly centre: Vector3
+  readonly radius: number
+}
+
 // Where the camera lock (0x004047b0) puts the camera: its position and the forward and up vectors it is given.
 export type SkeletonInstanceCameraView = {
   readonly position: { readonly x: number; readonly y: number; readonly z: number }

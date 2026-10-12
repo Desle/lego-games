@@ -31,4 +31,6 @@ export type MinifigPartPlan = {
   // An LDraw colour code, or a direct colour (`0x2RRGGBB`).
   readonly color: number | string
   readonly matrix: Matrix4
+  // Flesh (a head, a hand): the part the menus' lighting must show as the yellow it is.
+  readonly isSkin: boolean
 }

@@ -1,7 +1,7 @@
 import type { BspPlane } from '@lego-games/lego-racers/bsp-tree'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
-import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
+import type { RaceWorlds } from '@lego-games/lego-racers/world-animation'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import type { ScreenFadeOverlay } from '../screen-fade-overlay/screen-fade-overlay.types.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
@@ -26,9 +26,9 @@ export type RaceViewport = {
     screenFades?: readonly ScreenFadeView[],
     fieldOfViewDegrees?: number
   ) => void
-  // Shows the simulation's hazards and emitters: the track world's skeleton instances take the clip states the
+  // Shows the simulation's hazards and emitters: the worlds' skeleton instances take the clip states the
   // simulation advanced, and the emitter pools' particles are drawn as points.
-  readonly showHazards: (trackWorld: WorldAnimation, pools: readonly (EmitterPool | null)[]) => void
+  readonly showHazards: (worlds: RaceWorlds, pools: readonly (EmitterPool | null)[]) => void
   // Advances the backdrop and the sky by whole milliseconds (the track's instances follow the simulation).
   readonly animate: (deltaMilliseconds: number) => void
   // Draws the race at another size, keeping the camera's vertical field of view.

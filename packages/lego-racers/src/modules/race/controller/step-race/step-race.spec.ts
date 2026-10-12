@@ -80,6 +80,7 @@ describe('stepRace', () => {
           name: 'camera',
           framesPerMillisecond: 0,
           velocity: [0, 0, 0],
+          boundingSphere: [0, 0, 0, 0],
           firstTrackIndex: 0,
           frameCount: 60,
           loopLength: 60,

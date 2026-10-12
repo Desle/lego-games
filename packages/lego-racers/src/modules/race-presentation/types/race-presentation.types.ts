@@ -277,6 +277,8 @@ export type EffectViews = {
   readonly attachments: readonly AttachmentView[]
   readonly bricks: readonly BrickView[]
   readonly spinAngle: number
+  // The clock of the bricks' trail clips (the world of 0x00416090 at power-up system +0x60), in milliseconds.
+  readonly brickClockMilliseconds: number
   readonly effects: readonly EffectView[]
   readonly explosions: readonly ExplosionView[]
   readonly decals: readonly DecalView[]

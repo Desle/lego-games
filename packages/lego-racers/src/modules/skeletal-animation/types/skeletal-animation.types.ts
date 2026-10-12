@@ -78,6 +78,9 @@ export type AnimationClip = {
   readonly name: string
   readonly framesPerMillisecond: number
   readonly velocity: Vector3
+  // The clip's keyword 0x31 (+0x10..+0x1c): the centre and the radius of the sphere around the model while it plays, in
+  // model units (0x10023ef0 scales and carries it for the visibility test).
+  readonly boundingSphere: readonly [number, number, number, number]
   readonly firstTrackIndex: number
   // +0x24: frames in the clip (the last frame is one less).
   readonly frameCount: number

@@ -23,6 +23,7 @@ import type {
   AggregatedGroup,
   FrameTotals,
   HudFrameResult,
+  WatchedCount,
   RenderScenarioResult,
   WorldFrameComparison,
   WorldFrameInput,
@@ -33,12 +34,14 @@ import type { TraceScenarioRequest } from './trace-scenarios.types.ts'
 const getEffectScenes = (assets: RaceAssets): readonly Scene[] => {
   const {
     powerUpBricks,
+    powerUpTrails,
     rocket,
     barrel,
     magnet,
     curse,
     spikedExplosion,
     enhancementBrick,
+    enhancementTrail,
     warpTunnel,
   } = assets.effectModels
   return [
@@ -49,7 +52,9 @@ const getEffectScenes = (assets: RaceAssets): readonly Scene[] => {
       ...curse.map((figure) => figure.model),
       spikedExplosion,
       enhancementBrick,
+      enhancementTrail,
       ...Object.values(powerUpBricks),
+      ...Object.values(powerUpTrails),
     ].map((model) => model.scene),
     warpTunnel,
   ]
@@ -97,7 +102,7 @@ export const compareWorldFrame = (input: WorldFrameInput): WorldFrameComparison 
     getEffectViews(raceState),
     presentation.warpView
   )
-  stage.showHazards(raceState.trackLogic.worlds.track, [
+  stage.showHazards(raceState.trackLogic.worlds, [
     raceState.racerSet.emitters.common,
     raceState.racerSet.emitters.track,
   ])
@@ -150,6 +155,7 @@ export const runRenderComparison = async (
   const hudResults: HudFrameResult[] = []
   const groups = new Map<string, AggregatedGroup>()
   const totals: FrameTotals[] = []
+  const watchedCounts: WatchedCount[] = []
   runPortRace(
     assets,
     scenario.frames,
@@ -163,7 +169,20 @@ export const runRenderComparison = async (
         candidateCount: CANDIDATE_COUNT,
       })
       if (world === null) return
-      const { originalFrame, originalTriangles, comparison } = world
+      const { originalFrame, originalTriangles, portTriangles, textureMatches, comparison } = world
+      for (const watched of request.watched ?? []) {
+        const originalPattern = new RegExp(watched.originalTexture, 'i')
+        const portPattern = new RegExp(watched.portSource, 'i')
+        watchedCounts.push({
+          label: watched.label,
+          frame,
+          originalCount: originalTriangles.filter((triangle) =>
+            originalPattern.test(textureMatches.get(triangle.textureKey ?? '')?.bestKey ?? '')
+          ).length,
+          portCount: portTriangles.triangles.filter((triangle) => portPattern.test(triangle.source))
+            .length,
+        })
+      }
       if (presentation.hudFrame !== null) {
         const hud = compareQuadPlacements({
           original: getOriginalQuads(originalFrame, true),
@@ -266,6 +285,7 @@ export const runRenderComparison = async (
   return Object.freeze({
     hudResults,
     totals,
+    watched: watchedCounts,
     groups: [...groups.values()].sort((left, right) => right.count - left.count),
   })
 }

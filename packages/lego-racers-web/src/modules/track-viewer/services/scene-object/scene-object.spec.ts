@@ -138,6 +138,7 @@ const SCENE: Scene = {
             name: 'swing',
             framesPerMillisecond: 1,
             velocity: [0, 0, 0],
+            boundingSphere: [0, 0, 0, 0],
             firstTrackIndex: 0,
             frameCount: 11,
             loopLength: 10,

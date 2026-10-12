@@ -4,13 +4,12 @@ import type { FrustumView, Vector3Like } from '../race-viewport/race-viewport.ty
 // The effects of a race as three.js objects.
 export type RaceEffects = {
   // Shows the effects the race reports this frame and hides the rest.
-  // The bricks farther from the eye than their level distance are left out.
-  // The curse figures outside the camera's frustum or beyond their level distance are left out.
+  // The bricks' instances beyond their level distance or outside the frustum are left out.
   readonly update: (
     views: EffectViews,
     eye: Vector3Like,
     poses: readonly RacerPose[],
-    frustum: FrustumView
+    view: FrustumView
   ) => void
   readonly dispose: () => void
 }
