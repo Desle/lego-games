@@ -136,6 +136,18 @@ export const createLDrawRacerCar = (
   const database = parseBrickDatabase(request.archive.readFile(BRICK_DATABASE_PATH))
   const keepModelParts = (model: Group) => foundWheels.push(...takeWheelsAndFigures(model))
   const sourceName = source.kind === 'design' ? `${source.chassis.name}.ldr` : source.file
+  const buildWheels = () => {
+    if (getIsDisposed()) return
+    const partRequest = getPartRequest(request)
+    live.wheels =
+      foundWheels.length > 0
+        ? createFileWheelsDrawing(foundWheels, partRequest)
+        : createLDrawWheelsDrawing(partRequest)
+    if (live.wheels === null) return
+    wheelsScaled.add(live.wheels.object)
+    if (live.state !== null) live.wheels.setAnimationState(live.state)
+    setDrawingOpacity(object, live.opacity)
+  }
   const buildBody = async (): Promise<boolean> => {
     if (source.kind === 'design') {
       const name = source.chassis.name.toLowerCase()
@@ -154,6 +166,8 @@ export const createLDrawRacerCar = (
         chassisModels
       )
       bodyHolder.add(drawing.object)
+      // The wheels come with the placeholder bricks, so a car never stands without them while its parts load.
+      buildWheels()
       await drawing.settled
       return true
     }
@@ -183,25 +197,14 @@ export const createLDrawRacerCar = (
     bodyHolder.add(createStudioLights(), holder)
     return true
   }
-  const buildWheels = () => {
-    if (getIsDisposed()) return
-    const partRequest = getPartRequest(request)
-    live.wheels =
-      foundWheels.length > 0
-        ? createFileWheelsDrawing(foundWheels, partRequest)
-        : createLDrawWheelsDrawing(partRequest)
-    if (live.wheels === null) return
-    wheelsScaled.add(live.wheels.object)
-    if (live.state !== null) live.wheels.setAnimationState(live.state)
-    setDrawingOpacity(object, live.opacity)
-  }
   const settle = (isBuilt: boolean) => {
     if (isBuilt || getIsDisposed()) return
     failureListeners.forEach((listener) => listener())
   }
   void buildBody()
     .then((isBuilt) => {
-      if (isBuilt) buildWheels()
+      if (isBuilt && live.wheels === null) buildWheels()
+      if (isBuilt) setDrawingOpacity(object, live.opacity)
       settle(isBuilt)
     })
     .catch((error: unknown) => {
