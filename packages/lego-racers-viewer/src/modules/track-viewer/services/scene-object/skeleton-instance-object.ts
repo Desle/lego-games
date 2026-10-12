@@ -11,6 +11,8 @@ import {
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import type { BufferAttribute } from 'three'
 import { createBatchGeometry } from './batch-geometry.ts'
+import { LIT_MATERIAL_KEY } from './vertex-lighting.ts'
+import type { LitMaterial } from './vertex-lighting.types.ts'
 import { createBatchMesh, createInstanceGroup, getBatchMaterial } from './instance-batches.ts'
 import type {
   InstanceLevelMesh,
@@ -40,6 +42,18 @@ const createSkeletonBatch = (
     batchMaterial.sceneMaterial.renderState,
     batchMaterial.sceneMaterial.ambientColor
   )
+  const { renderState, ambientColor, diffuseColor } = batchMaterial.sceneMaterial
+  if (
+    levelMesh.mesh.colors === null &&
+    levelMesh.mesh.normals !== null &&
+    !renderState.isDiffuseWhite
+  ) {
+    const litMaterial: LitMaterial = {
+      ambient: [ambientColor[0], ambientColor[1], ambientColor[2]],
+      diffuse: [diffuseColor[0], diffuseColor[1], diffuseColor[2]],
+    }
+    geometry.userData[LIT_MATERIAL_KEY] = litMaterial
+  }
   const positions = geometry.getAttribute('position') as BufferAttribute
   const normals = geometry.getAttribute('normal') as BufferAttribute | undefined
   const mesh = createBatchMesh(context, geometry, batchMaterial.material)

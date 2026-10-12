@@ -26,7 +26,7 @@ import {
 const FRAME_MILLISECONDS = 33
 const POSITION_TOLERANCE = 0.03
 const MENU_OPENED_FRAME = 154
-const MATCHED_SHARE = 0.7
+const MATCHED_SHARE = 0.9
 // Down and enter open the circuit race screen, two downs and enter the single race screen (scan codes 208 and 28; a key of frame f
 // shows in frame f + 1). The circuit screen shows the next race (and its cinema) every two seconds.
 const CIRCUIT_KEYS: readonly (readonly [number, FrontEndInput, number])[] = [
@@ -38,7 +38,17 @@ const SINGLE_KEYS: readonly (readonly [number, FrontEndInput, number])[] = [
   [250, 'down', 208],
   [270, 'accept', 28],
 ]
-const CIRCUIT_FRAMES = [285, 300, 330, 345, 400, 460, 520, 700]
+// Six presses of right on the circuit race screen reach the last circuit (the yellow frame, the Final cinema).
+const LAST_CIRCUIT_KEYS: readonly (readonly [number, FrontEndInput, number])[] = [
+  ...CIRCUIT_KEYS,
+  ...[290, 310, 330, 350, 370, 390].map((frame): readonly [number, FrontEndInput, number] => [
+    frame,
+    'right',
+    205,
+  ]),
+]
+const LAST_CIRCUIT_FRAMES = [430, 440, 500]
+const CIRCUIT_FRAMES = [285, 300, 330, 332, 345, 350, 356, 392, 396, 400, 460, 520, 700]
 const SINGLE_FRAMES = [285, 300, 400, 500, 700]
 
 const archive = openJamArchive(readOriginalJam())
@@ -57,6 +67,15 @@ type CinemaFrame = {
   readonly cinemaName: string | null
   readonly originalCount: number
   readonly share: number
+  // The original's draws with the colour the port tints the preview's frame with (8 pieces).
+  readonly tintedDrawCount: number
+}
+
+const getFrameTint = (state: FrontEndState): number | null => {
+  for (const command of getFrontEndFrame(state, resources, environment).commands) {
+    if (command.kind === 'image' && command.tint !== undefined) return command.tint
+  }
+  return null
 }
 
 const getCinemaView = (state: FrontEndState): RaceCinemaView | null => {
@@ -97,7 +116,12 @@ const runScenario = async (
     const matched = originalPositions.filter((position) =>
       bonePositions.some((bone) => getDistance(bone, position) < POSITION_TOLERANCE)
     )
+    const tint = getFrameTint(state)
     return {
+      tintedDrawCount:
+        tint === null
+          ? 0
+          : draws.filter((draw) => draw.vertices.some((vertex) => vertex.diffuse === tint)).length,
       frame: watchedFrame,
       cinemaName: view?.cinemaName ?? null,
       originalCount: originalPositions.length,
@@ -123,7 +147,18 @@ describe.skipIf(!(getIsOriginalGamePresent() && getIsOriginalPresentationAvailab
 
       // Assert
       expect(Math.min(...frames.map((frame) => frame.share))).toBeGreaterThan(MATCHED_SHARE)
+      expect(Math.min(...frames.map((frame) => frame.tintedDrawCount))).toBeGreaterThanOrEqual(8)
       expect(new Set(frames.map((frame) => frame.cinemaName)).size).toBeGreaterThan(1)
+    })
+
+    it('colours the frame of the last circuit yellow with the alpha the original draws', async () => {
+      // Arrange / Act
+      const frames = await runScenario(LAST_CIRCUIT_KEYS, LAST_CIRCUIT_FRAMES)
+
+      // Assert
+      expect(frames.every((frame) => frame.cinemaName === 'Final')).toBe(true)
+      expect(Math.min(...frames.map((frame) => frame.share))).toBeGreaterThan(MATCHED_SHARE)
+      expect(Math.min(...frames.map((frame) => frame.tintedDrawCount))).toBeGreaterThanOrEqual(8)
     })
   }
 )
