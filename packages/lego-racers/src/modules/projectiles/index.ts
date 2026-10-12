@@ -72,13 +72,18 @@ export type {
   LineProbe,
   LineProbeHit,
   RocketLaunchBone,
+  SurfaceSignalHandler,
 } from './types/projectiles.types.ts'
 export {
   getPointMovedAlongRoute,
   getWarpLandingPosition,
 } from './types/route-movement/route-movement.ts'
 export type { RouteNode } from './types/route-movement/route-movement.types.ts'
-export { createTrackLineProbe } from './types/track-line-probe/track-line-probe.ts'
+export {
+  createTrackLineProbe,
+  NO_PROBE_SURFACE,
+} from './types/track-line-probe/track-line-probe.ts'
+export type { ProbeSurface } from './types/track-line-probe/track-line-probe.types.ts'
 export { getIsSpeedNearZero } from './types/turbo-early-end/turbo-early-end.ts'
 export { getRaySphereHit, getWandBeam } from './types/wand-beam/wand-beam.ts'
 export type { WandBeam, WandBeamRequest, WandBounds } from './types/wand-beam/wand-beam.types.ts'

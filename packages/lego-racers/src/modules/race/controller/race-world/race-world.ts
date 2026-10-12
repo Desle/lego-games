@@ -17,7 +17,15 @@ import type {
   LineProbe,
   ProjectileContext,
   ProjectileEvent,
+  SurfaceSignalHandler,
 } from '../../../projectiles/index.ts'
+import {
+  getProbeSurface,
+  getSurfacesWithBarrierOpen,
+} from '../../types/surface-materials/surface-materials.ts'
+import type { SurfaceMaterials } from '../../types/surface-materials/surface-materials.types.ts'
+import { getCollisionMaterialName } from '../../../collision/index.ts'
+import type { CollisionObject } from '../../../collision/index.ts'
 import {
   addCarBodyImpulse,
   getRacer,
@@ -290,6 +298,19 @@ export const changePowerUps: RaceWorldChange = (context, racerSet, change) => {
 
 const NO_LINE_HIT: LineProbe = () => null
 
+// 0x0041f730 over the track object: the hit material's track-material entry makes it a pass-through (flag 0x20000)
+// or starts its signal (flag 0x10).
+const createSurfaceLineProbe = (
+  arithmetic: FloatArithmetic,
+  track: CollisionObject | undefined,
+  surfaces: SurfaceMaterials
+): LineProbe =>
+  track === undefined
+    ? NO_LINE_HIT
+    : createTrackLineProbe(arithmetic, track.volume, (materialIndex) =>
+        getProbeSurface(surfaces, getCollisionMaterialName(track, materialIndex))
+      )
+
 // What the moving effects read of a racer. Fields named in projectiles.md: +0x3f0 is the car body's linear velocity
 // (+0x8), +0x9e0 and +0x9ec its velocity direction and speed (+0x5f8, +0x604), +0x550 its heading (+0x168), +0xe08 and
 // +0xe20 the display frame's position and first row, +0xcc4 the checkpoint. Not ported, so fixed: the vehicle
@@ -324,15 +345,17 @@ export const getFlightRacer = (context: RacerSetContext, racer: Racer): FlightRa
   })
 }
 
-// The line probe 0x0041f730 over the first collision object (the track); the material flag 0x20000 test needs the
-// track-material table of the track, which the race does not carry, so no hit is passed through.
+// The line probe 0x0041f730 over the first collision object (the track); the signals of the materials it hits go to
+// onSurfaceSignal (the caller starts and stops them on the track logic).
 export const createProjectileContext = (
   context: RacerSetContext,
   modelData: RaceState['projectileModelData'],
   racerSet: RaceRacerSet,
-  powerUps: PowerUpContext
+  powerUps: PowerUpContext,
+  onSurfaceSignal?: SurfaceSignalHandler
 ): ProjectileContext => {
   const track = context.collisionObjects[racerSet.racers[0]?.collisionObjectIndices[0] ?? 0]
+  const probe = createSurfaceLineProbe(context.arithmetic, track, racerSet.surfaces)
   return Object.freeze({
     powerUps,
     racers: Object.freeze(racerSet.racers.map((racer) => getFlightRacer(context, racer))),
@@ -342,19 +365,23 @@ export const createProjectileContext = (
     rocketModelScale: modelData.rocketModelScale,
     getTableCosine: (index: number) => getTableCosine(context.tables, index),
     debrisAnimations: modelData.debrisAnimations,
-    probe:
-      track === undefined
-        ? NO_LINE_HIT
-        : createTrackLineProbe(context.arithmetic, track.volume, () => false),
+    probe: (start, end) => probe(start, end, onSurfaceSignal),
   })
 }
 
 export const getProjectileContext = (
   state: RaceState,
   racerSet: RaceRacerSet,
-  powerUps: PowerUpContext
+  powerUps: PowerUpContext,
+  onSurfaceSignal?: SurfaceSignalHandler
 ): ProjectileContext =>
-  createProjectileContext(state.context, state.projectileModelData, racerSet, powerUps)
+  createProjectileContext(
+    state.context,
+    state.projectileModelData,
+    racerSet,
+    powerUps,
+    onSurfaceSignal
+  )
 
 // 0x00439570 makes the racer tumble; the other events call car body slots that are not ported (they stay in the
 // events the race reports).
@@ -616,6 +643,11 @@ const getRacerSetAfterTrackEffect = (
       })
     )
   }
+  if (effect.type === 'hazard.collision_object_changed') {
+    // 0x0048f030 and the other barrier hazards set or clear flags 0x10000 and 0x20000 of the named track material.
+    const surfaces = getSurfacesWithBarrierOpen(racerSet.surfaces, effect.name, !effect.isSolid)
+    return surfaces === racerSet.surfaces ? racerSet : Object.freeze({ ...racerSet, surfaces })
+  }
   return racerSet
 }
 
@@ -638,10 +670,7 @@ export const changeTrackLogic = (
     world: STATIC_TRACK_WORLD,
     getHazardRacer: (racerIndex) => getHazardRacer(racerSet.racers[racerIndex], racerIndex),
     getTableCosine: (index) => getTableCosine(context.tables, index),
-    probe:
-      track === undefined
-        ? NO_LINE_HIT
-        : createTrackLineProbe(context.arithmetic, track.volume, () => false),
+    probe: createSurfaceLineProbe(context.arithmetic, track, racerSet.surfaces),
   })
   const changed: RaceRacerSet = Object.freeze({
     ...racerSet,

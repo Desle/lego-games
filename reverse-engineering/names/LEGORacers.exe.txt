@@ -910,3 +910,10 @@
 004568f0 Rocket_Update
 00440160 Vehicle_SetPartsScale
 0043a3e0 Racer_RequestCameraSnap
+0048ef70 Hazard34_Begin
+0048efe0 Hazard34_End
+0048f030 Hazard34_Update
+0048e5a0 Hazard2E_TurnOn
+0048e600 Hazard2E_TurnOff
+004881a0 TimeTrialScreen_ShowBestTime
+00488150 TimeTrialScreen_Update

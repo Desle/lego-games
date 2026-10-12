@@ -176,7 +176,13 @@ export const createTrackSession = (
     },
     getRacer: (racerIndex) => getHazardRacer(racerIndex),
     getTableCosine: (index) => context.getTableCosine?.(index) ?? 1,
-    probe: (start, end) => context.probe?.(start, end) ?? null,
+    // 0x0041f730 starts and stops the signal of a hit material at the hit point as it probes.
+    probe: (start, end) =>
+      context.probe?.(start, end, (identifier, point) => {
+        const position: Vector3 = [point.x, point.y, point.z]
+        getSession().startSignal(identifier, position)
+        getSession().stopSignal(identifier, position)
+      }) ?? null,
     emit: (effect) => void effects.push(effect),
   }
 

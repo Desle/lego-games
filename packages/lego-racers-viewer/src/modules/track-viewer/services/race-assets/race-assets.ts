@@ -32,6 +32,7 @@ import {
   loadSceneOnto,
 } from '@lego-games/lego-racers/scene'
 import { parseSky } from '@lego-games/lego-racers/sky'
+import { parseModel } from '@lego-games/lego-racers/model'
 import { readWorld } from '@lego-games/lego-racers/world'
 import { getString, parseStringTable } from '@lego-games/lego-racers/string-table'
 import type { ModelScene, Scene } from '@lego-games/lego-racers/scene'
@@ -51,6 +52,9 @@ import type {
 const DEFAULT_RACE_FOLDER = 'RACEC0R0'
 // The warp's tunnel world (LEGORacers.exe 0x0045d940 draws its `dbricks` and `dtube`).
 export const WARP_WORLD_PATH = `${COMMON_DIRECTORY}\\TURBO3.WDB`
+// The champion ghost's car (Ghost_Initialize 0x00422420 loads "ghost" from GAMEDATA\COMMON): `ghost2` (the wheels), `ghostb2` (the
+// body) and `ghostdr` (the driver).
+export const GHOST_WORLD_PATH = `${COMMON_DIRECTORY}\\GHOST.WDB`
 const ENGLISH_DIRECTORY = `${COMMON_DIRECTORY}\\ENGLISH`
 const SEPARATOR = '\\'
 // The image database flag for a colour key (IMAGE_KEYWORD_2B_FLAG, 0x20).
@@ -231,6 +235,26 @@ const getEffectMaterials = (archive: JamArchive): Scene =>
     animationName: null,
   }).scene
 
+// The ghost car's parts are drawn at the scale of their model (GDB keyword 0x33), as a racer's car is.
+const getGhostModels = (
+  archive: JamArchive,
+  scene: Scene,
+  isTimeTrial: boolean
+): Pick<RaceAssets, 'ghostScene' | 'ghostScales'> => {
+  if (!isTimeTrial) return { ghostScene: null, ghostScales: Object.freeze({}) }
+  const ghostScene = loadSceneOnto(archive, scene, [GHOST_WORLD_PATH])
+  const scales = ghostScene.instances
+    .filter((instance) => instance.worldPath === GHOST_WORLD_PATH)
+    .map((instance) => {
+      const mesh = ghostScene.meshes[instance.levels[0]?.meshIndex ?? -1]
+      return [
+        instance.name,
+        mesh === undefined ? 1 : parseModel(archive.readFile(mesh.path)).scale,
+      ] as const
+    })
+  return { ghostScene, ghostScales: Object.freeze(Object.fromEntries(scales)) }
+}
+
 const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
   Object.freeze({
     materials: getEffectMaterials(archive),
@@ -377,6 +401,7 @@ export const loadRaceAssets = (
       definition.racers.map((racer) => getRacerModels(archive, racer, loadModel))
     ),
     effectModels: getEffectModels(archive, scene),
+    ...getGhostModels(archive, scene, definition.ghost !== null),
     getString: (stringId: number) => getString(table, stringId) ?? '',
     imageNames: Object.freeze(imageDatabase.images.map((image) => image.name.toUpperCase())),
     hudFonts: loadHudFonts(archive),

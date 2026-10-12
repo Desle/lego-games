@@ -18,7 +18,25 @@ import type { VehicleSkids } from '../../racer/index.ts'
 import type { DecalPlacement } from '../../decal/index.ts'
 import type { ColourShift } from '../../racer/index.ts'
 import type { Matrix3, Vector3 } from '../../simulation-math/index.ts'
-import type { RacePhaseValue } from '../../race/index.ts'
+import type { RacePhaseValue, RaceState } from '../../race/index.ts'
+import type { GhostRunSelection } from '../../ghost/index.ts'
+
+// A ghost car of a time trial (FUN_00422960): the champion's, drawn from GHOST.WDB, or the session's best run, drawn with
+// the player's own car. All three parts take the run's one orientation; the driver sits at the seat point carried by it.
+export type GhostCar = {
+  readonly kind: GhostRunSelection
+  readonly position: Vector3
+  readonly rotation: Matrix3
+  readonly driverPosition: Vector3
+  // The integer FUN_00422960 stores as the wheels' animation rate (+0xb8).
+  readonly speed: number
+}
+
+export type GhostCarsStep = {
+  // The race with the ghost's playback flags moved on (a run whose last sample has passed stops being drawn).
+  readonly raceState: RaceState
+  readonly cars: readonly GhostCar[]
+}
 
 // Everything the screen and the speakers show that the simulation does not keep: the player's camera and HUD, the
 // turbo level the camera reads, and the previous frame's phase and bindings for edge detection.

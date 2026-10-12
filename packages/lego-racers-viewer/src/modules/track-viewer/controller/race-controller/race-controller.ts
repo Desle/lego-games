@@ -46,6 +46,7 @@ import { getRacerControls } from '@lego-games/lego-racers/race-input'
 import {
   createRacePresentation,
   getEffectViews,
+  getGhostCars,
   getPauseMenuCommands,
   getRacerPoses,
   stepRacePresentation,
@@ -59,6 +60,11 @@ import { createRaceAudioPlayer } from '../../services/race-audio-player/race-aud
 import { loadRaceAssets } from '../../services/race-assets/race-assets.ts'
 import type { LoadedGameFiles, RaceAssets } from '../../services/race-assets/race-assets.types.ts'
 import { createDevelopmentPowerUpSource } from '../../services/development-power-up-source/development-power-up-source.ts'
+import {
+  getIsDirectoryPickerAvailable,
+  getNeededGameFiles,
+  pickGameFolderFiles,
+} from '../../services/game-folder/game-folder.ts'
 import { createIndexedDbSaveStorage } from '../../services/indexed-db-save-storage/indexed-db-save-storage.ts'
 import { createRaceMenuInputSource } from '../../services/race-menu-input-source/race-menu-input-source.ts'
 import { createRaceInputSource } from '../../services/race-input-source/race-input-source.ts'
@@ -388,7 +394,8 @@ export const useRaceController = (): RaceController => {
           { controls: [controls], contacts: NO_RACE_CONTACTS, menu: menuInput.read() },
           advance.frameMilliseconds
         )
-        raceState = step.raceState
+        const ghostStep = getGhostCars(step.raceState)
+        raceState = ghostStep.raceState
         if (sessionReference.current !== null) {
           sessionReference.current = recordRaceStep(sessionReference.current, step)
         }
@@ -408,7 +415,8 @@ export const useRaceController = (): RaceController => {
           getRacerPoses(raceState),
           frame.cameraView,
           getEffectViews(raceState),
-          frame.warpView
+          frame.warpView,
+          ghostStep.cars
         )
         viewport.showHazards(raceState.trackLogic.worlds.track, [
           raceState.racerSet.emitters.common,
@@ -467,7 +475,14 @@ export const useRaceController = (): RaceController => {
     onDevelopmentGameRequested: import.meta.env.DEV
       ? () => openGame(getDevelopmentGameFiles)
       : () => undefined,
-    onGameFilesChosen: (files) => openGame(() => getChosenGameFiles(files)),
+    isDirectoryPickerAvailable: getIsDirectoryPickerAvailable(),
+    onGameFilesChosen: (files) => openGame(() => getChosenGameFiles(getNeededGameFiles(files))),
+    onGameFolderRequested: () =>
+      void pickGameFolderFiles()
+        .then((files) => {
+          if (files !== null) openGame(() => getChosenGameFiles(files))
+        })
+        .catch(showFailure),
     onRaceRequested: startRace,
     onDemonstrationRequested: startDemonstration,
     onMenuMemoryChanged: (memory) => {

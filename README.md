@@ -13,6 +13,18 @@ Needs Node 24 (`.nvmrc`) and pnpm (`corepack enable`).
 
 Put your own copy of the game in `original-files/` (gitignored), for example `original-files/Lego_Racers_Win_Files_EN/Game Files/LEGO.JAM`. Tests that need it skip when it's missing.
 
+## Play
+
+You need your own copy of LEGO Racers (1999); nothing of it ships here.
+
+```sh
+pnpm install
+pnpm --filter @lego-games/lego-racers-viewer build
+pnpm --filter @lego-games/lego-racers-viewer exec vite preview
+```
+
+Open the printed address in Chrome or Edge, click **Choose your LEGO Racers game folder** and pick the folder holding `LEGO.JAM`, `LEGORacers.exe` and the `.tun` music (the `Game Files` folder of the install). The files are read in the browser and never uploaded; the game opens on the main menu. Other browsers get a folder input instead of the directory picker. Menus: arrow keys, Enter, Escape; the race controls are listed on the start screen. Saves are kept in the browser (IndexedDB). `pnpm run dev:viewer` also offers the developer panel and the development-files button.
+
 ## Reverse engineering
 
 Ghidra 12 (`brew install ghidra`) analyses `LEGORacers.exe` and `GolDP.dll` into `reverse-engineering/ghidra/`. The scripts in `reverse-engineering/scripts/` decompile functions headlessly, for example:

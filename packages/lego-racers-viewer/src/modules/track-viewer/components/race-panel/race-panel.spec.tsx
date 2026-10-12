@@ -8,6 +8,8 @@ const getProps = (overrides: Partial<RacePanelProps> = {}): RacePanelProps => ({
   errorMessage: null,
   isDevelopmentFilesAvailable: true,
   onDevelopmentGameRequested: vi.fn(),
+  isDirectoryPickerAvailable: true,
+  onGameFolderRequested: vi.fn(),
   onGameFilesChosen: vi.fn(),
   onRaceStopped: vi.fn(),
   ...overrides,
@@ -30,6 +32,26 @@ describe('RacePanel', () => {
 
     // Assert
     expect(container).toMatchSnapshot()
+  })
+
+  it('renders the folder input where the browser has no directory picker', () => {
+    // Arrange / Act
+    const { container } = render(<RacePanel {...getProps({ isDirectoryPickerAvailable: false })} />)
+
+    // Assert
+    expect(container).toMatchSnapshot()
+  })
+
+  it('asks for the game folder when the folder button is clicked', () => {
+    // Arrange
+    const props = getProps()
+    render(<RacePanel {...props} />)
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: /game folder/ }))
+
+    // Assert
+    expect(props.onGameFolderRequested).toHaveBeenCalledTimes(1)
   })
 
   it('renders the loading state with the buttons disabled', () => {
@@ -70,7 +92,7 @@ describe('RacePanel', () => {
 
   it('hands the chosen files and the clicks to the controller', () => {
     // Arrange
-    const props = getProps({ status: RaceStatus.RUNNING })
+    const props = getProps({ status: RaceStatus.RUNNING, isDirectoryPickerAvailable: false })
     const { container } = render(<RacePanel {...props} />)
     const file = new File(['x'], 'LEGO.JAM')
 

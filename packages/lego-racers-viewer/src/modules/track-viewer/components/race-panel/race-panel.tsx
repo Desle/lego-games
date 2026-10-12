@@ -9,6 +9,8 @@ const RacePanel = ({
   errorMessage,
   isDevelopmentFilesAvailable,
   onDevelopmentGameRequested,
+  isDirectoryPickerAvailable,
+  onGameFolderRequested,
   onGameFilesChosen,
   onRaceStopped,
 }: RacePanelProps) => {
@@ -27,19 +29,32 @@ const RacePanel = ({
           Open the game (development files)
         </button>
       )}
-      <label className="flex cursor-pointer flex-col gap-1 rounded-lg border-2 border-dashed border-slate-500 p-3 text-center hover:border-amber-400">
-        <span className="font-semibold">Choose the game files</span>
-        <span className="text-slate-400">
-          LEGO.JAM, LEGORacers.exe and the .tun music; they never leave your browser.
-        </span>
-        <input
-          className="sr-only"
-          type="file"
-          multiple
+      {isDirectoryPickerAvailable ? (
+        <button
+          type="button"
+          className="rounded bg-amber-500 px-3 py-3 text-base font-semibold text-slate-900 hover:bg-amber-400 disabled:opacity-50"
           disabled={isBusy}
-          onChange={onInputChange}
-        />
-      </label>
+          onClick={onGameFolderRequested}
+        >
+          Choose your LEGO Racers game folder
+        </button>
+      ) : (
+        <label className="flex cursor-pointer flex-col gap-1 rounded-lg border-2 border-dashed border-slate-500 p-3 text-center hover:border-amber-400">
+          <span className="font-semibold">Choose your LEGO Racers game folder</span>
+          <input
+            className="sr-only"
+            type="file"
+            multiple
+            disabled={isBusy}
+            onChange={onInputChange}
+            {...{ webkitdirectory: '' }}
+          />
+        </label>
+      )}
+      <p className="text-center text-slate-400">
+        The folder with LEGO.JAM and LEGORacers.exe; the files are read in your browser and never
+        uploaded.
+      </p>
       {status === RaceStatus.RUNNING && (
         <button
           type="button"
