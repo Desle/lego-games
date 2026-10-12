@@ -12,10 +12,12 @@ import {
   MeshStandardMaterial,
   SRGBColorSpace,
 } from 'three'
-import type { Material, Object3D } from 'three'
+import type { Material, Object3D, Texture } from 'three'
 import type { StandardMesh } from './ldraw-plastic.types.ts'
 import { PLASTIC_APPEARANCE } from './ldraw-plastic.constants.ts'
 
+// The decals are colour-keyed pictures: a keyed pixel has alpha 0.
+const DECAL_ALPHA_TEST = 0.5
 const ENVIRONMENT_FACE_SIZE = 64
 const CUBE_FACE_COUNT = 6
 const TOP_FACE_INDEX = 2
@@ -103,6 +105,15 @@ const getIsStandardMesh = (object: Object3D): object is StandardMesh =>
 
 export const createPlasticMaterialFromColor = (color: number): MeshPhysicalMaterial =>
   createPlasticMaterial(new MeshStandardMaterial({ color, side: DoubleSide }))
+
+export const createPlasticMaterialFromTexture = (map: Texture): MeshPhysicalMaterial => {
+  const material = createPlasticMaterial(
+    new MeshStandardMaterial({ color: 0xffffff, side: DoubleSide })
+  )
+  material.map = map
+  material.alphaTest = DECAL_ALPHA_TEST
+  return material
+}
 
 const isConditionalLineMaterial = (material: unknown): material is LineBasicMaterial =>
   material instanceof Object && Reflect.get(material, 'isConditionalLineMaterial') === true

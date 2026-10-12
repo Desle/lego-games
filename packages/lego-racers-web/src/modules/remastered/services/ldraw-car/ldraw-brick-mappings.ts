@@ -94,6 +94,13 @@ export const LDRAW_BRICK_MAPPINGS: Readonly<Record<string, LDrawBrickMapping>> =
     offset: Object.freeze([20, 20, 50] as const),
     heightError: 0.44,
   }),
+  L304900: Object.freeze({
+    partNumber: '3049',
+    quarterTurns: 3,
+    isMirrored: true,
+    offset: Object.freeze([10, 20, 24] as const),
+    heightError: 0.67,
+  }),
   L329700: Object.freeze({
     partNumber: '3297',
     quarterTurns: 0,
@@ -474,7 +481,6 @@ export const UNMAPPED_BRICK_REASONS: Readonly<Record<string, string>> = Object.f
   JTchas0: 'no LDraw part with this shape',
   KKCHAS0: 'no LDraw part with this shape (closest: 24248, mean height error 3.25 plates)',
   l248900: 'no LDraw part with this shape (closest: 30361a, mean height error 0.63 plates)',
-  L304900: 'no LDraw part with this shape (closest: 41732, mean height error 0.87 plates)',
   S243201:
     'no LDraw part with this shape (closest: 21, mean height error 0.81 plates; the brick is a thin angled pane, the part a block)',
   RRchas0: 'no LDraw part with this shape (closest: 30497, mean height error 1.87 plates)',
