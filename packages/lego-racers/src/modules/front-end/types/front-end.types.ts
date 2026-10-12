@@ -1,6 +1,8 @@
 import type { EmitterPool } from '../../emitter/index.ts'
 import type {
   RacePreviewClock,
+  RacePreviewColourShift,
+  RacePreviewEffects,
   RacePreviewEmitters,
   RacePreviewResources,
 } from './race-preview.types.ts'
@@ -193,6 +195,8 @@ export type FrontEndState = {
   readonly racePreview: RacePreviewClock
   // The emitters of the race preview's cinema (null while a screen without a preview is on top).
   readonly racePreviewEmitters: RacePreviewEmitters | null
+  // The vertex effects of the race preview's cinema (the sky's flash).
+  readonly racePreviewEffects: RacePreviewEffects | null
   // The entry of MENUDATA\LEGOMSC the music stream plays (FrontEnd_SetMusic 0x00480470), or null before any.
   readonly musicListIndex: number | null
   // The main menu's figure and its timers; they run only while that screen is the top one.
@@ -263,6 +267,8 @@ export type RaceCinemaView = {
   readonly partBytes: readonly number[] | null
   // The emitters the cinema has started (the snow of the ice world), drawn with the world's materials.
   readonly emitterPool: EmitterPool | null
+  // The colour remaps the cinema's vertex effects give its instances now.
+  readonly colourShifts: readonly RacePreviewColourShift[]
 }
 
 // The racer of the save the showcase shows: his car, turning on the turntable, and his driver standing on the platform.

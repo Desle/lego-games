@@ -19,6 +19,7 @@ import type {
   ScreenResult,
   ScreenRuntime,
 } from '../../types/front-end-screen.types.ts'
+import { getRacePreviewColourShifts } from '../race-preview/race-preview-effects.ts'
 import { getUnlockedCircuitMask } from '../profile/profile.ts'
 import { createResult, getClampedStep, MenuSound } from '../screen-helpers/screen-helpers.ts'
 
@@ -107,6 +108,7 @@ const getRaceCinema = (
     milliseconds: runtime.racePreview.cinemaMilliseconds,
     partBytes: champion?.unreadBytes ?? null,
     emitterPool: runtime.racePreviewEmitters?.pool ?? null,
+    colourShifts: getRacePreviewColourShifts(runtime.racePreviewEffects),
   }
 }
 
