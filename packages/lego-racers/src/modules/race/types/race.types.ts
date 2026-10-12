@@ -195,6 +195,8 @@ export type RaceState = {
   readonly introductionCameraObject: string | null
   readonly introductionCameraPoint: Vector3
   readonly introductionCameraVectors: readonly [Vector3, Vector3]
+  // The settings flag (+0x3c) that negates y in every loader.
+  readonly isMirrored: boolean
   readonly tuneIndex: number | null
   // Race +0x3330: how many racers have been given a final place.
   readonly finishedRacerCount: number

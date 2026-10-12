@@ -28,6 +28,7 @@ import { CAMERA_TRACE_FIELDS, getPortCameraTrace } from './camera-trace.ts'
 
 const TRACE_TIMEOUT_MILLISECONDS = 3_600_000
 const DEMONSTRATION_FRAME_COUNT = Number(process.env['CAMERA_TRACE_DEMONSTRATION_FRAMES'] ?? 700)
+const FINISH_FRAME_COUNT = Number(process.env['CAMERA_TRACE_FINISH_FRAMES'] ?? 9000)
 const SELECTED_RACES = (process.env['CAMERA_TRACE_RACES'] ?? '').split(',').filter(Boolean)
 const SELECTED_MODES = (process.env['CAMERA_TRACE_MODES'] ?? '').split(',').filter(Boolean)
 const MIRRORING = process.env['CAMERA_TRACE_MIRRORING'] ?? 'both'
@@ -84,6 +85,8 @@ const MODES: Readonly<Record<string, ModeSpecification>> = {
     getFrames: () => getIdleFrames(DEMONSTRATION_FRAME_COUNT),
   },
   player: { localPlayerCount: 1, getFrames: getPlayerFrames },
+  // A whole demonstration race: the player's racer finishes and the finish camera takes over.
+  finish: { localPlayerCount: 0, getFrames: () => getIdleFrames(FINISH_FRAME_COUNT) },
 }
 
 const getScenario = (
@@ -111,6 +114,16 @@ const getScenario = (
   }
 }
 
+// The frames the original's camera changes mode in, as "mode@frame".
+const getModeTimeline = (frames: readonly TraceFrame[]): string =>
+  frames
+    .flatMap((frame, index) => {
+      const mode = frame.fields['camera0.mode']?.[0]
+      const previous = frames[index - 1]?.fields['camera0.mode']?.[0]
+      return mode !== previous ? [`${String(mode)}@${String(index)}`] : []
+    })
+    .join(' ')
+
 const getIsGamePresent = (): boolean =>
   getIsOriginalJamPresent() && getIsOriginalExecutablePresent() && getIsOriginalTraceAvailable()
 
@@ -131,6 +144,7 @@ describe('race cameras: the original and the port, frame for frame', () => {
         (mode) => SELECTED_MODES.length === 0 || SELECTED_MODES.includes(mode)
       )
       const report: Record<string, readonly FieldDivergence[]> = {}
+      const timelines: Record<string, string> = {}
 
       // Act
       for (const { track, isMirrored } of runs) {
@@ -165,6 +179,7 @@ describe('race cameras: the original and the port, frame for frame', () => {
               JSON.stringify({ original: pick(original.frames), port: pick(port) }, null, 1)
             )
           }
+          timelines[scenario.name] = getModeTimeline(original.frames)
           report[scenario.name] = compareTraces(
             original.frames,
             port,
@@ -176,6 +191,7 @@ describe('race cameras: the original and the port, frame for frame', () => {
       // Assert
       const lines = Object.entries(report).flatMap(([name, divergences]) => [
         `${name}: ${divergences.length === 0 ? 'match' : `${String(divergences.length)} fields differ`}`,
+        `  camera modes (mode@frame): ${timelines[name] ?? ''}`,
         ...divergences.map((divergence) => `  ${formatDivergence(divergence)}`),
       ])
       if (REPORT_PATH !== '') {
