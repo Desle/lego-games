@@ -44,6 +44,7 @@
     "./power-ups": "./src/modules/power-ups/index.ts",
     "./projectiles": "./src/modules/projectiles/index.ts",
     "./race": "./src/modules/race/index.ts",
+    "./ribbon": "./src/modules/ribbon/index.ts",
     "./race-audio": "./src/modules/race-audio/index.ts",
     "./race-camera": "./src/modules/race-camera/index.ts",
     "./race-catalog": "./src/modules/race-catalog/index.ts",

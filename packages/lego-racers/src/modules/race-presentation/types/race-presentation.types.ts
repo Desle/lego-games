@@ -20,6 +20,7 @@ import type { ColourShift } from '../../racer/index.ts'
 import type { Matrix3, Vector3 } from '../../simulation-math/index.ts'
 import type { RacePhaseValue, RaceState } from '../../race/index.ts'
 import type { GhostRunSelection } from '../../ghost/index.ts'
+import type { RibbonView } from '../../ribbon/index.ts'
 
 // A ghost car of a time trial (FUN_00422960): the champion's, drawn from GHOST.WDB, or the session's best run, drawn with
 // the player's own car. All three parts take the run's one orientation; the driver sits at the seat point carried by it.
@@ -251,6 +252,8 @@ export type SpriteView = {
 
 export type EffectViews = {
   readonly sprites: readonly SpriteView[]
+  // The strips the effects lay out in the world (the grapple's rope, the wand's beam).
+  readonly ribbons: readonly RibbonView[]
   readonly attachments: readonly AttachmentView[]
   readonly bricks: readonly BrickView[]
   readonly spinAngle: number

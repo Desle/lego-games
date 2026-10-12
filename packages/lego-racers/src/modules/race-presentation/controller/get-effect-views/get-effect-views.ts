@@ -15,6 +15,8 @@ import type { EffectMotion, ExplosionPool } from '../../../projectiles/index.ts'
 import { getWarpFadeScale } from '../../../racer/index.ts'
 import type { RaceState } from '../../../race/index.ts'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
+import type { RibbonView } from '../../../ribbon/index.ts'
+import { getTetherRibbon } from '../get-tether-ribbon/get-tether-ribbon.ts'
 import type {
   AttachmentState,
   AttachmentView,
@@ -266,6 +268,31 @@ const getSpriteViews = (
       ]
     : []
 
+// 0x004542d0 draws the rope while the grapple flies, holds a racer and retracts (states 3 to 5).
+const getRibbonViews = (raceState: RaceState): readonly RibbonView[] => {
+  const { effects, activeEffectIds } = raceState.powerUpStep.world.effects
+  return activeEffectIds.flatMap((effectId): readonly RibbonView[] => {
+    const effect = effects[effectId]
+    const motion = raceState.projectileWorld.motions[effectId]
+    if (
+      effect === undefined ||
+      effect.kind !== PowerUpEffectKind.GRAPPLE ||
+      !DRAWN_STATES.includes(effect.state) ||
+      effect.state === EffectState.STARTING ||
+      effect.ownerRacer === null ||
+      motion?.kind !== 'grapple'
+    ) {
+      return []
+    }
+    const ribbon = getTetherRibbon(
+      raceState.context.arithmetic,
+      motion.hook.ropeOwnerPosition,
+      motion.hook
+    )
+    return ribbon === null ? [] : [ribbon]
+  })
+}
+
 const getExplosionViews = (pool: ExplosionPool, isSpiked: boolean): readonly ExplosionView[] =>
   pool.activeIndices.flatMap((index) => {
     const explosion = pool.explosions[index]
@@ -309,6 +336,7 @@ export const getEffectViews = (raceState: RaceState): EffectViews => {
   })
   return Object.freeze({
     sprites: Object.freeze(sprites),
+    ribbons: Object.freeze(getRibbonViews(raceState)),
     attachments: Object.freeze(attachments),
     bricks: Object.freeze([
       ...getBrickViews(world.bricks, false),

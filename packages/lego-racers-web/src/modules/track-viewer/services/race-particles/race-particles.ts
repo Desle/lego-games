@@ -6,6 +6,7 @@ import {
 } from '@lego-games/lego-racers/emitter'
 import type { EmitterPool, EmitterQuad } from '@lego-games/lego-racers/emitter'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-racers/simulation-math'
+import type { RibbonView } from '@lego-games/lego-racers/ribbon'
 import type { SpriteView } from '@lego-games/lego-racers/race-presentation'
 import type { Scene } from '@lego-games/lego-racers/scene'
 import type { BufferAttribute } from 'three'
@@ -52,7 +53,8 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
   const update = (
     pools: readonly (EmitterPool | null)[],
     cameraView: CameraView,
-    sprites: readonly SpriteView[] = []
+    sprites: readonly SpriteView[] = [],
+    ribbons: readonly RibbonView[] = []
   ) => {
     const axes = getBillboardAxes(arithmetic, cameraView.forward, cameraView.up)
     const quads: EmitterQuad[] = [
@@ -67,31 +69,49 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
       ...sprites.map((sprite) => getSpriteQuad(arithmetic, axes, sprite)),
     ]
     const counts = new Map<string, number>()
-    for (const quad of quads) {
-      const batch = getBatch(quad.materialName)
-      if (batch === null) continue
-      const count = counts.get(quad.materialName) ?? 0
+    const addCorner = (
+      batch: MaterialBatch,
+      corner: number,
+      source: { x: number; y: number; z: number; u: number; v: number },
+      color: readonly [number, number, number, number]
+    ) => {
       const positions = batch.mesh.geometry.getAttribute('position') as BufferAttribute
       const coordinates = batch.mesh.geometry.getAttribute('uv') as BufferAttribute
       const colors = batch.mesh.geometry.getAttribute('color') as BufferAttribute
-      let corner = count
+      positions.setXYZ(corner, source.x, source.y, source.z)
+      coordinates.setXY(corner, source.u, source.v)
+      colors.setXYZW(
+        corner,
+        color[0] / BYTE_MAXIMUM,
+        color[1] / BYTE_MAXIMUM,
+        color[2] / BYTE_MAXIMUM,
+        color[3] / BYTE_MAXIMUM
+      )
+    }
+    for (const quad of quads) {
+      const batch = getBatch(quad.materialName)
+      if (batch === null) continue
+      let corner = counts.get(quad.materialName) ?? 0
       for (const triangle of QUAD_TRIANGLE_CORNERS) {
         for (const index of triangle) {
           const source = quad.corners[index]
           if (source === undefined || corner >= MAXIMUM_CORNERS) continue
-          positions.setXYZ(corner, source.x, source.y, source.z)
-          coordinates.setXY(corner, source.u, source.v)
-          colors.setXYZW(
-            corner,
-            batch.color[0] / BYTE_MAXIMUM,
-            batch.color[1] / BYTE_MAXIMUM,
-            batch.color[2] / BYTE_MAXIMUM,
-            batch.color[3] / BYTE_MAXIMUM
-          )
+          addCorner(batch, corner, source, batch.color)
           corner += 1
         }
       }
       counts.set(quad.materialName, corner)
+    }
+    for (const ribbon of ribbons) {
+      const batch = getBatch(ribbon.materialName)
+      if (batch === null) continue
+      let corner = counts.get(ribbon.materialName) ?? 0
+      for (const source of ribbon.corners) {
+        if (corner >= MAXIMUM_CORNERS) continue
+        addCorner(batch, corner, { ...source.position, u: source.u, v: source.v }, source.color)
+        corner += 1
+      }
+      counts.set(ribbon.materialName, corner)
     }
     for (const [name, batch] of batches) {
       if (batch === null) continue
