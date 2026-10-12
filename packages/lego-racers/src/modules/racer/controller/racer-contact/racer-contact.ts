@@ -391,9 +391,9 @@ export const respondToRacerContact = (
       )
     }
     current = startCollisionSparks(context, current)
-    current = playRacerVoice(context, current, secondIndex)
+    current = playRacerVoice(context, current, secondIndex, false)
   } else {
-    current = playRacerVoice(context, current, firstIndex)
+    current = playRacerVoice(context, current, firstIndex, false)
   }
   // 0x00438bec..0x00438db0
   const radiusOf = (racerIndex: number): Vector3 => {

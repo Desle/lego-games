@@ -1,4 +1,4 @@
-import { drawRandomValue } from '../../../random-table/index.ts'
+import { drawRandomRemainder, drawRandomValue } from '../../../random-table/index.ts'
 import {
   getRacer,
   getRacerSetProgress,
@@ -12,6 +12,7 @@ const FLOAT32_MAXIMUM = 3.4028234663852886e38 // 0x7f7fffff
 const FINISHED_FLAG = 0x2
 const UNRANKED_FLAG = 0x1000
 const VOICE_MINIMUM_MILLISECONDS = 5000
+const VOICE_VARIANTS = 6
 
 const swapEntries = (
   entries: readonly RankingEntry[],
@@ -126,15 +127,20 @@ const breakTie = (
   )
 }
 
-// 0x00439240 (thiscall: 1 when the racer gained a place): a voice line every 5 s or more. The sound is not modelled.
+// 0x00439240 (the stack argument is 1 for a taunt line): a voice line every 5 s or more, sound `+0xd40 + r % 6 (+ 6)`.
 export const playRacerVoice = (
   context: RacerSetContext,
   racerSet: RacerSet,
-  racerIndex: number
+  racerIndex: number,
+  isTaunt: boolean
 ): RacerSet => {
   const racer = getRacer(racerSet, racerIndex)
   if (racer.voiceMilliseconds !== 0) return racerSet
-  const voice = drawRandomValue(context.tables.randomTable, racerSet.randomPosition)
+  const voice = drawRandomRemainder(
+    context.tables.randomTable,
+    racerSet.randomPosition,
+    VOICE_VARIANTS
+  )
   const delay = drawRandomValue(context.tables.randomTable, voice.position)
   const updated = setRacer(
     racerSet,
@@ -144,7 +150,17 @@ export const playRacerVoice = (
       voiceMilliseconds: delay.value * 4 + VOICE_MINIMUM_MILLISECONDS,
     })
   )
-  return setRandomPosition(updated, delay.position)
+  const sounded: RacerSet = Object.freeze({
+    ...updated,
+    sounds: Object.freeze([
+      ...updated.sounds,
+      {
+        soundId: racer.voiceBase + voice.value + (isTaunt ? VOICE_VARIANTS : 0),
+        address: '0x004392ff',
+      },
+    ]),
+  })
+  return setRandomPosition(sounded, delay.position)
 }
 
 // 0x0043a210 (thiscall: race position).
@@ -156,7 +172,9 @@ const setRacePosition = (
 ): RacerSet => {
   const racer = getRacer(racerSet, racerIndex)
   const isChanged = (racer.flags & FINISHED_FLAG) === 0 && racePosition !== racer.racePosition
-  const voiced = isChanged ? playRacerVoice(context, racerSet, racerIndex) : racerSet
+  const voiced = isChanged
+    ? playRacerVoice(context, racerSet, racerIndex, racePosition < racer.racePosition)
+    : racerSet
   return setRacer(
     voiced,
     racerIndex,

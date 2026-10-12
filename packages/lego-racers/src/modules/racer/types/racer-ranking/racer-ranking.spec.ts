@@ -78,6 +78,22 @@ describe('rankRacers (0x0043c1b0)', () => {
     expect(ranked.randomPosition).toBe(4)
   })
 
+  it('plays the voice line: the draw % 6 after the voice base, plus 6 for a racer that gained a place (0x00439240)', () => {
+    // Arrange
+    const context = { ...createTestContext(), checkpoints: CHECKPOINTS }
+    const placed = placeRacer(placeRacer(createTestRacerSet(2), 0, 1, 1, 0), 1, 2, 1, 0)
+    const voiceBase = getRacer(placed, 0).voiceBase
+
+    // Act
+    const ranked = rankRacers(context, placed)
+
+    // Assert: the table values are 1 and 3 for the sounds.
+    expect(ranked.sounds).toEqual([
+      { soundId: voiceBase + 1, address: '0x004392ff' },
+      { soundId: voiceBase + 3 + 6, address: '0x004392ff' },
+    ])
+  })
+
   it('leaves unranked racers (flag 0x1000) alone', () => {
     // Arrange
     const racerSet = createTestRacerSet(1)
