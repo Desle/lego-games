@@ -24,7 +24,7 @@ src/
   main.ts       composition root: mounts the studio in index.html's #studio
   modules/
     studio/     the page: tabs (Models for now), the model picker over files.json, reading a model with the model files it places
-    files/      node only, for any dev server: the routes that serve the library and a models folder, list parts, save models
+    files/      node only, for any dev server: the routes that serve the library and a models folder, list parts, save and remove models
   shared/types/enum.types.ts   createEnum, used instead of `enum`
 ```
 

@@ -112,6 +112,7 @@ import type { PartShape, PartStud } from '@lego-games/ldraw/building'
 import {
   BUILDER_PARTS_FILE,
   BUILDER_PROGRESS_FILE,
+  BUILDER_REMOVE_PATH,
   BUILDER_SAVE_PATH,
   DEVELOPMENT_LDRAW_BUILDER_ROUTE,
 } from './ldraw-builder-route.ts'
@@ -122,6 +123,8 @@ import type {
   BuilderPart,
   BuilderPartLine,
   BuilderProgress,
+  BuilderRemoveRequest,
+  BuilderRemoveResult,
   BuilderSaveRequest,
   BuilderSaveResult,
   LibraryPart,
@@ -232,6 +235,7 @@ const panel = createBuilderPanel(
     onRotate: () => rotate(false),
     onDeleteSelected: () => deleteSelected(),
     onDone: () => void finishItem(),
+    onRemove: () => void removeItem(),
     onScaleStep: (direction) => stepScale(direction),
     onScaleFit: () => fitScale(),
     onShortcutsToggle: () => toggleShortcuts(),
@@ -878,6 +882,7 @@ const openItem = async (item: BuilderItem, startFile: string | null) => {
   syncScene()
   frameCamera()
   replaceAddressHash(item.id)
+  panel.showRemove({ isShown: start.isFilePresent, file: start.file })
   await showStartFiles(item)
 }
 
@@ -927,6 +932,38 @@ const finishItem = async () => {
       return
     }
     await openItem(next, null)
+  } finally {
+    isSaving = false
+    panel.setIsBusy(false)
+  }
+}
+
+const postRemoval = async (itemId: string): Promise<BuilderRemoveResult | string> => {
+  const response = await fetch(`${DEVELOPMENT_LDRAW_BUILDER_ROUTE}/${BUILDER_REMOVE_PATH}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ itemId } satisfies BuilderRemoveRequest),
+  })
+  return response.ok ? ((await response.json()) as BuilderRemoveResult) : response.text()
+}
+
+// Remove model: the item's file goes into the backups (Start from offers it back), its mark and draft go, and the game falls back.
+const removeItem = async () => {
+  if (currentItem === null || isSaving) return
+  isSaving = true
+  panel.setIsBusy(true)
+  try {
+    const result = await postRemoval(currentItem.id)
+    if (typeof result === 'string') {
+      panel.showStatus(`Not removed: ${result}`)
+      return
+    }
+    clearDraft(currentItem.id)
+    progress = result.progress
+    savedParts = history.present
+    savedScale = scale
+    await openItem(currentItem, null)
+    panel.showStatus(`Removed ${result.path} · moved to ${result.backupPath}`)
   } finally {
     isSaving = false
     panel.setIsBusy(false)

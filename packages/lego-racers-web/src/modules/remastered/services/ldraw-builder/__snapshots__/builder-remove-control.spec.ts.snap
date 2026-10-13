@@ -1,0 +1,5 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`createBuilderRemoveControl > renders the shown and the asked states 1`] = `"<span class="remove-control"><button type="button" class="remove" title="Move the file to drafts/backups so the game falls back to the original">Remove model</button><span class="remove-question" hidden=""><span>Remove powerups/BARREL.ldr? It moves to drafts/backups.</span><button type="button" class="remove-confirm">Remove</button><button type="button" class="remove-cancel">Cancel</button></span></span>"`;
+
+exports[`createBuilderRemoveControl > renders the shown and the asked states 2`] = `"<span class="remove-control"><button type="button" class="remove" title="Move the file to drafts/backups so the game falls back to the original" hidden="">Remove model</button><span class="remove-question"><span>Remove powerups/BARREL.ldr? It moves to drafts/backups.</span><button type="button" class="remove-confirm">Remove</button><button type="button" class="remove-cancel">Cancel</button></span></span>"`;

@@ -9,10 +9,12 @@ import {
   readLDrawModelFiles,
   readLDrawModelFolders,
 } from '../ldraw-model-files/ldraw-model-files.ts'
+import { removeLDrawModel } from '../ldraw-model-remove/ldraw-model-remove.ts'
 import { DEFAULT_BACKUP_FOLDER, saveLDrawModel } from '../ldraw-model-save/ldraw-model-save.ts'
 import { LDrawFileName, LDrawFileRoute } from './ldraw-file-routes.types.ts'
 import type {
   LDrawFileMiddleware,
+  LDrawFileRequest,
   LDrawFileRoutePaths,
   LDrawFileRoutesOptions,
   LDrawSaveRequest,
@@ -60,20 +62,21 @@ const readBody = async (request: IncomingMessage): Promise<string | null> => {
   return Buffer.concat(chunks).toString('utf8')
 }
 
-const getSaveRequest = (body: string | null): LDrawSaveRequest | null => {
+const getFileRequest = (body: string | null): LDrawFileRequest | null => {
   try {
     const parsed: unknown = JSON.parse(body ?? '')
-    return typeof parsed === 'object' &&
-      parsed !== null &&
-      !Array.isArray(parsed) &&
-      'text' in parsed &&
-      typeof parsed.text === 'string'
-      ? Object.freeze({ ...parsed, text: parsed.text })
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      ? Object.freeze({ ...parsed })
       : null
   } catch {
     return null
   }
 }
+
+const getSaveRequest = (request: LDrawFileRequest | null): LDrawSaveRequest | null =>
+  request !== null && typeof request['text'] === 'string'
+    ? Object.freeze({ ...request, text: request['text'] })
+    : null
 
 const getRequestPath = (request: string): string => request.split('?')[0] ?? ''
 
@@ -87,19 +90,24 @@ const getRouteFile = (requestPath: string, route: string): string | null | undef
   }
 }
 
-const getDefaultSavePath = (request: LDrawSaveRequest): string | null =>
+const getDefaultPath = (request: LDrawFileRequest): string | null =>
   typeof request['path'] === 'string' ? request['path'] : null
 
 // The dev server's LDraw files for any app, under one prefix: `<prefix>/ldraw/<file>` serves the parts library (a model may name a
 // part in any case while the library's files are lower case, so the lower-case name is tried second); `<prefix>/ldraw-models/`
 // serves the models folder (`index.json`, `files.json`, and the `.ldr` and `.mpd` files, read at every request so a new file shows
-// after a reload); `<prefix>/ldraw-builder/` the library's part list (read once) and `save` (POST JSON with `text`), which writes a
-// model after backing up the file it replaces. Paths that leave a folder are refused.
+// after a reload); `<prefix>/ldraw-builder/` the library's part list (read once), `save` (POST JSON with `text`), which writes a
+// model after backing up the file it replaces, and `remove` (POST JSON), which moves an `.ldr` model into the backup folder. Paths
+// that leave a folder are refused.
 export const createLDrawFileRoutes = (options: LDrawFileRoutesOptions): LDrawFileMiddleware => {
   const paths = getLDrawFileRoutePaths(options.routePrefix)
   const getModelIndex = options.getModelIndex ?? ((folders) => folders)
-  const getSavePath = options.getSavePath ?? getDefaultSavePath
+  const getSavePath = options.getSavePath ?? getDefaultPath
+  const getRemovePath = options.getRemovePath ?? getDefaultPath
+  const backupFolder = options.backupFolder ?? DEFAULT_BACKUP_FOLDER
   let parts: readonly LDrawLibraryPart[] | null = null
+
+  const getExistingFiles = () => readLDrawModelFiles(options.modelsRoot).map((file) => file.path)
 
   const serveLibrary = (file: string, response: ServerResponse) =>
     sendTextFile(
@@ -124,13 +132,12 @@ export const createLDrawFileRoutes = (options: LDrawFileRoutesOptions): LDrawFil
   }
 
   const save = async (request: IncomingMessage, response: ServerResponse) => {
-    const saveRequest = getSaveRequest(await readBody(request))
+    const saveRequest = getSaveRequest(getFileRequest(await readBody(request)))
     if (saveRequest === null) {
       sendError(response, 400, 'POST a JSON object with the model as `text`')
       return
     }
-    const existingFiles = readLDrawModelFiles(options.modelsRoot).map((file) => file.path)
-    const path = getSavePath(saveRequest, existingFiles)
+    const path = getSavePath(saveRequest, getExistingFiles())
     if (path === null) {
       sendError(response, 400, 'The request names no model file to save')
       return
@@ -138,7 +145,7 @@ export const createLDrawFileRoutes = (options: LDrawFileRoutesOptions): LDrawFil
     const result = saveLDrawModel(
       options.modelsRoot,
       { path, text: saveRequest.text },
-      options.backupFolder ?? DEFAULT_BACKUP_FOLDER,
+      backupFolder,
       new Date()
     )
     if (typeof result === 'string') {
@@ -146,6 +153,21 @@ export const createLDrawFileRoutes = (options: LDrawFileRoutesOptions): LDrawFil
       return
     }
     sendJson(response, { ...result, ...options.onModelSaved?.(result, saveRequest) })
+  }
+
+  const remove = async (request: IncomingMessage, response: ServerResponse) => {
+    const removeRequest = getFileRequest(await readBody(request))
+    const path = removeRequest === null ? null : getRemovePath(removeRequest, getExistingFiles())
+    if (removeRequest === null || path === null) {
+      sendError(response, 400, 'The request names no model file to remove')
+      return
+    }
+    const result = removeLDrawModel(options.modelsRoot, path, backupFolder, new Date())
+    if (typeof result === 'string') {
+      sendError(response, 400, result)
+      return
+    }
+    sendJson(response, { ...result, ...options.onModelRemoved?.(result, removeRequest) })
   }
 
   const serveBuilder = (file: string, request: IncomingMessage, response: ServerResponse) => {
@@ -157,6 +179,8 @@ export const createLDrawFileRoutes = (options: LDrawFileRoutesOptions): LDrawFil
       sendJson(response, readJsonFile())
     } else if (file === LDrawFileName.SAVE && request.method === 'POST') {
       void save(request, response)
+    } else if (file === LDrawFileName.REMOVE && request.method === 'POST') {
+      void remove(request, response)
     } else {
       sendError(response, 404, 'Unknown builder route')
     }

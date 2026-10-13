@@ -437,8 +437,8 @@ export const loadBuilderItemStart = async (
     ...Object.values(index.particles),
   ]
   const file = getBuilderItemFile(item.id, existing) ?? `${item.name}.ldr`
-  const sourceFile =
-    startFile ?? (existing.some((path) => path.toLowerCase() === file.toLowerCase()) ? file : null)
+  const isFilePresent = existing.some((path) => path.toLowerCase() === file.toLowerCase())
+  const sourceFile = startFile ?? (isFilePresent ? file : null)
   const database = parseBrickDatabase(archive.readFile(BRICK_DATABASE_PATH))
   const piece = findBrickPieceByName(database, item.chassisName)
   const isChassis = item.kind === BuilderItemKind.CHASSIS
@@ -459,6 +459,7 @@ export const loadBuilderItemStart = async (
     : inlineReferencedModels(parsed, await loadReferencedRecipes(parsed.referenceLines))
   return {
     file,
+    isFilePresent,
     sourceFile,
     document: Object.freeze({
       ...document,

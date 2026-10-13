@@ -4,6 +4,7 @@ export const DEVELOPMENT_LDRAW_BUILDER_ROUTE = '/__development/ldraw-builder'
 export const BUILDER_PARTS_FILE = 'parts.json'
 export const BUILDER_PROGRESS_FILE = 'progress.json'
 export const BUILDER_SAVE_PATH = 'save'
+export const BUILDER_REMOVE_PATH = 'remove'
 // In the models folder.
 export const BUILDER_PROGRESS_STORE = 'builder-progress.json'
 export const BUILDER_BACKUP_FOLDER = 'drafts/backups'
