@@ -29,7 +29,7 @@ import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import { IDLE_RACER_CONTROLS, readRacerDatabases } from '@lego-games/lego-racers/race'
 import type { RaceDefinition } from '@lego-games/lego-racers/race'
-import { getEffectViews, getRacerPoses } from '@lego-games/lego-racers/race-presentation'
+import type { RacerControls } from '@lego-games/lego-racers/racer'
 import { loadRandomTable } from '@lego-games/lego-racers/random-table'
 import {
   getBuiltRacerAppearance,
@@ -49,6 +49,7 @@ import {
   getDevelopmentJam,
   loadRaceAssets,
   runRaceFrames,
+  showPortRaceFrame,
 } from '../../../track-viewer/index.ts'
 import { getLDrawModelIndex, loadLDrawModelText } from '../ldraw-models/ldraw-model-client.ts'
 import { CHAMPION_CAR_CODES } from '../ldraw-racer-model/known-racer-models.ts'
@@ -85,6 +86,12 @@ const SETTLE_POLL_MILLISECONDS = 250
 const SETTLE_TIMEOUT_MILLISECONDS = 240_000
 const EVERY_CIRCUIT_OPEN = 0x7f
 const MODEL_VIEW_SIZE = 64
+const SLIDING_CONTROLS: RacerControls = Object.freeze({
+  ...IDLE_RACER_CONTROLS,
+  isAcceleratePressed: true,
+  isSteerPositivePressed: true,
+  isPowerSlidePressed: true,
+})
 // The player holds the use key for three frames, starting three frames after the power-up was handed over.
 const USE_DELAY_FRAMES = 3
 const USE_FRAME_COUNT = 3
@@ -305,7 +312,7 @@ export const installHdCoverageHarness = async (search: string) => {
     const frames = Array.from({ length: place.frameCount }, (_, frame) => ({
       milliseconds: FRAME_MILLISECONDS,
       controls: {
-        ...IDLE_RACER_CONTROLS,
+        ...(place.isPlayerSliding ? SLIDING_CONTROLS : IDLE_RACER_CONTROLS),
         isUsePowerUpPressed: getIsUsePressed(place.powerUpUses, frame),
       },
     }))
@@ -314,16 +321,9 @@ export const installHdCoverageHarness = async (search: string) => {
       assets,
       STAGE_SIZE,
       frames,
-      ({ frame, raceState, presentation, ghostCars }) => {
-        viewport.update(
-          getRacerPoses(raceState),
-          presentation.cameraView,
-          getEffectViews(raceState),
-          presentation.warpView,
-          ghostCars,
-          presentation.screenFades,
-          presentation.fieldOfViewDegrees
-        )
+      (portFrame) => {
+        const { frame } = portFrame
+        showPortRaceFrame(viewport, portFrame)
         if (!place.recordFrames.includes(frame)) return
         census.setIsTaking(true)
         viewport.render()

@@ -10,14 +10,24 @@ import { getRibbonCorners } from '@lego-games/lego-racers/ribbon'
 import type { RibbonView } from '@lego-games/lego-racers/ribbon'
 import type { TrailDrawing } from '@lego-games/lego-racers/projectile-trail'
 import type { SpriteView } from '@lego-games/lego-racers/race-presentation'
-import type { Scene } from '@lego-games/lego-racers/scene'
+import type { Scene, SceneMaterial } from '@lego-games/lego-racers/scene'
 import type { BufferAttribute } from 'three'
 import { Group, Mesh, type Material } from 'three'
+import { PARTICLE_MATERIAL_NAME_KEY } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
+import type {
+  ParticleDrawing,
+  ParticleView,
+} from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import { createDynamicGeometry } from '../dynamic-mesh/dynamic-mesh.ts'
+import {
+  getMaterialParticleDrawings,
+  getParticleView,
+} from '../particle-drawings/particle-drawings.ts'
 import { createSceneMaterial } from '../scene-object/scene-material.ts'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type {
   BatchCorner,
+  FoundSceneMaterial,
   MaterialBatch,
   ParticleQuad,
   RaceParticles,
@@ -35,21 +45,35 @@ const WHITE_VERTEX_COLOR: readonly [number, number, number, number] = Object.fre
   BYTE_MAXIMUM,
 ])
 
-const createBatch = (scenes: readonly Scene[], materialName: string): MaterialBatch | null => {
+const findSceneMaterial = (
+  scenes: readonly Scene[],
+  materialName: string
+): FoundSceneMaterial | null => {
   const scene = scenes.find((candidate) =>
     candidate.materials.some((material) => material.name === materialName)
   )
   const sceneMaterial = scene?.materials.findLast((candidate) => candidate.name === materialName)
-  if (scene === undefined || sceneMaterial === undefined) return null
+  return scene === undefined || sceneMaterial === undefined ? null : { scene, sceneMaterial }
+}
+
+// A material with an opacity of its own draws with it in the vertex alpha.
+const getQuadColor = (sceneMaterial: SceneMaterial): readonly [number, number, number, number] => {
+  const [red, green, blue, alpha] = sceneMaterial.diffuseColor
+  return [red, green, blue, sceneMaterial.renderState.diffuseAlpha ?? alpha]
+}
+
+const createBatch = (scenes: readonly Scene[], materialName: string): MaterialBatch | null => {
+  const found = findSceneMaterial(scenes, materialName)
+  if (found === null) return null
+  const { scene, sceneMaterial } = found
   const geometry = createDynamicGeometry(MAXIMUM_CORNERS)
   const mesh = new Mesh(geometry, createSceneMaterial(sceneMaterial, scene.textures, new Map()))
   mesh.frustumCulled = false
   mesh.visible = false
-  const [red, green, blue, alpha] = sceneMaterial.diffuseColor
-  // A material with an opacity of its own draws with it in the vertex alpha.
+  Object.assign(mesh.userData, { [PARTICLE_MATERIAL_NAME_KEY]: materialName })
   return {
     mesh,
-    color: [red, green, blue, sceneMaterial.renderState.diffuseAlpha ?? alpha],
+    color: getQuadColor(sceneMaterial),
     isDiffuseWhite: sceneMaterial.renderState.isDiffuseWhite,
   }
 }
@@ -58,6 +82,35 @@ const createBatch = (scenes: readonly Scene[], materialName: string): MaterialBa
 // drawn with the material of its particle, in the colour of that material.
 export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => {
   const group = new Group()
+  const particleDrawings = getMaterialParticleDrawings(scenes)
+  const distinctDrawings = [...new Set(particleDrawings.values())]
+  for (const drawing of distinctDrawings) group.add(drawing.object)
+  const quadColors = new Map<string, readonly [number, number, number, number]>()
+  const getDrawnColor = (materialName: string): readonly [number, number, number, number] => {
+    const known = quadColors.get(materialName)
+    if (known !== undefined) return known
+    const found = findSceneMaterial(scenes, materialName)
+    const color = found === null ? WHITE_VERTEX_COLOR : getQuadColor(found.sceneMaterial)
+    quadColors.set(materialName, color)
+    return color
+  }
+  // The layer's drawings take the particles of their materials; the other quads stay the original's.
+  const drawParticles = (poolQuads: readonly EmitterQuad[]): readonly EmitterQuad[] => {
+    const views = new Map<ParticleDrawing, ParticleView[]>()
+    const kept: EmitterQuad[] = []
+    for (const quad of poolQuads) {
+      const drawing = particleDrawings.get(quad.materialName)
+      if (drawing === undefined) {
+        kept.push(quad)
+        continue
+      }
+      const drawingViews = views.get(drawing) ?? []
+      views.set(drawing, drawingViews)
+      drawingViews.push(getParticleView(quad, getDrawnColor(quad.materialName)))
+    }
+    for (const drawing of distinctDrawings) drawing.setParticles(views.get(drawing) ?? [])
+    return kept
+  }
   const batches = new Map<string, MaterialBatch | null>()
   const getBatch = (materialName: string): MaterialBatch | null => {
     if (!batches.has(materialName)) {
@@ -78,17 +131,18 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
     const axes = getBillboardAxes(arithmetic, cameraView.forward, cameraView.up)
     // A world sprite draws with the engine's white vertex array (0x1005ca4c), whatever its material's colour, and its
     // texture keeps the order of the file's rows (its texture lacks flag 4, see scene-material.ts).
+    const poolQuads = pools.flatMap((pool) =>
+      (pool?.instances ?? []).flatMap((instance) =>
+        getEmitterQuads(arithmetic, instance.system, pool?.animation ?? null, {
+          position: cameraView.position,
+          axes,
+        })
+      )
+    )
     const quads: ParticleQuad[] = [
       ...worldSpriteQuads.map((quad) => ({ quad, isWorldSprite: true })),
       ...[
-        ...pools.flatMap((pool) =>
-          (pool?.instances ?? []).flatMap((instance) =>
-            getEmitterQuads(arithmetic, instance.system, pool?.animation ?? null, {
-              position: cameraView.position,
-              axes,
-            })
-          )
-        ),
+        ...(particleDrawings.size === 0 ? poolQuads : drawParticles(poolQuads)),
         ...sprites.map((sprite) => getSpriteQuad(arithmetic, axes, sprite)),
       ].map((quad) => ({ quad, isWorldSprite: false })),
     ]
@@ -189,6 +243,7 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
     group,
     update,
     dispose: () => {
+      for (const drawing of distinctDrawings) drawing.dispose()
       for (const batch of batches.values()) {
         if (batch === null) continue
         batch.mesh.geometry.dispose()

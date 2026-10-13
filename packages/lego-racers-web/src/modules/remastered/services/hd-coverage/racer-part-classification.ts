@@ -1,5 +1,5 @@
 import { EFFECT_MODEL_NAMES } from '../../../../shared/viewer-extensions/effect-model-names.ts'
-import { RacerPartKind } from './hd-coverage.types.ts'
+import { HookKind, RacerPartKind } from './hd-coverage.types.ts'
 import type { HookCall, InstanceSource, RacerPartIdentity } from './hd-coverage.types.ts'
 
 // The mesh builder's models have no file: the car builder's (`loadBuiltCarScene`) in the brick folder, the figure builder's
@@ -72,6 +72,8 @@ export const getMatchingCalls = (
   calls: readonly HookCall[]
 ): readonly HookCall[] =>
   calls.filter((call) => {
+    if (identity.kind === RacerPartKind.PARTICLE)
+      return call.hook === HookKind.PARTICLE && call.key === identity.key
     if (identity.kind === RacerPartKind.WHEELS) return call.wheelsKey === identity.key
     if (identity.key === BUILT_CAR_KEY) return call.key.startsWith(DESIGN_KEY_PREFIX)
     if (identity.key === BUILT_FIGURE_KEY) return call.key.startsWith(PARTS_KEY_PREFIX)

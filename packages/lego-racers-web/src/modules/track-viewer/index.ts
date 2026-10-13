@@ -7,5 +7,5 @@ export { loadEffectModel, loadRaceAssets } from './services/race-assets/race-ass
 export { createFrontEndRenderer } from './controller/front-end-renderer/front-end-renderer.ts'
 export { getDevelopmentJam } from './services/jam-file/jam-file.ts'
 export { createRaceViewport } from './services/race-viewport/race-viewport.ts'
-export { runRaceFrames } from './services/race-frames/race-frames.ts'
+export { runRaceFrames, showPortRaceFrame } from './services/race-frames/race-frames.ts'
 export { getIsRaceRecordingRequested } from './services/race-recording/race-recording.ts'

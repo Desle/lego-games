@@ -3,6 +3,7 @@ import type { SpriteView } from '@lego-games/lego-racers/race-presentation'
 import type { RibbonView } from '@lego-games/lego-racers/ribbon'
 import type { TrailDrawing } from '@lego-games/lego-racers/projectile-trail'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
+import type { Scene, SceneMaterial } from '@lego-games/lego-racers/scene'
 import type { Group, Mesh } from 'three'
 
 export type RaceParticles = {
@@ -44,4 +45,10 @@ export type BatchCorner = {
 export type ParticleQuad = {
   readonly quad: EmitterQuad
   readonly isWorldSprite: boolean
+}
+
+// A material of the race's scenes and the scene whose textures it draws with.
+export type FoundSceneMaterial = {
+  readonly scene: Scene
+  readonly sceneMaterial: SceneMaterial
 }

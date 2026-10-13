@@ -29,6 +29,7 @@ import {
   createPerformancePass,
   getIsPerformanceRequested,
 } from '../performance-monitor/performance-monitor.ts'
+import { createLDrawParticleDrawing } from '../ldraw-particles/ldraw-particle-drawing.ts'
 import {
   createLDrawEffectModelDrawing,
   preparePowerUpObjects,
@@ -126,6 +127,8 @@ export const createRemasteredExtension = async (search: string): Promise<ViewerE
     },
     getEffectModelDrawing: (request) =>
       getIsLDrawRequested(search) ? createLDrawEffectModelDrawing(request) : null,
+    getParticleDrawing: (request) =>
+      getIsLDrawRequested(search) ? createLDrawParticleDrawing(request) : null,
     getSelections: () => [
       `textures=${getHighDefinitionVariant(search)}`,
       `audio=${audioVariant ?? 'none'}`,

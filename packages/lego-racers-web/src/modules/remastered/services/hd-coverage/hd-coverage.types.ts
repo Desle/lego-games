@@ -9,6 +9,7 @@ export const RacerPartKind = createEnum({
   WHEELS: 'wheels',
   DRIVER: 'driver',
   POWER_UP: 'power_up',
+  PARTICLE: 'particle',
 })
 
 export const CoverageOrigin = createEnum({
@@ -20,6 +21,7 @@ export const HookKind = createEnum({
   CAR: 'car',
   DRIVER: 'driver',
   EFFECT_MODEL: 'effect_model',
+  PARTICLE: 'particle',
 })
 
 // Why a racer part was drawn by the original. Only `no_model_file` is allowed: the folder has nothing to draw it with.
@@ -58,15 +60,16 @@ export type InstanceSource = {
   readonly worldPath: string
 }
 
-// One call of `getCarDrawing`, `getDriverDrawing` or `getEffectModelDrawing` in a place, and what came of it.
+// One call of `getCarDrawing`, `getDriverDrawing`, `getEffectModelDrawing` or `getParticleDrawing` in a place, and what came of it.
 export type HookCall = {
   readonly id: number
   readonly hook: HookKind
-  // A car: its champion code or `design:<chassis>`; a driver: its model name or `parts:<bytes>`; an effect: its model name.
+  // A car: its champion code or `design:<chassis>`; a driver: its model name or `parts:<bytes>`; an effect: its model name;
+  // particles: their material.
   readonly key: string
   // A car's wheel model name (lower case); null for a driver.
   readonly wheelsKey: string | null
-  // Whether the models folder has what the layer needs to draw it.
+  // Whether the models folder (for particles: the layer's mappings) has what the layer needs to draw it.
   readonly isModelPresent: boolean
   readonly isDrawingReturned: boolean
   readonly isFailed: boolean
@@ -173,6 +176,8 @@ export type RacePlace = {
   readonly localPlayerCount: number
   // A time trial whose session has a finished run: the best run's ghost drives beside the champion's.
   readonly isBestRunShown: boolean
+  // The player holds accelerate, steer and power slide from the start (its wheels kick up dust and tire smoke); else touches nothing.
+  readonly isPlayerSliding: boolean
   // The power-ups the player is given and fires (the developer overlay's keys do the same in play).
   readonly powerUpUses: readonly PowerUpUse[]
   readonly frameCount: number

@@ -84,6 +84,35 @@ export type EffectModelDrawingRequest = {
   readonly model: ModelScene
 }
 
+// The particles the original draws with a material (a camera-facing quad each, the material's picture on it).
+export type ParticleDrawingRequest = {
+  readonly materialName: string
+}
+
+export type WorldVector = {
+  readonly x: number
+  readonly y: number
+  readonly z: number
+}
+
+// One particle's quad as the original draws it this frame, in the world: its material, its centre, its two sides (along the
+// camera's right and down axes, each as long as the side) and the colour bytes of its vertices (the alpha is the material's opacity).
+export type ParticleView = {
+  readonly materialName: string
+  readonly centre: WorldVector
+  readonly right: WorldVector
+  readonly down: WorldVector
+  readonly color: readonly [number, number, number, number]
+}
+
+// What a layer draws in place of the quads of one or more particle materials. The viewer adds its object to the race's particles
+// once, and every frame hands it all the particles of the materials it was returned for (none: an empty list).
+export type ParticleDrawing = {
+  readonly object: Object3D
+  readonly setParticles: (particles: readonly ParticleView[]) => void
+  readonly dispose: () => void
+}
+
 // A skeleton model of the original's and what names it to a layer: the wheels of a chassis or a driver.
 export type RacerDrawingPart = {
   readonly model: ModelScene
@@ -173,6 +202,9 @@ export type ViewerExtension = {
   readonly getRaceRenderPass: (request: RaceRenderRequest) => RaceRenderPass | null
   // Something to draw in place of the model the original draws for an effect, in that model's frame (the original's units, its scale applied); null keeps the original's.
   readonly getEffectModelDrawing: (request: EffectModelDrawingRequest) => Object3D | null
+  // Something to draw in place of the particles of a material; one drawing may be returned for several materials. Null keeps the
+  // original's quads.
+  readonly getParticleDrawing: (request: ParticleDrawingRequest) => ParticleDrawing | null
   // The selections the layer runs with (texture pack, audio pack, bricks), for the notes of a recording.
   readonly getSelections: () => readonly string[]
 }

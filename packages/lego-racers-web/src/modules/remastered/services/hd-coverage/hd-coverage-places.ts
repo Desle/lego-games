@@ -15,6 +15,8 @@ const KEY_SPACING_STEPS = 20
 const SETTLED_STEPS = 60
 const LATER_STEPS = 200
 const TIME_TRIAL_FOLDER = 'RACEC0R0'
+// Well after the countdown (about 90 frames): the sliding player's dust and tire smoke are behind it, in front of the camera.
+const ON_SCREEN_SLIDE_FRAME = 200
 const RACE_FRAME_COUNT = 300
 const RACE_RECORD_FRAMES: readonly number[] = [120, 290]
 const ON_SCREEN_RACE_FRAME = 120
@@ -76,13 +78,15 @@ const getRacePlace = (
   mode: RacePlace['mode'],
   racerCount: number,
   localPlayerCount: number,
-  isBestRunShown: boolean
+  isBestRunShown: boolean,
+  isPlayerSliding = false
 ): RacePlace => ({
   powerUpUses: [],
   kind: 'race',
   name,
   mode,
   raceFolder: TIME_TRIAL_FOLDER,
+  isPlayerSliding,
   racerCount,
   localPlayerCount,
   isBestRunShown,
@@ -90,10 +94,11 @@ const getRacePlace = (
   recordFrames: RACE_RECORD_FRAMES,
 })
 
-// A place's first recorded frame, drawn again without each of the layer's drawings.
+// A place's first recorded frame (a race's `raceFrame`), drawn again without each of the layer's drawings.
 const getOnScreenPlace = (
   subject: FrontEndPlace | RacePlace,
-  expectedHooks: readonly HookKind[]
+  expectedHooks: readonly HookKind[],
+  raceFrame = ON_SCREEN_RACE_FRAME
 ): OnScreenPlace => ({
   kind: 'on_screen',
   name: `On screen: ${subject.name}`,
@@ -102,8 +107,8 @@ const getOnScreenPlace = (
       ? { ...subject, recordSteps: subject.recordSteps.slice(0, 1) }
       : {
           ...subject,
-          frameCount: ON_SCREEN_RACE_FRAME + 1,
-          recordFrames: [ON_SCREEN_RACE_FRAME],
+          frameCount: raceFrame + 1,
+          recordFrames: [raceFrame],
         },
   expectedHooks,
   isEveryPowerUpFileShown: false,
@@ -149,7 +154,8 @@ const getPowerUpOnScreenPlace = (): OnScreenPlace => {
   }
 }
 
-// Every place the game draws a racer: the menus' figures and cars, the cinemas, and the races of every mode.
+// Every place the game draws a racer: the menus' figures and cars, the cinemas, and the races of every mode; a race whose frame
+// has particles, which must reach the screen as the layer's parts; and the power-up objects.
 export const HD_COVERAGE_PLACES: readonly HdCoveragePlace[] = [
   { kind: 'model_parts', name: 'Every model of the folder, part by part' },
   { kind: 'driver_seats', name: 'Every driver on its seat' },
@@ -186,5 +192,10 @@ export const HD_COVERAGE_PLACES: readonly HdCoveragePlace[] = [
     HookKind.CAR,
     HookKind.DRIVER,
   ]),
+  getOnScreenPlace(
+    getRacePlace('Power slide', 'single_race', 6, 1, false, true),
+    [HookKind.CAR, HookKind.DRIVER, HookKind.PARTICLE],
+    ON_SCREEN_SLIDE_FRAME
+  ),
   getPowerUpOnScreenPlace(),
 ]

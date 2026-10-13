@@ -40,6 +40,55 @@ const getResult = (
 })
 
 describe('getPlaceFindings', () => {
+  it("fails a mapped particle material the original drew although the layer's drawing was returned", () => {
+    // Arrange
+    const call = getCarCall({
+      hook: HookKind.PARTICLE,
+      key: 'smoke1',
+      wheelsKey: null,
+      isDrawingReturned: true,
+    })
+    const result = getResult([getOriginal(RacerPartKind.PARTICLE, 'smoke1')], [call])
+
+    // Act
+    const findings = getPlaceFindings(result, [])
+
+    // Assert
+    expect(findings.map((finding) => [finding.reason, getIsFailure(finding)])).toEqual([
+      ['drawing_not_shown', true],
+    ])
+  })
+
+  it('lets the original draw a particle material the layer has no part for', () => {
+    // Arrange
+    const call = getCarCall({
+      hook: HookKind.PARTICLE,
+      key: 'ltflash',
+      wheelsKey: null,
+      isModelPresent: false,
+    })
+    const result = getResult([getOriginal(RacerPartKind.PARTICLE, 'ltflash')], [call])
+
+    // Act
+    const findings = getPlaceFindings(result, [])
+
+    // Assert
+    expect(findings.map((finding) => [finding.reason, getIsFailure(finding)])).toEqual([
+      ['no_model_file', false],
+    ])
+  })
+
+  it('fails a particle material drawn on a path that never asked the layer', () => {
+    // Arrange
+    const result = getResult([getOriginal(RacerPartKind.PARTICLE, 'dust1')], [])
+
+    // Act
+    const findings = getPlaceFindings(result, [])
+
+    // Assert
+    expect(findings.map((finding) => finding.reason)).toEqual(['hook_not_called'])
+  })
+
   it('fails a modelled champion car the hook was never asked for', () => {
     // Arrange
     const result = getResult([getOriginal(RacerPartKind.BODY, 'VVCM')], [])

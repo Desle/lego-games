@@ -6,6 +6,8 @@ import type {
   CarDrawingRequest,
   DriverDrawing,
   DriverDrawingRequest,
+  ParticleDrawing,
+  ParticleDrawingRequest,
   RaceRenderPass,
   RaceRenderRequest,
   TextureCreatedEvent,
@@ -21,6 +23,7 @@ export const NEUTRAL_EXTENSION: ViewerExtension = Object.freeze({
   getSoundReplacement: () => Promise.resolve(null),
   getRaceRenderPass: () => null,
   getEffectModelDrawing: () => null,
+  getParticleDrawing: () => null,
   getCarDrawing: () => null,
   getDriverDrawing: () => null,
   getSelections: () => [],
@@ -28,6 +31,9 @@ export const NEUTRAL_EXTENSION: ViewerExtension = Object.freeze({
 
 // The name of the mesh of a racer's blob shadow (the decal the original projects under each car), so a layer can find it.
 export const RACER_SHADOW_DECAL_NAME = 'racer-shadow-decal'
+
+// The user data key of the mesh that draws the original's quads (particles and sprites) of one material, holding its name.
+export const PARTICLE_MATERIAL_NAME_KEY = 'particleMaterialName'
 
 let registeredExtensions: readonly ViewerExtension[] = Object.freeze([])
 
@@ -83,6 +89,14 @@ export const getRaceRenderPasses = (request: RaceRenderRequest): readonly RaceRe
 export const getEffectModelDrawing = (request: EffectModelDrawingRequest): Object3D | null => {
   for (const extension of registeredExtensions) {
     const drawing = extension.getEffectModelDrawing(request)
+    if (drawing !== null) return drawing
+  }
+  return null
+}
+
+export const getParticleDrawing = (request: ParticleDrawingRequest): ParticleDrawing | null => {
+  for (const extension of registeredExtensions) {
+    const drawing = extension.getParticleDrawing(request)
     if (drawing !== null) return drawing
   }
   return null

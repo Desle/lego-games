@@ -25,6 +25,7 @@ Shows any LEGO Racers world from the player's own `LEGO.JAM` in the browser: tex
 - A BSP tree instance (the race track) shows only the draw batches of the leaves the camera's visibility list names and the 65 degree, near 5, far 800 frustum does not reject (`GolDP.dll` `0x100092a0`); the race camera's field of view is the original's 65 degrees.
 - A racer's wheels, car model and driver are left out when their sphere centre is farther than 500 units from the camera, and a power-up brick beyond 400 (the engine's level distances).
 - The race HUD's overlay draws the minimap: the world's `igd_map` picture as textured triangles, the racers' dots as parts of the `igdcrdot` image and the player's arrow.
+- The race's particles ask the viewer extensions for a drawing of every material of its scenes once (`getParticleDrawing`); the emitter quads of a material that has one go to it instead of the original's quads, and with no extension every quad is drawn as before.
 - A skeleton instance the world gives no clip plays its first clip (a viewer choice; the game's own code picks it).
 
 ## Out of scope

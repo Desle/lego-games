@@ -25,6 +25,7 @@ src/
     material/   plastic, the look presets (shadings, edges), occlusion bake, shader precompile
     building/   pure stud-grid maths: documents, rotation, part shapes, placement, editing, history
     minifig/    the minifigure skeleton: where the library's parts sit, their roles, the hinges and their limits, posing
+    particles/  one part drawn as many particles: instanced, one draw call per material, each with its matrix and opacity
     editor/     embeddable UI: createModelViewer(element, { libraryUrl }) shows a model's text (later the builder and minifigure poser)
   shared/types/enum.types.ts   createEnum, used instead of `enum`
 ```

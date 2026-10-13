@@ -1,11 +1,10 @@
-import { getEffectViews, getRacerPoses } from '@lego-games/lego-racers/race-presentation'
 import { DEVELOPMENT_GAME_FILE_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
 import { getDevelopmentJam } from '../jam-file/jam-file.ts'
 import { createBitmapFontPainter } from '../bitmap-font-painter/bitmap-font-painter.ts'
 import { paintHud } from '../hud-painter/hud-painter.ts'
 import { createHudImageUrls } from '../hud-resources/hud-resources.ts'
 import { loadRaceAssets } from '../race-assets/race-assets.ts'
-import { runRaceFrames } from '../race-frames/race-frames.ts'
+import { runRaceFrames, showPortRaceFrame } from '../race-frames/race-frames.ts'
 import { createRaceViewport } from '../race-viewport/race-viewport.ts'
 import { getScenarioRaceOptions } from '../scenario-race-options/scenario-race-options.ts'
 import type {
@@ -76,20 +75,9 @@ export const runPixelTrace = async (request: PixelTraceRequest): Promise<PixelTr
     assets,
     size,
     request.frames,
-    ({ frame, raceState, presentation, milliseconds, ghostCars }) => {
-      viewport.update(
-        getRacerPoses(raceState),
-        presentation.cameraView,
-        getEffectViews(raceState),
-        presentation.warpView,
-        ghostCars,
-        presentation.screenFades,
-        presentation.fieldOfViewDegrees
-      )
-      viewport.showHazards(raceState.trackLogic, [
-        raceState.racerSet.emitters.common,
-        raceState.racerSet.emitters.track,
-      ])
+    (portFrame) => {
+      const { frame, presentation, milliseconds } = portFrame
+      showPortRaceFrame(viewport, portFrame)
       viewport.animate(milliseconds)
       if (!request.recordFrames.includes(frame)) return
       viewport.render()
