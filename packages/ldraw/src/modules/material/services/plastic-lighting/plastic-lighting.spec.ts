@@ -1,6 +1,10 @@
 import { MeshPhysicalMaterial } from 'three'
 import type { WebGLProgramParametersWithUniforms } from 'three'
-import { applyPlasticLighting, setPlasticLightingExtension } from './plastic-lighting.ts'
+import {
+  applyPlasticLighting,
+  setIsPlasticLightingSkipped,
+  setPlasticLightingExtension,
+} from './plastic-lighting.ts'
 import type { PlasticLightingExtension } from './plastic-lighting.types.ts'
 
 const createShader = () => ({
@@ -62,5 +66,27 @@ describe('applyPlasticLighting', () => {
     expect(shader.fragmentShader).toContain('reflectedLight.directDiffuse *= plasticDirectLight;')
     expect(shader.fragmentShader).not.toContain('indirect')
     expect(copy.customProgramCacheKey()).toMatch(/plastic-lighting-sun$/u)
+  })
+
+  it('lets a material skip the extension by a define, and take it back', () => {
+    // Arrange
+    const material = new MeshPhysicalMaterial()
+    const shader = createShader()
+    applyPlasticLighting(material)
+    setPlasticLightingExtension(EXTENSION)
+
+    // Act
+    setIsPlasticLightingSkipped(material, true)
+    compile(material, shader)
+    const skipped = { ...material.defines }
+    setIsPlasticLightingSkipped(material, false)
+
+    // Assert
+    expect(skipped).toHaveProperty('PLASTIC_LIGHTING_SKIPPED')
+    expect(material.defines).not.toHaveProperty('PLASTIC_LIGHTING_SKIPPED')
+    expect(material.defines).toHaveProperty('PHYSICAL')
+    expect(shader.fragmentShader).toContain(
+      '#ifdef PLASTIC_LIGHTING_SKIPPED\nfloat plasticDirectLight = 1.0;'
+    )
   })
 })
