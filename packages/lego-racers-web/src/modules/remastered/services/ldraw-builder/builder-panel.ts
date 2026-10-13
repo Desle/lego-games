@@ -1,5 +1,6 @@
 import type { LDrawColorName } from '../reference-kit/reference-kit.types.ts'
 import { getPaletteGroups } from './builder-palette.ts'
+import { BUILDER_SHORTCUT_GROUPS, BUILDER_SHORTCUT_HINTS } from './builder-shortcuts.ts'
 import { ReferenceMode } from './builder-panel.types.ts'
 import type {
   BuilderPanel,
@@ -8,26 +9,10 @@ import type {
   BuilderQueueView,
   BuilderToolView,
 } from './builder-panel.types.ts'
+import { EMPTY_START_FILE } from './ldraw-builder-route.ts'
 import { BuilderItemKind } from './ldraw-builder.types.ts'
 import type { LibraryPart } from './ldraw-builder.types.ts'
 
-const SHORTCUTS: readonly (readonly [string, string])[] = [
-  ['Click', 'place the part'],
-  ['Shift + click', 'select a part'],
-  ['R', 'rotate 90° (selected part, else the part in hand)'],
-  ['Arrows, [ ]', 'move the selected part a stud, a plate down/up'],
-  ['M', 'pick up the selected part to move it'],
-  ['Q', 'take the part under the cursor (part, colour, turn)'],
-  ['C or Alt + click', 'take the colour of the part under the cursor'],
-  ['X', 'delete the part under the cursor'],
-  ['Delete', 'delete the selected part'],
-  ['Esc', 'deselect'],
-  ['Ctrl/Cmd + Z, + Shift', 'undo, redo'],
-  ['G', 'original: side by side, ghost, off'],
-  ['W', 'wheel guides on/off'],
-  ['F', 'frame the camera'],
-  ['Drag, right drag, wheel', 'orbit, pan, zoom'],
-]
 const REFERENCE_LABELS: Readonly<Record<ReferenceMode, string>> = {
   [ReferenceMode.SIDE]: 'Original: side by side',
   [ReferenceMode.GHOST]: 'Original: ghost',
@@ -85,7 +70,9 @@ export const createBuilderPanel = (
     )
   )
   const doneButton = createButton('Done ✓', 'done', handlers.onDone)
-  doneButton.title = 'Save into the models folder, mark done, go to the next one'
+  doneButton.title = 'Save into the models folder, mark done, go to the next one (⌘S)'
+  const shortcutsButton = createButton('?', 'shortcuts-button', handlers.onShortcutsToggle)
+  shortcutsButton.title = 'Shortcuts (?)'
   elements.bar.append(
     title,
     startSelect,
@@ -94,6 +81,7 @@ export const createBuilderPanel = (
     createButton('Redo', '', handlers.onRedo),
     createButton('Rotate', '', handlers.onRotate),
     createButton('Delete', '', handlers.onDeleteSelected),
+    shortcutsButton,
     doneButton
   )
 
@@ -101,32 +89,94 @@ export const createBuilderPanel = (
   const search = createElement('input', 'search')
   search.type = 'search'
   search.placeholder = 'Search parts: 3001, slope 45, wheel…'
+  search.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') search.blur()
+  })
+  const tabs = createElement('div', 'tabs')
   const partList = createElement('div', 'part-list')
   const colorGrid = createElement('div', 'color-grid')
-  elements.palette.append(tool, search, partList, colorGrid)
+  elements.palette.append(tool, search, tabs, partList, colorGrid)
   let libraryParts: readonly LibraryPart[] = []
-  const showParts = () =>
+  let activeLabel = ''
+  let colorCode = 0
+  let chosenPartName = ''
+  const thumbnailObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        const image = entry.target
+        if (!entry.isIntersecting || !(image instanceof HTMLImageElement)) continue
+        thumbnailObserver.unobserve(image)
+        const partName = image.dataset['part'] ?? ''
+        const wantedColor = colorCode
+        void handlers.getThumbnail(partName, wantedColor).then((url) => {
+          if (url !== null && image.dataset['color'] === String(wantedColor)) image.src = url
+        })
+      }
+    },
+    { root: partList, rootMargin: '64px' }
+  )
+  const createTile = (part: LibraryPart) => {
+    const number = part.name.replace(/\.dat$/i, '')
+    const tile = createButton('', 'tile', () => handlers.onPartSelect(part.name))
+    tile.title = `${number}  ${part.description}`
+    tile.dataset['part'] = part.name.toLowerCase()
+    tile.classList.toggle('chosen', part.name.toLowerCase() === chosenPartName)
+    const image = createElement('img', 'thumbnail')
+    image.alt = ''
+    image.dataset['part'] = part.name
+    image.dataset['color'] = String(colorCode)
+    thumbnailObserver.observe(image)
+    tile.append(image, createElement('span', 'number', number))
+    return tile
+  }
+  const showParts = () => {
+    thumbnailObserver.disconnect()
+    const isSearching = search.value.trim() !== ''
+    const groups = getPaletteGroups(libraryParts, search.value)
+    if (!groups.some((group) => group.label === activeLabel)) activeLabel = groups[0]?.label ?? ''
+    tabs.replaceChildren(
+      ...(isSearching
+        ? []
+        : groups.map((group) =>
+            createButton(group.label, group.label === activeLabel ? 'tab active' : 'tab', () => {
+              activeLabel = group.label
+              showParts()
+            })
+          ))
+    )
+    const shown = isSearching ? groups : groups.filter((group) => group.label === activeLabel)
     partList.replaceChildren(
-      ...getPaletteGroups(libraryParts, search.value).flatMap((group) => [
-        createElement('div', 'group', group.label),
-        ...group.parts.map((part) => {
-          const button = createButton(
-            `${part.name.replace(/\.dat$/i, '')}  ${part.description}`,
-            'part',
-            () => handlers.onPartSelect(part.name)
-          )
-          button.title = part.description
-          return button
-        }),
+      ...shown.flatMap((group) => [
+        ...(isSearching ? [createElement('div', 'group', group.label)] : []),
+        createElement('div', 'tiles'),
       ])
     )
+    const grids = partList.querySelectorAll('.tiles')
+    shown.forEach((group, index) => grids[index]?.append(...group.parts.map(createTile)))
+  }
   search.addEventListener('input', showParts)
 
-  const shortcutList = createElement('dl', 'shortcuts')
-  for (const [keys, action] of SHORTCUTS) {
-    shortcutList.append(createElement('dt', '', keys), createElement('dd', '', action))
-  }
-  elements.help.append(shortcutList)
+  const hintLines = BUILDER_SHORTCUT_HINTS.map((line) => createElement('div', 'hint', line))
+  const modeLine = createElement('div', 'mode')
+  elements.help.append(modeLine, ...hintLines)
+  const overlay = elements.shortcuts
+  overlay.hidden = true
+  overlay.append(
+    createElement('h2', '', 'Shortcuts'),
+    ...BUILDER_SHORTCUT_GROUPS.map((group) => {
+      const section = createElement('section', '')
+      const list = createElement('dl', '')
+      for (const shortcut of group.shortcuts) {
+        list.append(
+          createElement('dt', '', shortcut.keys),
+          createElement('dd', '', shortcut.description)
+        )
+      }
+      section.append(createElement('h3', '', group.title), list)
+      return section
+    }),
+    createElement('p', 'close', '? or ⎋ to close')
+  )
 
   return {
     showQueue: (view: BuilderQueueView) => {
@@ -153,6 +203,7 @@ export const createBuilderPanel = (
     showStartFiles: (files, selected) => {
       startSelect.replaceChildren(
         new Option(MODEL_FILE_LABEL, ''),
+        new Option('Start empty', EMPTY_START_FILE),
         ...files.map((file) => new Option(`Start from ${file}`, file))
       )
       startSelect.value = selected ?? ''
@@ -175,7 +226,20 @@ export const createBuilderPanel = (
         })
       ),
     showTool: (view: BuilderToolView) => {
-      tool.textContent = `In hand: ${view.partName.replace(/\.dat$/i, '')} ${view.description} · ${view.colorName} (${String(view.colorCode)})`
+      tool.textContent = view.isHolding
+        ? `In hand: ${view.partName.replace(/\.dat$/i, '')} ${view.description} · ${view.colorName}`
+        : `Empty hand · ${view.colorName}: pick a part`
+      const nextPartName = view.isHolding ? view.partName.toLowerCase() : ''
+      const isColorChanged = view.colorCode !== colorCode
+      colorCode = view.colorCode
+      if (isColorChanged) {
+        showParts()
+      } else if (nextPartName !== chosenPartName) {
+        for (const tile of partList.querySelectorAll<HTMLElement>('.tile')) {
+          tile.classList.toggle('chosen', tile.dataset['part'] === nextPartName)
+        }
+      }
+      chosenPartName = nextPartName
       for (const swatch of colorGrid.querySelectorAll<HTMLElement>('.swatch')) {
         swatch.classList.toggle('chosen', swatch.dataset['code'] === String(view.colorCode))
       }
@@ -184,6 +248,13 @@ export const createBuilderPanel = (
       status.textContent = text
       title.textContent = text.split(' · ')[0] ?? ''
     },
+    showHint: (text) => {
+      modeLine.textContent = text
+    },
+    setIsShortcutsShown: (isShown) => {
+      overlay.hidden = !isShown
+    },
+    getIsShortcutsShown: () => !overlay.hidden,
     setIsBusy: (isBusy) => {
       doneButton.disabled = isBusy
     },

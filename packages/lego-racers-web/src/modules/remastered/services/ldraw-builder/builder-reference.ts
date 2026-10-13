@@ -1,3 +1,4 @@
+import { EMPTY_START_FILE } from './ldraw-builder-route.ts'
 import {
   BRICK_DATABASE_PATH,
   findBrickPieceByName,
@@ -151,7 +152,7 @@ const loadReferencedParts = async (
   return placed.flat()
 }
 
-// What an item starts from: the file in the models folder (or the one given), else an empty model (a car with its chassis recipe
+// What an item starts from: the file in the models folder (or the one given), else (or for EMPTY_START_FILE) an empty model (a car with its chassis recipe
 // placed by the reference sheet's line). A chassis is edited in its recipe frame, which sits at its offset in the car's frame.
 export const loadBuilderItemStart = async (
   archive: JamArchive,
@@ -163,7 +164,8 @@ export const loadBuilderItemStart = async (
   const file = getBuilderItemFile(item.id, existing) ?? `${item.name}.ldr`
   const sourceFile =
     startFile ?? (existing.some((path) => path.toLowerCase() === file.toLowerCase()) ? file : null)
-  const text = sourceFile === null ? null : await fetchModelText(sourceFile)
+  const text =
+    sourceFile === null || sourceFile === EMPTY_START_FILE ? null : await fetchModelText(sourceFile)
   const database = parseBrickDatabase(archive.readFile(BRICK_DATABASE_PATH))
   const piece = findBrickPieceByName(database, item.chassisName)
   const isChassis = item.kind === BuilderItemKind.CHASSIS

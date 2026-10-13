@@ -22,7 +22,6 @@ import {
   WebGLRenderer,
 } from 'three'
 import type { Camera, Object3D } from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { DEVELOPMENT_JAM_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
 import { LDRAW_TO_STUDS } from '../ldraw-car/ldraw-car-document.ts'
 import { useLookFromAddress } from '../ldraw-car/ldraw-look.ts'
@@ -43,7 +42,29 @@ import {
   undoBuilderHistory,
 } from './builder-history.ts'
 import { getBuilderItems, getNextBuilderItem } from './builder-items.ts'
+import {
+  createBuilderView,
+  getBuilderGroundAxes,
+  getBuilderViewPosition,
+  orbitBuilderView,
+  panBuilderView,
+  scaleBuilderView,
+  zoomBuilderView,
+} from './builder-camera.ts'
+import {
+  addParts,
+  getStudOffset,
+  getStudStep,
+  moveParts,
+  pickParts,
+  removeParts,
+  toggleIndex,
+  turnParts,
+} from './builder-editing.ts'
 import { createBuilderPanel } from './builder-panel.ts'
+import { getBuilderKeyCommand, QUICK_COLOR_CODES } from './builder-shortcuts.ts'
+import { BuilderAction } from './builder-shortcuts.types.ts'
+import { createBuilderThumbnails } from './builder-thumbnails.ts'
 import { ReferenceMode } from './builder-panel.types.ts'
 import { createGhostInstance, createPartInstance, createPartTemplates } from './builder-parts.ts'
 import {
@@ -68,6 +89,7 @@ import {
   BUILDER_SAVE_PATH,
   DEVELOPMENT_LDRAW_BUILDER_ROUTE,
 } from './ldraw-builder-route.ts'
+import { BuilderItemKind } from './ldraw-builder.types.ts'
 import type {
   BuilderBox,
   BuilderPart,
@@ -75,7 +97,13 @@ import type {
   LibraryPart,
 } from './ldraw-builder.types.ts'
 import type { BuilderItem, BuilderSaveResult, Vector } from './ldraw-builder.types.ts'
-import type { BuilderTool, PointerHit, PointerPosition } from './ldraw-builder-page.types.ts'
+import { PointerGesture } from './ldraw-builder-page.types.ts'
+import type {
+  BuilderTool,
+  PointerHit,
+  PointerPosition,
+  PointerPress,
+} from './ldraw-builder-page.types.ts'
 
 const BACKGROUND_COLOR = 0x2b3340
 const SELECTION_COLOR = 0xffd400
@@ -85,7 +113,9 @@ const GHOST_REFERENCE_OPACITY = 0.45
 const CLICK_DISTANCE = 5
 const GRID_STUDS = 40
 const FRAME_MARGIN = 1.4
-const VIEW_DIRECTION = new Vector3(0.7, -1, 0.6).normalize()
+const VIEW_DIRECTION: Vector = [0.7, -1, 0.6]
+const BRICK_HEIGHT = 3 * PLATE_HEIGHT
+const LINE_PIXELS = 16
 const IDENTITY_ROTATION: readonly number[] = [1, 0, 0, 0, 1, 0, 0, 0, 1]
 const DEFAULT_TOOL: BuilderTool = {
   partName: '3001.dat',
@@ -112,8 +142,7 @@ renderer.setPixelRatio(window.devicePixelRatio)
 
 const camera = new PerspectiveCamera(FIELD_OF_VIEW, 1, 0.05, 1000)
 camera.up.set(0, 0, 1)
-const controls = new OrbitControls(camera, canvas)
-controls.enableDamping = true
+let view = createBuilderView([0, 0, 0], VIEW_DIRECTION, 10)
 
 const buildScene = new Scene()
 const ldrawFrame = new Group()
@@ -127,9 +156,8 @@ grid.raycast = () => undefined
 editFrame.add(partsGroup, grid)
 ldrawFrame.add(lockedGroup, editFrame)
 const guidesHolder = new Group()
-const selectionHelper = new Box3Helper(new Box3(), SELECTION_COLOR)
-selectionHelper.visible = false
-buildScene.add(createStudioLights(), ldrawFrame, guidesHolder, selectionHelper)
+const selectionHolder = new Group()
+buildScene.add(createStudioLights(), ldrawFrame, guidesHolder, selectionHolder)
 const referenceScene = new Scene()
 
 const overlayTarget = new WebGLRenderTarget(1, 1)
@@ -154,23 +182,27 @@ const panel = createBuilderPanel(
     bar: findElement('bar'),
     palette: findElement('palette'),
     help: findElement('help'),
+    shortcuts: findElement('shortcuts'),
     status: findElement('status'),
   },
   {
     onItemSelect: (itemId) => void selectItem(itemId),
     onStartFileSelect: (file) => void restartItem(file),
     onReferenceModeSelect: (mode) => setReferenceMode(mode),
-    onPartSelect: (partName) => setToolPart(partName),
+    onPartSelect: (partName) => takeInHand(partName),
     onColorSelect: (colorCode) => chooseColor(colorCode),
     onUndo: () => undo(),
     onRedo: () => redo(),
-    onRotate: () => rotate(),
+    onRotate: () => rotate(false),
     onDeleteSelected: () => deleteSelected(),
     onDone: () => void finishItem(),
+    onShortcutsToggle: () => toggleShortcuts(),
+    getThumbnail: (partName, colorCode) => thumbnails.getThumbnail(partName, colorCode),
   }
 )
 
 const templates = createPartTemplates()
+const thumbnails = createBuilderThumbnails(templates)
 let archive: JamArchive | null = null
 let items: readonly BuilderItem[] = []
 let progress: BuilderProgress = { done: [] }
@@ -181,7 +213,11 @@ let start: BuilderItemStart | null = null
 let history = createBuilderHistory([])
 let savedParts: readonly BuilderPart[] = []
 let tool = DEFAULT_TOOL
-let selectedIndex: number | null = null
+let isHolding = false
+let selectedIndices: readonly number[] = Object.freeze([])
+let clipboard: readonly BuilderPart[] = Object.freeze([])
+// The model while a drag moves the selection, committed once on release.
+let draftParts: readonly BuilderPart[] | null = null
 let referenceMode: ReferenceMode = ReferenceMode.SIDE
 let reference: OriginalReference | null = null
 let ghost: Group | null = null
@@ -199,12 +235,22 @@ const getTemplateBox = (part: BuilderPart): BuilderBox | null =>
 const getDescription = (partName: string) =>
   libraryParts.find((part) => part.name.toLowerCase() === partName.toLowerCase())?.description ?? ''
 
+const getPartName = (partName: string) => partName.replace(/\.dat$/i, '')
+
+const getSelectionText = (parts: readonly BuilderPart[]): string => {
+  const [first] = selectedIndices
+  const selected = first === undefined ? undefined : parts[first]
+  if (selected === undefined) return ''
+  return selectedIndices.length > 1
+    ? `${String(selectedIndices.length)} selected`
+    : `selected ${selected.partName} (${String(selected.colorCode)}) at ${selected.position.join(' ')}`
+}
+
 const showStatus = () => {
   const parts = history.present
   const missing = parts.filter(
     (part) => templates.getLoaded(part.partName, part.colorCode) === null
   )
-  const selected = selectedIndex === null ? undefined : parts[selectedIndex]
   panel.showStatus(
     [
       start?.file ?? '',
@@ -212,9 +258,7 @@ const showStatus = () => {
       missing.length > 0
         ? `${String(missing.length)} not in the library (${[...new Set(missing.map((part) => part.partName))].join(', ')})`
         : '',
-      selected === undefined
-        ? ''
-        : `selected ${selected.partName} (${String(selected.colorCode)}) at ${selected.position.join(' ')}`,
+      getSelectionText(parts),
       getIsDirty() ? 'unsaved changes' : 'saved',
     ]
       .filter((text) => text !== '')
@@ -222,13 +266,34 @@ const showStatus = () => {
   )
 }
 
-const showTool = () =>
+const getHint = (): string =>
+  [
+    getActionHint(),
+    currentItem?.kind === BuilderItemKind.CHASSIS ? 'wheels go on the guides (W)' : '',
+  ]
+    .filter((text) => text !== '')
+    .join(' · ')
+
+const getActionHint = (): string => {
+  if (isHolding) {
+    return `Click to place ${getPartName(tool.partName)} ${getDescription(tool.partName)} · R rotate · ⎋ put down`
+  }
+  if (selectedIndices.length > 0) {
+    return 'Drag to move · arrows a stud · ⌘↑↓ a plate · R rotate · ⌫ delete · ⎋ deselect'
+  }
+  return 'Pick a part on the right to build · click a part to select it · ⇧ click adds'
+}
+
+const showTool = () => {
   panel.showTool({
     partName: tool.partName,
     description: getDescription(tool.partName),
     colorCode: tool.colorCode,
     colorName: colors.find((color) => color.code === tool.colorCode)?.name ?? '',
+    isHolding,
   })
+  panel.showHint(getHint())
+}
 
 const scheduleSync = () => {
   if (isSyncScheduled) return
@@ -256,22 +321,23 @@ const fillGroup = (group: Group, parts: readonly BuilderPart[], isEditable: bool
 }
 
 const syncSelection = () => {
-  const instance = partsGroup.children.find(
-    (child) => child.userData['partIndex'] === selectedIndex && selectedIndex !== null
-  )
-  selectionHelper.visible = instance !== undefined
-  if (instance !== undefined) {
-    buildScene.updateMatrixWorld(true)
-    selectionHelper.box.setFromObject(instance)
+  selectionHolder.clear()
+  buildScene.updateMatrixWorld(true)
+  for (const instance of partsGroup.children) {
+    const partIndex: unknown = instance.userData['partIndex']
+    if (typeof partIndex === 'number' && selectedIndices.includes(partIndex)) {
+      selectionHolder.add(new Box3Helper(new Box3().setFromObject(instance), SELECTION_COLOR))
+    }
   }
 }
 
 const syncScene = () => {
-  fillGroup(partsGroup, history.present, true)
+  fillGroup(partsGroup, draftParts ?? history.present, true)
   fillGroup(lockedGroup, start?.lockedParts ?? [], false)
   syncSelection()
   syncGhost()
   showStatus()
+  panel.showHint(getHint())
 }
 
 const getOwner = (object: Object3D | null): Object3D | null => {
@@ -385,9 +451,9 @@ const removeGhost = () => {
 }
 
 const syncGhost = () => {
-  const template = templates.getLoaded(tool.partName, tool.colorCode)
+  const template = isHolding ? templates.getLoaded(tool.partName, tool.colorCode) : null
   if (template === undefined) void templates.load(tool.partName, tool.colorCode).then(scheduleSync)
-  const hit = pointer === null ? null : getPointerHit(pointer)
+  const hit = pointer === null || template == null ? null : getPointerHit(pointer)
   if (template == null || hit === null) {
     removeGhost()
     ghostPosition = null
@@ -410,96 +476,123 @@ const commit = (parts: readonly BuilderPart[]) => {
   syncScene()
 }
 
-const replacePart = (index: number, change: (part: BuilderPart) => BuilderPart) =>
-  commit(history.present.map((part, partIndex) => (partIndex === index ? change(part) : part)))
-
 const placePart = () => {
   if (ghostPosition === null) return
   const position = ghostPosition
   commit([...history.present, Object.freeze({ ...tool, position, commentLines: [] })])
 }
 
-const setTool = (next: BuilderTool) => {
+const setTool = (next: BuilderTool, isNextHolding: boolean) => {
   tool = next
+  isHolding = isNextHolding
   showTool()
   syncGhost()
 }
 
-const setToolPart = (partName: string) => setTool({ ...tool, partName })
-
-const chooseColor = (colorCode: number) => {
-  setTool({ ...tool, colorCode })
-  if (selectedIndex !== null) replacePart(selectedIndex, (part) => ({ ...part, colorCode }))
-}
-
-const setSelectedIndex = (index: number | null) => {
-  selectedIndex = index
+const setSelectedIndices = (indices: readonly number[]) => {
+  selectedIndices = Object.freeze([...indices])
   syncSelection()
   showStatus()
+  panel.showHint(getHint())
 }
 
-const rotate = () =>
-  selectedIndex === null
-    ? setTool({ ...tool, rotation: turnQuarter(tool.rotation) })
-    : replacePart(selectedIndex, (part) => ({ ...part, rotation: turnQuarter(part.rotation) }))
-
-const deleteAt = (index: number) => {
-  selectedIndex = null
-  commit(history.present.filter((_part, partIndex) => partIndex !== index))
+const takeInHand = (partName: string) => {
+  setSelectedIndices([])
+  setTool({ ...tool, partName }, true)
 }
+
+const putDown = () => {
+  if (panel.getIsShortcutsShown()) panel.setIsShortcutsShown(false)
+  else if (isHolding) setTool(tool, false)
+  else setSelectedIndices([])
+}
+
+const chooseColor = (colorCode: number) => {
+  setTool({ ...tool, colorCode }, isHolding)
+  if (selectedIndices.length > 0) {
+    commit(
+      history.present.map((part, index) =>
+        selectedIndices.includes(index) ? Object.freeze({ ...part, colorCode }) : part
+      )
+    )
+  }
+}
+
+const rotate = (isBack: boolean) =>
+  isHolding || selectedIndices.length === 0
+    ? setTool(
+        {
+          ...tool,
+          rotation: isBack
+            ? turnQuarter(turnQuarter(turnQuarter(tool.rotation)))
+            : turnQuarter(tool.rotation),
+        },
+        isHolding
+      )
+    : commit(turnParts(history.present, selectedIndices, isBack))
 
 const deleteSelected = () => {
-  if (selectedIndex !== null) deleteAt(selectedIndex)
+  if (selectedIndices.length === 0) return
+  const removed = selectedIndices
+  selectedIndices = Object.freeze([])
+  commit(removeParts(history.present, removed))
 }
 
-const nudge = (offset: Vector) => {
-  if (selectedIndex === null) return
-  replacePart(selectedIndex, (part) => ({
-    ...part,
-    position: [
-      part.position[0] + offset[0],
-      part.position[1] + offset[1],
-      part.position[2] + offset[2],
-    ] as const,
-  }))
+const moveSelected = (offset: Vector) => {
+  if (selectedIndices.length > 0) commit(moveParts(history.present, selectedIndices, offset))
 }
 
-const pickUpSelected = () => {
-  const part = selectedIndex === null ? undefined : history.present[selectedIndex]
-  if (part === undefined || selectedIndex === null) return
-  setTool({ partName: part.partName, colorCode: part.colorCode, rotation: part.rotation })
-  deleteAt(selectedIndex)
+// The camera's right or forward, along the nearest of the editing frame's ground axes.
+const getCameraStudStep = (isForward: boolean, sign: number): Vector => {
+  const axes = getBuilderGroundAxes(view)
+  const world = isForward ? axes.forward : axes.right
+  buildScene.updateMatrixWorld(true)
+  const direction = new Vector3(...world)
+    .multiplyScalar(sign)
+    .transformDirection(editFrame.matrixWorld.clone().invert())
+  return getStudStep([direction.x, direction.y, direction.z])
+}
+
+const addCopies = (copies: readonly BuilderPart[]) => {
+  if (copies.length === 0) return
+  const added = addParts(history.present, copies, getCameraStudStep(false, 1))
+  selectedIndices = added.indices
+  isHolding = false
+  showTool()
+  commit(added.parts)
+}
+
+const copySelected = () => {
+  clipboard = pickParts(history.present, selectedIndices)
+}
+
+const selectAll = () => {
+  setTool(tool, false)
+  setSelectedIndices(history.present.map((_part, index) => index))
 }
 
 const undo = () => {
   history = undoBuilderHistory(history)
-  selectedIndex = null
+  selectedIndices = Object.freeze([])
   syncScene()
 }
 
 const redo = () => {
   history = redoBuilderHistory(history)
-  selectedIndex = null
+  selectedIndices = Object.freeze([])
   syncScene()
 }
 
 const takeFromPointer = (isWholePart: boolean) => {
   const part = pointer === null ? null : (getPointerHit(pointer)?.part ?? null)
   if (part === null) return
-  setTool(
-    isWholePart
-      ? { partName: part.partName, colorCode: part.colorCode, rotation: part.rotation }
-      : { ...tool, colorCode: part.colorCode }
-  )
+  if (isWholePart) {
+    setSelectedIndices([])
+    setTool({ partName: part.partName, colorCode: part.colorCode, rotation: part.rotation }, true)
+  } else {
+    setTool({ ...tool, colorCode: part.colorCode }, isHolding)
+  }
 }
-
-const deleteAtPointer = () => {
-  const index = pointer === null ? null : (getPointerHit(pointer)?.partIndex ?? null)
-  if (index !== null) deleteAt(index)
-}
-
-const selectAtPointer = () =>
-  setSelectedIndex(pointer === null ? null : (getPointerHit(pointer)?.partIndex ?? null))
 
 const setReferenceMode = (mode: ReferenceMode) => {
   referenceMode = mode
@@ -520,13 +613,20 @@ const frameCamera = () => {
   const centre = box.getCenter(new Vector3())
   const radius = Math.max(box.getSize(new Vector3()).length() / 2, 1)
   const distance = (radius * FRAME_MARGIN) / Math.tan((FIELD_OF_VIEW * Math.PI) / 360)
-  controls.target.copy(centre)
-  camera.position.copy(centre).addScaledVector(VIEW_DIRECTION, distance)
-  camera.near = distance / 100
-  camera.far = distance * 20
-  camera.updateProjectionMatrix()
-  controls.update()
+  view = createBuilderView([centre.x, centre.y, centre.z], VIEW_DIRECTION, distance)
 }
+
+const applyView = () => {
+  camera.position.set(...getBuilderViewPosition(view))
+  camera.lookAt(...view.target)
+  camera.near = view.distance / 100
+  camera.far = view.distance * 20
+}
+
+const getUnitsPerPixel = () =>
+  (2 * view.distance * Math.tan((FIELD_OF_VIEW * Math.PI) / 360)) / Math.max(canvas.clientHeight, 1)
+
+const toggleShortcuts = () => panel.setIsShortcutsShown(!panel.getIsShortcutsShown())
 
 const fetchJson = async <Value>(url: string, fallback: Value): Promise<Value> => {
   try {
@@ -565,7 +665,8 @@ const openItem = async (item: BuilderItem, startFile: string | null) => {
   start = await loadBuilderItemStart(archive, item, startFile)
   history = createBuilderHistory(start.document.parts)
   savedParts = history.present
-  selectedIndex = null
+  selectedIndices = Object.freeze([])
+  draftParts = null
   editFrame.position.set(...start.editOffset)
   editFrame.updateMatrix()
   reference?.dispose()
@@ -574,6 +675,7 @@ const openItem = async (item: BuilderItem, startFile: string | null) => {
   if (reference !== null) referenceScene.add(reference.object)
   guidesHolder.clear()
   if (item.chassisName !== '') guidesHolder.add(createWheelGuides(archive, item.chassisName))
+  if (item.kind === BuilderItemKind.CHASSIS) guidesHolder.visible = true
   history.present.forEach((part) => void templates.load(part.partName, part.colorCode))
   await Promise.all(
     [...history.present, ...start.lockedParts].map((part) =>
@@ -635,60 +737,153 @@ const finishItem = async () => {
 }
 
 const getIsTyping = (target: EventTarget | null) =>
-  target instanceof HTMLInputElement || target instanceof HTMLSelectElement
+  target instanceof HTMLInputElement ||
+  target instanceof HTMLSelectElement ||
+  target instanceof HTMLTextAreaElement
+
+const getKeyActions = (quickColorIndex: number): Readonly<Record<BuilderAction, () => void>> => ({
+  [BuilderAction.ROTATE]: () => rotate(false),
+  [BuilderAction.ROTATE_BACK]: () => rotate(true),
+  [BuilderAction.MOVE_LEFT]: () => moveSelected(getCameraStudStep(false, -1)),
+  [BuilderAction.MOVE_RIGHT]: () => moveSelected(getCameraStudStep(false, 1)),
+  [BuilderAction.MOVE_AWAY]: () => moveSelected(getCameraStudStep(true, 1)),
+  [BuilderAction.MOVE_TOWARD]: () => moveSelected(getCameraStudStep(true, -1)),
+  [BuilderAction.RAISE_PLATE]: () => moveSelected([0, -PLATE_HEIGHT, 0]),
+  [BuilderAction.LOWER_PLATE]: () => moveSelected([0, PLATE_HEIGHT, 0]),
+  [BuilderAction.RAISE_BRICK]: () => moveSelected([0, -BRICK_HEIGHT, 0]),
+  [BuilderAction.LOWER_BRICK]: () => moveSelected([0, BRICK_HEIGHT, 0]),
+  [BuilderAction.DELETE]: deleteSelected,
+  [BuilderAction.COPY]: copySelected,
+  [BuilderAction.PASTE]: () => addCopies(clipboard),
+  [BuilderAction.DUPLICATE]: () => addCopies(pickParts(history.present, selectedIndices)),
+  [BuilderAction.UNDO]: undo,
+  [BuilderAction.REDO]: redo,
+  [BuilderAction.SELECT_ALL]: selectAll,
+  [BuilderAction.SAVE]: () => void finishItem(),
+  [BuilderAction.TAKE_COLOR]: () => takeFromPointer(false),
+  [BuilderAction.TAKE_PART]: () => takeFromPointer(true),
+  [BuilderAction.QUICK_COLOR]: () => {
+    const colorCode = QUICK_COLOR_CODES[quickColorIndex]
+    if (colorCode !== undefined) chooseColor(colorCode)
+  },
+  [BuilderAction.CANCEL]: putDown,
+  [BuilderAction.FRAME]: frameCamera,
+  [BuilderAction.REFERENCE]: cycleReferenceMode,
+  [BuilderAction.WHEEL_GUIDES]: () => void (guidesHolder.visible = !guidesHolder.visible),
+  [BuilderAction.SHORTCUTS]: toggleShortcuts,
+})
 
 const onKeyDown = (event: KeyboardEvent) => {
   if (getIsTyping(event.target)) return
-  const isCommand = event.ctrlKey || event.metaKey
-  const key = event.key.toLowerCase()
-  const actions: Readonly<Record<string, () => void>> = isCommand
-    ? { z: event.shiftKey ? redo : undo, y: redo }
-    : {
-        r: rotate,
-        delete: deleteSelected,
-        backspace: deleteSelected,
-        x: deleteAtPointer,
-        c: () => takeFromPointer(false),
-        q: () => takeFromPointer(true),
-        m: pickUpSelected,
-        escape: () => setSelectedIndex(null),
-        g: cycleReferenceMode,
-        w: () => void (guidesHolder.visible = !guidesHolder.visible),
-        f: frameCamera,
-        arrowleft: () => nudge([-STUD_WIDTH, 0, 0]),
-        arrowright: () => nudge([STUD_WIDTH, 0, 0]),
-        arrowup: () => nudge([0, 0, -STUD_WIDTH]),
-        arrowdown: () => nudge([0, 0, STUD_WIDTH]),
-        '[': () => nudge([0, PLATE_HEIGHT, 0]),
-        ']': () => nudge([0, -PLATE_HEIGHT, 0]),
-      }
-  const action = actions[key]
-  if (action === undefined) return
+  const command = getBuilderKeyCommand({
+    key: event.key,
+    isCommand: event.metaKey || event.ctrlKey,
+    isShift: event.shiftKey,
+    isOption: event.altKey,
+  })
+  if (command === null) return
   event.preventDefault()
-  action()
+  getKeyActions(command.quickColorIndex)[command.action]()
 }
 
-let pressed: PointerPosition | null = null
+let press: PointerPress | null = null
 
-const onPointerMove = (event: PointerEvent) => {
-  pointer = { clientX: event.clientX, clientY: event.clientY }
-  syncGhost()
+const getGroundPoint = (position: PointerPosition, height: number): Vector | null => {
+  const raycaster = getRay(position)
+  if (raycaster === null) return null
+  buildScene.updateMatrixWorld(true)
+  const ray = raycaster.ray.clone().applyMatrix4(editFrame.matrixWorld.clone().invert())
+  const point = ray.intersectPlane(new Plane(new Vector3(0, 1, 0), -height), new Vector3())
+  return point === null ? null : [point.x, point.y, point.z]
+}
+
+const getPressGesture = (event: PointerEvent, hit: PointerHit | null): PointerGesture => {
+  if (event.altKey) return event.shiftKey ? PointerGesture.PAN : PointerGesture.ORBIT
+  if (isHolding) return PointerGesture.PLACE
+  return hit?.partIndex == null ? PointerGesture.SELECT : PointerGesture.MOVE
 }
 
 const onPointerDown = (event: PointerEvent) => {
-  pressed = { clientX: event.clientX, clientY: event.clientY }
+  if (event.button !== 0) return
+  canvas.setPointerCapture(event.pointerId)
+  const position = { clientX: event.clientX, clientY: event.clientY }
+  const hit = isHolding || event.altKey ? null : getPointerHit(position)
+  const partIndex = hit?.partIndex ?? null
+  const gesture = getPressGesture(event, hit)
+  const isAlreadySelected = partIndex !== null && selectedIndices.includes(partIndex)
+  if (gesture === PointerGesture.MOVE && partIndex !== null && !isAlreadySelected) {
+    setSelectedIndices(event.shiftKey ? [...selectedIndices, partIndex] : [partIndex])
+  }
+  press = Object.freeze({
+    start: position,
+    last: position,
+    gesture,
+    partIndex,
+    isAlreadySelected,
+    isShift: event.shiftKey,
+    groundStart:
+      gesture === PointerGesture.MOVE && hit !== null
+        ? getGroundPoint(position, hit.target.point[1])
+        : null,
+    isDragging: false,
+  })
 }
 
-const getIsClick = (event: PointerEvent) =>
-  event.button === 0 &&
-  pressed !== null &&
-  Math.hypot(event.clientX - pressed.clientX, event.clientY - pressed.clientY) < CLICK_DISTANCE
+const dragSelection = (current: PointerPress, position: PointerPosition) => {
+  const from = current.groundStart
+  const to = from === null ? null : getGroundPoint(position, from[1])
+  if (from === null || to === null) return
+  draftParts = moveParts(history.present, selectedIndices, getStudOffset(from, to))
+  syncScene()
+}
+
+const onPointerMove = (event: PointerEvent) => {
+  const position = { clientX: event.clientX, clientY: event.clientY }
+  pointer = position
+  const current = press
+  if (current === null) {
+    syncGhost()
+    return
+  }
+  const isDragging =
+    current.isDragging ||
+    Math.hypot(
+      position.clientX - current.start.clientX,
+      position.clientY - current.start.clientY
+    ) >= CLICK_DISTANCE
+  const deltaX = position.clientX - current.last.clientX
+  const deltaY = position.clientY - current.last.clientY
+  press = Object.freeze({ ...current, last: position, isDragging })
+  if (!isDragging) return
+  if (current.gesture === PointerGesture.ORBIT) view = orbitBuilderView(view, deltaX, deltaY)
+  else if (current.gesture === PointerGesture.PAN) {
+    view = panBuilderView(view, deltaX, deltaY, getUnitsPerPixel())
+  } else if (current.gesture === PointerGesture.MOVE) dragSelection(current, position)
+  else syncGhost()
+}
+
+const onClick = (current: PointerPress) => {
+  if (current.gesture === PointerGesture.ORBIT) takeFromPointer(false)
+  else if (current.gesture === PointerGesture.PLACE) placePart()
+  else if (current.partIndex === null) {
+    if (!current.isShift) setSelectedIndices([])
+  } else if (current.isShift) {
+    if (current.isAlreadySelected)
+      setSelectedIndices(toggleIndex(selectedIndices, current.partIndex))
+  } else setSelectedIndices([current.partIndex])
+}
 
 const onPointerUp = (event: PointerEvent) => {
-  if (!getIsClick(event)) return
-  if (event.shiftKey) selectAtPointer()
-  else if (event.altKey) takeFromPointer(false)
-  else placePart()
+  const current = press
+  press = null
+  if (current === null || event.button !== 0) return
+  if (!current.isDragging) {
+    onClick(current)
+    return
+  }
+  const moved = draftParts
+  draftParts = null
+  if (moved !== null && current.gesture === PointerGesture.MOVE) commit(moved)
 }
 
 const onPointerLeave = () => {
@@ -696,11 +891,38 @@ const onPointerLeave = () => {
   syncGhost()
 }
 
+// A trackpad: two fingers orbit, with Shift they pan; a pinch arrives as a wheel event with ctrlKey.
+const onWheel = (event: WheelEvent) => {
+  event.preventDefault()
+  const scale = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? LINE_PIXELS : 1
+  const deltaX = event.deltaX * scale
+  const deltaY = event.deltaY * scale
+  if (event.ctrlKey) view = zoomBuilderView(view, deltaY)
+  else if (event.shiftKey) view = panBuilderView(view, deltaX, deltaY, getUnitsPerPixel())
+  else view = orbitBuilderView(view, deltaX, deltaY)
+}
+
+// Safari reports a pinch as gesture events instead of a wheel with ctrlKey.
+let gestureScale = 1
+const onGesture = (event: Event) => {
+  event.preventDefault()
+  const scale: unknown = 'scale' in event ? event.scale : 1
+  if (typeof scale !== 'number' || scale <= 0) return
+  if (event.type === 'gesturestart') gestureScale = 1
+  view = scaleBuilderView(view, gestureScale / scale)
+  gestureScale = scale
+}
+
 window.addEventListener('keydown', onKeyDown)
 canvas.addEventListener('pointermove', onPointerMove)
 canvas.addEventListener('pointerdown', onPointerDown)
 canvas.addEventListener('pointerup', onPointerUp)
 canvas.addEventListener('pointerleave', onPointerLeave)
+canvas.addEventListener('wheel', onWheel, { passive: false })
+canvas.addEventListener('contextmenu', (event) => event.preventDefault())
+for (const type of ['gesturestart', 'gesturechange']) {
+  canvas.addEventListener(type, onGesture, { passive: false })
+}
 
 const renderView = (
   scene: Scene,
@@ -729,7 +951,7 @@ const renderGhostReference = (width: number, height: number) => {
 }
 
 const draw = () => {
-  controls.update()
+  applyView()
   const { width, height } = canvas.getBoundingClientRect()
   renderer.setSize(Math.max(width, 1), Math.max(height, 1), false)
   renderer.setScissorTest(true)
