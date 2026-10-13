@@ -28,6 +28,8 @@ const SHAPES: ReadonlyMap<string, PartShape> = new Map([
       box: { minimum: [-60, -4, -60], maximum: [60, 8, 60] },
       footprint: { minimum: [-60, 8, -60], maximum: [60, 8, 60] },
       bottom: 8,
+      holes: [],
+      description: '',
     },
   ],
   [
@@ -40,6 +42,8 @@ const SHAPES: ReadonlyMap<string, PartShape> = new Map([
       box: { minimum: [-20, -4, -10], maximum: [20, 8, 10] },
       footprint: { minimum: [-20, 8, -10], maximum: [20, 8, 10] },
       bottom: 8,
+      holes: [],
+      description: '',
     },
   ],
 ])
