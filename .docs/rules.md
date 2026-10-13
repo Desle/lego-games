@@ -179,3 +179,9 @@ Not mechanically decidable; reviewers and agents uphold these.
 - **Rule**: A change to what the viewer draws (geometry, textures, materials, decals, draw order, effects) is done only when `pnpm run pixel-trace` passes a case that shows it on the screen. Add the case to `pixel-trace-cases.ts` first, watch it fail, then fix.
 - **Why**: The render and decal traces compare the engine's data with the original's, not the pixels the viewer produces: an oil slick whose triangles matched still drew its picture upside down.
 - **Enforced by**: code review; `pnpm run pixel-trace` (needs the original files and Chrome, skips without them; not part of `ci`). See `.docs/reverse-engineering/pixel-trace.md`.
+
+### HD rendering changes state what they cost
+
+- **Rule**: A change to HD rendering (`packages/lego-racers-web/src/modules/remastered/`) or the LDraw library (`packages/ldraw`) runs `pnpm run perf` and puts the report's table (`scratch/perf-report.md`) in its PR. A deterministic count (draw calls, triangles, line segments, points, programs, textures, buffers, geometries, scene objects, LDraw parses) more than 5 % above `packages/lego-racers-web/perf-baseline.json` fails, unless the same PR updates the baseline with `pnpm run perf -- --update-baseline --reason "…"`. Frame and load times only warn (above 20 % and a floor: 1 ms for a median frame, 100 ms for a load): they depend on the machine.
+- **Why**: The HD layer must run well on phones and tablets; a cost nobody measured is found by the player, months later, with no change to blame.
+- **Enforced by**: code review; `pnpm run perf` (needs the original files, the LDraw library, the models folder and Chrome, and skips without them; part of `pnpm run traces`, not of `ci`); the comparison is specified in `performance-trace-report.spec.ts`. See `.docs/remastered.md`, Performance trace.

@@ -80,7 +80,7 @@ import { createOnScreenCheck } from './on-screen-check.ts'
 import type { FrameDrawer, OnScreenFrame } from './on-screen-check.types.ts'
 
 const EXECUTABLE_NAME = 'LEGORacers.exe'
-const FRAME_MILLISECONDS = 33
+export const FRAME_MILLISECONDS = 33
 const STAGE_SIZE = Object.freeze({ width: 640, height: 480 })
 const SETTLE_POLL_MILLISECONDS = 250
 const SETTLE_TIMEOUT_MILLISECONDS = 240_000
@@ -95,7 +95,7 @@ const SLIDING_CONTROLS: RacerControls = Object.freeze({
 // The player holds the use key for three frames, starting three frames after the power-up was handed over.
 const USE_DELAY_FRAMES = 3
 const USE_FRAME_COUNT = 3
-const PLAYER_RACER_INDEX = 0
+export const PLAYER_RACER_INDEX = 0
 
 const getIsUsePressed = (uses: readonly PowerUpUse[], frame: number): boolean =>
   uses.some(
@@ -104,13 +104,23 @@ const getIsUsePressed = (uses: readonly PowerUpUse[], frame: number): boolean =>
       frame < use.frame + USE_DELAY_FRAMES + USE_FRAME_COUNT
   )
 
-const getExecutable = async (): Promise<Uint8Array> => {
+// A race place's frames: the scripted frame time, and the player's controls (sliding, and the use key for its power-ups).
+export const getPlaceFrames = (place: RacePlace) =>
+  Array.from({ length: place.frameCount }, (_, frame) => ({
+    milliseconds: FRAME_MILLISECONDS,
+    controls: {
+      ...(place.isPlayerSliding ? SLIDING_CONTROLS : IDLE_RACER_CONTROLS),
+      isUsePowerUpPressed: getIsUsePressed(place.powerUpUses, frame),
+    },
+  }))
+
+export const getExecutable = async (): Promise<Uint8Array> => {
   const response = await fetch(`${DEVELOPMENT_GAME_FILE_ROUTE}/${EXECUTABLE_NAME}`)
   return new Uint8Array(await response.arrayBuffer())
 }
 
 // The garage cars of the quick-build save that have a design: the player's cars of every place.
-const getPlayerCars = (archive: JamArchive): readonly SavedCar[] =>
+export const getPlayerCars = (archive: JamArchive): readonly SavedCar[] =>
   loadSavedCars((path) => archive.readFile(path), QUICK_BUILD_SAVE_PATH).filter(
     (car) => car.design !== null
   )
@@ -154,7 +164,7 @@ const createRenderCensus = (recorder: CoverageRecorder) => {
   }
 }
 
-const getEnvironment = (
+export const getEnvironment = (
   executable: Uint8Array,
   cars: readonly SavedCar[]
 ): FrontEndEnvironment => ({
@@ -166,7 +176,7 @@ const getEnvironment = (
   standingRows: [],
 })
 
-const getRaceSettings = (
+export const getRaceSettings = (
   resources: GameResources,
   place: RacePlace,
   cars: readonly SavedCar[]
@@ -309,13 +319,7 @@ export const installHdCoverageHarness = async (search: string) => {
     document.body.appendChild(container)
     const viewport = createRaceViewport(container, assets, STAGE_SIZE)
     await waitForSettledDrawings(recorder)
-    const frames = Array.from({ length: place.frameCount }, (_, frame) => ({
-      milliseconds: FRAME_MILLISECONDS,
-      controls: {
-        ...(place.isPlayerSliding ? SLIDING_CONTROLS : IDLE_RACER_CONTROLS),
-        isUsePowerUpPressed: getIsUsePressed(place.powerUpUses, frame),
-      },
-    }))
+    const frames = getPlaceFrames(place)
     const grants = place.powerUpUses.map((use) => ({ ...use, racer: PLAYER_RACER_INDEX }))
     runRaceFrames(
       assets,

@@ -1,0 +1,694 @@
+{
+  "reason": "main after #198-#203",
+  "machine": {
+    "cpu": "Apple M5 Pro",
+    "cores": 18,
+    "memoryGigabytes": 48,
+    "platform": "darwin 25.6.0",
+    "node": "v24.15.0",
+    "browser": "Chrome 155.0.8059.40",
+    "graphics": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Pro, Unspecified Version)"
+  },
+  "models": {
+    "hash": "2202d2be061862adb89f37b3fc68be2bf890192c5279dcfabf395f1f3ab3831e",
+    "files": {
+      "_convention-test.ldr": "5964c5c41171be30110af37a790d7bd5e623ae0e3a11ff4d42193c4abdbdc887",
+      "ACM.ldr": "d57845c03a2a594827b7dd9820d87818d24ec8293b475c278fe971610751aecb",
+      "APCM.ldr": "7b1155981933c81c950154b718a8ca1f78ffc70b1efe4ae2e4120f82ee2f81a4",
+      "BBCM.ldr": "5a86936569ec3d0a0a35317149e8c857d558c3ff7f7f1eb4e5ddadce1bc1f21d",
+      "BHCM.ldr": "7fee62590b586bf096fcc21060dc4b9e914d4b51045faa379df39195d4be26af",
+      "BKCM.ldr": "a1a80f280b1600382bf0c432b549f54d2339a3f9a197418eceb1281c684c4142",
+      "BVBCM.ldr": "dc0c28709d45583bed61eda5f32a9684eb1c14dc6c9ce5904c3264e23a460ca9",
+      "CCCM.ldr": "c66c3e02c7e5ab84e5d4c945ce960bc70f68dce8c7e415fab636a1393e065fea",
+      "chassis/_fallback/BBCHAS0.dat": "13c34b850137100c881aff1c6a2e740fbc8555f2ae0a107471e3b0c2595c647f",
+      "chassis/_fallback/BVBCHA0.dat": "7b8b9917b7bfa2758f5ec65d94b85704e6b93d864e18e2ecee42dea7a87a8f88",
+      "chassis/_fallback/CRCHAS0.dat": "abb697bf696ff89af008921095bc1b1744d21cb81de430406f1de62c8e93df72",
+      "chassis/_fallback/DACHAS0.dat": "88cb8880eecd5849d835b5f1383fd5ab8e01ddb95de179a042d793822d94a7a1",
+      "chassis/_fallback/DBCHAS0.dat": "23779f01f6bebcb6cc10191e4819f894b9b305233136883d06fef13f8460df3a",
+      "chassis/_fallback/DCCHAS0.dat": "93f136dfd2a5aa7bd46e5b67ff75f10b4a16668863a1e9d3da66783ff75c8861",
+      "chassis/_fallback/DDCHAS0.dat": "d3590c528a20e42e635f1e3e70705f29548119eeeddac9be024e605c2e7067e3",
+      "chassis/_fallback/GM_CHAS0.dat": "4ae9db3039faeef43635c8d102e27ecf5dcab2f4272e4b591029fc922beadc45",
+      "chassis/_fallback/JTCHAS0.dat": "9b130a2ff132c059e529698f0fa39f4768f0644fcf3ccaaeac1047730ae949e6",
+      "chassis/_fallback/KKCHAS0.dat": "03fc78c48367c08c361c0d223cdee5efef5bbc067e0f638d00584e813384e0e8",
+      "chassis/_fallback/RRCHAS0.dat": "407b0c1f30909bec4619e0679a99c9bc25dfae4321d89908408ef66dfe33f527",
+      "chassis/_fallback/VVCHAS0.dat": "b61ba03fd422957dfa3e4fe5874a69d42dea9868223958cb3bfc75b200390d94",
+      "chassis/BBCHAS0.ldr": "809a7766ddff056308e0f67d8cdba0c998d1a471f358fbeae8eed574b66ed138",
+      "chassis/BVBCHA0.ldr": "95ccf5e67f74c75e2dc076051825c18ec122b71f7ca6b049bac171a674b1a8a9",
+      "chassis/CRCHAS0.ldr": "e7613e484a8a15fd97505c11cd1f087c34cff1ce1776675bf0695c244fdab669",
+      "chassis/DACHAS0.ldr": "326939167803be6e4d5136fef370d032a9558160d8732c3e8fb0f5e86c88b5f8",
+      "chassis/DBCHAS0.ldr": "42f849145058dd9838e28d186d7ec717683541f1265fd6d1ade44521fc36c577",
+      "chassis/DCCHAS0.ldr": "6791aa3a4d4917cae1f8b74c3b76dc0dd0ac9b4ab6dc4d13cb047a4e4e37859f",
+      "chassis/DDCHAS0.ldr": "fdc240335f5255c08445573c9b9e30bc5c40d33cf8b9fb5e833b1f47b2830a85",
+      "chassis/GM_CHAS0.ldr": "fbbd719dbb4e62609271c7cb05754bc27907455d3984584278c1da4b91b5ca76",
+      "chassis/JTchas0.ldr": "caaa2e7359aa1129708887bde4fdf46879c7efd3cc8be55f9605c04c542bc0ef",
+      "chassis/KKCHAS0.ldr": "9f4c69b24f31991c6527af7c00bb8216d1dd50902ee3ec44ae8684ebb896fb41",
+      "chassis/RRchas0.ldr": "1bd31eee868ada66d6c97d01fcc6a40bdc77f96821b2201c805f42c48015f403",
+      "chassis/VVCHAS0.ldr": "138e19d1a2b59403c5f4ce58c78cc771d787c03f163128b2abbeb06d20e34e94",
+      "CRCM.ldr": "26a8a8293dfe8354771fd328ca7b8aa095e36657e6de4a61349e29cc1d035eb4",
+      "drivers/AD.ldr": "e892eabe54eebb79965579e810712039a5bb6ce74bfb40bbd0673bfcf1d8c316",
+      "drivers/AL.ldr": "a5e93fb725074c731b5ab84450cf77aa8fb435b2b33188cb95b5b3b49e459f32",
+      "drivers/AP.ldr": "7098de3bf43777a83e4f80a590b0da4d436ef403c724e31459728e91cb27c411",
+      "drivers/BB.ldr": "d677925eed2a90509ccfc63f30c73791c2cf13e67b2aa3894240613552c0317e",
+      "drivers/BH.ldr": "eb8d5cd733ac32d71891daf807316cced2f570cbbef9827892982cd6ff5655f5",
+      "drivers/BK.ldr": "4de92b95f747a063c0da8dbd698ed8977d16a7f5f22d4d4ebeb9e898d1e4c00d",
+      "drivers/BVB.ldr": "bb0fbc992c550c993cc6979b8f1a3407be5aae305ab531c3bd925acefd236fa3",
+      "drivers/CC.ldr": "07ec591cab3a62e80f4d45a9c3de8dda68fadeb6bb036fd9633408924dfaf3ba",
+      "drivers/CR.ldr": "8529fc036ad4182d90606d6cc1372d958dfe26f035eb0e78a2745b11f521abfb",
+      "drivers/GB.ldr": "8887dbb32fe33dd9ba1b6bcdf8cb860fa92571e821afb679444d23082d6b5530",
+      "drivers/GM.ldr": "3bcf06e3455f9bc351f48a5ff1bee07819e5fe29c5a2016c65cfc6db03d28b1f",
+      "drivers/GS.ldr": "03b523f9cb45079f2f4c527a961662356c94436f91d1a8dafc7f30bf70c5468b",
+      "drivers/IL.ldr": "2bdc683ee0c5aef72e32cf35fa6659c78aa54374ef698a2a25ea25dd1050a6ba",
+      "drivers/JT.ldr": "3fd425e205f948abe3ee03a4a1ab48f8818d99eb6d23d56ebe1ef7cb2b342c05",
+      "drivers/KK.ldr": "3ef890dc023f1a59866ed9c32092f06c0e80ded6f618ae875a23215590bbcadf",
+      "drivers/NH.ldr": "6965739a8f7ad35a7e761a9ff57fbac07cec560eca2cbb86d4c13749f58a8384",
+      "drivers/PH.ldr": "697e291655afb3a8f896da2c8a5afeb9131aab4a70481ee1dd4c254237bfbb7e",
+      "drivers/RH.ldr": "ced5eec3ad54205079d197e894f2ac2324973dfdc87babbefdac052326714790",
+      "drivers/RK.ldr": "1234646b6984b2aac0c1840d6a38c544f428bf6df9bfeedcd18482c554cb973d",
+      "drivers/RR.ldr": "8f8eac18e1efd6fb4524ca13bf65de52ae772a4d347ef17eca72d7a20ee80a6b",
+      "drivers/SB.ldr": "dc384d43b00c5938cc6e742dc6dfc31dfc1d69037507e11727c2fa5b65c5d809",
+      "drivers/TC.ldr": "86b426a36f72095961db4a6cc85a4ffca571e835aad861eebb08c52e384d270a",
+      "drivers/VV.ldr": "cdae34b032b9ed15903cb0b89ceedb8dca60d6310d01c112bd539f6501d42377",
+      "drivers/WW.ldr": "b2777f4c54f8e2d6bb5bb8f8afebc9d5c35a248d4f1f72c8bf5ddf762e7e2caf",
+      "GBCM.ldr": "2fe362a7b83d57fcb7e41c2ae29600770f110bfa3c7b8999ce6c59e68ddc039b",
+      "GMCM.ldr": "fb6e860a6d9e6040cb1dae734b7e43a46672b51126390e002cf0ba9ee90be15d",
+      "JTCM.ldr": "0f6ee7ef8db6b60b9b8478af84c91b1af2fb122dcd397f7df3d59e61c43ec870",
+      "KKCM.ldr": "4b4381379b503b9caf3bb7b51bec5bea3160dc13b7017002e09c72cbf03de21f",
+      "NHCM.ldr": "e724e8e28fd698b01772e8cccd9af3caa8dce3c27aa676e88cf956411a84e4c1",
+      "PHCM.ldr": "4842551a228c5bc4327255341f3465f45988aa7fd06a1ae00e956e0955a100c0",
+      "powerups/BARREL.ldr": "56b7dffa3740c20aa132c4fc174771a8578d012a2684ca9900a7d3d69ae6e3a2",
+      "powerups/CURSE.ldr": "4da271a34de843e5e59377fb166f752811a11d72b7a971ae7955386b327a5f5e",
+      "powerups/DMISSILE.ldr": "347d61a943fbb218579c06c347b5abd3365e419f48a973807efc4f137a3997b3",
+      "powerups/DT0BURN.ldr": "0b70917a0ad291d24442ef985ddfe2d82c58937a2dcefe328ce862a38be910a4",
+      "powerups/DT0FLA1.ldr": "6f7c3fe89d679aea57fe6b7e60342c665e2e1c0cc824f0ddbe3fdb1e5eb9dec6",
+      "powerups/DT0FLA2.ldr": "35879d8435de22bbf4b5d1ac45f42308f139fd8b87220a45ba4cb92e6c0fd79d",
+      "powerups/DT1BURN.ldr": "301cc400148b5e3523943b70eb352fd905fcd7aea3772eb41385f14cc3d4e268",
+      "powerups/DT1FLA1.ldr": "4fdcd52b25caaae307e30232c4e60fb4883571b6163beb14e77da8f05387e0e5",
+      "powerups/DT2CBURN.ldr": "6cec44c7da7f75868095aa5309798c6cc88cce7b1690485a8b102838bbb98d39",
+      "powerups/DT2CFLA1.ldr": "ba059f8a80a53c53ad40eea52cd67ed9cb167a7119fbc7a7239d1515d43c55e6",
+      "powerups/ENHANER.ldr": "e865efe2d2df752270b789ea3fb2e93777bf107801d3d2812487223fe8c2a926",
+      "powerups/MAGNET04.ldr": "3289e7fef8d7215d5706862e30c2f7a9dba3a300efa2ea6fb29cff0b9e587119",
+      "powerups/PUTRAILY.ldr": "e865efe2d2df752270b789ea3fb2e93777bf107801d3d2812487223fe8c2a926",
+      "powerups/WARPHOLE.ldr": "87e3149eead26cc1af9dfb62b33c974535bd5ffced9779677f31e96f05270b62",
+      "RHCM.ldr": "62b7333832b3dd833dda596cc5a21715f50e1f17acf6ea253b495ca9d7f4d5bb",
+      "RKCM.ldr": "0f5c5928c58edbcd281697ff981dc6c89fd4d027aad3a611d143775d35215118",
+      "RRCM.ldr": "ecebffaa1cd9bf58cfe8c164925a99bd0af93f6b2bb0e5e1833ec197de57c39e",
+      "SSCM.ldr": "92f6bd0a3cef11a15b8a8019ddb9ec98db51957eb68eb12dfc620455924a992a",
+      "TCCM.ldr": "6ab8ade06bbd46ebc29a46a35c173a810f2c5f045c5e9e448637aceb6ff5da73",
+      "VVCM.ldr": "c0dcb47b17a7f319fe95ef0830853dd72f116e38a450c9c88446cd3f236ce8b2"
+    }
+  },
+  "results": {
+    "garage-car-builder-hd": {
+      "desktop": {
+        "deterministic": {
+          "drawCalls": 23,
+          "triangles": 13196,
+          "lines": 4736,
+          "points": 0,
+          "programs": 5,
+          "textures": 11,
+          "buffers": 45,
+          "geometries": 15,
+          "sceneObjects": 58,
+          "ldrawParses": 14
+        },
+        "timing": {
+          "firstFrameMilliseconds": 329,
+          "modelsShownMilliseconds": 385.1999999284744,
+          "cpuFrameMedianMilliseconds": 0.3999999761581421,
+          "cpuFrameP95Milliseconds": 0.6000000238418579,
+          "gpuFrameMedianMilliseconds": 0.308583,
+          "gpuFrameP95Milliseconds": 0.368458,
+          "heapMegabytes": 97.80976104736328,
+          "ldrawParseMilliseconds": 323.60000002384186
+        }
+      },
+      "ipad": {
+        "deterministic": {
+          "drawCalls": 23,
+          "triangles": 13196,
+          "lines": 4736,
+          "points": 0,
+          "programs": 5,
+          "textures": 11,
+          "buffers": 45,
+          "geometries": 15,
+          "sceneObjects": 58,
+          "ldrawParses": 14
+        },
+        "timing": {
+          "firstFrameMilliseconds": 335.89999997615814,
+          "modelsShownMilliseconds": 390.2000000476837,
+          "cpuFrameMedianMilliseconds": 0.5,
+          "cpuFrameP95Milliseconds": 0.6000000238418579,
+          "gpuFrameMedianMilliseconds": 5.460041,
+          "gpuFrameP95Milliseconds": 7.570083,
+          "heapMegabytes": 79.76384353637695,
+          "ldrawParseMilliseconds": 332.1999999284744
+        }
+      },
+      "phone": {
+        "deterministic": {
+          "drawCalls": 23,
+          "triangles": 13196,
+          "lines": 4736,
+          "points": 0,
+          "programs": 5,
+          "textures": 11,
+          "buffers": 45,
+          "geometries": 15,
+          "sceneObjects": 58,
+          "ldrawParses": 14
+        },
+        "timing": {
+          "firstFrameMilliseconds": 336.59999990463257,
+          "modelsShownMilliseconds": 392.59999990463257,
+          "cpuFrameMedianMilliseconds": 0.5,
+          "cpuFrameP95Milliseconds": 0.7000000476837158,
+          "gpuFrameMedianMilliseconds": 1.9764365,
+          "gpuFrameP95Milliseconds": 3.766458,
+          "heapMegabytes": 79.7425308227539,
+          "ldrawParseMilliseconds": 317.4999998807907
+        }
+      }
+    },
+    "ldraw-builder-car": {
+      "desktop": {
+        "deterministic": {
+          "drawCalls": 82,
+          "triangles": 15006,
+          "lines": 4232,
+          "points": 0,
+          "programs": 12,
+          "textures": 20,
+          "buffers": 223,
+          "geometries": null,
+          "sceneObjects": null,
+          "ldrawParses": 22
+        },
+        "timing": {
+          "firstFrameMilliseconds": 193.60000002384186,
+          "modelsShownMilliseconds": 867.1999999284744,
+          "cpuFrameMedianMilliseconds": 0.3999999761581421,
+          "cpuFrameP95Milliseconds": 0.5,
+          "gpuFrameMedianMilliseconds": 0.990624,
+          "gpuFrameP95Milliseconds": 1.264958,
+          "heapMegabytes": 58.575406074523926,
+          "ldrawParseMilliseconds": 153.09999990463257
+        }
+      },
+      "ipad": {
+        "deterministic": {
+          "drawCalls": 82,
+          "triangles": 15006,
+          "lines": 4232,
+          "points": 0,
+          "programs": 12,
+          "textures": 20,
+          "buffers": 223,
+          "geometries": null,
+          "sceneObjects": null,
+          "ldrawParses": 22
+        },
+        "timing": {
+          "firstFrameMilliseconds": 200.29999995231628,
+          "modelsShownMilliseconds": 412.39999997615814,
+          "cpuFrameMedianMilliseconds": 0.3999999761581421,
+          "cpuFrameP95Milliseconds": 0.5,
+          "gpuFrameMedianMilliseconds": 0.5527915,
+          "gpuFrameP95Milliseconds": 1.444124,
+          "heapMegabytes": 58.632493019104004,
+          "ldrawParseMilliseconds": 145.20000004768372
+        }
+      },
+      "phone": {
+        "deterministic": {
+          "drawCalls": 82,
+          "triangles": 15006,
+          "lines": 4232,
+          "points": 0,
+          "programs": 12,
+          "textures": 20,
+          "buffers": 223,
+          "geometries": null,
+          "sceneObjects": null,
+          "ldrawParses": 22
+        },
+        "timing": {
+          "firstFrameMilliseconds": 195.60000002384186,
+          "modelsShownMilliseconds": 401,
+          "cpuFrameMedianMilliseconds": 0.3999999761581421,
+          "cpuFrameP95Milliseconds": 0.5,
+          "gpuFrameMedianMilliseconds": 0.054937,
+          "gpuFrameP95Milliseconds": 0.056749,
+          "heapMegabytes": 58.404574394226074,
+          "ldrawParseMilliseconds": 147.29999995231628
+        }
+      }
+    },
+    "main-menu-classic": {
+      "desktop": {
+        "deterministic": {
+          "drawCalls": 5,
+          "triangles": 566,
+          "lines": 0,
+          "points": 0,
+          "programs": 2,
+          "textures": 8,
+          "buffers": 20,
+          "geometries": 5,
+          "sceneObjects": 11,
+          "ldrawParses": 0
+        },
+        "timing": {
+          "firstFrameMilliseconds": 113.70000004768372,
+          "modelsShownMilliseconds": null,
+          "cpuFrameMedianMilliseconds": 0.5,
+          "cpuFrameP95Milliseconds": 0.7000000476837158,
+          "gpuFrameMedianMilliseconds": 0.09906200000000001,
+          "gpuFrameP95Milliseconds": 0.13225,
+          "heapMegabytes": 65.90545558929443,
+          "ldrawParseMilliseconds": 0
+        }
+      },
+      "ipad": {
+        "deterministic": {
+          "drawCalls": 5,
+          "triangles": 566,
+          "lines": 0,
+          "points": 0,
+          "programs": 2,
+          "textures": 8,
+          "buffers": 20,
+          "geometries": 5,
+          "sceneObjects": 11,
+          "ldrawParses": 0
+        },
+        "timing": {
+          "firstFrameMilliseconds": 114.60000002384186,
+          "modelsShownMilliseconds": null,
+          "cpuFrameMedianMilliseconds": 0.40000009536743164,
+          "cpuFrameP95Milliseconds": 0.7000000476837158,
+          "gpuFrameMedianMilliseconds": 0.09952050000000001,
+          "gpuFrameP95Milliseconds": 0.1435,
+          "heapMegabytes": 65.92505550384521,
+          "ldrawParseMilliseconds": 0
+        }
+      },
+      "phone": {
+        "deterministic": {
+          "drawCalls": 5,
+          "triangles": 566,
+          "lines": 0,
+          "points": 0,
+          "programs": 2,
+          "textures": 8,
+          "buffers": 20,
+          "geometries": 5,
+          "sceneObjects": 11,
+          "ldrawParses": 0
+        },
+        "timing": {
+          "firstFrameMilliseconds": 111,
+          "modelsShownMilliseconds": null,
+          "cpuFrameMedianMilliseconds": 0.40000009536743164,
+          "cpuFrameP95Milliseconds": 0.6000000238418579,
+          "gpuFrameMedianMilliseconds": 0.099687,
+          "gpuFrameP95Milliseconds": 0.139208,
+          "heapMegabytes": 65.92370891571045,
+          "ldrawParseMilliseconds": 0
+        }
+      }
+    },
+    "main-menu-hd": {
+      "desktop": {
+        "deterministic": {
+          "drawCalls": 28,
+          "triangles": 7017,
+          "lines": 2489,
+          "points": 0,
+          "programs": 3,
+          "textures": 13,
+          "buffers": 122,
+          "geometries": 38,
+          "sceneObjects": 85,
+          "ldrawParses": 22
+        },
+        "timing": {
+          "firstFrameMilliseconds": 356,
+          "modelsShownMilliseconds": 458.10000002384186,
+          "cpuFrameMedianMilliseconds": 0.6999999284744263,
+          "cpuFrameP95Milliseconds": 0.8000000715255737,
+          "gpuFrameMedianMilliseconds": 0.3230415,
+          "gpuFrameP95Milliseconds": 0.345458,
+          "heapMegabytes": 110.41759395599365,
+          "ldrawParseMilliseconds": 329.4999998807907
+        }
+      },
+      "ipad": {
+        "deterministic": {
+          "drawCalls": 28,
+          "triangles": 7017,
+          "lines": 2489,
+          "points": 0,
+          "programs": 3,
+          "textures": 13,
+          "buffers": 122,
+          "geometries": 38,
+          "sceneObjects": 85,
+          "ldrawParses": 22
+        },
+        "timing": {
+          "firstFrameMilliseconds": 357.2999999523163,
+          "modelsShownMilliseconds": 460.7000000476837,
+          "cpuFrameMedianMilliseconds": 0.7999999523162842,
+          "cpuFrameP95Milliseconds": 0.9000000953674316,
+          "gpuFrameMedianMilliseconds": 3.917041,
+          "gpuFrameP95Milliseconds": 7.320166,
+          "heapMegabytes": 81.92186260223389,
+          "ldrawParseMilliseconds": 324.2999999523163
+        }
+      },
+      "phone": {
+        "deterministic": {
+          "drawCalls": 28,
+          "triangles": 7017,
+          "lines": 2489,
+          "points": 0,
+          "programs": 3,
+          "textures": 13,
+          "buffers": 122,
+          "geometries": 38,
+          "sceneObjects": 85,
+          "ldrawParses": 22
+        },
+        "timing": {
+          "firstFrameMilliseconds": 354.60000002384186,
+          "modelsShownMilliseconds": 471.8000000715256,
+          "cpuFrameMedianMilliseconds": 0.6999999284744263,
+          "cpuFrameP95Milliseconds": 0.7999999523162842,
+          "gpuFrameMedianMilliseconds": 5.389457500000001,
+          "gpuFrameP95Milliseconds": 6.467583,
+          "heapMegabytes": 82.00718975067139,
+          "ldrawParseMilliseconds": 324.60000002384186
+        }
+      }
+    },
+    "power-slide-hd": {
+      "desktop": {
+        "deterministic": {
+          "drawCalls": 177,
+          "triangles": 107868,
+          "lines": 8815,
+          "points": 0,
+          "programs": 21,
+          "textures": 73,
+          "buffers": 1745,
+          "geometries": 564,
+          "sceneObjects": 1493,
+          "ldrawParses": 75
+        },
+        "timing": {
+          "firstFrameMilliseconds": 480.60000002384186,
+          "modelsShownMilliseconds": 1269.7999999523163,
+          "cpuFrameMedianMilliseconds": 4,
+          "cpuFrameP95Milliseconds": 5.700000047683716,
+          "gpuFrameMedianMilliseconds": 1.4412915000000002,
+          "gpuFrameP95Milliseconds": 2.376624,
+          "heapMegabytes": 148.5614013671875,
+          "ldrawParseMilliseconds": 1895.2000000476837
+        }
+      },
+      "ipad": {
+        "deterministic": {
+          "drawCalls": 168,
+          "triangles": 107365,
+          "lines": 8815,
+          "points": 0,
+          "programs": 21,
+          "textures": 73,
+          "buffers": 1745,
+          "geometries": 564,
+          "sceneObjects": 1481,
+          "ldrawParses": 75
+        },
+        "timing": {
+          "firstFrameMilliseconds": 496.40000009536743,
+          "modelsShownMilliseconds": 1338.7000000476837,
+          "cpuFrameMedianMilliseconds": 3.7500000596046448,
+          "cpuFrameP95Milliseconds": 5.300000071525574,
+          "gpuFrameMedianMilliseconds": 0.818999,
+          "gpuFrameP95Milliseconds": 1.456083,
+          "heapMegabytes": 166.13190269470215,
+          "ldrawParseMilliseconds": 1897.6000000238419
+        }
+      },
+      "phone": {
+        "deterministic": {
+          "drawCalls": 158,
+          "triangles": 107115,
+          "lines": 8815,
+          "points": 0,
+          "programs": 21,
+          "textures": 72,
+          "buffers": 1744,
+          "geometries": 563,
+          "sceneObjects": 1469,
+          "ldrawParses": 75
+        },
+        "timing": {
+          "firstFrameMilliseconds": 496.3000000715256,
+          "modelsShownMilliseconds": 1341.4000000953674,
+          "cpuFrameMedianMilliseconds": 3.5,
+          "cpuFrameP95Milliseconds": 10.399999976158142,
+          "gpuFrameMedianMilliseconds": 1.2507489999999999,
+          "gpuFrameP95Milliseconds": 1.897374,
+          "heapMegabytes": 156.02673149108887,
+          "ldrawParseMilliseconds": 1830.8000000715256
+        }
+      }
+    },
+    "power-up-burst-hd": {
+      "desktop": {
+        "deterministic": {
+          "drawCalls": 93,
+          "triangles": 62950,
+          "lines": 8815,
+          "points": 0,
+          "programs": 22,
+          "textures": 80,
+          "buffers": 1843,
+          "geometries": 595,
+          "sceneObjects": 263,
+          "ldrawParses": 74
+        },
+        "timing": {
+          "firstFrameMilliseconds": 479.3000000715256,
+          "modelsShownMilliseconds": 1310.7000000476837,
+          "cpuFrameMedianMilliseconds": 4.800000011920929,
+          "cpuFrameP95Milliseconds": 6.600000023841858,
+          "gpuFrameMedianMilliseconds": 1.2418325000000001,
+          "gpuFrameP95Milliseconds": 2.167791,
+          "heapMegabytes": 150.82926750183105,
+          "ldrawParseMilliseconds": 2019.4999998807907
+        }
+      },
+      "ipad": {
+        "deterministic": {
+          "drawCalls": 93,
+          "triangles": 62950,
+          "lines": 8815,
+          "points": 0,
+          "programs": 22,
+          "textures": 80,
+          "buffers": 1843,
+          "geometries": 595,
+          "sceneObjects": 263,
+          "ldrawParses": 74
+        },
+        "timing": {
+          "firstFrameMilliseconds": 481.10000002384186,
+          "modelsShownMilliseconds": 1286.2999999523163,
+          "cpuFrameMedianMilliseconds": 4.75,
+          "cpuFrameP95Milliseconds": 6.399999976158142,
+          "gpuFrameMedianMilliseconds": 1.3469365,
+          "gpuFrameP95Milliseconds": 3.0335,
+          "heapMegabytes": 150.67136573791504,
+          "ldrawParseMilliseconds": 1978.1000001430511
+        }
+      },
+      "phone": {
+        "deterministic": {
+          "drawCalls": 93,
+          "triangles": 62950,
+          "lines": 8815,
+          "points": 0,
+          "programs": 22,
+          "textures": 80,
+          "buffers": 1843,
+          "geometries": 595,
+          "sceneObjects": 263,
+          "ldrawParses": 74
+        },
+        "timing": {
+          "firstFrameMilliseconds": 478.60000002384186,
+          "modelsShownMilliseconds": 1265.8999999761581,
+          "cpuFrameMedianMilliseconds": 4.800000071525574,
+          "cpuFrameP95Milliseconds": 7.299999952316284,
+          "gpuFrameMedianMilliseconds": 2.1781245,
+          "gpuFrameP95Milliseconds": 3.311999,
+          "heapMegabytes": 158.34192657470703,
+          "ldrawParseMilliseconds": 1919
+        }
+      }
+    },
+    "race-start-classic": {
+      "desktop": {
+        "deterministic": {
+          "drawCalls": 107,
+          "triangles": 4060,
+          "lines": 0,
+          "points": 0,
+          "programs": 7,
+          "textures": 62,
+          "buffers": 352,
+          "geometries": 115,
+          "sceneObjects": 216,
+          "ldrawParses": 0
+        },
+        "timing": {
+          "firstFrameMilliseconds": 218.79999995231628,
+          "modelsShownMilliseconds": null,
+          "cpuFrameMedianMilliseconds": 1.100000023841858,
+          "cpuFrameP95Milliseconds": 1.5,
+          "gpuFrameMedianMilliseconds": 0.078374,
+          "gpuFrameP95Milliseconds": 0.35975,
+          "heapMegabytes": 77.55693435668945,
+          "ldrawParseMilliseconds": 0
+        }
+      },
+      "ipad": {
+        "deterministic": {
+          "drawCalls": 107,
+          "triangles": 4060,
+          "lines": 0,
+          "points": 0,
+          "programs": 7,
+          "textures": 62,
+          "buffers": 352,
+          "geometries": 115,
+          "sceneObjects": 216,
+          "ldrawParses": 0
+        },
+        "timing": {
+          "firstFrameMilliseconds": 216.70000004768372,
+          "modelsShownMilliseconds": null,
+          "cpuFrameMedianMilliseconds": 1.100000023841858,
+          "cpuFrameP95Milliseconds": 1.600000023841858,
+          "gpuFrameMedianMilliseconds": 0.1492285,
+          "gpuFrameP95Milliseconds": 1.288416,
+          "heapMegabytes": 77.59814834594727,
+          "ldrawParseMilliseconds": 0
+        }
+      },
+      "phone": {
+        "deterministic": {
+          "drawCalls": 107,
+          "triangles": 4060,
+          "lines": 0,
+          "points": 0,
+          "programs": 7,
+          "textures": 62,
+          "buffers": 352,
+          "geometries": 115,
+          "sceneObjects": 216,
+          "ldrawParses": 0
+        },
+        "timing": {
+          "firstFrameMilliseconds": 214,
+          "modelsShownMilliseconds": null,
+          "cpuFrameMedianMilliseconds": 1.100000023841858,
+          "cpuFrameP95Milliseconds": 1.600000023841858,
+          "gpuFrameMedianMilliseconds": 0.14716649999999998,
+          "gpuFrameP95Milliseconds": 0.823833,
+          "heapMegabytes": 77.60013961791992,
+          "ldrawParseMilliseconds": 0
+        }
+      }
+    },
+    "race-start-hd": {
+      "desktop": {
+        "deterministic": {
+          "drawCalls": 526,
+          "triangles": 291538,
+          "lines": 47310,
+          "points": 0,
+          "programs": 17,
+          "textures": 65,
+          "buffers": 1699,
+          "geometries": 550,
+          "sceneObjects": 1416,
+          "ldrawParses": 74
+        },
+        "timing": {
+          "firstFrameMilliseconds": 483.7000000476837,
+          "modelsShownMilliseconds": 1269.5,
+          "cpuFrameMedianMilliseconds": 3.799999952316284,
+          "cpuFrameP95Milliseconds": 4.300000071525574,
+          "gpuFrameMedianMilliseconds": 0.9777495,
+          "gpuFrameP95Milliseconds": 2.655999,
+          "heapMegabytes": 141.72121238708496,
+          "ldrawParseMilliseconds": 1587.2999999523163
+        }
+      },
+      "ipad": {
+        "deterministic": {
+          "drawCalls": 475,
+          "triangles": 278211,
+          "lines": 42629,
+          "points": 0,
+          "programs": 17,
+          "textures": 65,
+          "buffers": 1699,
+          "geometries": 550,
+          "sceneObjects": 1416,
+          "ldrawParses": 74
+        },
+        "timing": {
+          "firstFrameMilliseconds": 485.89999997615814,
+          "modelsShownMilliseconds": 1296.5,
+          "cpuFrameMedianMilliseconds": 3.299999952316284,
+          "cpuFrameP95Milliseconds": 3.899999976158142,
+          "gpuFrameMedianMilliseconds": 1.0718325000000002,
+          "gpuFrameP95Milliseconds": 1.479458,
+          "heapMegabytes": 138.11933708190918,
+          "ldrawParseMilliseconds": 1559.5
+        }
+      },
+      "phone": {
+        "deterministic": {
+          "drawCalls": 370,
+          "triangles": 225904,
+          "lines": 25428,
+          "points": 0,
+          "programs": 17,
+          "textures": 65,
+          "buffers": 1699,
+          "geometries": 550,
+          "sceneObjects": 1416,
+          "ldrawParses": 74
+        },
+        "timing": {
+          "firstFrameMilliseconds": 487.89999997615814,
+          "modelsShownMilliseconds": 1273.7999999523163,
+          "cpuFrameMedianMilliseconds": 2.700000047683716,
+          "cpuFrameP95Milliseconds": 3.1999999284744263,
+          "gpuFrameMedianMilliseconds": 0.7034994999999999,
+          "gpuFrameP95Milliseconds": 0.99675,
+          "heapMegabytes": 148.90960311889648,
+          "ldrawParseMilliseconds": 1501.2000000476837
+        }
+      }
+    }
+  }
+}
