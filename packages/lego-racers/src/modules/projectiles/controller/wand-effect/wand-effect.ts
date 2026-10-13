@@ -15,7 +15,6 @@ import type {
 } from '../../../power-ups/index.ts'
 import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
-import type { FlightRacer } from '../../types/projectiles.types.ts'
 import { getWandJitter } from '../../types/wand-jitter/wand-jitter.ts'
 import { getMotion, getWorldWithMotion } from '../../types/projectile-world/projectile-world.ts'
 import type {
@@ -83,10 +82,9 @@ const getStepWithSparksPlaced = (
   context: ProjectileContext,
   effectId: number,
   beam: WandBeam,
-  owner: FlightRacer
+  muzzleDirection: Vector3
 ): PowerUpStep => {
   const end = beam.points.at(-1)
-  const { muzzleDirection } = owner
   return end === undefined
     ? step
     : placeOrientedEffectEmitter(step, effectId, context.powerUps.arithmetic, {
@@ -123,7 +121,7 @@ const getStepWithBeam = (
     struck: struck === undefined ? null : { center: struck.position, radius: struck.beamRadius },
   })
   if (effect.targetRacer !== null) {
-    return { step: getStepWithSparksPlaced(step, context, effectId, beam, owner), beam }
+    return { step: getStepWithSparksPlaced(step, context, effectId, beam, muzzle.direction), beam }
   }
   // 0x00455660: with no racer held the sparks of the last strike are let go.
   return {

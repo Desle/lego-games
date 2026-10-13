@@ -5,7 +5,7 @@ import { NO_BARREL_SPIN } from '../barrel-spin/barrel-spin.ts'
 import { getWorldWithBarrelSpin, getWorldWithStartedBarrelsReset } from './projectile-world.ts'
 import type { ProjectileWorld } from './projectile-world.types.ts'
 
-const SPUN = Object.freeze({ angle: 43.7, rotation: IDENTITY_MATRIX3 })
+const SPUN = Object.freeze({ angle: 43.7, cosine: 1, sine: 0, rotation: IDENTITY_MATRIX3 })
 
 const createEffect = (state: PowerUpEffect['state'], timerMilliseconds: number): PowerUpEffect =>
   ({ id: 0, kind: PowerUpEffectKind.BARREL, state, timerMilliseconds }) as PowerUpEffect
