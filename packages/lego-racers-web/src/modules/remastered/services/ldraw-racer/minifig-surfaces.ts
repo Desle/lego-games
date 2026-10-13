@@ -4,6 +4,7 @@ import { MINIFIG_SIDES } from './minifig-geometry.ts'
 import type { MinifigSide } from './minifig-geometry.types.ts'
 import type { BatchSurface, BitmapRegion } from './model-surface.types.ts'
 import type {
+  ArmParts,
   BoneClass,
   MinifigSurfaces,
   PictureSource,
@@ -111,7 +112,7 @@ const getArmParts = (
   mesh: SceneMesh,
   triangles: readonly SurfaceTriangle[],
   side: MinifigSide
-): { readonly sleeve: readonly SurfaceTriangle[]; readonly hand: readonly SurfaceTriangle[] } => {
+): ArmParts => {
   const arm = triangles.filter((triangle) => triangle.boneIndex === ARM_BONES[side])
   const reaches = arm.map((triangle) => getMeanX(mesh, triangle))
   const [nearest, farthest] = reaches.length === 0 ? [0, 0] : getBounds(reaches)

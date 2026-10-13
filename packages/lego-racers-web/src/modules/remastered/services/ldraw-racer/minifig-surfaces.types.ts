@@ -46,3 +46,9 @@ export type SurfaceSize = {
   readonly width: number
   readonly height: number
 }
+
+// One arm's triangles of the chest picture: the sleeve, and the hand at the far end of its reach.
+export type ArmParts = {
+  readonly sleeve: readonly SurfaceTriangle[]
+  readonly hand: readonly SurfaceTriangle[]
+}
