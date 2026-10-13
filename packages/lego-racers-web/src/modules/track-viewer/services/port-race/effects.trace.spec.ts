@@ -20,7 +20,7 @@ const EFFECT_CASES: readonly EffectTraceCase[] = Object.freeze([
   {
     name: 'Ice Planet, snow',
     race: 'ipp',
-    frames: [170, 250, 340, 520, 610],
+    frames: [70, 100, 120, 170, 250, 340, 520, 610],
     texture: /snowflak/,
   },
   // Turbo flames and burn figures: their texture scroll has run since the effect started (0x0045ce20).

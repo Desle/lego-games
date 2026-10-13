@@ -1021,3 +1021,7 @@
 00428390 Camera_SetEye
 004282a0 Camera_SetBasisFromForwardUp
 004283d0 Camera_SetMode
+00455660 Wand_PlaceSparks
+00493790 Trail_Draw
+00493aa0 Trails_Draw
+00493850 Trails_Create

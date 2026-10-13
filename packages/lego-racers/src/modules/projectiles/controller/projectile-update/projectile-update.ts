@@ -18,6 +18,7 @@ import type {
   PowerUpEffect,
   PowerUpStep,
 } from '../../../power-ups/index.ts'
+import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
 import { BallisticFlightState } from '../../types/ballistic-flight/ballistic-flight.ts'
 import {
@@ -36,7 +37,12 @@ import {
   getStepWithConsequences,
   getStepWithExplosionsAndDebris,
 } from '../projectile-consequences/projectile-consequences.ts'
-import { getBarrelSpun, NO_BARREL_SPIN } from '../../types/barrel-spin/barrel-spin.ts'
+import {
+  getBarrelLaunchSparksPosition,
+  getBarrelSparksPosition,
+  getBarrelSpun,
+  NO_BARREL_SPIN,
+} from '../../types/barrel-spin/barrel-spin.ts'
 import { updateRocket } from '../rocket-effect/rocket-effect.ts'
 import { updateWarp } from '../warp-effect/warp-effect.ts'
 import { updateWand } from '../wand-effect/wand-effect.ts'
@@ -158,19 +164,33 @@ const updateBarrel: EffectUpdate = (step, world, context, before, stepMillisecon
             stepMilliseconds
           )
         )
-  const counted = updatePowerUpEffect(
-    afterFlight.step,
-    context.powerUps,
-    before.id,
-    stepMilliseconds
-  )
+  // The sparks follow the frame position read before the flight advanced (0x00452ff0).
+  const frameBefore = motion?.kind === 'ballistic' ? motion.flight.framePosition : null
+  const spin = spunWorld.barrelSpins[before.id]
+  const { arithmetic } = context.powerUps
+  const followed =
+    before.state === EffectState.FINISHED || frameBefore === null || spin === undefined
+      ? afterFlight.step
+      : placeEffectEmitter(
+          afterFlight.step,
+          before.id,
+          getBarrelSparksPosition(arithmetic, frameBefore, spin)
+        )
+  const counted = updatePowerUpEffect(followed, context.powerUps, before.id, stepMilliseconds)
   const after = getEffect(counted, before.id)
+  const isLaunching = before.state === EffectState.STARTING && after.state === EffectState.ACTIVE
   return Object.freeze({
-    step: counted,
-    world:
-      before.state === EffectState.STARTING && after.state === EffectState.ACTIVE
-        ? getWithBallisticMotion(spunWorld, before.id, getBarrelFlight(context, after))
-        : spunWorld,
+    // 0x00453240: the sparks start where the barrel's frame was before it launched.
+    step: isLaunching
+      ? placeEffectEmitter(
+          counted,
+          before.id,
+          getBarrelLaunchSparksPosition(arithmetic, frameBefore ?? ZERO_VECTOR3)
+        )
+      : counted,
+    world: isLaunching
+      ? getWithBallisticMotion(spunWorld, before.id, getBarrelFlight(context, after))
+      : spunWorld,
   })
 }
 
