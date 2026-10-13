@@ -23,24 +23,21 @@ const FRAME_COUNT = Number(process.env['COMPUTER_FRAMES'] ?? '700')
 const SELECTED = process.env['COMPUTER_RACES'] ?? ''
 const KIND = process.env['COMPUTER_KIND'] ?? 'idle'
 
-// The first field that differs, per race, in a run of every race (null for none). The mirrored hammer words are the
-// instance rotation of the hammer's skeleton (golden-trace-simulation-sweep.md).
+// The first field that differs, per race, in a run of every race (races that match are left out).
 const EXPECTED_FIRST_FIELDS: Readonly<Record<string, Readonly<Record<string, string | null>>>> =
   Object.freeze({
-    idle: Object.freeze({ rkr2: 'track.hammers[24]', att2: 'track.hammers[25]' }),
+    idle: Object.freeze({}),
     // The weaving player for 7,000 frames; what is open is listed in golden-trace-simulation-sweep.md.
     'weave-7000': Object.freeze({
       aar: 'race.randomPosition[0]',
       att: 'track.hammers[73]',
-      att2: 'track.hammers[25]',
+      att2: 'track.hammers[73]',
       frk: 'powerUps.effects[0]',
       frk2: 'powerUps.effects[0]',
       igp: 'racer3.body.flags[0]',
-      ipp: 'race.randomPosition[0]',
-      ipp2: 'race.randomPosition[0]',
       mmm: 'emitters.track.instances[6]',
       mmm2: 'emitters.track.instances[6]',
-      rkr2: 'track.hammers[24]',
+      rkr2: 'racer2.racer.curseFigure[0]',
       rr: 'powerUps.effects[10]',
     }),
   })
