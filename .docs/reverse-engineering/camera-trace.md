@@ -63,6 +63,6 @@ The mechanisms, in the order they were found:
 
 ## Open
 
-- Two scenarios (`racec0r0-mirrored-demonstration`, `-player`): the introduction clip's node orientation is one unit in the last place off in places while the position matches. The original mirrors the animation keys at load (`0x004015e0` negates the y of translation keys and the y and w of rotation keys, `0x0040ea20`) and the port flips y of the finished vectors; **hypothesis:** an operation order in the key interpolation or the bone matrix differs for mirrored keys. The other 11 mirrored races match bit for bit.
+- (Closed.) The mirrored introduction clips (`racec0r0-mirrored-demonstration`, `-player`) were one unit in the last place off while the port flipped y of the finished vectors; the port now mirrors the world's skeletons (`0x00413310`) and animation keys (`0x004015e0`, `0x0040ea20`) as the original does (golden-trace-simulation-sweep.md, item 13), and all 13 mirrored races match bit for bit.
 - The racer divergences the camera trace runs into (`camera0.racer[12]` onward, forward speed one to 13 units in the last place from frame 270 to 590, a body flag `0x80000` the port lacks on RACEC2R2 at frame 511) are the physics family of golden-trace divergence 8, not camera code; the camera is judged before them.
 - The viewer's three.js camera uses the near plane 0.5 and the far plane 20,000 for drawing, where the original's frame holds 5 and 800 (the frustum used for culling has the right ones, `camera-frustum.ts`). That is the draw distance, left to its own work.

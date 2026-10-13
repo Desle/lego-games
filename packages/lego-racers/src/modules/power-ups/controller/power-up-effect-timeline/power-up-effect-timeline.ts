@@ -23,7 +23,11 @@ import {
   PowerUpEffectKind,
 } from '../../types/power-up-effect-kind/power-up-effect-kind.ts'
 import type { EffectState as EffectStateValue, PowerUpEffect } from '../../types/power-ups.types.ts'
-import { releaseEffectEmitter, startEffectEmitter } from '../effect-emitters/effect-emitters.ts'
+import {
+  placeOrientedEffectEmitter,
+  releaseEffectEmitter,
+  startEffectEmitter,
+} from '../effect-emitters/effect-emitters.ts'
 import {
   getEffect,
   getStepDraws,
@@ -235,6 +239,31 @@ const advanceThreeStages = (
   return getWithState(step, effect, EffectState.FINISHED, 0)
 }
 
+// 0x004521f5: a launcher's cannonball puts its smoke 4 units above the launcher's position (0x004b13b0), facing x
+// with z up; a racer's follows the racer (0x00451b50).
+const LAUNCHER_SMOKE_HEIGHT = 4
+const LAUNCHER_SMOKE_FACING = Object.freeze({ x: 1, y: 0, z: 0 })
+const LAUNCHER_SMOKE_UP = Object.freeze({ x: 0, y: 0, z: 1 })
+const getWithLauncherSmokePlaced = (
+  step: PowerUpStep,
+  context: PowerUpContext,
+  effect: PowerUpEffect
+): PowerUpStep => {
+  const cannonball = effect.launcherCannonball
+  if (cannonball === null) return step
+  const { add, storeFloat } = context.arithmetic
+  const { position } = cannonball
+  return placeOrientedEffectEmitter(step, effect.id, context.arithmetic, {
+    position: Object.freeze({
+      x: position.x,
+      y: position.y,
+      z: storeFloat(add(position.z, LAUNCHER_SMOKE_HEIGHT)),
+    }),
+    facing: LAUNCHER_SMOKE_FACING,
+    up: LAUNCHER_SMOKE_UP,
+  })
+}
+
 const advanceProjectile = (
   step: PowerUpStep,
   context: PowerUpContext,
@@ -286,9 +315,14 @@ const advanceProjectile = (
     )
     // 0x00451f50 state 2 ends with the launch sound.
     return effect.kind === PowerUpEffectKind.CANNON
-      ? getStepWithEvents(startEffectEmitter(started, context.arithmetic, effect.id, 'cannsmk'), [
-          { type: 'power_ups.sound_played', soundId: 6, address: '0x00452367' },
-        ])
+      ? getStepWithEvents(
+          getWithLauncherSmokePlaced(
+            startEffectEmitter(started, context.arithmetic, effect.id, 'cannsmk'),
+            context,
+            effect
+          ),
+          [{ type: 'power_ups.sound_played', soundId: 6, address: '0x00452367' }]
+        )
       : started
   }
   return getWithState(step, effect, EffectState.FINISHED, 0)

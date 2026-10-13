@@ -1,4 +1,5 @@
 export {
+  activateLauncherCannonball,
   activateLauncherCurse,
   activateLauncherWand,
   activateLauncherWarp,
@@ -107,6 +108,7 @@ export type {
   PowerUpBrickPlacement,
   BrickBase,
   PowerUpEffect,
+  LauncherCannonball,
   LauncherMuzzle,
   WarpDestination,
   PowerUpEffects,

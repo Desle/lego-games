@@ -204,6 +204,16 @@ export type PowerUpEffect = {
   readonly launcherMuzzle: LauncherMuzzle | null
   // The hazard (index in the track logic) whose muzzle the beam follows each frame; null for a racer's wand.
   readonly launcherHazardIndex: number | null
+  // A cannonball a hazard threw (0x0048c680 through 0x00451a50, +0xe0 = the launcher's struct): null for a racer's.
+  readonly launcherCannonball: LauncherCannonball | null
+}
+
+// The periodic launcher's struct as the cannonball reads it when it leaves state 2 (0x00451f50): where it starts
+// (launcher +0x14), where it lands (+0x8) and its speed (+0x20).
+export type LauncherCannonball = {
+  readonly position: Vector3
+  readonly target: Vector3
+  readonly speed: number
 }
 
 export type LauncherMuzzle = {

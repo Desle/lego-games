@@ -1,9 +1,10 @@
 import { getBonePosition, getRestPose, getSkeletonPose } from '../../../skeletal-animation/index.ts'
-import type { SkeletalPose, Vector3 } from '../../../skeletal-animation/index.ts'
+import type { SkeletalAnimation, SkeletalPose, Vector3 } from '../../../skeletal-animation/index.ts'
 import type { Skeleton } from '../../../skeleton/index.ts'
 import {
   getFrameRotatedVector,
   getFrameTransformedPoint,
+  getRotationFromFrameAxes,
   ZERO_VECTOR3,
 } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, FrameAxes } from '../../../simulation-math/index.ts'
@@ -12,11 +13,88 @@ import type {
   SkeletonInstanceRuntime,
 } from '../../types/world-animation.types.ts'
 
+const mirroredRestPoses = new WeakMap<FloatArithmetic, WeakMap<Skeleton, SkeletalPose>>()
+
+// 0x00413310 (from 0x00416140, which Race_LoadTrackContent's world loads 0x00432e20 call in a mirrored race): every bone
+// of the world's skeletons has the y of its translation negated (bone slots +0x40, +0x44) and the y of its rotation's
+// rows 0 and 2 (slot +0x20), from which slot +0x28 (0x10002b20, Gram-Schmidt as 0x00410900) builds the rotation again.
+// The clips' keys are not mirrored: a channel the clip has keys for overrides the mirrored rest.
+const getMirroredRestPose = (arithmetic: FloatArithmetic, skeleton: Skeleton): SkeletalPose => {
+  const known = mirroredRestPoses.get(arithmetic)?.get(skeleton)
+  if (known !== undefined) return known
+  const mirrored: SkeletalPose = Object.freeze({
+    bones: Object.freeze(
+      getRestPose(skeleton).bones.map(({ rotation, translation }) =>
+        Object.freeze({
+          rotation: getRotationFromFrameAxes(arithmetic, {
+            first: { x: rotation[0], y: -rotation[1], z: rotation[2] },
+            // @check-allow traced-constants: 6, 7 and 8 are the third row of a 3×3 rotation matrix
+            third: { x: rotation[6], y: -rotation[7], z: rotation[8] },
+          }),
+          translation: Object.freeze([translation[0], -translation[1], translation[2]] as const),
+        })
+      )
+    ),
+  })
+  const byArithmetic = mirroredRestPoses.get(arithmetic) ?? new WeakMap<Skeleton, SkeletalPose>()
+  byArithmetic.set(skeleton, mirrored)
+  mirroredRestPoses.set(arithmetic, byArithmetic)
+  return mirrored
+}
+
+const mirroredAnimations = new WeakMap<SkeletalAnimation, SkeletalAnimation>()
+
+// 0x004015e0 → 0x0040ea20 (the animations of the same mirrored worlds): every position key has its y negated, every
+// rotation key its second and fourth words (+0x4, +0xc), which is the same turn mirrored; 0x004015e0 also negates the y
+// of each clip's velocity (+0x8) and of its sphere's centre (+0x14).
+const getMirroredAnimation = (animation: SkeletalAnimation): SkeletalAnimation => {
+  const known = mirroredAnimations.get(animation)
+  if (known !== undefined) return known
+  const mirrored: SkeletalAnimation = Object.freeze({
+    ...animation,
+    positions: Object.freeze(
+      animation.positions.map((position) =>
+        Object.freeze([position[0], -position[1], position[2]] as const)
+      )
+    ),
+    rotations: Object.freeze(
+      animation.rotations.map((rotation) =>
+        Object.freeze([rotation[0], -rotation[1], rotation[2], -rotation[3]] as const)
+      )
+    ),
+    clips: Object.freeze(
+      animation.clips.map((clip) =>
+        Object.freeze({
+          ...clip,
+          velocity: Object.freeze([clip.velocity[0], -clip.velocity[1], clip.velocity[2]] as const),
+          boundingSphere: Object.freeze([
+            clip.boundingSphere[0],
+            -clip.boundingSphere[1],
+            clip.boundingSphere[2],
+            clip.boundingSphere[3],
+          ] as const),
+        })
+      )
+    ),
+  })
+  mirroredAnimations.set(animation, mirrored)
+  return mirrored
+}
+
 // The pose the instance's bones hold now (GolDP.dll 0x10023580 poses them when the instance advances): the clip's
 // sample, or the rest pose without a clip. Null for an instance without a skeleton or an animation.
-const getInstancePose = (instance: SkeletonInstanceRuntime): SkeletalPose | null => {
+const getInstancePose = (
+  arithmetic: FloatArithmetic,
+  instance: SkeletonInstanceRuntime
+): SkeletalPose | null => {
   const { skeleton, animation, clip } = instance
   if (skeleton === null || animation === null) return null
+  if (instance.isMirrored === true) {
+    const mirroredRest = getMirroredRestPose(arithmetic, skeleton)
+    return clip === null
+      ? mirroredRest
+      : getSkeletonPose(mirroredRest, getMirroredAnimation(animation), clip)
+  }
   const rest = getRestPose(skeleton)
   return clip === null ? rest : getSkeletonPose(rest, animation, clip)
 }
@@ -51,7 +129,7 @@ export const getSkeletonInstanceChainPosition = (
   scale: number
 ): Vector3 | null => {
   const { skeleton } = instance
-  const pose = getInstancePose(instance)
+  const pose = getInstancePose(arithmetic, instance)
   if (skeleton === null || pose === null) return null
   const local = getBonePosition(arithmetic, skeleton, pose, boneIndex)
   return local === null ? null : getPointInInstance(arithmetic, instance, local, scale)
@@ -64,11 +142,9 @@ export const getSkeletonInstanceBoneTranslation = (
   instance: SkeletonInstanceRuntime,
   boneIndex: number
 ): Vector3 | null => {
-  const translation = getInstancePose(instance)?.bones[boneIndex]?.translation
+  const translation = getInstancePose(arithmetic, instance)?.bones[boneIndex]?.translation
   if (translation === undefined) return null
-  const local: Vector3 =
-    instance.isMirrored === true ? [translation[0], -translation[1], translation[2]] : translation
-  return getPointInInstance(arithmetic, instance, local, instance.scale)
+  return getPointInInstance(arithmetic, instance, translation, instance.scale)
 }
 
 // A bone's own transform of a point (bone slot +0x4, GolDP.dll 0x10002c10): the point's coordinates times the rows of the
@@ -80,7 +156,7 @@ export const getSkeletonInstanceBonePoint = (
   point: Vector3
 ): Vector3 | null => {
   const { add, multiply, storeFloat } = arithmetic
-  const bone = getInstancePose(instance)?.bones[boneIndex]
+  const bone = getInstancePose(arithmetic, instance)?.bones[boneIndex]
   if (bone === undefined) return null
   const { rotation, translation } = bone
   const getComponent = (column: number): number => {
@@ -109,7 +185,7 @@ const getChainTurnedAxes = (
   getChain: (skeleton: Skeleton) => readonly number[]
 ): FrameAxes | null => {
   const { skeleton } = instance
-  const pose = getInstancePose(instance)
+  const pose = getInstancePose(arithmetic, instance)
   const rotation = pose?.bones[boneIndex]?.rotation
   if (skeleton === null || pose === null || rotation === undefined) return null
   const getRow = (start: number): FrameAxes['first'] =>

@@ -29,16 +29,10 @@ const EXPECTED_FIRST_FIELDS: Readonly<Record<string, Readonly<Record<string, str
     idle: Object.freeze({}),
     // The weaving player for 7,000 frames; what is open is listed in golden-trace-simulation-sweep.md.
     'weave-7000': Object.freeze({
-      aar: 'race.randomPosition[0]',
       att: 'track.hammers[73]',
       att2: 'track.hammers[73]',
-      frk: 'powerUps.effects[0]',
-      frk2: 'powerUps.effects[0]',
       igp: 'racer3.body.flags[0]',
-      mmm: 'emitters.track.instances[6]',
-      mmm2: 'emitters.track.instances[6]',
       rkr2: 'racer2.racer.curseFigure[0]',
-      rr: 'powerUps.effects[10]',
     }),
   })
 

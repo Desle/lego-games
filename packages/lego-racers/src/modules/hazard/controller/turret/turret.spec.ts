@@ -44,6 +44,8 @@ describe('the turret', () => {
         launcher: {
           position: [100, 200, 283],
           direction: [0.7071067690849304, 0.7071067690849304, 0],
+          target: null,
+          speed: null,
         },
       },
     ])

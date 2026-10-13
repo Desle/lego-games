@@ -1,6 +1,7 @@
 import { HazardKeyword } from '../../../hazard/index.ts'
 import type { HazardRacer } from '../../../hazard/index.ts'
 import {
+  activateLauncherCannonball,
   activateLauncherCurse,
   activateLauncherWand,
   activateLauncherWarp,
@@ -175,6 +176,7 @@ export const getPowerUpContext = (
     raceModeFlags: racerSet.raceModeFlags,
     getGroundPoint: racerSet.getGroundPoint ?? (() => null),
     trackTargets: racerSet.trackTargets,
+    eventStart: racerSet.powerUpStep.events.length,
   })
 
 // The power-up fields the racer and the power-ups both keep: held brick, use check and voice (racer +0xccc,
@@ -312,6 +314,7 @@ export const changePowerUps: RaceWorldChange = (context, racerSet, change) => {
 }
 
 // The power-up system's projectile kind 2 (0x0045a950 → 0x0045ac80): the wand.
+const CANNON_PROJECTILE_KIND = 0
 const WAND_PROJECTILE_KIND = 2
 
 const NO_LINE_HIT: LineProbe = () => null
@@ -646,6 +649,22 @@ const getRacerSetAfterTrackEffect = (
     if (position === null) return racerSet
     return changePowerUps(context, racerSet, (step) =>
       activateLauncherCurse(step, { x: position[0], y: position[1], z: position[2] })
+    )
+  }
+  if (
+    effect.type === 'hazard.power_up_activated' &&
+    effect.activation === 'projectile' &&
+    effect.effectKind === CANNON_PROJECTILE_KIND
+  ) {
+    // 0x0048c680: the periodic launcher throws a cannonball at once, with itself as the launcher (system +0x1998).
+    const { position, target, speed } = effect.launcher
+    if (position === null || target === null || speed === null) return racerSet
+    return changePowerUps(context, racerSet, (step) =>
+      activateLauncherCannonball(step, {
+        position: { x: position[0], y: position[1], z: position[2] },
+        target: { x: target[0], y: target[1], z: target[2] },
+        speed,
+      })
     )
   }
   if (

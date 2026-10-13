@@ -68,6 +68,8 @@ export const HAZARD_DROPPER: HazardBehavior = Object.freeze({
           place[2],
         ] as const),
         direction: FACING,
+        target: null,
+        speed: null,
       }),
     })
     return Object.freeze({ ...instance, lifecycle: HazardLifecycle.ACTIVE })

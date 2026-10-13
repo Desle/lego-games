@@ -20,6 +20,7 @@ import type {
   HazardWorldKey,
   InstanceReference,
 } from '../../types/hazard-runtime.types.ts'
+import type { Vector3 } from '../../types/hazard.types.ts'
 import { HazardLifecycle } from '../../types/hazard-lifecycle/hazard-lifecycle.ts'
 
 // The identifier of a hazard that no signal can start (+0x08 = -1).
@@ -154,12 +155,19 @@ export const setInstanceDistances = (
   }
 }
 
-// 0x00489d70 on the track's emitter pool (race +0x248c): the handle of a new emitter, or null when the race has no
-// pool, no free handle or no free emitter.
-export const spawnTrackEmitter = (session: HazardSession, name: string): number | null => {
+// 0x00489d70 on the track's emitter pool (race +0x248c), placed at the position when one is given (0x00489660): the
+// handle of a new emitter, or null when the race has no pool, no free handle or no free emitter.
+export const spawnTrackEmitter = (
+  session: HazardSession,
+  name: string,
+  position: Vector3 | null = null
+): number | null => {
   const pool = session.getEmitters()
   if (pool === null) return null
-  const spawn = spawnEmitter(session.arithmetic, pool, name, { position: null, orientation: null })
+  const spawn = spawnEmitter(session.arithmetic, pool, name, {
+    position: position === null ? null : { x: position[0], y: position[1], z: position[2] },
+    orientation: null,
+  })
   session.setEmitters(spawn.pool)
   return spawn.handleIndex
 }

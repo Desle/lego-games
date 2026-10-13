@@ -261,11 +261,14 @@ const getFlownRocket = (
           third: getFrameAxes(motion.frameRotation).third,
         })
       : motion.frameRotation
+  // 0x00456fa0: a shield that sends the rocket back makes the victim its owner (+0x24); the flight goes on.
+  const ownerRacer = getEffect(resolved.step, effectId).ownerRacer ?? motion.ownerRacer
   return Object.freeze({
     step: resolved.step,
     world: getWorldWithRocketWobbleAngle(
       getWorldWithRocket(current.world, effectId, {
         ...motion,
+        ownerRacer,
         frameRotation,
         homing: Object.freeze({ ...advance.homing, flight: resolved.flight }),
       }),

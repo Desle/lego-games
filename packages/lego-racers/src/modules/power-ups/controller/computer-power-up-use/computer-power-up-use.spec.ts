@@ -52,6 +52,7 @@ const CONTEXT: PowerUpContext = {
   raceModeFlags: 0,
   getGroundPoint: () => null,
   trackTargets: [],
+  eventStart: 0,
 }
 
 // Every table value is 100 (low byte 100).

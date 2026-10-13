@@ -77,6 +77,7 @@ const createIdleEffect = (id: number, kind: PowerUpEffectKindValue): PowerUpEffe
     launcherPosition: null,
     launcherMuzzle: null,
     launcherHazardIndex: null,
+    launcherCannonball: null,
   })
 
 // 0x00457cf0 → 0x00457d30 (pool sizes) and 0x004590f0 (free lists, first object at the head).
@@ -169,6 +170,7 @@ export const resetPowerUpEffect = (
       launcherPosition: null,
       launcherMuzzle: null,
       launcherHazardIndex: null,
+      launcherCannonball: null,
     }),
     getResetEvents(effect, isStolen)
   )

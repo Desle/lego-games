@@ -43,6 +43,7 @@ const createContext = (racers: readonly RacerPowerUpStatus[]): PowerUpContext =>
   raceModeFlags: 0,
   getGroundPoint: () => null,
   trackTargets: [],
+  eventStart: 0,
 })
 
 const createStep = (racerCount: number): PowerUpStep =>

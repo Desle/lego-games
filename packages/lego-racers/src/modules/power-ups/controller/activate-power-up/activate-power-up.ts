@@ -35,8 +35,17 @@ import {
   getStepWithRacerEffectsFinished,
   takePowerUpEffect,
 } from '../power-up-effects/power-up-effects.ts'
-import { getEffect, getStepWithEffect, getStepWithEvents } from '../power-up-step/power-up-step.ts'
-import type { LauncherMuzzle, WarpDestination } from '../../types/power-ups.types.ts'
+import {
+  getEffect,
+  getRacerStatusNow,
+  getStepWithEffect,
+  getStepWithEvents,
+} from '../power-up-step/power-up-step.ts'
+import type {
+  LauncherCannonball,
+  LauncherMuzzle,
+  WarpDestination,
+} from '../../types/power-ups.types.ts'
 import type { PowerUpContext, PowerUpStep } from '../power-up-step/power-up-step.types.ts'
 import type { ActivationTarget, EffectStart } from './activate-power-up.types.ts'
 
@@ -190,7 +199,7 @@ const activateShield = (
 ): PowerUpStep => {
   if (!getIsAttachmentRoomFor(step.world.effects.attachmentSlots, SHIELD_REQUIRED_SLOTS))
     return step
-  const status = getStatus(context, racer)
+  const status = getRacerStatusNow(step, context, racer)
   const start = {
     ...getPlainStart(racer, level, SHIELD_MILLISECONDS[level] ?? 0, null),
     state: EffectState.ACTIVE,
@@ -233,7 +242,7 @@ const activateTurbo = (
   level: number
 ): PowerUpStep => {
   if (!getIsAttachmentRoomFor(step.world.effects.attachmentSlots, OTHER_REQUIRED_SLOTS)) return step
-  const status = getStatus(context, racer)
+  const status = getRacerStatusNow(step, context, racer)
   return startAttachedEffect(
     step,
     PowerUpEffectKind.TURBO,
@@ -261,7 +270,7 @@ const startWarp = (
   racer: number,
   warpDestination: WarpDestination | null
 ): PowerUpStep => {
-  const status = getStatus(context, racer)
+  const status = getRacerStatusNow(step, context, racer)
   const taken = takePowerUpEffect(step, { kind: PowerUpEffectKind.WARP, levels: [3, -1, -1, -1] })
   const effect = getEffect(taken.step, taken.effectId)
   if (status.isWarping || status.isWarpPending) {
@@ -311,28 +320,51 @@ export const activateLauncherCurse = (step: PowerUpStep, position: Vector3): Pow
   )
 }
 
+const LAUNCHER_WAND_MILLISECONDS = 500 // 0x00454cb0 `+0x8 = 500`
+
+// An effect a hazard starts as the launcher (power-up system +0x1998): it belongs to no racer and keeps what the
+// launcher hands it.
+const startLauncherEffect = (
+  step: PowerUpStep,
+  kind: PowerUpEffectKindValue,
+  start: EffectStart,
+  withLauncher: (effect: PowerUpEffect) => PowerUpEffect
+): PowerUpStep => {
+  const started = startEffect(step, kind, { ...start, ownerRacer: null })
+  const effectId = started.world.effects.activeEffectIds[0]
+  const effect = effectId === undefined ? undefined : started.world.effects.effects[effectId]
+  return effect === undefined ? started : getStepWithEffect(started, withLauncher(effect))
+}
+
 // 0x0045a950 case 2 with a hazard as the launcher (the turret, 0x0048b740): a wand that belongs to no racer, its beam
 // leaving the launcher's muzzle (0x00454cb0 stores the launcher's pointer at +0x23c).
 export const activateLauncherWand = (
   step: PowerUpStep,
   muzzle: LauncherMuzzle,
   hazardIndex: number | null
-): PowerUpStep => {
-  const started = startEffect(step, PowerUpEffectKind.WAND, {
-    // level 2 (0x0045a950 case 2), timer 500 (0x00454cb0 `+0x8 = 500`)
-    ...getPlainStart(0, 2, 500, null),
-    ownerRacer: null,
-  })
-  const effectId = started.world.effects.activeEffectIds[0]
-  const effect = effectId === undefined ? undefined : started.world.effects.effects[effectId]
-  return effect === undefined
-    ? started
-    : getStepWithEffect(started, {
-        ...effect,
-        launcherMuzzle: muzzle,
-        launcherHazardIndex: hazardIndex,
-      })
-}
+): PowerUpStep =>
+  // level 2 (0x0045a950 case 2)
+  startLauncherEffect(
+    step,
+    PowerUpEffectKind.WAND,
+    getPlainStart(0, 2, LAUNCHER_WAND_MILLISECONDS, null),
+    (effect) => ({
+      ...effect,
+      launcherMuzzle: muzzle,
+      launcherHazardIndex: hazardIndex,
+    })
+  )
+
+// 0x0045a950 case 0 with a hazard as the launcher (the periodic launcher, 0x0048c680): 0x0045aa30 looks for no target
+// and 0x00451a50 starts a cannonball of no racer at level 0 with the timer 0, holding the launcher's struct (+0xe0).
+export const activateLauncherCannonball = (
+  step: PowerUpStep,
+  cannonball: LauncherCannonball
+): PowerUpStep =>
+  startLauncherEffect(step, PowerUpEffectKind.CANNON, getPlainStart(0, 0, 0, null), (effect) => ({
+    ...effect,
+    launcherCannonball: cannonball,
+  }))
 
 // 0x0045af80: three rockets, each taken separately, numbered 0..2.
 const activateRockets = (step: PowerUpStep, racer: number): PowerUpStep =>
@@ -397,7 +429,7 @@ const activateHazard = (
     return startEffect(step, PowerUpEffectKind.OIL_SLICK, getPlainStart(racer, 0, 0, null))
   if (level === 1) {
     // 0x0045ad30 looks behind the racer: the barrel is thrown backwards.
-    const status = getStatus(context, racer)
+    const status = getRacerStatusNow(step, context, racer)
     const { forward } = status
     const target = getNearestRacer(
       context,

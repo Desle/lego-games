@@ -33,6 +33,8 @@ describe('the hazard dropper', () => {
             getFloatFromBits(0xc2bc6e6e),
           ],
           direction: [1, 0, 0],
+          target: null,
+          speed: null,
         },
       },
     ])

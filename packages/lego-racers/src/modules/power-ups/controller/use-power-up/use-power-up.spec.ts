@@ -49,6 +49,7 @@ const CONTEXT: PowerUpContext = {
   raceModeFlags: 0,
   getGroundPoint: () => null,
   trackTargets: [],
+  eventStart: 0,
 }
 
 // One racer holding the given brick, with two enhancement bricks collected.
