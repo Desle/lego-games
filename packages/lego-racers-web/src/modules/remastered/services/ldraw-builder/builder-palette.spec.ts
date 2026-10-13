@@ -28,4 +28,15 @@ describe('getPaletteGroups', () => {
     // Assert
     expect(found).toEqual([[PARTS[2]], [PARTS[1]]])
   })
+
+  it('leads with the parts of the model, the latest placed first', () => {
+    // Arrange
+    const used = ['3001.dat', '3039.dat', '3001.dat']
+
+    // Act
+    const groups = getPaletteGroups(PARTS, '', used)
+
+    // Assert
+    expect(groups[0]).toEqual({ label: 'Used', parts: [PARTS[0], PARTS[1]] })
+  })
 })

@@ -356,6 +356,7 @@ const syncScene = () => {
   keepDraft()
   fillGroup(partsGroup, draftParts ?? history.present, true)
   fillGroup(lockedGroup, start?.lockedParts ?? [], false)
+  panel.showUsedParts(history.present.map((part) => part.partName))
   syncSelection()
   syncGhost()
   showStatus()
