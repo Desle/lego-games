@@ -13,6 +13,10 @@ import type { ModelObject } from '../model-object/model-object.types.ts'
 
 const MATRIX_SIZE = 16
 
+// The name a layer knows an effect's model by: the stem of its mesh file (`DMISSILE.GDB` is DMISSILE).
+export const getEffectModelName = (model: ModelScene): string =>
+  (model.scene.meshes[0]?.path.split('\\').at(-1) ?? '').replace(/\.[^.]*$/, '').toUpperCase()
+
 // The matrix that takes the drawing (fitted to the mesh's vertices as the file stores them) to where the pose puts the mesh, in
 // the model's frame with its scale applied: the bone the mesh's first vertex hangs on (GolDP.dll 0x10014c20 builds the bone
 // matrices, 0x10023b10 moves each vertex by its bone's), scaled like the mesh. Null for a model without a skeleton.
@@ -41,7 +45,6 @@ const createBonePoser = (
 // the pose the race gives the model (a brick's turn is its clip, 0x00457900), as the model's own vertices would.
 export const showEffectModelDrawing = (
   modelObject: ModelObject,
-  model: ModelScene,
   request: EffectModelDrawingRequest
 ): ModelObject => {
   const drawing = getEffectModelDrawing(request)
@@ -50,7 +53,7 @@ export const showEffectModelDrawing = (
   posed.matrixAutoUpdate = false
   posed.add(drawing)
   const shown = showDrawingInPlaceOfModel(modelObject, posed)
-  const getPoseMatrix = createBonePoser(model)
+  const getPoseMatrix = createBonePoser(request.model)
   if (getPoseMatrix === null) return shown
   return {
     group: shown.group,

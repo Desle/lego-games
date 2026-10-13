@@ -1,3 +1,4 @@
+import { EFFECT_MODEL_NAMES } from '../../../../shared/viewer-extensions/effect-model-names.ts'
 import { RacerPartKind } from './hd-coverage.types.ts'
 import type { HookCall, InstanceSource, RacerPartIdentity } from './hd-coverage.types.ts'
 
@@ -40,8 +41,8 @@ const getCinemaRacerIdentity = (
 }
 
 // Which racer part an original mesh is, from the file it was read from: a champion's body (`VVCM.GDB`), a chassis's wheels
-// (`*JMW.GDB`), a champion's race driver (`*PELVIS.GDB`), a model the builders made, or a cinema's own car or figure. Null for
-// anything else (the track, the menus' sets).
+// (`*JMW.GDB`), a champion's race driver (`*PELVIS.GDB`), a model the builders made, a cinema's own car or figure, or a power-up
+// object or brick of the race (`DMISSILE.GDB`). Null for anything else (the track, the menus' sets).
 export const getRacerPartIdentity = (
   source: InstanceSource,
   championCarCodes: readonly string[]
@@ -59,6 +60,7 @@ export const getRacerPartIdentity = (
     return getCinemaRacerIdentity(stem, championCarCodes)
   }
   if (championCarCodes.includes(stem)) return { kind: RacerPartKind.BODY, key: stem }
+  if (EFFECT_MODEL_NAMES.includes(stem)) return { kind: RacerPartKind.POWER_UP, key: stem }
   if (stem.endsWith(WHEEL_MODEL_SUFFIX)) return { kind: RacerPartKind.WHEELS, key: stem }
   if (stem.endsWith(DRIVER_MODEL_SUFFIX)) return { kind: RacerPartKind.DRIVER, key: stem }
   return null

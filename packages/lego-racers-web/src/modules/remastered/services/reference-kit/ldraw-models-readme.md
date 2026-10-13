@@ -9,6 +9,7 @@ Hand-built LDraw models for the cars of LEGO Racers. The viewer reads this folde
 | `<CODE>.ldr` or `<CODE>.mpd`              | A whole champion car, by the body code of its model (below). The `.ldr` wins over the `.mpd`. |
 | `chassis/<CHASSIS>.ldr`                   | A recipe for one of the 12 chassis parts, built from standard parts. Cars refer to it.        |
 | `drivers/<NAME>.ldr`                      | A driver's minifigure, by the name of his record in the driver database (below).              |
+| `powerups/<MODEL>.ldr`                    | A power-up object (rocket, barrel, shield ...), by the name of its game model (below).        |
 | `reference/<CODE>.svg`, `.txt`            | The reference sheet of a champion's car (below).                                              |
 | `reference/chassis/<CHASSIS>.svg`, `.txt` | The reference sheet of a chassis.                                                             |
 | `chassis/_fallback/<CHASSIS>.dat`         | The unofficial LDraw part the converter makes from the game's own geometry (a stand-in).      |
@@ -67,3 +68,7 @@ The LDraw Official Model Repository (OMR) has no set for any car of the game: th
 ## Drivers
 
 `drivers/<NAME>.ldr` is a driver's minifigure (**driver names**: RR VV AD IL WW GS BK RK RH AL CC PH GB BH SB TC NH AP KK CR BVB JT BB GM). It stands in the rest pose, arms down, its origin the top of the hips (`3815b`'s own origin), in LDraw axes (y down, the figure faces -z). Each part line follows `0 !RACERS ROLE <hips|left-leg|right-leg|torso|head|hat|accessory|left-arm|right-arm|left-hand|right-hand>`: the bone of the game's skeleton it moves with (a part with no ROLE line is known by its minifigure part number). The colours are the file's. A head or torso with no print of its own (`3626b`, `3626c`, `973`) shows the game's picture of the face or the chest; a printed part keeps its print. A driver with no file (one the player built) is put together from the library parts mapped to his figure builder pieces.
+
+## Power-up objects
+
+`powerups/<MODEL>.ldr` is drawn in place of a model of `POWERUP.WDB` (**model names**: DMISSILE rocket, BARREL, MAGNET04 magnet, CURSE and its rings CGREEN and GREEN, HEDRA01 explosion, SPIKEXP spiked explosion, SHEOUT0 to SHEOUT3 the four shields, DT0BURN DT0FLA1 DT0FLA2, DT1BURN DT1FLA1 DT1FLA2 and DT2CBURN DT2CFLA1 DT2CFLA2 the three turbos' burns and flames, WARPHOLE the warp's portal, PUTRAILY and ENHANER the bricks' trails). LDraw axes, the front along x, at any size: the game fits the model's largest extent and centre to the original's and moves, spins and fades it as the original. A model without a file is the game's own.

@@ -292,6 +292,8 @@ const ITEM_HINTS: Readonly<Record<BuilderItemKind, string>> = Object.freeze({
     'the whole car (chassis and body) but the wheels: the game draws those, spinning and steering, on the guides (W)',
   [BuilderItemKind.DRIVER]:
     'the standing figure, origin the top of the hips: each part follows the bone of its 0 !RACERS ROLE line; a plain head or torso shows the game picture',
+  [BuilderItemKind.POWER_UP]:
+    'the power-up object as the original models it (front along x): the race fits its size to the original and spins, moves and fades it as the game does',
 })
 
 const getHint = (): string =>

@@ -4,6 +4,7 @@ import type {
   FrontEndPlace,
   HdCoveragePlace,
   OnScreenPlace,
+  PowerUpUse,
   RacePlace,
 } from './hd-coverage.types.ts'
 
@@ -17,6 +18,31 @@ const TIME_TRIAL_FOLDER = 'RACEC0R0'
 const RACE_FRAME_COUNT = 300
 const RACE_RECORD_FRAMES: readonly number[] = [120, 290]
 const ON_SCREEN_RACE_FRAME = 120
+// The racers are released at frame 160; from frame 200 the player is handed a power-up every 60 frames and fires it, and each is
+// censused 10 frames after it was handed over.
+const FIRST_POWER_UP_FRAME = 200
+const POWER_UP_SPACING_FRAMES = 60
+const POWER_UP_RECORD_DELAY_FRAMES = 10
+const POWER_UP_RACER_COUNT = 2
+// Each power-up whose effect the race draws with a model of POWERUP.WDB (power-ups.md): the rocket, the barrel, the magnet, the
+// curse, the four shields, the three turbos, the warp, and the cannon (whose hit explodes).
+const POWER_UP_KINDS_AND_LEVELS: readonly (readonly [number, number])[] = [
+  [1, 3],
+  [4, 1],
+  [4, 2],
+  [4, 3],
+  [2, 0],
+  [2, 1],
+  [2, 2],
+  [2, 3],
+  [3, 0],
+  [3, 1],
+  [3, 2],
+  [3, 3],
+  [1, 0],
+]
+const ROCKET_AND_SHIELD_USE_COUNT = 1
+const LAST_SHIELD_USE_INDEX = 7
 
 // The seven circuits' introduction cinemas (`CIRCUIT1` .. `CIRCUIT7`, screens 0x1f to 0x25).
 const CIRCUIT_INTRODUCTION_SCREEN_IDS: readonly number[] = [
@@ -52,6 +78,7 @@ const getRacePlace = (
   localPlayerCount: number,
   isBestRunShown: boolean
 ): RacePlace => ({
+  powerUpUses: [],
   kind: 'race',
   name,
   mode,
@@ -79,7 +106,48 @@ const getOnScreenPlace = (
           recordFrames: [ON_SCREEN_RACE_FRAME],
         },
   expectedHooks,
+  isEveryPowerUpFileShown: false,
 })
+
+const POWER_UP_USES: readonly PowerUpUse[] = POWER_UP_KINDS_AND_LEVELS.map(
+  ([kind, level], index) => ({
+    frame: FIRST_POWER_UP_FRAME + POWER_UP_SPACING_FRAMES * index,
+    kind,
+    level,
+  })
+)
+
+const getPowerUpRecordFrame = (use: PowerUpUse): number => use.frame + POWER_UP_RECORD_DELAY_FRAMES
+
+// A race where the player fires every power-up drawn with a model, censused after each.
+const getPowerUpPlace = (name: string, uses: readonly PowerUpUse[]): RacePlace => {
+  const recordFrames = uses.map(getPowerUpRecordFrame)
+  return {
+    ...getRacePlace(name, 'single_race', POWER_UP_RACER_COUNT, 1, false),
+    powerUpUses: uses,
+    frameCount: Math.max(...recordFrames) + 1,
+    recordFrames,
+  }
+}
+
+// The rocket and the last shield on screen: every power-up object of the folder among them must show.
+const getPowerUpOnScreenPlace = (): OnScreenPlace => {
+  const uses = [
+    ...POWER_UP_USES.slice(0, ROCKET_AND_SHIELD_USE_COUNT),
+    ...POWER_UP_USES.slice(LAST_SHIELD_USE_INDEX, LAST_SHIELD_USE_INDEX + 1),
+  ]
+  const subject = getPowerUpPlace(
+    'Power-up objects',
+    POWER_UP_USES.slice(0, LAST_SHIELD_USE_INDEX + 1)
+  )
+  return {
+    kind: 'on_screen',
+    name: 'On screen: Power-up objects',
+    subject: { ...subject, recordFrames: uses.map(getPowerUpRecordFrame) },
+    expectedHooks: [],
+    isEveryPowerUpFileShown: true,
+  }
+}
 
 // Every place the game draws a racer: the menus' figures and cars, the cinemas, and the races of every mode.
 export const HD_COVERAGE_PLACES: readonly HdCoveragePlace[] = [
@@ -111,10 +179,12 @@ export const HD_COVERAGE_PLACES: readonly HdCoveragePlace[] = [
   getRacePlace('Versus, two players', 'single_race', 2, 2, false),
   getRacePlace('Time trial, champion ghost', 'time_trial', 1, 1, false),
   getRacePlace('Time trial, champion and best run ghosts', 'time_trial', 1, 1, true),
+  getPowerUpPlace('Power-up objects, every one fired', POWER_UP_USES),
   getOnScreenPlace(getMenuPlace('Main menu figure', null, []), [HookKind.DRIVER]),
   getOnScreenPlace(getMenuPlace('Car builder', 0x0e, []), [HookKind.CAR]),
   getOnScreenPlace(getRacePlace('Race start', 'single_race', 6, 1, false), [
     HookKind.CAR,
     HookKind.DRIVER,
   ]),
+  getPowerUpOnScreenPlace(),
 ]

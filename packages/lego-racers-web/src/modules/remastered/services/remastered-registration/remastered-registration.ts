@@ -29,7 +29,10 @@ import {
   createPerformancePass,
   getIsPerformanceRequested,
 } from '../performance-monitor/performance-monitor.ts'
-import { createLDrawPickupDrawing } from '../ldraw-pickup/ldraw-pickup-drawing.ts'
+import {
+  createLDrawEffectModelDrawing,
+  preparePowerUpObjects,
+} from '../ldraw-powerup/powerup-object-drawing.ts'
 import {
   getIsStudLogoRequested,
   setIsStudLogoShown,
@@ -75,10 +78,11 @@ const getIsLDrawRequested = (search: string): boolean =>
 
 // The remastered features as a viewer extension; `?hd=<variant>` picks the texture pack and `audio=<variant>` the audio pack.
 export const createRemasteredExtension = async (search: string): Promise<ViewerExtension> => {
-  await loadLDrawModelIndex()
+  const index = await loadLDrawModelIndex()
   setUpLDrawModelParser()
   setActiveLookPreset(getLookPreset(search))
   setIsStudLogoShown(getIsStudLogoRequested(search))
+  if (getIsLDrawRequested(search)) await preparePowerUpObjects(index)
   setPlasticLightingExtension(
     getShadowMode(search) === ShadowMode.CLASSIC ? null : createPlasticShadowExtension()
   )
@@ -127,7 +131,7 @@ export const createRemasteredExtension = async (search: string): Promise<ViewerE
       }
     },
     getEffectModelDrawing: (request) =>
-      getIsLDrawRequested(search) ? createLDrawPickupDrawing(request) : null,
+      getIsLDrawRequested(search) ? createLDrawEffectModelDrawing(request) : null,
     getSelections: () => [
       `textures=${getHighDefinitionVariant(search)}`,
       `audio=${audioVariant ?? 'none'}`,

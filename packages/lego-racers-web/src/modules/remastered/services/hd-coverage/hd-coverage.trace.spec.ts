@@ -18,7 +18,11 @@ import {
   getStaleGaps,
 } from './hd-coverage-judgement.ts'
 import { HD_COVERAGE_PLACES } from './hd-coverage-places.ts'
-import { formatOnScreenDrawing, getOnScreenFailures } from './on-screen-judgement.ts'
+import {
+  formatOnScreenDrawing,
+  getOnScreenFailures,
+  getPowerUpOnScreenFailures,
+} from './on-screen-judgement.ts'
 import {
   formatDriverSeat,
   getDriverSeatFailures,
@@ -91,10 +95,15 @@ describe.skipIf(!isAvailable)('HD coverage', () => {
     )
     results.push(result)
     const findings: readonly HdCoverageFinding[] = getPlaceFindings(result, KNOWN_COVERAGE_GAPS)
-    const onScreenFailures = getOnScreenFailures(
-      result.onScreenFrames,
-      place.kind === 'on_screen' ? place.expectedHooks : []
-    )
+    const onScreenFailures = [
+      ...getOnScreenFailures(
+        result.onScreenFrames,
+        place.kind === 'on_screen' ? place.expectedHooks : []
+      ),
+      ...(place.kind === 'on_screen' && place.isEveryPowerUpFileShown
+        ? getPowerUpOnScreenFailures(result.onScreenFrames, result.calls)
+        : []),
+    ]
 
     // Assert
     console.log(

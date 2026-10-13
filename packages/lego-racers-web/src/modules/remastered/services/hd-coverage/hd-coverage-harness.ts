@@ -52,6 +52,8 @@ import {
 } from '../../../track-viewer/index.ts'
 import { getLDrawModelIndex, loadLDrawModelText } from '../ldraw-models/ldraw-model-client.ts'
 import { CHAMPION_CAR_CODES } from '../ldraw-racer-model/known-racer-models.ts'
+import { LDRAW_PICKUP_MAPPINGS } from '../ldraw-pickup/ldraw-pickup-mappings.ts'
+import { POWER_UP_OBJECT_MODEL_NAMES } from '../../../../shared/viewer-extensions/effect-model-names.ts'
 import { createLDrawCarDocument, getChassisFileName } from '../ldraw-car/ldraw-car-document.ts'
 import { getSingleBrickDesign } from '../ldraw-fidelity/fidelity-pairs.ts'
 import { getReferencedChassisNames } from '../ldraw-racer-model/ldraw-racer-car.ts'
@@ -65,6 +67,7 @@ import type {
   HdCoveragePlaceResult,
   ModelPartFinding,
   OnScreenPlace,
+  PowerUpUse,
   RacePlace,
 } from './hd-coverage.types.ts'
 import { takeCensus } from './hd-coverage-census.ts'
@@ -82,6 +85,17 @@ const SETTLE_POLL_MILLISECONDS = 250
 const SETTLE_TIMEOUT_MILLISECONDS = 240_000
 const EVERY_CIRCUIT_OPEN = 0x7f
 const MODEL_VIEW_SIZE = 64
+// The player holds the use key for three frames, starting three frames after the power-up was handed over.
+const USE_DELAY_FRAMES = 3
+const USE_FRAME_COUNT = 3
+const PLAYER_RACER_INDEX = 0
+
+const getIsUsePressed = (uses: readonly PowerUpUse[], frame: number): boolean =>
+  uses.some(
+    (use) =>
+      frame >= use.frame + USE_DELAY_FRAMES &&
+      frame < use.frame + USE_DELAY_FRAMES + USE_FRAME_COUNT
+  )
 
 const getExecutable = async (): Promise<Uint8Array> => {
   const response = await fetch(`${DEVELOPMENT_GAME_FILE_ROUTE}/${EXECUTABLE_NAME}`)
@@ -288,31 +302,41 @@ export const installHdCoverageHarness = async (search: string) => {
     document.body.appendChild(container)
     const viewport = createRaceViewport(container, assets, STAGE_SIZE)
     await waitForSettledDrawings(recorder)
-    const frames = Array.from({ length: place.frameCount }, () => ({
+    const frames = Array.from({ length: place.frameCount }, (_, frame) => ({
       milliseconds: FRAME_MILLISECONDS,
-      controls: IDLE_RACER_CONTROLS,
+      controls: {
+        ...IDLE_RACER_CONTROLS,
+        isUsePowerUpPressed: getIsUsePressed(place.powerUpUses, frame),
+      },
     }))
-    runRaceFrames(assets, STAGE_SIZE, frames, ({ frame, raceState, presentation, ghostCars }) => {
-      viewport.update(
-        getRacerPoses(raceState),
-        presentation.cameraView,
-        getEffectViews(raceState),
-        presentation.warpView,
-        ghostCars,
-        presentation.screenFades,
-        presentation.fieldOfViewDegrees
-      )
-      if (!place.recordFrames.includes(frame)) return
-      census.setIsTaking(true)
-      viewport.render()
-      census.setIsTaking(false)
-      measureOnScreen(`frame ${String(frame)}`, () => {
+    const grants = place.powerUpUses.map((use) => ({ ...use, racer: PLAYER_RACER_INDEX }))
+    runRaceFrames(
+      assets,
+      STAGE_SIZE,
+      frames,
+      ({ frame, raceState, presentation, ghostCars }) => {
+        viewport.update(
+          getRacerPoses(raceState),
+          presentation.cameraView,
+          getEffectViews(raceState),
+          presentation.warpView,
+          ghostCars,
+          presentation.screenFades,
+          presentation.fieldOfViewDegrees
+        )
+        if (!place.recordFrames.includes(frame)) return
+        census.setIsTaking(true)
         viewport.render()
-        const canvas = container.querySelector('canvas')
-        if (canvas === null) throw new Error('The race viewport has no canvas')
-        return canvas
-      })
-    })
+        census.setIsTaking(false)
+        measureOnScreen(`frame ${String(frame)}`, () => {
+          viewport.render()
+          const canvas = container.querySelector('canvas')
+          if (canvas === null) throw new Error('The race viewport has no canvas')
+          return canvas
+        })
+      },
+      grants
+    )
     viewport.dispose()
     container.remove()
   }
@@ -459,7 +483,16 @@ export const installHdCoverageHarness = async (search: string) => {
       sightings: census.getSightings(),
       otherSources: census.getOtherSources(),
       renderCount: census.getRenderCount(),
-      modelIndex: { cars: Object.keys(index.cars), chassis: Object.keys(index.chassis) },
+      modelIndex: {
+        cars: Object.keys(index.cars),
+        chassis: Object.keys(index.chassis),
+        effectModels: [
+          ...Object.keys(LDRAW_PICKUP_MAPPINGS),
+          ...Object.keys(index.powerUps).filter((name) =>
+            POWER_UP_OBJECT_MODEL_NAMES.includes(name)
+          ),
+        ],
+      },
       unsettledCallIds: recorder.getUnsettledCallIds(),
       partFindings,
       driverSeats,

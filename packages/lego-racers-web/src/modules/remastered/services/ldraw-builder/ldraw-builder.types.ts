@@ -16,17 +16,19 @@ export const BuilderItemKind = createEnum({
   CHASSIS: 'chassis',
   CAR: 'car',
   DRIVER: 'driver',
+  POWER_UP: 'power_up',
 })
 export type BuilderItemKind = EnumValues<typeof BuilderItemKind>
 
-// One thing to build: a chassis recipe (`chassis/<NAME>.ldr`), a champion's whole car but its wheels (`<CODE>.ldr`) or a driver's
-// minifigure (`drivers/<NAME>.ldr`).
+// One thing to build: a chassis recipe (`chassis/<NAME>.ldr`), a champion's whole car but its wheels (`<CODE>.ldr`), a driver's
+// minifigure (`drivers/<NAME>.ldr`) or a power-up object (`powerups/<MODEL>.ldr`).
 export type BuilderItem = {
   readonly id: string
   readonly kind: BuilderItemKind
-  // The chassis name (lower case), the car code or the driver's name (upper case).
+  // The chassis name (lower case), the car code, the driver's name or the power-up object's model name (upper case).
   readonly name: string
-  // The chassis a car's wheels are on (lower case), which gives its wheel guides; for a chassis, its own name; for a driver, empty.
+  // The chassis a car's wheels are on (lower case), which gives its wheel guides; for a chassis, its own name; for a driver or a
+  // power-up object, empty.
   readonly chassisName: string
 }
 
@@ -72,7 +74,7 @@ export type BuilderDraft = {
   readonly parts: readonly BuilderPart[]
 }
 
-// A labelled group of the Start from menu (Cars, Chassis, Backups/drafts).
+// A labelled group of the Start from menu (Cars, Chassis, Drivers, Power-ups, Backups/drafts).
 export type StartFileGroup = {
   readonly label: string
   readonly files: readonly string[]
