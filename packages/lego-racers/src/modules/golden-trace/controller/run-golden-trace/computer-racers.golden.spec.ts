@@ -28,6 +28,21 @@ const KIND = process.env['COMPUTER_KIND'] ?? 'idle'
 const EXPECTED_FIRST_FIELDS: Readonly<Record<string, Readonly<Record<string, string | null>>>> =
   Object.freeze({
     idle: Object.freeze({ rkr2: 'track.hammers[24]', att2: 'track.hammers[25]' }),
+    // The weaving player for 7,000 frames; what is open is listed in golden-trace-simulation-sweep.md.
+    'weave-7000': Object.freeze({
+      aar: 'race.randomPosition[0]',
+      att: 'track.hammers[73]',
+      att2: 'track.hammers[25]',
+      frk: 'powerUps.effects[0]',
+      frk2: 'powerUps.effects[0]',
+      igp: 'racer3.body.flags[0]',
+      ipp: 'race.randomPosition[0]',
+      ipp2: 'race.randomPosition[0]',
+      mmm: 'emitters.track.instances[6]',
+      mmm2: 'emitters.track.instances[6]',
+      rkr2: 'track.hammers[24]',
+      rr: 'powerUps.effects[10]',
+    }),
   })
 
 const getIsGamePresent = (): boolean =>
@@ -99,7 +114,8 @@ describe('golden trace: the computer racers', () => {
         if (REPORT_PATH !== '') writeFileSync(REPORT_PATH, lines.join('\n'))
       }
       console.log(lines.join('\n'))
-      const expected = EXPECTED_FIRST_FIELDS[KIND]
+      const expected =
+        EXPECTED_FIRST_FIELDS[KIND === 'weave' ? `weave-${String(FRAME_COUNT)}` : KIND]
       if (
         SELECTED === '' &&
         expected !== undefined &&
