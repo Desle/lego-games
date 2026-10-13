@@ -101,4 +101,27 @@ describe('getBuilderKeyCommand', () => {
       null,
     ])
   })
+
+  it('scales a power-up object or a particle with Option = - 0, as a Mac types them', () => {
+    // Arrange
+    const presses = [
+      press('≠', false, false, true),
+      press('=', false, false, true),
+      press('–', false, false, true),
+      press('º', false, false, true),
+      press('=', false, false, false),
+    ]
+
+    // Act
+    const actions = presses.map((keyPress) => getBuilderKeyCommand(keyPress)?.action)
+
+    // Assert
+    expect(actions).toEqual([
+      BuilderAction.SCALE_UP,
+      BuilderAction.SCALE_UP,
+      BuilderAction.SCALE_DOWN,
+      BuilderAction.SCALE_FIT,
+      undefined,
+    ])
+  })
 })

@@ -21,6 +21,7 @@ import {
   getLookPresetFromLabel,
   LOOK_APPEARANCES,
   LOOK_PARAMETER,
+  LookPreset,
   setActiveLookPreset,
   setPlasticLightingExtension,
   setShaderPrecompiler,
@@ -29,7 +30,10 @@ import {
   createPerformancePass,
   getIsPerformanceRequested,
 } from '../performance-monitor/performance-monitor.ts'
-import { createLDrawParticleDrawing } from '../ldraw-particles/ldraw-particle-drawing.ts'
+import {
+  createLDrawParticleDrawing,
+  prepareParticleFiles,
+} from '../ldraw-particles/ldraw-particle-drawing.ts'
 import {
   createLDrawEffectModelDrawing,
   preparePowerUpObjects,
@@ -63,10 +67,14 @@ const CLASSIC_BRICKS = 'classic'
 const LDRAW_BRICKS = 'LDraw'
 const CHASSIS_PARAMETER = 'chassis'
 const GAME_CHASSIS = 'game'
+const RECIPE_CHASSIS = 'recipe'
+// The user's preferred look for the race; `?look=` picks another.
+const RACERS_LOOK = LookPreset.GAME
 
-// A chassis without a recipe in the models folder is drawn from the game's own geometry only when the URL says `chassis=game`.
+// A chassis without a recipe in the models folder is drawn from the game's own geometry (the user's choice) unless the URL says
+// `chassis=recipe`.
 const getIsChassisFallbackRequested = (search: string): boolean =>
-  new URLSearchParams(search).get(CHASSIS_PARAMETER) === GAME_CHASSIS
+  new URLSearchParams(search).get(CHASSIS_PARAMETER) !== RECIPE_CHASSIS
 
 // Built cars are drawn from LDraw parts unless the URL says `bricks=classic`.
 const getIsLDrawRequested = (search: string): boolean =>
@@ -76,8 +84,10 @@ const getIsLDrawRequested = (search: string): boolean =>
 export const createRemasteredExtension = async (search: string): Promise<ViewerExtension> => {
   const index = await loadLDrawModelIndex()
   setUpLDrawModelParser()
-  setActiveLookPreset(getLookPreset(search))
-  if (getIsLDrawRequested(search)) await preparePowerUpObjects(index)
+  setActiveLookPreset(getLookPreset(search, RACERS_LOOK))
+  if (getIsLDrawRequested(search)) {
+    await Promise.all([preparePowerUpObjects(index), prepareParticleFiles(index)])
+  }
   setPlasticLightingExtension(
     getShadowMode(search) === ShadowMode.CLASSIC ? null : createPlasticShadowExtension()
   )
@@ -133,9 +143,9 @@ export const createRemasteredExtension = async (search: string): Promise<ViewerE
       `textures=${getHighDefinitionVariant(search)}`,
       `audio=${audioVariant ?? 'none'}`,
       `bricks=${getIsLDrawRequested(search) ? LDRAW_BRICKS : CLASSIC_BRICKS}`,
-      `chassis=${getIsChassisFallbackRequested(search) ? GAME_CHASSIS : 'recipe'}`,
+      `chassis=${getIsChassisFallbackRequested(search) ? GAME_CHASSIS : RECIPE_CHASSIS}`,
       `shadows=${getShadowMode(search)}`,
-      `look=${getLookPreset(search)}`,
+      `look=${getLookPreset(search, RACERS_LOOK)}`,
     ],
     getSoundReplacement: (context, archivePath) =>
       audioVariant === null
@@ -171,8 +181,8 @@ const selectBricks = (bricks: string | null) => {
 // Switching the chassis fallback reloads the page too: cars are drawn as they are made.
 const selectChassis = (chassis: string | null) => {
   const url = new URL(globalThis.location.href)
-  if (chassis === null) url.searchParams.delete(CHASSIS_PARAMETER)
-  else url.searchParams.set(CHASSIS_PARAMETER, GAME_CHASSIS)
+  if (chassis === null) url.searchParams.set(CHASSIS_PARAMETER, RECIPE_CHASSIS)
+  else url.searchParams.delete(CHASSIS_PARAMETER)
   if (!url.searchParams.has('hd')) url.searchParams.set('hd', '')
   globalThis.location.assign(url.toString())
 }
@@ -241,7 +251,7 @@ export const getRemasteredSelectors = async (
       label: 'Look (reloads): Manual / Photo / Instructions / Toon / Game / Retro 1999',
       options: getLookLabels(),
       selected: getIsRemasteredRequested(search)
-        ? LOOK_APPEARANCES[getLookPreset(search)].label
+        ? LOOK_APPEARANCES[getLookPreset(search, RACERS_LOOK)].label
         : null,
       onSelected: selectLook,
     },

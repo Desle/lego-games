@@ -139,12 +139,17 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
         })
       )
     )
+    // An effect's sprites (the cannon ball) go to the layer's drawings with the particles; with none the order is unchanged.
+    const effectQuads = [
+      ...poolQuads,
+      ...sprites.map((sprite) => getSpriteQuad(arithmetic, axes, sprite)),
+    ]
     const quads: ParticleQuad[] = [
       ...worldSpriteQuads.map((quad) => ({ quad, isWorldSprite: true })),
-      ...[
-        ...(particleDrawings.size === 0 ? poolQuads : drawParticles(poolQuads)),
-        ...sprites.map((sprite) => getSpriteQuad(arithmetic, axes, sprite)),
-      ].map((quad) => ({ quad, isWorldSprite: false })),
+      ...(particleDrawings.size === 0 ? effectQuads : drawParticles(effectQuads)).map((quad) => ({
+        quad,
+        isWorldSprite: false,
+      })),
     ]
     const counts = new Map<string, number>()
     const addCorner = (

@@ -2,6 +2,7 @@ import type { LDrawModelFolders } from '@lego-games/ldraw-studio/files'
 import {
   LDRAW_CHASSIS_FOLDER,
   LDRAW_DRIVERS_FOLDER,
+  LDRAW_PARTICLES_FOLDER,
   LDRAW_POWER_UPS_FOLDER,
 } from '../ldraw-models/ldraw-models-route.ts'
 import type { LDrawModelIndex } from '../ldraw-models/ldraw-model-index.types.ts'
@@ -25,11 +26,12 @@ const getEntries = (
   )
 
 // The index of a models folder (on the dev server): the car models in the folder itself, the chassis recipes in `chassis/`, the
-// drivers in `drivers/`, the power-up objects in `powerups/`. A `.ldr` wins over a `.mpd` of the same name. Files that begin with an underscore are notes and tests, not models.
+// drivers in `drivers/`, the power-up objects in `powerups/`, the particles in `particles/`. A `.ldr` wins over a `.mpd` of the same name. Files that begin with an underscore are notes and tests, not models.
 export const createLDrawModelIndex = (folders: LDrawModelFolders): LDrawModelIndex =>
   Object.freeze({
     cars: getEntries(folders, ROOT_FOLDER, (stem) => stem.toUpperCase()),
     chassis: getEntries(folders, LDRAW_CHASSIS_FOLDER, (stem) => stem.toLowerCase()),
     drivers: getEntries(folders, LDRAW_DRIVERS_FOLDER, (stem) => stem.toUpperCase()),
     powerUps: getEntries(folders, LDRAW_POWER_UPS_FOLDER, (stem) => stem.toUpperCase()),
+    particles: getEntries(folders, LDRAW_PARTICLES_FOLDER, (stem) => stem.toUpperCase()),
   })

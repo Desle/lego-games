@@ -20,7 +20,7 @@ describe('getLookPreset', () => {
       '?hd&look=photo',
       '?hd&look=studio',
       '?look=odd',
-    ].map(getLookPreset)
+    ].map((search) => getLookPreset(search))
 
     // Assert
     expect(presets).toEqual([
