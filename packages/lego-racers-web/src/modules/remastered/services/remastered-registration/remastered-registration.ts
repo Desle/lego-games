@@ -187,11 +187,11 @@ const selectLook = (label: string | null) => {
 
 const STUD_LOGOS_LABEL = 'On'
 
-// Switching the stud logos reloads the page too: the models are built with their studs. Off draws plain studs everywhere.
+// Switching the stud logos reloads the page too: the models are built with their studs. Off (the default) draws plain studs everywhere.
 const selectStudLogos = (label: string | null) => {
   const url = new URL(globalThis.location.href)
-  if (label === null) url.searchParams.set(STUD_LOGOS_PARAMETER, '0')
-  else url.searchParams.delete(STUD_LOGOS_PARAMETER)
+  if (label === null) url.searchParams.delete(STUD_LOGOS_PARAMETER)
+  else url.searchParams.set(STUD_LOGOS_PARAMETER, '1')
   if (!url.searchParams.has('hd')) url.searchParams.set('hd', '')
   globalThis.location.assign(url.toString())
 }

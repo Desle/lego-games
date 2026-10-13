@@ -69,6 +69,7 @@ export const mountStudioPage = (root: HTMLElement) => {
   detailSelect.append(
     ...Object.values(LDrawDetail).map((detail) => new Option(DETAIL_LABELS[detail], detail))
   )
+  detailSelect.value = LDrawDetail.LOW
   bar.append(modelSelect, lookSelect, detailSelect)
   const stage = createElement('div', 'stage')
   const status = createElement('pre', 'status')

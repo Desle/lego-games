@@ -7,7 +7,7 @@ Reads LDraw models with three.js's `LDrawLoader` against an LDraw parts library 
 ## User flows
 
 - **Parse a model unmerged**: `parseLDrawModel(text, libraryUrl, detail)` gives the loader's three.js group, one object per part line with the loader's `userData`, on the calling thread. It is the parse worker's step and the one way for a tool that needs the parts one by one (a coverage check); drawings go through the geometry module's `holdPreparedModel`. One loader per library and detail keeps every part it has read, so a part is fetched and built once.
-- **Choose the studs**: `LDrawDetail.HIGH` builds studs with the logo (level 4, rounded 3D, by default), `LDrawDetail.LOW` with plain studs. `setIsStudLogoShown(false)` (from `?studlogos=0`, read by `getIsStudLogoRequested`) makes `getModelDetail` build every model plain.
+- **Choose the studs**: `LDrawDetail.HIGH` builds studs with the logo (level 4, rounded 3D, by default), `LDrawDetail.LOW` with plain studs. Logos are off by default: `getModelDetail` builds every model plain until `setIsStudLogoShown(true)` (from `?studlogos=1`, read by `getIsStudLogoRequested`).
 
 ## Invariants
 

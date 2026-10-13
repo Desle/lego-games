@@ -7,14 +7,14 @@ import {
 } from './stud-logos.ts'
 
 describe('stud logos', () => {
-  afterEach(() => setIsStudLogoShown(true))
+  afterEach(() => setIsStudLogoShown(false))
 
-  it('reads the switch from the address, on by default', () => {
+  it('reads the switch from the address, off by default', () => {
     // Arrange / Act
     const requests = ['?hd', '?hd&studlogos=1', '?hd&studlogos=0'].map(getIsStudLogoRequested)
 
     // Assert
-    expect(requests).toEqual([true, true, false])
+    expect(requests).toEqual([false, true, false])
   })
 
   it('builds every model with plain studs when the logos are off', () => {
@@ -30,7 +30,10 @@ describe('stud logos', () => {
   })
 
   it('keeps the asked detail when the logos are on', () => {
-    // Arrange / Act
+    // Arrange
+    setIsStudLogoShown(true)
+
+    // Act
     const detail = getModelDetail(LDrawDetail.HIGH)
 
     // Assert

@@ -1,13 +1,13 @@
 import { LDrawDetail } from '../ldraw-library-loader/ldraw-library-loader.types.ts'
 
 export const STUD_LOGOS_PARAMETER = 'studlogos'
-const HIDDEN_VALUE = '0'
+const SHOWN_VALUE = '1'
 
-let isStudLogoShown = true
+let isStudLogoShown = false
 
-// `studlogos=0` draws plain studs everywhere; by default a model near the camera shows the LEGO logo on its studs.
+// Plain studs by default (the user's choice); `studlogos=1` shows the LEGO logo on the studs of a model near the camera.
 export const getIsStudLogoRequested = (search: string): boolean =>
-  new URLSearchParams(search).get(STUD_LOGOS_PARAMETER) !== HIDDEN_VALUE
+  new URLSearchParams(search).get(STUD_LOGOS_PARAMETER) === SHOWN_VALUE
 
 // Set once by the registration, before the first model is drawn.
 export const setIsStudLogoShown = (isShown: boolean) => {

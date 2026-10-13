@@ -70,7 +70,7 @@ describe('createModelViewer', () => {
     })
   })
 
-  it('shows a model framed at high detail, and lets go of it when the next one is shown', async () => {
+  it('shows a model framed with plain studs, and lets go of it when the next one is shown', async () => {
     // Arrange
     const first = createHeld()
     const second = createHeld()
@@ -83,8 +83,8 @@ describe('createModelViewer', () => {
 
     // Assert
     expect(vi.mocked(createModelObject).mock.calls).toEqual([
-      [FIRST_MODEL, LDrawDetail.HIGH],
-      [SECOND_MODEL, LDrawDetail.HIGH],
+      [FIRST_MODEL, LDrawDetail.LOW],
+      [SECOND_MODEL, LDrawDetail.LOW],
     ])
     expect(stage.setModel).toHaveBeenLastCalledWith(second.object, true)
     expect(first.release).toHaveBeenCalledOnce()
@@ -135,7 +135,7 @@ describe('createModelViewer', () => {
 
     // Assert
     expect(setActiveLookPreset).toHaveBeenCalledWith(LookPreset.PHOTO)
-    expect(vi.mocked(createModelObject).mock.calls[1]).toEqual([FIRST_MODEL, LDrawDetail.HIGH])
+    expect(vi.mocked(createModelObject).mock.calls[1]).toEqual([FIRST_MODEL, LDrawDetail.LOW])
     expect(stage.setModel).toHaveBeenLastCalledWith(expect.any(Group), false)
   })
 
@@ -146,10 +146,10 @@ describe('createModelViewer', () => {
     await viewer.showModel(FIRST_MODEL)
 
     // Act
-    await viewer.setDetail(LDrawDetail.LOW)
+    await viewer.setDetail(LDrawDetail.HIGH)
 
     // Assert
-    expect(vi.mocked(createModelObject).mock.calls[1]).toEqual([FIRST_MODEL, LDrawDetail.LOW])
+    expect(vi.mocked(createModelObject).mock.calls[1]).toEqual([FIRST_MODEL, LDrawDetail.HIGH])
   })
 
   it('reads out what the last frame drew', () => {
