@@ -44,7 +44,6 @@ import {
 import { getBuilderItems, getNextBuilderItem, getStartFiles } from './builder-items.ts'
 import {
   createBuilderView,
-  getBuilderGroundAxes,
   getBuilderViewPosition,
   orbitBuilderView,
   panBuilderView,
@@ -55,14 +54,10 @@ import {
   addParts,
   getSameColorIndices,
   getStudOffset,
-  getStudStep,
-  moveParts,
   pickParts,
   recolorParts,
   removeParts,
-  tiltParts,
   toggleIndex,
-  turnParts,
 } from './builder-editing.ts'
 import { createBuilderPanel } from './builder-panel.ts'
 import { clearDraft, getStoredDraft, storeDraft } from './builder-draft.ts'
@@ -75,16 +70,24 @@ import {
   findSideStud,
   getGridPoint,
   getGroundPhase,
+  getPartBottom,
   getPartPhase,
   getPlacedStuds,
   getPlacementPosition,
   getRotatedBox,
   getSideStudPosition,
-  PLATE_HEIGHT,
+  getTopGridPoint,
   STUD_WIDTH,
 } from './builder-placement.ts'
 import { getFacingRotation, turnAbout } from './builder-rotation.ts'
-import { createPartStudLists } from './builder-studs.ts'
+import {
+  applySelectionEdit,
+  dragSelection as dragSnappedSelection,
+  getCameraStudStep as getViewStudStep,
+  getSelectionEdit,
+} from './builder-snapping.ts'
+import type { SnapContext } from './builder-snapping.types.ts'
+import { createPartShapes } from './builder-studs.ts'
 import {
   createOriginalReference,
   createWheelGuides,
@@ -92,7 +95,7 @@ import {
   loadBuilderItemStart,
 } from './builder-reference.ts'
 import type { BuilderItemStart, OriginalReference } from './builder-reference.types.ts'
-import type { PartStud } from './builder-studs.types.ts'
+import type { PartShape, PartStud } from './builder-studs.types.ts'
 import {
   BUILDER_PARTS_FILE,
   BUILDER_PROGRESS_FILE,
@@ -126,9 +129,6 @@ const GRID_STUDS = 40
 const GROUND_HEIGHT = 0
 const FRAME_MARGIN = 1.4
 const VIEW_DIRECTION: Vector = [0.7, -1, 0.6]
-const BRICK_HEIGHT = 3 * PLATE_HEIGHT
-const NUDGE_ACROSS = STUD_WIDTH / 4
-const NUDGE_HEIGHT = PLATE_HEIGHT / 2
 const LINE_PIXELS = 16
 const IDENTITY_ROTATION: readonly number[] = [1, 0, 0, 0, 1, 0, 0, 0, 1]
 const DEFAULT_TOOL: BuilderTool = {
@@ -216,7 +216,7 @@ const panel = createBuilderPanel(
 )
 
 const templates = createPartTemplates()
-const studLists = createPartStudLists()
+const partShapes = createPartShapes()
 const thumbnails = createBuilderThumbnails()
 let archive: JamArchive | null = null
 let items: readonly BuilderItem[] = []
@@ -396,12 +396,21 @@ const toEditFrame = (point: Vector3): Vector =>
   [...editFrame.worldToLocal(point.clone()).toArray()] as const
 
 // The side stud of a part (in the editing frame) under the cursor; its studs are read from the library the first time.
-// A part's studs, read from the library the first time (none until they arrive; the scene follows).
-const getStuds = (partName: string): readonly PartStud[] => {
-  const studs = studLists.getLoaded(partName)
-  if (studs !== undefined) return studs
-  void studLists.load(partName).then(scheduleSync)
-  return []
+// A part's shape (studs, footprint, bottom), read from the library the first time (none until it arrives; the scene follows).
+const getShape = (partName: string): PartShape | undefined => {
+  const shape = partShapes.getLoaded(partName)
+  if (shape === undefined) void partShapes.load(partName).then(scheduleSync)
+  return shape
+}
+
+const getStuds = (partName: string): readonly PartStud[] => getShape(partName)?.studs ?? []
+
+const NO_SHAPE: PartShape = Object.freeze({ studs: [], box: null, footprint: null, bottom: null })
+
+const snapContext: SnapContext = {
+  getShape,
+  getBox: getTemplateBox,
+  groundHeight: GROUND_HEIGHT,
 }
 
 const getSideStudUnder = (part: BuilderPart, point: Vector, normal: Vector): PartStud | null =>
@@ -431,7 +440,7 @@ const getPointerHit = (position: PointerPosition): PointerHit | null => {
         target: {
           point,
           normal: hitNormal,
-          phase: getPartPhase(getGridPoint(getStuds(part.partName), box, part.rotation), part),
+          phase: getPartPhase(getTopGridPoint(getStuds(part.partName), box, part, point), part),
         },
         partIndex,
         part,
@@ -473,10 +482,16 @@ const syncGhost = () => {
   const stud = hit.sideStud
   ghostRotation = stud === null ? tool.rotation : getFacingRotation(tool.rotation, stud.direction)
   const box = getRotatedBox(template.box, ghostRotation)
-  const gridPoint = getGridPoint(getStuds(tool.partName), template.box, ghostRotation)
+  const shape = getShape(tool.partName) ?? NO_SHAPE
+  const gridPoint = getGridPoint(shape, template.box, ghostRotation)
   ghostPosition =
     stud === null
-      ? getPlacementPosition(hit.target, box, gridPoint)
+      ? getPlacementPosition(
+          hit.target,
+          box,
+          gridPoint,
+          getPartBottom(shape, template.box, ghostRotation)
+        )
       : getSideStudPosition(hit.target.point, stud, box, gridPoint)
   const part = { ...tool, rotation: ghostRotation, position: ghostPosition }
   const key = `${tool.partName}|${String(tool.colorCode)}`
@@ -554,7 +569,7 @@ const rotate = (isBack: boolean) =>
         },
         isHolding
       )
-    : commit(turnParts(history.present, selectedIndices, isBack))
+    : editSelected(isBack ? BuilderAction.ROTATE_BACK : BuilderAction.ROTATE)
 
 // T tilts about the level axis across the view (the camera's right, on the nearest LDraw axis).
 const tilt = (isBack: boolean) => {
@@ -562,12 +577,7 @@ const tilt = (isBack: boolean) => {
   const axis: Vector = [Math.sign(step[0]), 0, Math.sign(step[2])]
   if (isHolding || selectedIndices.length === 0) {
     setTool({ ...tool, rotation: turnAbout(tool.rotation, axis) }, isHolding)
-  } else commit(tiltParts(history.present, selectedIndices, axis))
-}
-
-const getNudge = (isForward: boolean, sign: number): Vector => {
-  const step = getCameraStudStep(isForward, sign)
-  return [Math.sign(step[0]) * NUDGE_ACROSS, 0, Math.sign(step[2]) * NUDGE_ACROSS]
+  } else editSelected(isBack ? BuilderAction.TILT_BACK : BuilderAction.TILT)
 }
 
 const deleteSelected = () => {
@@ -577,20 +587,17 @@ const deleteSelected = () => {
   commit(removeParts(history.present, removed))
 }
 
-const moveSelected = (offset: Vector) => {
-  if (selectedIndices.length > 0) commit(moveParts(history.present, selectedIndices, offset))
+// A key's edit of the selection, snapped to the stud grid of what is under it (a fine nudge excepted).
+const editSelected = (action: BuilderAction) => {
+  const edit = getSelectionEdit(action, view)
+  if (edit === null || selectedIndices.length === 0) return
+  const edited = applySelectionEdit(history.present, selectedIndices, edit, snapContext)
+  if (edited !== history.present) commit(edited)
 }
 
 // The camera's right or forward, along the nearest of the editing frame's ground axes.
-const getCameraStudStep = (isForward: boolean, sign: number): Vector => {
-  const axes = getBuilderGroundAxes(view)
-  const world = isForward ? axes.forward : axes.right
-  buildScene.updateMatrixWorld(true)
-  const direction = new Vector3(...world)
-    .multiplyScalar(sign)
-    .transformDirection(editFrame.matrixWorld.clone().invert())
-  return getStudStep([direction.x, direction.y, direction.z])
-}
+const getCameraStudStep = (isForward: boolean, sign: number): Vector =>
+  getViewStudStep(view, isForward, sign)
 
 const addCopies = (copies: readonly BuilderPart[]) => {
   if (copies.length === 0) return
@@ -783,20 +790,20 @@ const getKeyActions = (quickColorIndex: number): Readonly<Record<BuilderAction, 
   [BuilderAction.ROTATE_BACK]: () => rotate(true),
   [BuilderAction.TILT]: () => tilt(false),
   [BuilderAction.TILT_BACK]: () => tilt(true),
-  [BuilderAction.MOVE_LEFT]: () => moveSelected(getCameraStudStep(false, -1)),
-  [BuilderAction.MOVE_RIGHT]: () => moveSelected(getCameraStudStep(false, 1)),
-  [BuilderAction.MOVE_AWAY]: () => moveSelected(getCameraStudStep(true, 1)),
-  [BuilderAction.MOVE_TOWARD]: () => moveSelected(getCameraStudStep(true, -1)),
-  [BuilderAction.RAISE_PLATE]: () => moveSelected([0, -PLATE_HEIGHT, 0]),
-  [BuilderAction.LOWER_PLATE]: () => moveSelected([0, PLATE_HEIGHT, 0]),
-  [BuilderAction.RAISE_BRICK]: () => moveSelected([0, -BRICK_HEIGHT, 0]),
-  [BuilderAction.LOWER_BRICK]: () => moveSelected([0, BRICK_HEIGHT, 0]),
-  [BuilderAction.NUDGE_LEFT]: () => moveSelected(getNudge(false, -1)),
-  [BuilderAction.NUDGE_RIGHT]: () => moveSelected(getNudge(false, 1)),
-  [BuilderAction.NUDGE_AWAY]: () => moveSelected(getNudge(true, 1)),
-  [BuilderAction.NUDGE_TOWARD]: () => moveSelected(getNudge(true, -1)),
-  [BuilderAction.NUDGE_UP]: () => moveSelected([0, -NUDGE_HEIGHT, 0]),
-  [BuilderAction.NUDGE_DOWN]: () => moveSelected([0, NUDGE_HEIGHT, 0]),
+  [BuilderAction.MOVE_LEFT]: () => editSelected(BuilderAction.MOVE_LEFT),
+  [BuilderAction.MOVE_RIGHT]: () => editSelected(BuilderAction.MOVE_RIGHT),
+  [BuilderAction.MOVE_AWAY]: () => editSelected(BuilderAction.MOVE_AWAY),
+  [BuilderAction.MOVE_TOWARD]: () => editSelected(BuilderAction.MOVE_TOWARD),
+  [BuilderAction.RAISE_PLATE]: () => editSelected(BuilderAction.RAISE_PLATE),
+  [BuilderAction.LOWER_PLATE]: () => editSelected(BuilderAction.LOWER_PLATE),
+  [BuilderAction.RAISE_BRICK]: () => editSelected(BuilderAction.RAISE_BRICK),
+  [BuilderAction.LOWER_BRICK]: () => editSelected(BuilderAction.LOWER_BRICK),
+  [BuilderAction.NUDGE_LEFT]: () => editSelected(BuilderAction.NUDGE_LEFT),
+  [BuilderAction.NUDGE_RIGHT]: () => editSelected(BuilderAction.NUDGE_RIGHT),
+  [BuilderAction.NUDGE_AWAY]: () => editSelected(BuilderAction.NUDGE_AWAY),
+  [BuilderAction.NUDGE_TOWARD]: () => editSelected(BuilderAction.NUDGE_TOWARD),
+  [BuilderAction.NUDGE_UP]: () => editSelected(BuilderAction.NUDGE_UP),
+  [BuilderAction.NUDGE_DOWN]: () => editSelected(BuilderAction.NUDGE_DOWN),
   [BuilderAction.DELETE]: deleteSelected,
   [BuilderAction.COPY]: copySelected,
   [BuilderAction.PASTE]: () => addCopies(clipboard),
@@ -879,7 +886,12 @@ const dragSelection = (current: PointerPress, position: PointerPosition) => {
   const from = current.groundStart
   const to = from === null ? null : getGroundPoint(position, from[1])
   if (from === null || to === null) return
-  draftParts = moveParts(history.present, selectedIndices, getStudOffset(from, to))
+  draftParts = dragSnappedSelection(
+    history.present,
+    selectedIndices,
+    getStudOffset(from, to),
+    snapContext
+  )
   syncScene()
 }
 

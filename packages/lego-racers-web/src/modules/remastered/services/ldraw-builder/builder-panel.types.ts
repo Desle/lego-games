@@ -1,7 +1,7 @@
 import { createEnum } from '../../../../shared/types/enum.types.ts'
 import type { EnumValues } from '../../../../shared/types/enum.types.ts'
 import type { LDrawColorName } from '../reference-kit/reference-kit.types.ts'
-import type { BuilderItem, LibraryPart } from './ldraw-builder.types.ts'
+import type { BuilderItem, LibraryPart, StartFileGroup } from './ldraw-builder.types.ts'
 
 // How the original is shown: in a second view with the same camera, see-through over the build, or not at all.
 export const ReferenceMode = createEnum({
@@ -55,7 +55,7 @@ export type BuilderToolView = {
 
 export type BuilderPanel = {
   readonly showQueue: (view: BuilderQueueView) => void
-  readonly showStartFiles: (files: readonly string[], selected: string | null) => void
+  readonly showStartFiles: (groups: readonly StartFileGroup[], selected: string | null) => void
   readonly showReferenceMode: (mode: ReferenceMode) => void
   readonly showLibrary: (parts: readonly LibraryPart[]) => void
   // The parts of the model being built, in the order they were placed, for the Used tab.

@@ -1,6 +1,6 @@
 import { rotateVector } from './builder-document.ts'
 import { getNearestAxis, PART_UP } from './builder-rotation.ts'
-import type { PartStud } from './builder-studs.types.ts'
+import type { FootprintGrid, PartShape, PartStud } from './builder-studs.types.ts'
 import type {
   BuilderBox,
   BuilderPart,
@@ -53,21 +53,127 @@ export const getPlacedBox = (box: BuilderBox, part: BuilderPart): BuilderBox => 
 
 const HALF_STUD = STUD_WIDTH / 2
 
-// The base centre of a part's stud, from its origin, turned as the part is: one of its upward studs, else (a tile, or studs not read
-// yet) half a stud in from its box's corner across and its origin along its studs' way. A box corner is off the grid for a part that
-// overhangs (handles, clips, wheel pins), and its box's bottom off the plate grid when they hang below it.
+const getDot = (first: Vector, second: Vector): number =>
+  first[0] * second[0] + first[1] * second[1] + first[2] * second[2]
+
+const getDifference = (first: Vector, second: Vector): Vector => [
+  first[0] - second[0],
+  first[1] - second[1],
+  first[2] - second[2],
+]
+
+const getIsUpward = (direction: Vector) => direction[1] < -FACING_STUD
+
+// The upward studs of a part turned as it is, in its frame, the top ones first.
+const getUpwardStuds = (studs: readonly PartStud[], rotation: readonly number[]) =>
+  studs
+    .map((stud) => ({
+      position: rotateVector(rotation, stud.position),
+      direction: rotateVector(rotation, stud.direction),
+    }))
+    .filter((stud) => getIsUpward(stud.direction))
+    .sort((first, second) => first.position[1] - second.position[1])
+
+const getIsInside = (point: Vector, box: BuilderBox) =>
+  point[0] > box.minimum[0] &&
+  point[0] < box.maximum[0] &&
+  point[2] > box.minimum[2] &&
+  point[2] < box.maximum[2]
+
+const getIsUpright = (rotation: readonly number[]) => getIsUpward(rotateVector(rotation, PART_UP))
+
+// Where the anti-studs of a footprint are across, on one axis: its extent made whole studs (a tile's and a round part's bottom face is
+// a little in from its sides); null when it is not a whole number of studs wide (a clip, a bracket's edge).
+const getFootprintCentres = (minimum: number, maximum: number): number | null => {
+  const start = Math.round(minimum / HALF_STUD) * HALF_STUD
+  const width = Math.round(maximum / HALF_STUD) * HALF_STUD - start
+  return width >= STUD_WIDTH && width % STUD_WIDTH === 0 ? start + HALF_STUD : null
+}
+
+// A stud centre of a box as many studs wide as it nearly is, from its middle (half a stud off it for an even count): the same grid
+// whichever way the box is turned, so a part without studs (a wheel) does not wander as it turns.
+const getBoxStudCentre = (minimum: number, maximum: number): number => {
+  const count = Math.max(1, Math.round((maximum - minimum) / STUD_WIDTH))
+  return (minimum + maximum) / 2 + (count % 2 === 0 ? HALF_STUD : 0)
+}
+
+const getFootprintGrid = (
+  footprint: BuilderBox | null,
+  rotation: readonly number[]
+): FootprintGrid | null => {
+  if (footprint === null) return null
+  const turned = getRotatedBox(footprint, rotation)
+  const x = getFootprintCentres(turned.minimum[0], turned.maximum[0])
+  const z = getFootprintCentres(turned.minimum[2], turned.maximum[2])
+  if (x === null || z === null) return null
+  const getCount = (axis: number) =>
+    Math.round(((turned.maximum[axis] ?? 0) - (turned.minimum[axis] ?? 0)) / STUD_WIDTH)
+  return { point: [x, turned.maximum[1], z], count: getCount(0) * getCount(2), box: turned }
+}
+
+// Where the part in hand meets the stud grid, from its origin, turned as it is: across, the centre of one of its anti-studs (under
+// one of its top studs, or for a part whose few studs sit between its anti-studs, a jumper, where its footprint puts them); along, the
+// base of its top studs. A part without upward studs goes by its footprint (a tile), a part on its side by its box. A box corner is off
+// the grid for a part that overhangs (handles, clips, wheel pins).
 export const getGridPoint = (
-  studs: readonly PartStud[],
+  shape: PartShape,
   box: BuilderBox,
   rotation: readonly number[]
 ): Vector => {
-  const upward = studs.find((stud) => stud.direction[1] < -FACING_STUD)
-  if (upward !== undefined) return rotateVector(rotation, upward.position)
+  const upward = getUpwardStuds(shape.studs, rotation)
+  const footprint = getIsUpright(rotation) ? getFootprintGrid(shape.footprint, rotation) : null
+  const [top] = upward
+  if (top !== undefined) {
+    const isJumper =
+      footprint !== null &&
+      upward.length < footprint.count &&
+      upward.every((stud) => getIsInside(stud.position, footprint.box)) &&
+      upward.every(
+        (stud) =>
+          getRemainder(stud.position[0] - footprint.point[0], STUD_WIDTH) !== 0 ||
+          getRemainder(stud.position[2] - footprint.point[2], STUD_WIDTH) !== 0
+      )
+    return isJumper ? [footprint.point[0], top.position[1], footprint.point[2]] : top.position
+  }
+  if (footprint !== null) return [footprint.point[0], 0, footprint.point[2]]
   const turned = getRotatedBox(box, rotation)
   const studWay = getNearestAxis(rotateVector(rotation, PART_UP))
   const getAxis = (axis: number) =>
-    studWay[axis] === 0 ? (turned.minimum[axis] ?? 0) + HALF_STUD : 0
+    studWay[axis] === 0 ? getBoxStudCentre(turned.minimum[axis] ?? 0, turned.maximum[axis] ?? 0) : 0
   return [getAxis(0), getAxis(1), getAxis(2)]
+}
+
+// How far down from its origin the part in hand stands, turned as it is: an upright part with studs on what is under them (handles,
+// clips and wheel pins beside them hang lower), else on its box's bottom.
+export const getPartBottom = (
+  shape: PartShape,
+  box: BuilderBox,
+  rotation: readonly number[]
+): number =>
+  getIsUpright(rotation) && shape.bottom !== null
+    ? shape.bottom
+    : getRotatedBox(box, rotation).maximum[1]
+
+// The stud of a placed part the cursor is nearest to, turned as the part is (its top studs may stand at several levels and, on a
+// jumper, off its anti-studs); a part without upward studs offers its box: half a stud in from its corner across, its top.
+export const getTopGridPoint = (
+  studs: readonly PartStud[],
+  box: BuilderBox,
+  part: BuilderPartLine,
+  point: Vector
+): Vector => {
+  const local = getDifference(point, part.position)
+  const getDistance = (position: Vector) => Math.hypot(...getDifference(local, position))
+  const nearest = getUpwardStuds(studs, part.rotation).sort(
+    (first, second) => getDistance(first.position) - getDistance(second.position)
+  )[0]
+  if (nearest !== undefined) return nearest.position
+  const turned = getRotatedBox(box, part.rotation)
+  return [
+    getBoxStudCentre(turned.minimum[0], turned.maximum[0]),
+    turned.minimum[1],
+    getBoxStudCentre(turned.minimum[2], turned.maximum[2]),
+  ]
 }
 
 // The grid a placed part offers: its stud centres across (as the remainder of the corner half a stud before one, so the ground's 0
@@ -103,7 +209,8 @@ const snapAcross = (
 export const getPlacementPosition = (
   target: PlacementTarget,
   box: BuilderBox,
-  gridPoint: Vector
+  gridPoint: Vector,
+  bottom: number
 ): Vector => {
   const [normalX, normalY, normalZ] = target.normal
   const isTop = normalY < -FACING
@@ -121,27 +228,13 @@ export const getPlacementPosition = (
     : isBottom
       ? phaseY + PLATE_HEIGHT * Math.round((pointY - phaseY) / PLATE_HEIGHT)
       : phaseY + PLATE_HEIGHT * Math.ceil((pointY - phaseY) / PLATE_HEIGHT - CLEARANCE)
-  // The box's bottom is the part's bottom unless something hangs below it (handles): then the part rises to the next plate level.
-  const standing = phaseY - gridPoint[1]
-  const height = isBottom
-    ? level - gridPoint[1]
-    : standing +
-      PLATE_HEIGHT * Math.ceil((level - box.maximum[1] - standing) / PLATE_HEIGHT - CLEARANCE)
+  const height = level - (isBottom ? gridPoint[1] : bottom)
   return [
     snapAcross(getPushed(0, normalX), box.minimum[0], box.maximum[0], phaseX, gridPoint[0]),
     height,
     snapAcross(getPushed(2, normalZ), box.minimum[2], box.maximum[2], phaseZ, gridPoint[2]),
   ]
 }
-
-const getDot = (first: Vector, second: Vector): number =>
-  first[0] * second[0] + first[1] * second[1] + first[2] * second[2]
-
-const getDifference = (first: Vector, second: Vector): Vector => [
-  first[0] - second[0],
-  first[1] - second[1],
-  first[2] - second[2],
-]
 
 // A placed part's studs in the editing frame.
 export const getPlacedStuds = (

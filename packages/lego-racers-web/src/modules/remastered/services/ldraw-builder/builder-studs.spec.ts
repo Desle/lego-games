@@ -1,4 +1,4 @@
-import { findPartStuds } from './builder-studs.ts'
+import { findPartShape } from './builder-studs.ts'
 
 // The stud lines of 87087 (Brick 1 x 1 with Stud on 1 Side): one on top, one on the side facing -z, a tube underneath, a subpart.
 const FILES: Readonly<Record<string, string>> = {
@@ -16,13 +16,13 @@ const FILES: Readonly<Record<string, string>> = {
 const readFile = (name: string) => Promise.resolve(FILES[name] ?? null)
 const round = (values: readonly number[]) => values.map((value) => Number(value.toFixed(6)) + 0)
 
-describe('findPartStuds', () => {
+describe('findPartShape', () => {
   it('finds the studs of a part and its subparts, each pointing the way its matrix turns it', async () => {
     // Arrange
     const partName = 'side.dat'
 
     // Act
-    const studs = await findPartStuds(partName, readFile)
+    const { studs } = await findPartShape(partName, readFile)
 
     // Assert
     expect(
@@ -39,7 +39,7 @@ describe('findPartStuds', () => {
     const partName = 'missing.dat'
 
     // Act
-    const studs = await findPartStuds(partName, readFile)
+    const { studs } = await findPartShape(partName, readFile)
 
     // Assert
     expect(studs).toEqual([])

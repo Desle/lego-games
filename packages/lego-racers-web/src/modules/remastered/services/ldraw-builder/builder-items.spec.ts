@@ -51,23 +51,34 @@ describe('getNextBuilderItem', () => {
 })
 
 describe('getStartFiles', () => {
-  it('offers a car its own files and every chassis recipe, a chassis only its own', () => {
+  it('offers a car every champion car, every chassis recipe and its own drafts, a chassis its own recipe and drafts', () => {
     // Arrange
     const [chassis, car] = [getBuilderItems(new Map())[0], getBuilderItems(new Map()).at(-1)]
     const paths = [
       'GMCM.ldr',
       'drafts/GMCM-old.ldr',
+      'GMCM.ldr.bak',
       'chassis/JTchas0.ldr',
+      'chassis/JTCHAS0-backup.ldr',
       'chassis/_fallback/x.ldr',
       'RRCM.ldr',
+      'scratch.ldr',
     ]
 
     // Act
-    const carFiles = car === undefined ? [] : getStartFiles(car, paths)
-    const chassisFiles = chassis === undefined ? [] : getStartFiles(chassis, paths)
+    const carGroups = car === undefined ? [] : getStartFiles(car, paths)
+    const chassisGroups = chassis === undefined ? [] : getStartFiles(chassis, paths)
 
     // Assert
-    expect(carFiles).toEqual(['GMCM.ldr', 'drafts/GMCM-old.ldr', 'chassis/JTchas0.ldr'])
-    expect(chassisFiles).toEqual(['chassis/JTchas0.ldr'])
+    expect(car?.name).toBe('GMCM')
+    expect(carGroups).toEqual([
+      { label: 'Cars', files: ['GMCM.ldr', 'RRCM.ldr'] },
+      { label: 'Chassis', files: ['chassis/JTchas0.ldr', 'chassis/JTCHAS0-backup.ldr'] },
+      { label: 'Backups/drafts', files: ['drafts/GMCM-old.ldr', 'GMCM.ldr.bak'] },
+    ])
+    expect(chassisGroups).toEqual([
+      { label: 'Chassis', files: ['chassis/JTchas0.ldr'] },
+      { label: 'Backups/drafts', files: ['chassis/JTCHAS0-backup.ldr'] },
+    ])
   })
 })

@@ -1,21 +1,31 @@
 import {
   findSideStud,
   getGridPoint,
+  getPartBottom,
   getPartPhase,
   getPlacedStuds,
   getPlacementPosition,
   getRotatedBox,
   getSideStudPosition,
+  getTopGridPoint,
 } from './builder-placement.ts'
 import { turnQuarter } from './builder-document.ts'
 import { getFacingRotation } from './builder-rotation.ts'
-import type { PartStud } from './builder-studs.types.ts'
+import type { PartShape, PartStud } from './builder-studs.types.ts'
 import type { BuilderBox, Vector } from './ldraw-builder.types.ts'
 
 // A 2 x 4 brick (3001) in its own frame: 80 wide in x, 40 deep in z, body 24 down from its origin, studs 4 up.
 const BRICK_BOX = { minimum: [-40, -4, -20], maximum: [40, 24, 20] } as const
 const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1]
-const BRICK_GRID_POINT = getGridPoint([], BRICK_BOX, IDENTITY)
+// A part's shape as the library gives it, without a footprint (the alignment spec reads the real ones).
+const createShape = (
+  studs: readonly PartStud[],
+  box: BuilderBox,
+  bottom: number | null = null
+): PartShape => ({ studs, box, footprint: null, bottom })
+const BRICK_SHAPE = createShape([], BRICK_BOX)
+const BRICK_GRID_POINT = getGridPoint(BRICK_SHAPE, BRICK_BOX, IDENTITY)
+const BRICK_BOTTOM = getPartBottom(BRICK_SHAPE, BRICK_BOX, IDENTITY)
 
 describe('getPlacementPosition', () => {
   it('stands a brick on the ground with its box on the stud grid', () => {
@@ -23,7 +33,7 @@ describe('getPlacementPosition', () => {
     const target = { point: [3, 0, 7], normal: [0, -1, 0], phase: [0, 0, 0] } as const
 
     // Act
-    const position = getPlacementPosition(target, BRICK_BOX, BRICK_GRID_POINT)
+    const position = getPlacementPosition(target, BRICK_BOX, BRICK_GRID_POINT, BRICK_BOTTOM)
 
     // Assert
     expect(position).toEqual([0, -24, 0])
@@ -45,7 +55,7 @@ describe('getPlacementPosition', () => {
     } as const
 
     // Act
-    const position = getPlacementPosition(target, BRICK_BOX, BRICK_GRID_POINT)
+    const position = getPlacementPosition(target, BRICK_BOX, BRICK_GRID_POINT, BRICK_BOTTOM)
 
     // Assert
     expect(position).toEqual([10, -48, 0])
@@ -56,7 +66,7 @@ describe('getPlacementPosition', () => {
     const target = { point: [40, -10, 0], normal: [1, 0, 0], phase: [10, 0, 0] } as const
 
     // Act
-    const position = getPlacementPosition(target, BRICK_BOX, BRICK_GRID_POINT)
+    const position = getPlacementPosition(target, BRICK_BOX, BRICK_GRID_POINT, BRICK_BOTTOM)
 
     // Assert
     expect(position[0]).toBe(90)
@@ -123,7 +133,12 @@ describe('getSideStudPosition', () => {
     const position =
       stud === undefined
         ? null
-        : getSideStudPosition([3, -12, -10], stud, box, getGridPoint([], BRICK_BOX, rotation))
+        : getSideStudPosition(
+            [3, -12, -10],
+            stud,
+            box,
+            getGridPoint(BRICK_SHAPE, BRICK_BOX, rotation)
+          )
 
     // Assert
     expect(position).toEqual([10, -4, -34])
@@ -143,10 +158,18 @@ const getTwoByTwoStuds = (height: number) =>
     [10, height, 10],
   ])
 const LIBRARY_PARTS: Readonly<
-  Record<string, { readonly box: BuilderBox; readonly studs: readonly PartStud[] }>
+  Record<
+    string,
+    {
+      readonly box: BuilderBox
+      readonly studs: readonly PartStud[]
+      readonly bottom: number | null
+    }
+  >
 > = {
   '3001': {
     box: BRICK_BOX,
+    bottom: 24,
     studs: createUpwardStuds(
       [-30, -10, 10, 30].flatMap((x): Vector[] => [
         [x, 0, -10],
@@ -156,6 +179,7 @@ const LIBRARY_PARTS: Readonly<
   },
   '3839b': {
     box: { minimum: [-30, -4, -30], maximum: [30, 10, 10] },
+    bottom: 8,
     studs: createUpwardStuds([
       [-10, 0, 0],
       [10, 0, 0],
@@ -163,17 +187,31 @@ const LIBRARY_PARTS: Readonly<
   },
   '3023b': {
     box: { minimum: [-20, -4, -10], maximum: [20, 8, 10] },
+    bottom: 8,
     studs: createUpwardStuds([
       [-10, 0, 0],
       [10, 0, 0],
     ]),
   },
-  '3070b': { box: { minimum: [-10, 0, -10], maximum: [10, 8, 10] }, studs: [] },
-  '4600': { box: { minimum: [-34, -4, -20], maximum: [34, 10, 20] }, studs: getTwoByTwoStuds(0) },
-  '6157': { box: { minimum: [-44, 0, -20], maximum: [44, 16, 20] }, studs: getTwoByTwoStuds(8) },
-  '4488': { box: { minimum: [-20, -4, -20], maximum: [34, 16, 20] }, studs: getTwoByTwoStuds(0) },
+  '3070b': { box: { minimum: [-10, 0, -10], maximum: [10, 8, 10] }, studs: [], bottom: null },
+  '4600': {
+    box: { minimum: [-34, -4, -20], maximum: [34, 10, 20] },
+    studs: getTwoByTwoStuds(0),
+    bottom: 8,
+  },
+  '6157': {
+    box: { minimum: [-44, 0, -20], maximum: [44, 16, 20] },
+    studs: getTwoByTwoStuds(8),
+    bottom: 16,
+  },
+  '4488': {
+    box: { minimum: [-20, -4, -20], maximum: [34, 16, 20] },
+    studs: getTwoByTwoStuds(0),
+    bottom: 16,
+  },
   '2926': {
     box: { minimum: [-54, -4, -10], maximum: [54, 10, 10] },
+    bottom: 8,
     studs: createUpwardStuds([-30, -10, 10, 30].map((x): Vector => [x, 0, 0])),
   },
 }
@@ -202,7 +240,10 @@ describe('stud alignment', () => {
   const phase =
     below === undefined
       ? ([0, 0, 0] as const)
-      : getPartPhase(getGridPoint(below.studs, below.box, IDENTITY), BRICK_BELOW)
+      : getPartPhase(
+          getTopGridPoint(below.studs, below.box, BRICK_BELOW, [10, -28, 0]),
+          BRICK_BELOW
+        )
   const brickStudRemainders = getStudRemainders('3001', IDENTITY, BRICK_BELOW.position)
   const names = ['3001', '3839b', '3023b', '3070b', '4600', '6157', '4488', '2926']
   const rotations = [IDENTITY, turnQuarter(IDENTITY)]
@@ -224,7 +265,8 @@ describe('stud alignment', () => {
         const position = getPlacementPosition(
           { point, normal: [0, -1, 0], phase },
           box,
-          getGridPoint(part.studs, part.box, rotation)
+          getGridPoint(createShape(part.studs, part.box, part.bottom), part.box, rotation),
+          getPartBottom(createShape(part.studs, part.box, part.bottom), part.box, rotation)
         )
         return getStudRemainders(name, rotation, position)
       })
@@ -248,7 +290,8 @@ describe('stud alignment', () => {
         : getPlacementPosition(
             { point: [3, -28, 7], normal: [0, -1, 0], phase },
             part.box,
-            getGridPoint(part.studs, part.box, IDENTITY)
+            getGridPoint(createShape(part.studs, part.box, part.bottom), part.box, IDENTITY),
+            getPartBottom(createShape(part.studs, part.box, part.bottom), part.box, IDENTITY)
           )[1]
     })
 
@@ -265,9 +308,36 @@ describe('stud alignment', () => {
     const handlesPhase =
       handles === undefined
         ? null
-        : getPartPhase(getGridPoint(handles.studs, handles.box, IDENTITY), placed)
+        : getPartPhase(getTopGridPoint(handles.studs, handles.box, placed, [23, -12, 12]), placed)
 
     // Assert
     expect(handlesPhase).toEqual([0, 0, 0])
+  })
+})
+
+describe('getGridPoint', () => {
+  it('puts a jumper on the grid by its footprint, its one stud half a stud off the studs below', () => {
+    // Arrange
+    const jumper: PartShape = {
+      studs: createUpwardStuds([[0, 0, 0]]),
+      box: { minimum: [-20, -4, -10], maximum: [20, 8, 10] },
+      footprint: { minimum: [-19, 8, -9], maximum: [19, 8, 9] },
+      bottom: 8,
+    }
+    const box = jumper.box ?? BRICK_BOX
+    const phase = getPartPhase([10, 0, 10], BRICK_BELOW)
+
+    // Act
+    const position = getPlacementPosition(
+      { point: [3, -28, 7], normal: [0, -1, 0], phase },
+      box,
+      getGridPoint(jumper, box, IDENTITY),
+      getPartBottom(jumper, box, IDENTITY)
+    )
+
+    // Assert
+    expect([getRemainder(position[0]), getRemainder(position[2]), position[1]]).toEqual([
+      10, 10, -32,
+    ])
   })
 })
