@@ -85,8 +85,9 @@ export const placeEffectEmitter = (
 
 // 0x0045ce20 (turbo slot 2): the level 2 turbo's smoke sits at (-2, 0, 3) of the owner's frame, takes its rotation as
 // basis and 0.7 of its car body's velocity as the velocity offset.
+// float32 -2.0 and 3.0 pushed at 0x0045ceac and 0x0045cebc
 const TURBO_SMOKE_LOCAL_POINT: Vector3 = Object.freeze({ x: -2, y: 0, z: 3 })
-const TURBO_SMOKE_VELOCITY_FACTOR = Math.fround(0.7)
+const TURBO_SMOKE_VELOCITY_FACTOR = Math.fround(0.7) // float32 0.7 at 0x004b19e4
 export const placeTurboSmoke = (
   step: PowerUpStep,
   effectId: number,

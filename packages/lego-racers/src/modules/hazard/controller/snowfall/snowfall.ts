@@ -19,13 +19,12 @@ import {
 const EMITTER_MAXIMUM_MILLISECONDS = 1000
 const EMITTER_NAME = 'snow'
 const UINT32_MODULUS = 0x1_0000_0000
-// 0x004b461c and 0x004b4620: how far in front of the camera the flakes are made, and the weight of the camera's second
-// row in the height.
-const CAMERA_DISTANCE = 100
-const SECOND_ROW_HEIGHT = -40
-// The flakes are spread over 200 units across the view: the table value modulo 200, less 100.
-const SPREAD_UNITS = 200
-const SPREAD_HALF = 100
+// How far in front of the camera the flakes are made, and the weight of the camera's second row in the height.
+const CAMERA_DISTANCE = 100 // float32 100.0 at 0x004b461c
+const SECOND_ROW_HEIGHT = -40 // float32 -40.0 at 0x004b4620
+// The flakes are spread over 200 units across the view: the table value modulo 200, less 100 (0x0048ec75, 0x0048ec89).
+const SPREAD_UNITS = 200 // MOV ECX,0xc8 at 0x0048ec42
+const SPREAD_HALF = 100 // SUB EDX,0x64 at 0x0048ec89
 // The racer the hook reads is the first (race +0x2ba8 points at it, also in the demonstration).
 const PLAYER_RACER_INDEX = 0
 const WORLD_UP = Object.freeze({ x: 0, y: 0, z: 1 })
@@ -119,7 +118,12 @@ export const SNOWFALL: HazardBehavior = Object.freeze({
     const { data } = instance
     const camera = cameras[0]
     const pool = session.getEmitters()
-    if (!getIsSnowfallData(data) || data.emitterHandle === null || camera === undefined || pool === null) {
+    if (
+      !getIsSnowfallData(data) ||
+      data.emitterHandle === null ||
+      camera === undefined ||
+      pool === null
+    ) {
       return instance
     }
     const { add, multiply, storeFloat, subtract } = session.arithmetic
@@ -130,7 +134,10 @@ export const SNOWFALL: HazardBehavior = Object.freeze({
       x: storeFloat(add(multiply(CAMERA_DISTANCE, forward.x), position.x)),
       y: storeFloat(add(multiply(CAMERA_DISTANCE, forward.y), position.y)),
       z: storeFloat(
-        add(add(multiply(CAMERA_DISTANCE, forward.z), position.z), multiply(SECOND_ROW_HEIGHT, second.z))
+        add(
+          add(multiply(CAMERA_DISTANCE, forward.z), position.z),
+          multiply(SECOND_ROW_HEIGHT, second.z)
+        )
       ),
     }
     const placed = Object.freeze({

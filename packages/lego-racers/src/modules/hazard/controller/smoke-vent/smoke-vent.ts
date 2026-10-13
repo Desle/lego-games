@@ -21,30 +21,31 @@ export const SMOKE_VENT_IDENTIFIER = 10
 const EMITTER_NAME = 'smoke'
 const INSTANCE_NAME = 'dp_def'
 const BONE_INDEX = 0
+// 0x0048e8c1: the low two bits of the drawn byte pick the place (`AND EAX,0x3`).
 const RANDOM_CHOICE_MASK = 0x3
 
 // 0x004b45b0: the four places in the vent's own units (before the model scale) the smoke starts at, one chosen by the low
 // two bits of a draw.
 const SMOKE_PLACES: readonly (readonly [number, number, number])[] = Object.freeze([
   Object.freeze([
-    getFloatFromBits(0xc1c3999a),
-    getFloatFromBits(0x41d5eb85),
-    getFloatFromBits(0xc19c7ae1),
+    getFloatFromBits(0xc1c3999a), // 0x004b45b0
+    getFloatFromBits(0x41d5eb85), // 0x004b45b4
+    getFloatFromBits(0xc19c7ae1), // 0x004b45b8
   ] as const),
   Object.freeze([
-    getFloatFromBits(0xc20ee148),
-    getFloatFromBits(0x41168f5c),
-    getFloatFromBits(0xc19347ae),
+    getFloatFromBits(0xc20ee148), // 0x004b45bc
+    getFloatFromBits(0x41168f5c), // 0x004b45c0
+    getFloatFromBits(0xc19347ae), // 0x004b45c4
   ] as const),
   Object.freeze([
-    getFloatFromBits(0xc0dccccd),
-    getFloatFromBits(0xc112147b),
-    getFloatFromBits(0xc177d70a),
+    getFloatFromBits(0xc0dccccd), // 0x004b45c8
+    getFloatFromBits(0xc112147b), // 0x004b45cc
+    getFloatFromBits(0xc177d70a), // 0x004b45d0
   ] as const),
   Object.freeze([
-    getFloatFromBits(0x408bd70a),
-    getFloatFromBits(0x4108a3d7),
-    getFloatFromBits(0xc1853333),
+    getFloatFromBits(0x408bd70a), // 0x004b45d4
+    getFloatFromBits(0x4108a3d7), // 0x004b45d8
+    getFloatFromBits(0xc1853333), // 0x004b45dc
   ] as const),
 ])
 
