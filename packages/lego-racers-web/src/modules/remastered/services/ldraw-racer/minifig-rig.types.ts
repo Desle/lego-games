@@ -1,5 +1,14 @@
-import type { MinifigPosture } from './minifig-assembly.types.ts'
 import type { MinifigSide } from '@lego-games/ldraw/minifig'
+import { createEnum } from '../../../../shared/types/enum.types.ts'
+import type { EnumValues } from '../../../../shared/types/enum.types.ts'
+
+export const MinifigPosture = createEnum({
+  // Arms out sideways and legs straight down: the bind pose of the menu figure's skeleton.
+  STANDING: 'standing',
+  // Legs forward and arms reaching forward: the bind pose of the race driver's skeleton.
+  SEATED: 'seated',
+})
+export type MinifigPosture = EnumValues<typeof MinifigPosture>
 
 // Which way a leg or an arm points: the turn of one bone applied to the way the limb points in the bind pose (a direction of the
 // figure's frame, LDraw axes), or the straight line between two bones (an arm or a leg that is one rigid piece points from the bone

@@ -24,7 +24,7 @@ src/
     geometry/   parse in a worker, merge by material, the two details, the prepared-model cache and its copies
     material/   plastic, the look presets (shadings, edges), occlusion bake, shader precompile
     building/   pure stud-grid maths: documents, rotation, part shapes, placement, editing, history
-    minifig/    where the library's minifigure parts sit, assembled
+    minifig/    the minifigure skeleton: where the library's parts sit, their roles, the hinges and their limits, posing
     files/      node only, for an app's dev server: the routes that serve the library and a models folder, list parts, save models
   shared/types/enum.types.ts   createEnum, used instead of `enum`
 ```

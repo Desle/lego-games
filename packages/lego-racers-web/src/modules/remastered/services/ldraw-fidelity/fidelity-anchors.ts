@@ -1,7 +1,7 @@
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import { Box3, Triangle, Vector3 } from 'three'
 import type { Matrix4, Object3D } from 'three'
-import { MinifigPartKey } from '../ldraw-racer/minifig-assembly.types.ts'
+import { MinifigRole } from '@lego-games/ldraw/minifig'
 import type { MinifigRig } from '../ldraw-racer/minifig-rig.types.ts'
 import { findWheels } from '../ldraw-racer/wheel-analysis.ts'
 import { getAnchorResult } from './fidelity-measurement.ts'
@@ -16,9 +16,9 @@ const HAND_SHARE = 0.1
 const SIDES = ['left', 'right'] as const
 // A wheel of the original with none of the replacement's left to pair with: far enough to fail.
 const MISSING_WHEEL_DISTANCE = 1000
-const HAND_KEYS = Object.freeze({
-  left: MinifigPartKey.LEFT_HAND,
-  right: MinifigPartKey.RIGHT_HAND,
+const HAND_ROLES = Object.freeze({
+  left: MinifigRole.LEFT_HAND,
+  right: MinifigRole.RIGHT_HAND,
 })
 
 const getMesh = (model: ModelScene) =>
@@ -86,12 +86,12 @@ const getArmEnd = (points: readonly Vector3[], start: Vector3): Vector3 | null =
   return far.reduce((sum, point) => sum.add(point), new Vector3()).divideScalar(far.length)
 }
 
-// Where the replacement's part holders draw, in the world; the driver drawing adds one holder per part key, in the enum's order.
-const getHolderBounds = (drawing: Object3D, keys: readonly MinifigPartKey[]): Box3 | null => {
-  const order = Object.values(MinifigPartKey)
+// Where the replacement's part holders draw, in the world; the driver drawing adds one holder per role, in the enum's order.
+const getHolderBounds = (drawing: Object3D, roles: readonly MinifigRole[]): Box3 | null => {
+  const order = Object.values(MinifigRole)
   const bounds = new Box3()
-  for (const key of keys) {
-    const holder = drawing.children[order.indexOf(key)]
+  for (const role of roles) {
+    const holder = drawing.children[order.indexOf(role)]
     if (holder !== undefined) bounds.union(getVisibleBounds(holder))
   }
   return bounds.isEmpty() ? null : bounds
@@ -153,25 +153,21 @@ export const getDriverMeasures = (
   }
   const head = getPair(
     getBoundsOf(getFamilyPoints(rig.headIndex, null)),
-    getHolderBounds(drawing, [MinifigPartKey.HEAD])
+    getHolderBounds(drawing, [MinifigRole.HEAD, MinifigRole.HAT, MinifigRole.ACCESSORY])
   )
   const torso = getPair(
     getBoundsOf(getFamilyPoints(rig.torsoIndex, rig.headIndex)),
     getHolderBounds(drawing, [
-      MinifigPartKey.TORSO,
-      MinifigPartKey.LEFT_ARM,
-      MinifigPartKey.RIGHT_ARM,
-      MinifigPartKey.LEFT_HAND,
-      MinifigPartKey.RIGHT_HAND,
+      MinifigRole.TORSO,
+      MinifigRole.LEFT_ARM,
+      MinifigRole.RIGHT_ARM,
+      MinifigRole.LEFT_HAND,
+      MinifigRole.RIGHT_HAND,
     ])
   )
   const seat = getPair(
     getBoundsOf(getFamilyPoints(rig.pelvisIndex, rig.torsoIndex)),
-    getHolderBounds(drawing, [
-      MinifigPartKey.HIPS,
-      MinifigPartKey.LEFT_LEG,
-      MinifigPartKey.RIGHT_LEG,
-    ])
+    getHolderBounds(drawing, [MinifigRole.HIPS, MinifigRole.LEFT_LEG, MinifigRole.RIGHT_LEG])
   )
   return {
     anchors: [
@@ -189,7 +185,7 @@ export const getDriverMeasures = (
         getAnchorResult(
           `${side} hand`,
           getOriginalHand(rig, side, points, parentIndices, matrices, scale),
-          getCentre(getHolderBounds(drawing, [HAND_KEYS[side]]))
+          getCentre(getHolderBounds(drawing, [HAND_ROLES[side]]))
         )
       ),
       ...getAnchorResult(
