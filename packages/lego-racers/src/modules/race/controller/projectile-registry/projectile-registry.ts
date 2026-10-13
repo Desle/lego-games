@@ -18,6 +18,7 @@ import type { FloatArithmetic, Frame, Vector3 } from '../../../simulation-math/i
 import {
   touchProjectileExplosions,
   touchProjectileFlights,
+  getWorldWithStartedBarrelsReset,
   touchProjectileHazards,
 } from '../../../projectiles/index.ts'
 import type { ProjectileWorld } from '../../../projectiles/index.ts'
@@ -170,13 +171,13 @@ const getIsHazardRegistered = (source: RegistrySource, effect: PowerUpEffect): b
   const motion = source.projectileWorld.motions[effect.id]
   if (motion === undefined || motion === null) return false
   if (effect.kind === PowerUpEffectKind.MAGNET) {
-    return motion.kind === 'magnet' && effect.state !== EffectState.FINISHED
+    return motion.kind === 'magnet'
   }
-  return (
-    (effect.kind === PowerUpEffectKind.OIL_SLICK || effect.kind === PowerUpEffectKind.CURSE) &&
-    motion.kind === 'hazard' &&
-    getIsLive(effect)
-  )
+  if (motion.kind !== 'hazard') return false
+  // 0x004573a0 and the magnet only set state 6; the entry ends when 0x0045a490 returns the effect to its pool, a frame later.
+  if (effect.kind === PowerUpEffectKind.OIL_SLICK)
+    return getIsLive(effect) || effect.state === EffectState.FINISHED
+  return effect.kind === PowerUpEffectKind.CURSE && getIsLive(effect)
 }
 
 const getExplosionObjects = (pool: ExplosionPool, isSpiked: boolean): readonly RegistryObject[] =>
@@ -291,10 +292,17 @@ export const getRacerSetWithProjectileRegistry = (
     ],
     ended
   )
-  return fresh.length === 0 && liveIds.size === keptIds.size
+  const projectileWorld = getWorldWithStartedBarrelsReset(
+    racerSet.projectileWorld,
+    racerSet.powerUpStep.world.effects.effects
+  )
+  return fresh.length === 0 &&
+    liveIds.size === keptIds.size &&
+    projectileWorld === racerSet.projectileWorld
     ? racerSet
     : Object.freeze({
         ...racerSet,
+        projectileWorld,
         registryObjects: Object.freeze(objects),
         registryEntries: Object.freeze(entries),
       })

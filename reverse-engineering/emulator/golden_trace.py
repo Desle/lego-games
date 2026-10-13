@@ -51,6 +51,8 @@ RACER_FIELDS = (
     ("body.flags", 0x3E8 + 0x6C0, 1),
     ("body.travelDirection", 0x3E8 + 0x5F8, 3),
     ("body.heading", 0x3E8 + 0x168, 3),
+    ("body.groundNormal", 0x3E8 + 0x174, 3),
+    ("body.drift", 0x3E8 + 0x6C4, 4),
     ("body.gripScale", 0x3E8 + 0x5F4, 1),
     ("body.steeringScale", 0x3E8 + 0x728, 1),
     ("body.throttleScale", 0x3E8 + 0x72C, 1),

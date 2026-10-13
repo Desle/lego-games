@@ -63,7 +63,10 @@ export { getJitterValue, getWandJitter } from './types/wand-jitter/wand-jitter.t
 export { advanceHomingFlight, retargetHomingFlight } from './types/homing-flight/homing-flight.ts'
 export type { HomingFlight, HomingTarget } from './types/homing-flight/homing-flight.types.ts'
 export { getIsWithinMagnetCaptureRange, getMagnetPull } from './types/magnet-pull/magnet-pull.ts'
-export { createProjectileWorld } from './types/projectile-world/projectile-world.ts'
+export {
+  createProjectileWorld,
+  getWorldWithStartedBarrelsReset,
+} from './types/projectile-world/projectile-world.ts'
 export type {
   EffectMotion,
   ExplosionContact,

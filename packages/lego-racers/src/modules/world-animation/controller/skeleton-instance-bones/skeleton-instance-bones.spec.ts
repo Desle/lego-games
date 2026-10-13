@@ -2,7 +2,10 @@ import { createFloatArithmetic, FpuPrecision } from '../../../simulation-math/in
 import type { SkeletalAnimation } from '../../../skeletal-animation/index.ts'
 import type { Skeleton } from '../../../skeleton/index.ts'
 import type { SkeletonInstanceRuntime } from '../../types/world-animation.types.ts'
-import { getSkeletonInstanceCameraView } from './skeleton-instance-bones.ts'
+import {
+  getSkeletonInstanceBoneTranslation,
+  getSkeletonInstanceCameraView,
+} from './skeleton-instance-bones.ts'
 
 const arithmetic = createFloatArithmetic(FpuPrecision.SINGLE)
 const animation: SkeletalAnimation = Object.freeze({
@@ -56,5 +59,29 @@ describe('getSkeletonInstanceCameraView', () => {
 
     // Assert
     expect(view).toBeNull()
+  })
+})
+
+describe('getSkeletonInstanceBoneTranslation', () => {
+  it("carries the bone's own translation by the instance", () => {
+    // Arrange
+    const boneIndex = 1
+
+    // Act
+    const translation = getSkeletonInstanceBoneTranslation(arithmetic, instance, boneIndex)
+
+    // Assert
+    expect(translation).toEqual([11, 21, 31])
+  })
+
+  it("negates the bone's y in a mirrored race (the emulator's capture hazard, aar2)", () => {
+    // Arrange
+    const mirrored: SkeletonInstanceRuntime = { ...instance, isMirrored: true }
+
+    // Act
+    const translation = getSkeletonInstanceBoneTranslation(arithmetic, mirrored, 1)
+
+    // Assert
+    expect(translation).toEqual([11, 19, 31])
   })
 })

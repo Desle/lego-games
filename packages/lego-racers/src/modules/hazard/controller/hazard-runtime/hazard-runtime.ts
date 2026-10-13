@@ -149,9 +149,16 @@ export const updateHazards = (
   session: HazardSession,
   milliseconds: number
 ): void =>
-  forEach(store, (index) =>
-    apply(store, index, (instance) => getBehavior(instance).update(instance, session, milliseconds))
-  )
+  forEach(store, (index) => {
+    const indexed: HazardSession = {
+      ...session,
+      emit: (effect) =>
+        session.emit(
+          effect.type === 'hazard.power_up_activated' ? { ...effect, hazardIndex: index } : effect
+        ),
+    }
+    apply(store, index, (instance) => getBehavior(instance).update(instance, indexed, milliseconds))
+  })
 
 // 0x0048ae00, after the racers: the hazards that follow the cameras.
 export const updateHazardsAfterRacers = (

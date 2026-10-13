@@ -82,8 +82,8 @@ const getOpenedFrame = async (scenario: GoldenTraceScenario): Promise<number | n
   return opened?.frame ?? null
 }
 
-// The one divergence the shared racec0r1 scenarios already have (golden-trace.md): a brick's registry sphere.
-const KNOWN_DIVERGENT_FIELDS = ['powerUps.registry']
+// No divergence is left: the oil slick and magnet registry ends and the barrel spin were the last ones.
+const KNOWN_DIVERGENT_FIELDS: readonly string[] = []
 
 describe('golden trace: a projectile opens the shortcut barrier', () => {
   it.skipIf(!getIsGamePresent())(

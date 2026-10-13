@@ -32,6 +32,8 @@ export type SkeletonInstanceRuntime = {
   readonly position: Vector3
   // +0x84, +0x88, +0x8c: the squared distance each level shows up to (the largest float: always).
   readonly levelSquaredDistances: readonly number[]
+  // A mirrored race: the bones' own translations have y negated (the emulator's capture hazard sphere, aar2).
+  readonly isMirrored?: boolean
 }
 
 // The sphere an animated skeleton instance is culled by (GolDP.dll 0x10023ef0): its centre in the world and its radius.

@@ -322,6 +322,9 @@ const updateGrappleWithSmoke: EffectUpdate = (step, world, context, before, step
 }
 
 // 0x00452ae0 reads the owner's route node (racer +0xcc4) plane normal, or +x without one.
+// The frame of a dropped curse in the emulator: axes (0, -1, 0), (1, 0, 0), (0, 0, 1) (first = up x this).
+const UP: Vector3 = Object.freeze({ x: 0, y: 0, z: 1 })
+const DROPPED_CURSE_ROUTE_NORMAL: Vector3 = Object.freeze({ x: -1, y: 0, z: 0 })
 const FORWARD_WITHOUT_ROUTE: Vector3 = Object.freeze({ x: 1, y: 0, z: 0 })
 
 // 0x004573a0 and 0x00452ae0: the slick or the curse lands on the ground under the racer it was thrown from (0x00456360)
@@ -332,6 +335,23 @@ const updateHazard: EffectUpdate = (step, world, context, before, stepMillisecon
   const placedRacer = before.targetRacer ?? before.ownerRacer
   const racer = placedRacer === null ? undefined : context.racers[placedRacer]
   const isLanding = before.state === EffectState.STARTING && after.state === EffectState.ACTIVE
+  if (isLanding && before.launcherPosition !== null) {
+    // 0x00452ae0 without an owner: the shape sits where the dropper put it (0x00452550 → 0x00411cc0).
+    return Object.freeze({
+      step: counted,
+      world: getWorldWithMotion(
+        world,
+        before.id,
+        Object.freeze({
+          kind: 'hazard',
+          position: before.launcherPosition,
+          groundNormal: UP,
+          routeNormal: DROPPED_CURSE_ROUTE_NORMAL,
+          landingMilliseconds: stepMilliseconds,
+        })
+      ),
+    })
+  }
   if (!isLanding || racer === undefined) return Object.freeze({ step: counted, world })
   const landing = getHazardLanding(
     context.powerUps.arithmetic,

@@ -75,6 +75,12 @@ export type TurretData = {
   readonly periodMilliseconds: number
   readonly cycleMilliseconds: number
   readonly shotMilliseconds: number
+  // +0x3c, +0x40, +0x44: the file's second vector, the aim's phase scale, its height amplitude and offset (0x47).
+  readonly aim: Vector3
+  // +0x54: a mirrored race negates the aim's y.
+  readonly isMirrored: boolean
+  // +0x28..+0x30: where the muzzle points, turned through the cosine table over the period; it leaves with every shot.
+  readonly direction: Vector3
 }
 
 // 0x2e (0x0048e2a0): a rock that swaps between two meshes and a collision object.
@@ -230,6 +236,10 @@ export type CaptureData = {
   readonly holdMilliseconds: number
   readonly phase: number
   readonly phaseMilliseconds: number
+  // The bones hold the pose of the instance's last draw, the frame before (as the hammer's posedClip): the clip the
+  // reads of this frame see, and the clip this frame's update saw for the next one.
+  readonly posedClip: SkeletonInstanceRuntime['clip']
+  readonly nextPosedClip: SkeletonInstanceRuntime['clip']
 }
 
 // 0x32 (0x0048fe30): the crane.
@@ -241,6 +251,9 @@ export type CraneData = {
   readonly flags: number
   // +0x10..: the shape; its centre is the origin of the instance's fourth bone, radius 3.
   readonly sphere: HazardSphere
+  // The bones hold the pose of the instance's last draw (the frame before): see CaptureData.
+  readonly posedClip: SkeletonInstanceRuntime['clip']
+  readonly nextPosedClip: SkeletonInstanceRuntime['clip']
 }
 
 // A class that is registered but whose behaviour is not ported yet.

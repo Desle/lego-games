@@ -65,9 +65,10 @@ export const getSkeletonInstanceBoneTranslation = (
   boneIndex: number
 ): Vector3 | null => {
   const translation = getInstancePose(instance)?.bones[boneIndex]?.translation
-  return translation === undefined
-    ? null
-    : getPointInInstance(arithmetic, instance, translation, instance.scale)
+  if (translation === undefined) return null
+  const local: Vector3 =
+    instance.isMirrored === true ? [translation[0], -translation[1], translation[2]] : translation
+  return getPointInInstance(arithmetic, instance, local, instance.scale)
 }
 
 // A bone's own transform of a point (bone slot +0x4, GolDP.dll 0x10002c10): the point's coordinates times the rows of the

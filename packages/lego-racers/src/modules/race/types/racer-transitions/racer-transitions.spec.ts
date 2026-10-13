@@ -218,7 +218,7 @@ describe('racer transitions', () => {
 
     it('is held with flag 0x20000000 and pushed by the capture, and let go again', () => {
       // Arrange
-      const racer = getRacer()
+      const racer = Object.freeze({ ...getRacer(), controllerKind: 0 })
 
       // Act
       const held = getRacerAfterHazardReaction(FIXTURE_ARITHMETIC, racer, 'captured', [30, 0, 0])
@@ -229,6 +229,24 @@ describe('racer transitions', () => {
       expect(held.carBody.rigidBody.flags & 0x40).toBe(0x40)
       expect(released.flags & 0x20000000).toBe(0)
       expect(released.carBody.rigidBody.flags & 0x40).toBe(0)
+    })
+
+    it('has its target speed factors set to -0.4 by the capture and back to 1 when let go (a computer, 0x0048e050)', () => {
+      // Arrange
+      const computer = Object.freeze({ ...getRacer(), controllerKind: 2 })
+
+      // Act
+      const held = getRacerAfterHazardReaction(FIXTURE_ARITHMETIC, computer, 'captured', [30, 0, 0])
+      const released = getRacerAfterHazardReaction(FIXTURE_ARITHMETIC, held, 'released', null)
+
+      // Assert
+      expect(held.flags & 0x20000000).toBe(0x20000000)
+      expect(held.carBody.targetSpeedFactor).toBe(Math.fround(-0.4))
+      expect(held.carBody.defaultTargetSpeedFactor).toBe(Math.fround(-0.4))
+      expect(held.carBody.rigidBody.flags & 0x40).toBe(0)
+      expect(released.flags & 0x20000000).toBe(0)
+      expect(released.carBody.targetSpeedFactor).toBe(1)
+      expect(released.carBody.defaultTargetSpeedFactor).toBe(1)
     })
   })
 })

@@ -8,7 +8,12 @@ import {
 import type { PowerUpEffect, RacerPowerUpStatus } from '../../types/power-ups.types.ts'
 import { createPowerUpWorld } from '../power-up-world/power-up-world.ts'
 import type { PowerUpContext, PowerUpStep } from '../power-up-step/power-up-step.types.ts'
-import { activateLauncherWarp, activatePowerUp } from './activate-power-up.ts'
+import {
+  activateLauncherCurse,
+  activateLauncherWand,
+  activateLauncherWarp,
+  activatePowerUp,
+} from './activate-power-up.ts'
 
 const SINGLE = createFloatArithmetic(FpuPrecision.SINGLE)
 
@@ -239,6 +244,46 @@ describe('activatePowerUp', () => {
         forward: { x: 0, y: 1, z: 0 },
         start: null,
       },
+    })
+  })
+
+  it("drops a curse that belongs to no racer at the dropper's place (0x0045a9b0 case 3, 0x0048b3c0)", () => {
+    // Arrange
+    const position = { x: 1, y: 2, z: 3 }
+
+    // Act
+    const started = activateLauncherCurse(createStep(1), position)
+
+    // Assert
+    expect(getActive(started)[0]).toMatchObject({
+      kind: PowerUpEffectKind.CURSE,
+      state: EffectState.STARTING,
+      level: 3,
+      ownerRacer: null,
+      launcherPosition: position,
+    })
+    expect(started.world.effects.attachmentSlots.usedCount).toBe(3)
+  })
+
+  it("fires a wand that belongs to no racer along the turret's muzzle (0x0045ac80, 0x00454cb0)", () => {
+    // Arrange
+    const muzzle = {
+      position: { x: 1, y: 2, z: 3 },
+      direction: { x: 0, y: 1, z: 0 },
+    }
+
+    // Act
+    const started = activateLauncherWand(createStep(1), muzzle, 4)
+
+    // Assert
+    expect(getActive(started)[0]).toMatchObject({
+      kind: PowerUpEffectKind.WAND,
+      state: EffectState.STARTING,
+      timerMilliseconds: 500,
+      level: 2,
+      ownerRacer: null,
+      launcherMuzzle: muzzle,
+      launcherHazardIndex: 4,
     })
   })
 

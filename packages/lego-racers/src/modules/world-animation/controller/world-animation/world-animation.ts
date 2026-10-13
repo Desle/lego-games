@@ -240,6 +240,7 @@ export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation
     input.isMirrored === true
       ? Object.freeze({
           ...instance,
+          isMirrored: true,
           position: Object.freeze([
             instance.position[0],
             -instance.position[1],

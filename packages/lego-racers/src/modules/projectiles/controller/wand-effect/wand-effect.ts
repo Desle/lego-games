@@ -15,7 +15,6 @@ import type {
 } from '../../../power-ups/index.ts'
 import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
-import type { FlightRacer } from '../../types/projectiles.types.ts'
 import { getWandJitter } from '../../types/wand-jitter/wand-jitter.ts'
 import { getMotion, getWorldWithMotion } from '../../types/projectile-world/projectile-world.ts'
 import type {
@@ -83,10 +82,9 @@ const getStepWithSparksPlaced = (
   context: ProjectileContext,
   effectId: number,
   beam: WandBeam,
-  owner: FlightRacer
+  muzzleDirection: Vector3
 ): PowerUpStep => {
   const end = beam.points.at(-1)
-  const { muzzleDirection } = owner
   return end === undefined
     ? step
     : placeOrientedEffectEmitter(step, effectId, context.powerUps.arithmetic, {
@@ -105,24 +103,31 @@ const getStepWithBeam = (
 ): BeamedStep => {
   const effect = getEffect(step, effectId)
   const owner = effect.ownerRacer === null ? undefined : context.racers[effect.ownerRacer]
-  if (owner === undefined) return { step, beam: null }
+  // 0x00454cb0: a launcher's wand reads its muzzle from the launcher (+0x23c), a racer's from the racer (+0xe08).
+  const muzzle =
+    effect.launcherMuzzle === null
+      ? owner === undefined
+        ? undefined
+        : { position: owner.muzzlePosition, direction: owner.muzzleDirection }
+      : effect.launcherMuzzle
+  if (muzzle === undefined) return { step, beam: null }
   const struck = effect.targetRacer === null ? undefined : context.racers[effect.targetRacer]
   const beam = getWandBeam(context.powerUps.arithmetic, context.probe, {
-    muzzlePosition: owner.muzzlePosition,
-    muzzleDirection: owner.muzzleDirection,
+    muzzlePosition: muzzle.position,
+    muzzleDirection: muzzle.direction,
     isStarting: effect.state === EffectState.STARTING,
     isEnding: effect.state === EffectState.ENDING,
     timerMilliseconds: effect.timerMilliseconds,
     struck: struck === undefined ? null : { center: struck.position, radius: struck.beamRadius },
   })
   if (effect.targetRacer !== null) {
-    return { step: getStepWithSparksPlaced(step, context, effectId, beam, owner), beam }
+    return { step: getStepWithSparksPlaced(step, context, effectId, beam, muzzle.direction), beam }
   }
   // 0x00455660: with no racer held the sparks of the last strike are let go.
   return {
     step: getStepWithBeamHits(releaseEffectEmitter(step, effectId, false), context, effect, beam, {
       origin: beam.origin,
-      direction: owner.muzzleDirection,
+      direction: muzzle.direction,
       window: WAND_WINDOW,
       targets: context.racers.map((racer) => ({ position: racer.position })),
     }),

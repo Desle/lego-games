@@ -65,6 +65,8 @@ export const CRANE: HazardBehavior = Object.freeze({
         instance: findSkeletonReference(context.session, 'track', INSTANCE_NAME),
         flags: 0,
         sphere: Object.freeze({ centre: ORIGIN, radius: SHAPE_RADIUS }),
+        posedClip: null,
+        nextPosedClip: null,
       } satisfies CraneData),
     }),
   begin: (instance) => {
@@ -93,20 +95,31 @@ export const CRANE: HazardBehavior = Object.freeze({
   },
   update: (instance, session: HazardSession) => {
     const ended = getActiveAfterEndRequest(instance, end)
-    if (ended === null) return instance
+    if (ended === null) {
+      // The draw poses the bones whether or not the hazard is active, so the clip of this frame is remembered.
+      return getIsCraneData(instance.data)
+        ? getWithData(instance, {
+            ...instance.data,
+            nextPosedClip: getSkeletonInstance(session, instance.data.instance)?.clip ?? null,
+          })
+        : instance
+    }
     const { data: endedData } = ended
     if (!getIsCraneData(endedData)) return ended
     const skeleton = getSkeletonInstance(session, endedData.instance)
     if (skeleton === null) return ended
+    const posedClip = endedData.nextPosedClip ?? skeleton.clip
     const position =
       getSkeletonInstanceChainPosition(
         session.arithmetic,
-        skeleton,
+        Object.freeze({ ...skeleton, clip: posedClip }),
         TRACKED_BONE_INDEX,
         UNSCALED
       ) ?? endedData.sphere.centre
     const checked = getWithData(ended, {
       ...endedData,
+      posedClip,
+      nextPosedClip: skeleton.clip,
       sphere: Object.freeze({ centre: position, radius: endedData.sphere.radius }),
     })
     const { data } = checked

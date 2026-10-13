@@ -1,4 +1,5 @@
-import type { PowerUpStep } from '../../../power-ups/index.ts'
+import { EffectState, PowerUpEffectKind } from '../../../power-ups/index.ts'
+import type { PowerUpEffect, PowerUpStep } from '../../../power-ups/index.ts'
 import { IDENTITY_MATRIX3, ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import type { Matrix3, Vector3 } from '../../../simulation-math/index.ts'
 import { NO_BARREL_SPIN } from '../barrel-spin/barrel-spin.ts'
@@ -100,6 +101,30 @@ export const getWorldWithBarrelSpin = (
       world.barrelSpins.map((current, index) => (index === effectId ? spin : current))
     ),
   })
+
+// 0x00452f60 (the barrel's start) zeroes the spin; nothing else does, so a barrel that reuses a slot restarts from 0.
+export const getWorldWithStartedBarrelsReset = (
+  world: ProjectileWorld,
+  effects: readonly PowerUpEffect[]
+): ProjectileWorld => {
+  const isStarted = (effect: PowerUpEffect | undefined): boolean =>
+    effect !== undefined &&
+    effect.kind === PowerUpEffectKind.BARREL &&
+    effect.state === EffectState.STARTING &&
+    effect.timerMilliseconds === 0
+  return world.barrelSpins.some(
+    (spin, index) => isStarted(effects[index]) && spin !== NO_BARREL_SPIN
+  )
+    ? Object.freeze({
+        ...world,
+        barrelSpins: Object.freeze(
+          world.barrelSpins.map((spin, index) =>
+            isStarted(effects[index]) ? NO_BARREL_SPIN : spin
+          )
+        ),
+      })
+    : world
+}
 
 export const getWorldWithEvents = (
   world: ProjectileWorld,

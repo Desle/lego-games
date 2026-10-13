@@ -113,6 +113,23 @@ const getHammerWords = (
     ]
   })
 
+// The capture hazards' sphere, held racer flag, hold timer, phase and phase timer (track_trace.py `read_captures`).
+const getCaptureWords = (
+  hazards: RaceState['trackLogic']['hazards']['instances']
+): readonly number[] =>
+  hazards.flatMap((hazard) => {
+    const { data } = hazard
+    if (data.keyword !== HazardKeyword.HAZARD_48) return []
+    const { centre, radius } = data.sphere
+    return [
+      ...getFloatWords([centre[0], centre[1], centre[2], radius]),
+      data.capturedRacer === null ? 0 : 1,
+      data.holdMilliseconds >>> 0,
+      data.phase >>> 0,
+      data.phaseMilliseconds >>> 0,
+    ]
+  })
+
 // Race +0x30c0, as track_trace.py reads it.
 const PAUSE_MENU_MODE_NUMBERS: Readonly<Record<RaceState['pauseMenu']['mode'], number>> =
   Object.freeze({
@@ -140,6 +157,7 @@ export const getTrackFields: TraceFieldProvider = (raceState) => {
       hazard.lifecycle,
     ]),
     'track.hammers': getHammerWords(trackLogic.hazards.instances, trackLogic.worlds.track),
+    'track.captures': getCaptureWords(trackLogic.hazards.instances),
     'track.surfaces': [...raceState.surfaces.trackMaterials.values()].map(
       (material) => material.flags >>> 0
     ),
