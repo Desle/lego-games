@@ -2,7 +2,10 @@ import {
   NEUTRAL_EXTENSION,
   registerViewerExtension,
 } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
-import type { DevelopmentSelector } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
+import type {
+  DevelopmentSelector,
+  ViewerExtension,
+} from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import {
   getHighDefinitionAudioVariant,
   loadHighDefinitionSound,
@@ -67,9 +70,8 @@ const getIsChassisFallbackRequested = (search: string): boolean =>
 const getIsLDrawRequested = (search: string): boolean =>
   new URLSearchParams(search).get(BRICKS_PARAMETER) !== CLASSIC_BRICKS
 
-// Plugs the remastered features into the viewer's extension points; `?hd=<variant>` picks the texture pack and
-// `audio=<variant>` the audio pack.
-export const registerRemastered = async (search: string) => {
+// The remastered features as a viewer extension; `?hd=<variant>` picks the texture pack and `audio=<variant>` the audio pack.
+export const createRemasteredExtension = async (search: string): Promise<ViewerExtension> => {
   await loadLDrawModelIndex()
   setActiveLookPreset(getLookPreset(search))
   setIsStudLogoShown(getIsStudLogoRequested(search))
@@ -78,7 +80,7 @@ export const registerRemastered = async (search: string) => {
     isChassisFallbackUsed: getIsChassisFallbackRequested(search),
   }
   const audioVariant = getHighDefinitionAudioVariant(search)
-  registerViewerExtension({
+  return {
     ...NEUTRAL_EXTENSION,
     onTextureCreated: (event) => applyHighDefinitionTexture(event, search),
     onPictureCreated: (event) => applyHighDefinitionPicture(event, search),
@@ -132,8 +134,12 @@ export const registerRemastered = async (search: string) => {
       audioVariant === null
         ? Promise.resolve(null)
         : loadHighDefinitionSound(context, archivePath, audioVariant),
-  })
+  }
 }
+
+// Plugs the remastered features into the viewer's extension points.
+export const registerRemastered = async (search: string) =>
+  registerViewerExtension(await createRemasteredExtension(search))
 
 // Switching packs reloads the page: textures and sounds are swapped as they load. The audio pack needs `?hd` too.
 const selectVariant = (parameter: string, variant: string | null) => {

@@ -16,6 +16,7 @@
     "audio-trace": "vitest run --config vitest.trace.config.ts audio-trace",
     "pixel-trace": "vitest run --config vitest.trace.config.ts pixel-trace",
     "render-coverage": "vitest run --config vitest.trace.config.ts render-coverage",
+    "hd-coverage": "vitest run --config vitest.trace.config.ts hd-coverage",
     "check": "pnpm run typecheck && pnpm run lint && pnpm run verify && pnpm run test",
     "format": "eslint --fix . && prettier --write .",
     "format:check": "prettier --check .",

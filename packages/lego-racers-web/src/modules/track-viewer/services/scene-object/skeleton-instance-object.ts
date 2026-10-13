@@ -101,7 +101,7 @@ export const createSkeletonInstanceObject = (
   const skeleton = scene.skeletons[levelMesh.level.skeletonIndex ?? -1]?.skeleton
   const animation = scene.animations[levelMesh.level.animationIndex ?? -1]?.animation
   if (skeleton === undefined || animation === undefined) return null
-  const group = createInstanceGroup(instance, context.isBackground)
+  const group = createInstanceGroup(instance, levelMesh.mesh.path, context.isBackground)
   const batches = levelMesh.mesh.drawBatches.flatMap((_batch, batchIndex) => {
     const created = createSkeletonBatch(context, levelMesh, batchIndex)
     if (created === null) return []
