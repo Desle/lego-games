@@ -29,8 +29,18 @@ export type BuilderItemStart = {
   readonly sourceFile: string | null
   // The document without its scale line.
   readonly document: BuilderDocument
-  // The file's scale line's factor, null when it has none (a power-up object is then fitted).
+  // The file's scale line's factor, null when it has none (a power-up object is then fitted, a particle real size).
   readonly scale: number | null
   // Where the editing frame sits in the car's frame (LDraw units and axes): a chassis recipe's offset, nothing for a car.
   readonly editOffset: Vector
+}
+
+// A flat card of an original's material (from the material library and texture database `library` in `directory`), `width` by
+// `height` race units.
+export type CardReference = {
+  readonly materialName: string
+  readonly directory: string
+  readonly library: string
+  readonly width: number
+  readonly height: number
 }

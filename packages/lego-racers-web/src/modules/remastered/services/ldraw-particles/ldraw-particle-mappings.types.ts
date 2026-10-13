@@ -28,3 +28,14 @@ export type LDrawParticleMaterial = {
   readonly kind: LDrawParticleKind
   readonly solidAlpha: number
 }
+
+// What the builder shows a kind against: a material of its first row (its picture and colour, from the material library and
+// texture database of the same stem in the same folder) on a card the size of an emitter's quad that draws the kind (its first
+// size, or its last when the quad starts at nothing).
+export type LDrawParticleReference = {
+  readonly directory: string
+  readonly library: string
+  readonly materialName: string
+  readonly emitterPath: string
+  readonly emitterName: string
+}

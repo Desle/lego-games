@@ -156,7 +156,10 @@ const SCALE_STEP = 1.1
 const SCALE_DECIMALS = 3
 const MINIMUM_SCALE = 0.05
 const MAXIMUM_SCALE = 20
-const SCALED_KINDS: readonly BuilderItemKind[] = [BuilderItemKind.POWER_UP]
+const SCALED_KINDS: readonly BuilderItemKind[] = [
+  BuilderItemKind.POWER_UP,
+  BuilderItemKind.PARTICLE,
+]
 
 useLookFromAddress()
 setUpLDrawModelParser()
@@ -264,7 +267,7 @@ let ghostRotation: readonly number[] = IDENTITY_ROTATION
 let pointer: PointerPosition | null = null
 let isSyncScheduled = false
 let isSaving = false
-// The factor a power-up object's file is drawn at (powerup-object-frame.ts), and the one it was opened with.
+// The factor a power-up object's or a particle's file is drawn at (powerup-object-frame.ts), and the one it was opened with.
 let scale = 1
 let savedScale = 1
 
@@ -317,6 +320,8 @@ const ITEM_HINTS: Readonly<Record<BuilderItemKind, string>> = Object.freeze({
     'the standing figure, origin the top of the hips: each part follows the bone of its 0 !RACERS ROLE line; a plain head or torso shows the game picture',
   [BuilderItemKind.POWER_UP]:
     'the power-up object as the original models it (front along x): the race draws it at this size and place (⌥= ⌥- scale, ⌥0 fits the original) and spins, moves and fades it as the game does',
+  [BuilderItemKind.PARTICLE]:
+    "one piece of the particle, studs up (they face the camera; LDraw z up the quad): the race draws it at this size in a car's studs (⌥= ⌥- scale, ⌥0 real size), shrunk to a smaller quad, several spread over a bigger one",
 })
 
 const EFFECT_NOTE =
@@ -735,7 +740,7 @@ const frameCamera = () => {
   )
 }
 
-// A car's wide stud grid; a power-up object's sized to its original's footprint (in the build's studs, which the
+// A car's wide stud grid; a power-up object's or a particle's sized to its original's footprint (in the build's studs, which the
 // scale shrinks or grows).
 const replaceGrid = () => {
   editFrame.remove(grid)
@@ -756,6 +761,7 @@ const FIT_LABELS: Readonly<Record<BuilderItemKind, string>> = Object.freeze({
   [BuilderItemKind.CAR]: '',
   [BuilderItemKind.DRIVER]: '',
   [BuilderItemKind.POWER_UP]: 'Fit',
+  [BuilderItemKind.PARTICLE]: 'Real size',
 })
 
 // The build drawn at the scale (1 for an item without one), the grid with it, the control showing it.
@@ -781,7 +787,7 @@ const getFileBounds = (): Box3 => {
   return new Box3().setFromObject(partsGroup).applyMatrix4(editFrame.matrixWorld.clone().invert())
 }
 
-// A power-up object's fit to its original.
+// A power-up object's fit to its original, a particle's real size.
 const getFittedScale = (): number => {
   const bounds = getFileBounds()
   return reference === null || bounds.isEmpty() ? 1 : reference.getFittedScale(bounds)

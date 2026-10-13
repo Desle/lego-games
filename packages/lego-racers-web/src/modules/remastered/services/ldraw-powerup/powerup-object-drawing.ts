@@ -16,7 +16,11 @@ import {
   POWER_UP_OBJECT_MODEL_NAMES,
 } from '../../../../shared/viewer-extensions/effect-model-names.ts'
 import type { EffectModelDrawingRequest } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
-import { getLDrawModelIndex, loadLDrawModelText } from '../ldraw-models/ldraw-model-client.ts'
+import {
+  getHasPlacedParts,
+  getLDrawModelIndex,
+  loadLDrawModelText,
+} from '../ldraw-models/ldraw-model-client.ts'
 import type { LDrawModelIndex } from '../ldraw-models/ldraw-model-index.types.ts'
 import { brightenPlastic, createLDrawPickupDrawing } from '../ldraw-pickup/ldraw-pickup-drawing.ts'
 import { LDRAW_PICKUP_MAPPINGS } from '../ldraw-pickup/ldraw-pickup-mappings.ts'
@@ -38,7 +42,7 @@ const prepared = new Map<string, PreparedPowerUpObject | null>()
 const preparePowerUpObject = async (file: string): Promise<PreparedPowerUpObject | null> => {
   try {
     const text = await loadLDrawModelText(file)
-    if (text === null) return null
+    if (text === null || !getHasPlacedParts(text)) return null
     const { model } = await holdPreparedModel(text, LDrawDetail.LOW).prepared
     model.updateMatrixWorld(true)
     return Object.freeze({
@@ -71,14 +75,16 @@ export const preparePowerUpObjects = (index: LDrawModelIndex): Promise<void> =>
   Promise.all(Object.values(index.powerUps).map(loadPreparedPowerUpObject)).then(() => undefined)
 
 // Where the layer's drawing of an effect's model comes from: a power-up object's file (nothing for the inside of a model a file
-// draws whole), else the part of a pickup brick; null when the layer has nothing and the original is drawn.
+// draws whole), else the part of a pickup brick; null when the layer has nothing and the original is drawn. A file that was
+// prepared to nothing (empty, unreadable) is as if it were not there.
 export const getEffectModelDrawingSource = (
   request: Pick<EffectModelDrawingRequest, 'modelName' | 'variant'>,
   index: LDrawModelIndex
 ): EffectModelDrawingSource | null => {
-  const file = POWER_UP_OBJECT_MODEL_NAMES.includes(request.modelName)
+  const listed = POWER_UP_OBJECT_MODEL_NAMES.includes(request.modelName)
     ? index.powerUps[request.modelName]
     : undefined
+  const file = listed !== undefined && prepared.get(listed) === null ? undefined : listed
   if (file !== undefined) {
     return request.variant === BACK_FACES_VARIANT
       ? { kind: EffectModelDrawingSourceKind.NOTHING, file: null }

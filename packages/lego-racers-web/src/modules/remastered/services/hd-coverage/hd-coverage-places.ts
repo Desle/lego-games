@@ -43,8 +43,6 @@ const POWER_UP_KINDS_AND_LEVELS: readonly (readonly [number, number])[] = [
   [3, 3],
   [1, 0],
 ]
-const ROCKET_AND_SHIELD_USE_COUNT = 1
-const LAST_SHIELD_USE_INDEX = 7
 
 // The seven circuits' introduction cinemas (`CIRCUIT1` .. `CIRCUIT7`, screens 0x1f to 0x25).
 const CIRCUIT_INTRODUCTION_SCREEN_IDS: readonly number[] = [
@@ -135,20 +133,20 @@ const getPowerUpPlace = (name: string, uses: readonly PowerUpUse[]): RacePlace =
   }
 }
 
-// The rocket and the last shield on screen: every power-up object of the folder among them must show.
+// Every power-up fired again, each drawn again 10 frames after it was handed over and a few times more while it plays (a turbo's
+// flames show only once it has started, 0x0045d150, and turn with the car): every power-up object of the folder that was drawn
+// must show in one of them.
+const ACTIVE_RECORD_DELAY_FRAMES: readonly number[] = [25, 40, 55]
 const getPowerUpOnScreenPlace = (): OnScreenPlace => {
-  const uses = [
-    ...POWER_UP_USES.slice(0, ROCKET_AND_SHIELD_USE_COUNT),
-    ...POWER_UP_USES.slice(LAST_SHIELD_USE_INDEX, LAST_SHIELD_USE_INDEX + 1),
-  ]
-  const subject = getPowerUpPlace(
-    'Power-up objects',
-    POWER_UP_USES.slice(0, LAST_SHIELD_USE_INDEX + 1)
-  )
+  const subject = getPowerUpPlace('Power-up objects', POWER_UP_USES)
+  const recordFrames = POWER_UP_USES.flatMap((use) => [
+    getPowerUpRecordFrame(use),
+    ...ACTIVE_RECORD_DELAY_FRAMES.map((delay) => use.frame + delay),
+  ])
   return {
     kind: 'on_screen',
     name: 'On screen: Power-up objects',
-    subject: { ...subject, recordFrames: uses.map(getPowerUpRecordFrame) },
+    subject: { ...subject, recordFrames, frameCount: Math.max(...recordFrames) + 1 },
     expectedHooks: [],
     isEveryPowerUpFileShown: true,
   }

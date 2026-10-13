@@ -17,15 +17,17 @@ export const BuilderItemKind = createEnum({
   CAR: 'car',
   DRIVER: 'driver',
   POWER_UP: 'power_up',
+  PARTICLE: 'particle',
 })
 export type BuilderItemKind = EnumValues<typeof BuilderItemKind>
 
 // One thing to build: a chassis recipe (`chassis/<NAME>.ldr`), a champion's whole car but its wheels (`<CODE>.ldr`), a driver's
-// minifigure (`drivers/<NAME>.ldr`) or a power-up object (`powerups/<MODEL>.ldr`).
+// minifigure (`drivers/<NAME>.ldr`), a power-up object (`powerups/<MODEL>.ldr`) or a kind of particle (`particles/<KIND>.ldr`).
 export type BuilderItem = {
   readonly id: string
   readonly kind: BuilderItemKind
-  // The chassis name (lower case), the car code, the driver's name or the power-up object's model name (upper case).
+  // The chassis name (lower case), the car code, the driver's name, the power-up object's model name or the particle's kind (upper
+  // case).
   readonly name: string
   // The chassis a car's wheels are on (lower case), which gives its wheel guides; for a chassis, its own name; for a driver or a
   // power-up object, empty.

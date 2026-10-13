@@ -6,6 +6,7 @@ const EMPTY_INDEX: LDrawModelIndex = Object.freeze({
   chassis: Object.freeze({}),
   drivers: Object.freeze({}),
   powerUps: Object.freeze({}),
+  particles: Object.freeze({}),
 })
 
 let index: LDrawModelIndex = EMPTY_INDEX
@@ -28,6 +29,11 @@ const fetchText = async (file: string): Promise<string | null> => {
   const response = await fetch(`${DEVELOPMENT_LDRAW_MODELS_ROUTE}/${file}`)
   return response.ok ? response.text() : null
 }
+
+// Whether a model file places anything (a type 1 line): a file with only its header (a builder item saved empty) draws nothing and
+// leaves the original's model.
+export const getHasPlacedParts = (text: string): boolean =>
+  text.split(/\r?\n/).some((line) => /^\s*1\s/.test(line))
 
 // The model file's text, read once (a reload of the page reads the folder again).
 export const loadLDrawModelText = (file: string): Promise<string | null> => {
