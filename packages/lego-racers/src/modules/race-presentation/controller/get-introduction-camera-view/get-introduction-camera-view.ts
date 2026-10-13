@@ -6,10 +6,11 @@ import {
   getSkeletonInstanceCameraView,
 } from '../../../world-animation/index.ts'
 
-// World_Mirror 0x00416140 negates y of every instance's axes; the camera's vectors follow (hypothesis, fitted to the pixels).
+// World_Mirror 0x00416140 negates y of every instance's axes; the camera's vectors follow (hypothesis, fitted to the pixels). The
+// node's position has y negated as well (the camera trace: the original's node position is the mirror image, bit for bit).
 const getMirroredAxes = (view: CameraView): CameraView =>
   Object.freeze({
-    ...view,
+    position: Object.freeze({ ...view.position, y: -view.position.y }),
     forward: Object.freeze({ ...view.forward, y: -view.forward.y }),
     up: Object.freeze({ ...view.up, y: -view.up.y }),
   })

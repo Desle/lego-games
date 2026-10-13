@@ -110,3 +110,10 @@ export type CameraUpdate = {
   readonly camera: CameraState
   readonly view: CameraView
 }
+
+// What the camera node stores of an orientation (GolDP.dll 0x10002a30) and hands back (0x100029d0): forward normalized and up
+// made orthogonal to it and normalized.
+export type CameraNodeOrientation = {
+  readonly forward: Vector3
+  readonly up: Vector3
+}

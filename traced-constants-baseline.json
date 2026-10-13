@@ -7214,18 +7214,6 @@
     },
     {
       "path": "packages/lego-racers/src/modules/race-camera/controller/camera-update/camera-update.ts",
-      "scope": "FINISH_TURN_RATE",
-      "literal": "0.0015707963",
-      "count": 1
-    },
-    {
-      "path": "packages/lego-racers/src/modules/race-camera/controller/camera-update/camera-update.ts",
-      "scope": "HEADING_DEADBAND",
-      "literal": "0.014016",
-      "count": 1
-    },
-    {
-      "path": "packages/lego-racers/src/modules/race-camera/controller/camera-update/camera-update.ts",
       "scope": "MINIMUM_EASING_DISTANCE",
       "literal": "12",
       "count": 1
