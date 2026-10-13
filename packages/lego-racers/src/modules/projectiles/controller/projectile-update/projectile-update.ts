@@ -1,6 +1,8 @@
 import {
   advancePowerUpEffect,
   checkEffectEmitter,
+  placeEffectEmitter,
+  placeTurboSmoke,
   startEffectEmitter,
   EffectState,
   getEffect,
@@ -242,10 +244,15 @@ const getStepWithTurboSmoke = (
 
 // 0x0045ce20 (turbo vtable slot 2): after the countdown, a tumbling racer who has stopped ends the turbo early.
 const updateTurbo: EffectUpdate = (step, world, context, before, stepMilliseconds) => {
-  const counted = getStepWithTurboSmoke(
-    updatePowerUpEffect(step, context.powerUps, before.id, stepMilliseconds),
-    context,
-    before.id
+  const counted = placeTurboSmoke(
+    getStepWithTurboSmoke(
+      updatePowerUpEffect(step, context.powerUps, before.id, stepMilliseconds),
+      context,
+      before.id
+    ),
+    before.id,
+    context.powerUps.arithmetic,
+    getEmitterOwner(context, before.ownerRacer)
   )
   const after = getEffect(counted, before.id)
   const owner = after.ownerRacer === null ? undefined : context.racers[after.ownerRacer]
@@ -307,8 +314,12 @@ const updateHazard: EffectUpdate = (step, world, context, before, stepMillisecon
     context.powerUps.getGroundPoint
   )
   const routeNode = racer.routeNodeIndex === null ? undefined : context.route[racer.routeNodeIndex]
+  // 0x004573a0 puts the slick's bubbles where it lands.
   return Object.freeze({
-    step: counted,
+    step:
+      after.kind === PowerUpEffectKind.OIL_SLICK
+        ? placeEffectEmitter(counted, before.id, landing.position)
+        : counted,
     world: getWorldWithMotion(
       world,
       before.id,

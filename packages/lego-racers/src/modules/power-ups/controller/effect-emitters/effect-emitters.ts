@@ -10,7 +10,8 @@ import {
   spawnEmitter,
 } from '../../../emitter/index.ts'
 import type { EmitterPool } from '../../../emitter/index.ts'
-import type { FloatArithmetic } from '../../../simulation-math/index.ts'
+import { getFrameTransformedPoint } from '../../../simulation-math/index.ts'
+import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 import type { EffectEmitterOwner } from './effect-emitters.types.ts'
 import { getEffect, getStepWithEffect } from '../power-up-step/power-up-step.ts'
 import type { PowerUpStep } from '../power-up-step/power-up-step.types.ts'
@@ -66,6 +67,54 @@ export const releaseEffectEmitter = (
             : releaseEmitter(common, effect.emitterHandleIndex)
         )
   return getStepWithEffect(released, { ...getEffect(released, effectId), emitterHandleIndex: null })
+}
+
+// 0x00489660 on the effect's emitter: where its particles are born (the oil slick's bubbles, at the ground point it
+// lands on, 0x004573a0).
+export const placeEffectEmitter = (
+  step: PowerUpStep,
+  effectId: number,
+  position: Vector3
+): PowerUpStep => {
+  const { emitterHandleIndex } = getEffect(step, effectId)
+  const { common } = step.world.emitters
+  return emitterHandleIndex === null || common === null
+    ? step
+    : getStepWithPool(step, setEmitterPosition(common, emitterHandleIndex, position))
+}
+
+// 0x0045ce20 (turbo slot 2): the level 2 turbo's smoke sits at (-2, 0, 3) of the owner's frame, takes its rotation as
+// basis and 0.7 of its car body's velocity as the velocity offset.
+const TURBO_SMOKE_LOCAL_POINT: Vector3 = Object.freeze({ x: -2, y: 0, z: 3 })
+const TURBO_SMOKE_VELOCITY_FACTOR = Math.fround(0.7)
+export const placeTurboSmoke = (
+  step: PowerUpStep,
+  effectId: number,
+  arithmetic: FloatArithmetic,
+  owner: EffectEmitterOwner | null
+): PowerUpStep => {
+  const { emitterHandleIndex } = getEffect(step, effectId)
+  const { common } = step.world.emitters
+  if (emitterHandleIndex === null || common === null || owner === null) return step
+  const { multiply, storeFloat } = arithmetic
+  const based = setEmitterBasis(common, emitterHandleIndex, owner.rotation)
+  const placed = setEmitterPosition(
+    based,
+    emitterHandleIndex,
+    getFrameTransformedPoint(
+      arithmetic,
+      { rotation: owner.rotation, position: owner.position },
+      TURBO_SMOKE_LOCAL_POINT
+    )
+  )
+  return getStepWithPool(
+    step,
+    setEmitterVelocityOffset(arithmetic, placed, emitterHandleIndex, {
+      x: storeFloat(multiply(TURBO_SMOKE_VELOCITY_FACTOR, owner.velocity.x)),
+      y: storeFloat(multiply(TURBO_SMOKE_VELOCITY_FACTOR, owner.velocity.y)),
+      z: storeFloat(multiply(TURBO_SMOKE_VELOCITY_FACTOR, owner.velocity.z)),
+    })
+  )
 }
 
 // 0x004b13b0 and 0x004b1504: the smoke sits 4 above the owner's frame.
