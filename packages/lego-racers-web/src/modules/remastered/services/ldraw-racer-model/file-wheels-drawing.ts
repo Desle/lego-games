@@ -1,7 +1,7 @@
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import { Group, Matrix4, Vector3 } from 'three'
 import { LDRAW_TO_STUDS } from '../ldraw-car/ldraw-car-document.ts'
-import { disposeObject } from '../ldraw-racer/dispose-object.ts'
+import { disposeObject } from '@lego-games/ldraw/geometry'
 import { createSkeletonPoseSampler } from '../ldraw-racer/skeleton-pose.ts'
 import { findWheels } from '../ldraw-racer/wheel-analysis.ts'
 import type { RacerPartDrawingRequest } from '../ldraw-racer/ldraw-racer-drawing.types.ts'

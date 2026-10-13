@@ -22,7 +22,7 @@ import {
   SHADOW_RADIUS,
   SHADOW_STRENGTH,
 } from './shadow-pass.constants.ts'
-import { setIsShadowRenderActive } from '../ldraw-car/detail-switch.ts'
+import { setIsShadowRenderActive } from '@lego-games/ldraw/geometry'
 import { bakeSceneryShadow } from './baked-scenery-shadow.ts'
 import type { BakedSceneryShadow } from './baked-scenery-shadow.types.ts'
 import { createLightFrame } from './light-frame.ts'

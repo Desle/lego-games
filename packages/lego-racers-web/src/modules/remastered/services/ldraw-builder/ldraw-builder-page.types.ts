@@ -1,6 +1,6 @@
 import { createEnum } from '../../../../shared/types/enum.types.ts'
 import type { EnumValues } from '../../../../shared/types/enum.types.ts'
-import type { PartStud } from './builder-studs.types.ts'
+import type { PartStud } from '@lego-games/ldraw/building'
 import type { BuilderPart, PlacementTarget, Vector } from './ldraw-builder.types.ts'
 
 // The part in hand: what a click places.

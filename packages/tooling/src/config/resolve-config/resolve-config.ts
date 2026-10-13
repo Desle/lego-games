@@ -20,6 +20,7 @@ export const DEFAULT_CONFIG: ResolvedToolingConfig = {
   sharedDirectories: ['shared'],
   layers: DEFAULT_LAYERS,
   frameworkFreeLayers: ['types'],
+  forbiddenImports: [],
   maximumTodoAgeInDays: 90,
   specsDirectory: '.docs/specs',
   requiredSpecSections: ['Behaviour', 'User flows', 'Invariants', 'Out of scope'],

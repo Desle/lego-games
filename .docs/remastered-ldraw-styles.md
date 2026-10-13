@@ -1,6 +1,6 @@
 # LDraw render styles (remastered layer)
 
-How LEGO and LDraw models are drawn in genuinely different styles, and which of those fit the remastered `?hd` layer: real-time WebGL 2 with three.js, on the phone pixel budget of PR #122 (no extra full-screen pass, no extra render target, a few texture taps per fragment at most). Classic is never touched; the styles change only the LDraw plastic and its edge lines (`ldraw-car/ldraw-look.ts`, `ldraw-look-shader.ts`, `ldraw-plastic.ts`).
+How LEGO and LDraw models are drawn in genuinely different styles, and which of those fit the remastered `?hd` layer: real-time WebGL 2 with three.js, on the phone pixel budget of PR #122 (no extra full-screen pass, no extra render target, a few texture taps per fragment at most). Classic is never touched; the styles change only the LDraw plastic and its edge lines (`ldraw-look.ts` (`packages/ldraw`, module `material`), `ldraw-look-shader.ts`, `ldraw-plastic.ts`).
 
 The earlier presets (Manual, Studio, Photo, LEGO Movie) all moved along one axis, gloss: more clear coat, sharper reflections, then wear on top. The styles below each change a different axis: the shading model, the edge treatment, the colour handling or the output.
 

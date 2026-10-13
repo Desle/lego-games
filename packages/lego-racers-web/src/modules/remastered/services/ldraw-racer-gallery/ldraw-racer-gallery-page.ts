@@ -26,15 +26,17 @@ import {
   Vector3,
   WebGLRenderer,
 } from 'three'
-import { useLookFromAddress } from '../ldraw-car/ldraw-look.ts'
+import { useLookFromAddress } from '@lego-games/ldraw/material'
 import { DEVELOPMENT_JAM_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
 import { createModelObject } from '../../../track-viewer/index.ts'
 import { RacerPartKind } from '../ldraw-racer/ldraw-racer-drawing.types.ts'
-import type { RacerPartDrawingRequest } from '../ldraw-racer/ldraw-racer-drawing.types.ts'
+import type {
+  LDrawRacerPartDrawing,
+  RacerPartDrawingRequest,
+} from '../ldraw-racer/ldraw-racer-drawing.types.ts'
 import { createLDrawDriverDrawing } from '../ldraw-racer/ldraw-driver-drawing.ts'
 import { createLDrawWheelsDrawing } from '../ldraw-racer/ldraw-wheels-drawing.ts'
 import { ensureStudioLights } from '../ldraw-racer/studio-scene-lights.ts'
-import type { LDrawRacerPartDrawing } from '../ldraw-racer/ldraw-racer-drawing.types.ts'
 import type {
   GalleryCatalogueSlot,
   GalleryFigure,
@@ -42,8 +44,10 @@ import type {
   GalleryFocus,
   GalleryView,
 } from './ldraw-racer-gallery-page.types.ts'
+import { setUpLDrawModelParser } from '../ldraw-worker/ldraw-model-parser.ts'
 
 useLookFromAddress()
+setUpLDrawModelParser()
 
 const BACKGROUND_COLOR = 0x2b3340
 const FIELD_OF_VIEW = 30

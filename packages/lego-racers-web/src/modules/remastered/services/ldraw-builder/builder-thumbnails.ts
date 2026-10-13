@@ -1,6 +1,6 @@
 import { Box3, Group, PerspectiveCamera, Scene, Vector3, WebGLRenderer } from 'three'
 import { LDRAW_TO_STUDS } from '../ldraw-car/ldraw-car-document.ts'
-import { createStudioLights } from '../ldraw-car/ldraw-plastic.ts'
+import { createStudioLights } from '@lego-games/ldraw/material'
 import { createPartInstance, createThrowawayTemplate, disposeTemplate } from './builder-parts.ts'
 import type { BuilderThumbnails } from './builder-thumbnails.types.ts'
 

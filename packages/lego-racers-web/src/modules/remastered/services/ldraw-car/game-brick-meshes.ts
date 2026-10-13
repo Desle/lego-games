@@ -21,7 +21,7 @@ import {
 import {
   createPlasticMaterialFromColor,
   createPlasticMaterialFromTexture,
-} from './ldraw-plastic.ts'
+} from '@lego-games/ldraw/material'
 import { getLDrawBrickColor } from './ldraw-brick-colors.ts'
 import type { CarOrigin } from './ldraw-car-document.types.ts'
 import type { GameBrickMaterials, GameFaceBucket } from './game-brick-meshes.types.ts'

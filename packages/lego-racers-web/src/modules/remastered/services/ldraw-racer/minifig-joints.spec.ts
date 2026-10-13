@@ -1,6 +1,6 @@
 import { Matrix4, Vector3 } from 'three'
 import { MinifigPartKey } from './minifig-assembly.types.ts'
-import { MINIFIG_GEOMETRY } from './minifig-geometry.ts'
+import { MINIFIG_GEOMETRY } from '@lego-games/ldraw/minifig'
 import { MINIFIG_JOINT_LIMITS, getJointMatrices } from './minifig-joints.ts'
 import { getMinifigRig } from './minifig-rig.ts'
 import type { MinifigRig } from './minifig-rig.types.ts'

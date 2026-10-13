@@ -9,10 +9,10 @@ import {
   MeshBasicMaterial,
 } from 'three'
 import type { Material, Object3D } from 'three'
-import { applyPlasticLook } from '../ldraw-car/ldraw-plastic.ts'
-import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
-import { LDrawDetail } from '../ldraw-library/ldraw-library-loader.types.ts'
-import { formatPartLine } from './builder-document.ts'
+import { applyPlasticLook } from '@lego-games/ldraw/material'
+import { LDrawDetail, parseLDrawModel } from '@lego-games/ldraw/library'
+import { DEVELOPMENT_LDRAW_ROUTE } from '../ldraw-library/ldraw-library-route.ts'
+import { formatPartLine } from '@lego-games/ldraw/building'
 import type { BuilderBox, BuilderPartLine } from './ldraw-builder.types.ts'
 import type { PartTemplate, PartTemplates } from './builder-parts.types.ts'
 
@@ -44,6 +44,7 @@ const createTemplate = async (
 ): Promise<PartTemplate | null> => {
   const model = await parseLDrawModel(
     formatPartLine({ colorCode, position: [0, 0, 0], rotation: IDENTITY_ROTATION, partName }),
+    DEVELOPMENT_LDRAW_ROUTE,
     detail
   )
   applyPlasticLook(model)

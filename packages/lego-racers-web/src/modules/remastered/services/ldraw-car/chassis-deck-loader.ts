@@ -1,12 +1,20 @@
 import type { CarDesign } from '@lego-games/lego-racers/car-builder'
-import { parsePartLine, rotateVector } from '../ldraw-builder/builder-document.ts'
-import { createPartStudLists } from '../ldraw-builder/builder-studs.ts'
-import type { PartStud, PartStudLists } from '../ldraw-builder/builder-studs.types.ts'
+import {
+  createCachedReader,
+  createLibraryFileReader,
+  createPartStudLists,
+  parsePartLine,
+  rotateVector,
+} from '@lego-games/ldraw/building'
+import { DEVELOPMENT_LDRAW_ROUTE } from '../ldraw-library/ldraw-library-route.ts'
+import type { PartStud, PartStudLists } from '@lego-games/ldraw/building'
 import type { BuilderPartLine } from '../ldraw-builder/ldraw-builder.types.ts'
 import { getChassisDeck, getStudBases } from './chassis-deck.ts'
 import type { ChassisDeck, StudBase } from './chassis-deck.types.ts'
 
-const libraryStudLists = createPartStudLists()
+const libraryStudLists = createPartStudLists(
+  createCachedReader(createLibraryFileReader(DEVELOPMENT_LDRAW_ROUTE))
+)
 
 const getPlacedStud = (line: BuilderPartLine, stud: PartStud): PartStud => {
   const turned = rotateVector(line.rotation, stud.position)

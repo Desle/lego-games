@@ -1,6 +1,6 @@
 import { Box3, Group, Vector3 } from 'three'
 import type { Object3D } from 'three'
-import { disposeObject } from '../ldraw-racer/dispose-object.ts'
+import { disposeObject } from '@lego-games/ldraw/geometry'
 import type { FoundWheel } from './ldraw-racer-model.types.ts'
 
 const WHEEL_CATEGORIES: readonly string[] = ['wheel', 'tyre']

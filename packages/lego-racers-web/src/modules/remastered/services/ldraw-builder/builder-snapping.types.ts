@@ -1,6 +1,6 @@
 import { createEnum } from '../../../../shared/types/enum.types.ts'
 import type { EnumValues } from '../../../../shared/types/enum.types.ts'
-import type { PartShape } from './builder-studs.types.ts'
+import type { PartShape } from '@lego-games/ldraw/building'
 import type { BuilderBox, BuilderPart, Vector } from './ldraw-builder.types.ts'
 
 // What the builder knows of the parts it snaps: each part's shape (undefined while it has not arrived) and box, and the ground.

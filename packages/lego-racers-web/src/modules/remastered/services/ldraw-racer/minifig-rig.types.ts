@@ -1,5 +1,5 @@
 import type { MinifigPosture } from './minifig-assembly.types.ts'
-import type { MinifigSide } from './minifig-geometry.types.ts'
+import type { MinifigSide } from '@lego-games/ldraw/minifig'
 
 // Which way a leg or an arm points: the turn of one bone applied to the way the limb points in the bind pose (a direction of the
 // figure's frame, LDraw axes), or the straight line between two bones (an arm or a leg that is one rigid piece points from the bone

@@ -1,22 +1,21 @@
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import { Group, Matrix4 } from 'three'
-import type { RacerPartDrawingRequest } from './ldraw-racer-drawing.types.ts'
+import type { LDrawRacerPartDrawing, RacerPartDrawingRequest } from './ldraw-racer-drawing.types.ts'
 import {
   createMaterialSet,
+  disposeObject,
   getPreparedModel,
   instantiateModel,
-} from '../ldraw-car/detailed-model.ts'
-import type { MaterialSet } from '../ldraw-car/detailed-model.types.ts'
-import { LDrawDetail } from '../ldraw-library/ldraw-library-loader.types.ts'
+} from '@lego-games/ldraw/geometry'
+import type { MaterialSet } from '@lego-games/ldraw/geometry'
+import { LDrawDetail } from '@lego-games/ldraw/library'
 import { restoreDisplayColors } from './skin-colors.ts'
-import { disposeObject } from './dispose-object.ts'
-import type { LDrawRacerPartDrawing } from './ldraw-racer-drawing.types.ts'
 import { createFaceDecal, createTorsoDecal } from './minifig-decals.ts'
 import { createMinifigPartPlans } from './minifig-assembly.ts'
 import { MinifigPartKey, MinifigPosture } from './minifig-assembly.types.ts'
 import type { MinifigPartPlan } from './minifig-assembly.types.ts'
-import { MINIFIG_GEOMETRY } from './minifig-geometry.ts'
+import { MINIFIG_GEOMETRY } from '@lego-games/ldraw/minifig'
 import { getJointMatrices } from './minifig-joints.ts'
 import { getMinifigRig } from './minifig-rig.ts'
 import type { MinifigRig } from './minifig-rig.types.ts'

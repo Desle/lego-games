@@ -24,8 +24,7 @@ import {
 import type { Camera, Object3D } from 'three'
 import { DEVELOPMENT_JAM_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
 import { LDRAW_TO_STUDS } from '../ldraw-car/ldraw-car-document.ts'
-import { useLookFromAddress } from '../ldraw-car/ldraw-look.ts'
-import { createStudioLights } from '../ldraw-car/ldraw-plastic.ts'
+import { createStudioLights, useLookFromAddress } from '@lego-games/ldraw/material'
 import { DEVELOPMENT_LDRAW_ROUTE } from '../ldraw-library/ldraw-library-route.ts'
 import {
   DEVELOPMENT_LDRAW_MODELS_ROUTE,
@@ -34,13 +33,37 @@ import {
 import type { LDrawModelFile } from '../ldraw-models/ldraw-model-index.types.ts'
 import { parseBuildableColorNames } from '../reference-kit/ldraw-color-names.ts'
 import type { LDrawColorName } from '../reference-kit/reference-kit.types.ts'
-import { serializeBuilderDocument, turnQuarter } from './builder-document.ts'
 import {
+  addParts,
   createBuilderHistory,
+  createCachedReader,
+  createLibraryFileReader,
+  createPartShapes,
+  findSideStud,
+  getFacingRotation,
+  getGridPoint,
+  getGroundPhase,
+  getPartBottom,
+  getPartPhase,
+  getPlacedStuds,
+  getPlacementPosition,
+  getRotatedBox,
+  getSameColorIndices,
+  getSideStudPosition,
+  getStudOffset,
+  getTopGridPoint,
+  pickParts,
   pushBuilderHistory,
+  recolorParts,
   redoBuilderHistory,
+  removeParts,
+  serializeBuilderDocument,
+  STUD_WIDTH,
+  toggleIndex,
+  turnAbout,
+  turnQuarter,
   undoBuilderHistory,
-} from './builder-history.ts'
+} from '@lego-games/ldraw/building'
 import { getBuilderItems, getNextBuilderItem, getStartFiles } from './builder-items.ts'
 import {
   createBuilderView,
@@ -50,15 +73,6 @@ import {
   scaleBuilderView,
   zoomBuilderView,
 } from './builder-camera.ts'
-import {
-  addParts,
-  getSameColorIndices,
-  getStudOffset,
-  pickParts,
-  recolorParts,
-  removeParts,
-  toggleIndex,
-} from './builder-editing.ts'
 import { createBuilderPanel } from './builder-panel.ts'
 import { clearDraft, getStoredDraft, storeDraft } from './builder-draft.ts'
 import { getBuilderKeyCommand, QUICK_COLOR_CODES } from './builder-shortcuts.ts'
@@ -67,27 +81,12 @@ import { createBuilderThumbnails } from './builder-thumbnails.ts'
 import { ReferenceMode } from './builder-panel.types.ts'
 import { createGhostInstance, createPartInstance, createPartTemplates } from './builder-parts.ts'
 import {
-  findSideStud,
-  getGridPoint,
-  getGroundPhase,
-  getPartBottom,
-  getPartPhase,
-  getPlacedStuds,
-  getPlacementPosition,
-  getRotatedBox,
-  getSideStudPosition,
-  getTopGridPoint,
-  STUD_WIDTH,
-} from './builder-placement.ts'
-import { getFacingRotation, turnAbout } from './builder-rotation.ts'
-import {
   applySelectionEdit,
   dragSelection as dragSnappedSelection,
   getCameraStudStep as getViewStudStep,
   getSelectionEdit,
 } from './builder-snapping.ts'
 import type { SnapContext } from './builder-snapping.types.ts'
-import { createPartShapes } from './builder-studs.ts'
 import {
   createOriginalReference,
   createWheelGuides,
@@ -95,7 +94,7 @@ import {
   loadBuilderItemStart,
 } from './builder-reference.ts'
 import type { BuilderItemStart, OriginalReference } from './builder-reference.types.ts'
-import type { PartShape, PartStud } from './builder-studs.types.ts'
+import type { PartShape, PartStud } from '@lego-games/ldraw/building'
 import {
   BUILDER_PARTS_FILE,
   BUILDER_PROGRESS_FILE,
@@ -105,11 +104,13 @@ import {
 import { BuilderItemKind } from './ldraw-builder.types.ts'
 import type {
   BuilderBox,
+  BuilderItem,
   BuilderPart,
   BuilderProgress,
+  BuilderSaveResult,
   LibraryPart,
+  Vector,
 } from './ldraw-builder.types.ts'
-import type { BuilderItem, BuilderSaveResult, Vector } from './ldraw-builder.types.ts'
 import { PointerGesture } from './ldraw-builder-page.types.ts'
 import type {
   BuilderTool,
@@ -117,6 +118,7 @@ import type {
   PointerPosition,
   PointerPress,
 } from './ldraw-builder-page.types.ts'
+import { setUpLDrawModelParser } from '../ldraw-worker/ldraw-model-parser.ts'
 
 const BACKGROUND_COLOR = 0x2b3340
 const SELECTION_COLOR = 0xffd400
@@ -139,6 +141,7 @@ const DEFAULT_TOOL: BuilderTool = {
 const REFERENCE_MODES: readonly ReferenceMode[] = Object.values(ReferenceMode)
 
 useLookFromAddress()
+setUpLDrawModelParser()
 
 const findElement = (id: string): HTMLElement => {
   const found = document.getElementById(id)
@@ -216,7 +219,9 @@ const panel = createBuilderPanel(
 )
 
 const templates = createPartTemplates()
-const partShapes = createPartShapes()
+const partShapes = createPartShapes(
+  createCachedReader(createLibraryFileReader(DEVELOPMENT_LDRAW_ROUTE))
+)
 const thumbnails = createBuilderThumbnails()
 let archive: JamArchive | null = null
 let items: readonly BuilderItem[] = []

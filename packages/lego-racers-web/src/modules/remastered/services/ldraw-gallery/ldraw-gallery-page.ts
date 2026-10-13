@@ -8,7 +8,7 @@ import type { BrickDatabase, CarDesign, PlacedBrick } from '@lego-games/lego-rac
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { Object3D } from 'three'
-import { useLookFromAddress } from '../ldraw-car/ldraw-look.ts'
+import { useLookFromAddress } from '@lego-games/ldraw/material'
 import {
   Box3,
   Color,
@@ -28,8 +28,10 @@ import { createLDrawPickupDrawing } from '../ldraw-pickup/ldraw-pickup-drawing.t
 import { createLDrawCarDrawing } from '../ldraw-car/ldraw-car-drawing.ts'
 import { GalleryMode, GalleryView } from './ldraw-gallery-page.types.ts'
 import type { GalleryResult, GalleryScene, PieceSheetResult } from './ldraw-gallery-page.types.ts'
+import { setUpLDrawModelParser } from '../ldraw-worker/ldraw-model-parser.ts'
 
 useLookFromAddress()
+setUpLDrawModelParser()
 
 const BACKGROUND_COLOR = 0x2b3340
 const FIELD_OF_VIEW = 32

@@ -2,7 +2,6 @@ import { Vector3 } from 'three'
 import { LDRAW_TO_STUDS } from '../ldraw-car/ldraw-car-document.ts'
 import { getBuilderGroundAxes } from './builder-camera.ts'
 import type { BuilderView } from './builder-camera.types.ts'
-import { getStudStep, moveParts, tiltParts, turnParts } from './builder-editing.ts'
 import {
   getGridPoint,
   getGroundPhase,
@@ -11,14 +10,18 @@ import {
   getPlacedBox,
   getPlacementPosition,
   getRotatedBox,
+  getStudStep,
   getTopGridPoint,
+  moveParts,
   PLATE_HEIGHT,
   STUD_WIDTH,
-} from './builder-placement.ts'
+  tiltParts,
+  turnParts,
+} from '@lego-games/ldraw/building'
 import { BuilderAction } from './builder-shortcuts.types.ts'
 import { SelectionEditKind } from './builder-snapping.types.ts'
 import type { SelectionEdit, SnapContext, SnappedPart } from './builder-snapping.types.ts'
-import type { PartShape } from './builder-studs.types.ts'
+import type { PartShape } from '@lego-games/ldraw/building'
 import type { BuilderBox, BuilderPart, Vector } from './ldraw-builder.types.ts'
 
 const BRICK_HEIGHT = 3 * PLATE_HEIGHT

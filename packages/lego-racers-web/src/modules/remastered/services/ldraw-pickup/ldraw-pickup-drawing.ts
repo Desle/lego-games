@@ -1,7 +1,7 @@
 import { Group, Matrix4, Mesh, MeshPhysicalMaterial } from 'three'
 import type { Object3D } from 'three'
 import type { EffectModelDrawingRequest } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
-import { createDetailedPart, createMaterialSet } from '../ldraw-car/detailed-model.ts'
+import { createDetailedPart, createMaterialSet } from '@lego-games/ldraw/geometry'
 import { LDRAW_PICKUP_MAPPINGS } from './ldraw-pickup-mappings.ts'
 import type { LDrawPickupMapping } from './ldraw-pickup-mappings.types.ts'
 

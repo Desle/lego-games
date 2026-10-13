@@ -1,6 +1,6 @@
 import { DirectionalLight, Scene, Vector3 } from 'three'
 import type { Group, Matrix4, Object3D } from 'three'
-import { createStudioLights } from '../ldraw-car/ldraw-plastic.ts'
+import { createStudioLights } from '@lego-games/ldraw/material'
 
 // The studio's key light comes from behind; a figure seen from its front takes it from in front of the figure and a little above.
 const FRONT_KEY_POSITION = new Vector3(100, -10, 40)

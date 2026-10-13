@@ -1,0 +1,7 @@
+{
+  "extends": "@lego-games/tooling/tsconfig/bundler",
+  "compilerOptions": {
+    "types": ["vitest/globals"]
+  },
+  "include": ["src", "*.ts"]
+}

@@ -1,8 +1,8 @@
 import { Mesh, Vector3 } from 'three'
 import type { Material, Object3D } from 'three'
-import { DetailSwitch } from '../ldraw-car/detail-switch.ts'
-import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
-import { LDrawDetail } from '../ldraw-library/ldraw-library-loader.types.ts'
+import { DetailSwitch } from '@lego-games/ldraw/geometry'
+import { LDrawDetail, parseLDrawModel } from '@lego-games/ldraw/library'
+import { DEVELOPMENT_LDRAW_ROUTE } from '../ldraw-library/ldraw-library-route.ts'
 import { getPartsTakenFromCarBody } from '../ldraw-racer-model/racer-model-parts.ts'
 import { PartLoss } from './hd-coverage.types.ts'
 import type { ModelPartFinding, ModelPartLine } from './hd-coverage.types.ts'
@@ -106,7 +106,11 @@ export const checkModelParts = async (
     loss,
   })
   if (body === undefined) return lines.map((line) => getFinding(line, PartLoss.DROPPED))
-  const parsed = await parseLDrawModel(lines.map((line) => line.text).join('\n'), LDrawDetail.LOW)
+  const parsed = await parseLDrawModel(
+    lines.map((line) => line.text).join('\n'),
+    DEVELOPMENT_LDRAW_ROUTE,
+    LDrawDetail.LOW
+  )
   drawing.updateMatrixWorld(true)
   parsed.updateMatrixWorld(true)
   const taken = getPartsTakenFromCarBody(parsed)

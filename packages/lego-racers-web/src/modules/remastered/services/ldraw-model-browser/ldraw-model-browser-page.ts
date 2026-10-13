@@ -29,10 +29,16 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { DEVELOPMENT_JAM_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
 import { createChassisFallbackText } from '../ldraw-chassis/chassis-fallback.ts'
 import { LDRAW_TO_STUDS, getChassisFileName } from '../ldraw-car/ldraw-car-document.ts'
-import { getLookPreset, LOOK_APPEARANCES, setActiveLookPreset } from '../ldraw-car/ldraw-look.ts'
-import { LookPreset } from '../ldraw-car/ldraw-look.types.ts'
-import { applyPlasticLook, createStudioLights } from '../ldraw-car/ldraw-plastic.ts'
-import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
+import {
+  applyPlasticLook,
+  createStudioLights,
+  getLookPreset,
+  LOOK_APPEARANCES,
+  LookPreset,
+  setActiveLookPreset,
+} from '@lego-games/ldraw/material'
+import { parseLDrawModel } from '@lego-games/ldraw/library'
+import { DEVELOPMENT_LDRAW_ROUTE } from '../ldraw-library/ldraw-library-route.ts'
 import {
   DEVELOPMENT_LDRAW_MODELS_ROUTE,
   LDRAW_CHASSIS_FOLDER,
@@ -43,6 +49,7 @@ import { loadChampionBodyFaces } from '../reference-kit/champion-body-faces.ts'
 import { getReferencedChassisNames } from '../ldraw-racer-model/ldraw-racer-car.ts'
 import { describeLDrawModel } from './ldraw-model-description.ts'
 import type { BrowserScenes, DrawnScenes } from './ldraw-model-browser-page.types.ts'
+import { setUpLDrawModelParser } from '../ldraw-worker/ldraw-model-parser.ts'
 
 const BACKGROUND_COLOR = 0x2b3340
 const FIELD_OF_VIEW = 32
@@ -73,6 +80,7 @@ const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
 
 setActiveLookPreset(getLookPreset(location.search))
+setUpLDrawModelParser()
 let selectedPath: string | null = decodeURIComponent(location.hash.replace(/^#/, '')) || null
 let files: readonly LDrawModelFile[] = []
 let shown: LDrawModelFile | null = null
@@ -102,7 +110,7 @@ const getBaseName = (path: string): string =>
 
 // A model's parts in the frame the game uses (studs, z up), its look applied.
 const createLDrawObject = async (text: string): Promise<Group> => {
-  const model = await parseLDrawModel(text)
+  const model = await parseLDrawModel(text, DEVELOPMENT_LDRAW_ROUTE)
   applyPlasticLook(model)
   const holder = new Group()
   holder.matrixAutoUpdate = false

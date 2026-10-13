@@ -5,8 +5,8 @@ import {
 } from '@lego-games/lego-racers/car-builder'
 import { Group, Mesh } from 'three'
 import type { Object3D } from 'three'
-import type { LDrawDetail } from '../ldraw-library/ldraw-library-loader.types.ts'
-import { createDetailedBody } from './detailed-body.ts'
+import type { LDrawDetail } from '@lego-games/ldraw/library'
+import { createDetailedBody } from '@lego-games/ldraw/geometry'
 import { getBodyColoredDesign, getIsLDrawBrick } from './brick-body-color.ts'
 import { createGameBrickMeshes, getGameBrickMaterials } from './game-brick-meshes.ts'
 import { loadDesignGridOffset } from './chassis-grid-offset-loader.ts'
@@ -18,9 +18,9 @@ import {
   LDRAW_TO_STUDS,
   LDRAW_UNITS_PER_STUD,
 } from './ldraw-car-document.ts'
-import { createStudioLights } from './ldraw-plastic.ts'
-import type { PlasticMesh } from './ldraw-plastic.types.ts'
-import type { BodyWheel } from './detailed-body.types.ts'
+import { createStudioLights } from '@lego-games/ldraw/material'
+import type { PlasticMesh } from '@lego-games/ldraw/material'
+import type { SplitSubModel } from '@lego-games/ldraw/geometry'
 import type { LDrawCarDrawing, LDrawCarRequest } from './ldraw-car-drawing.types.ts'
 
 const NO_CHASSIS_MODELS: ReadonlyMap<string, string> = new Map()
@@ -43,7 +43,7 @@ export const createLDrawCarDrawing = (
   { archive, design }: LDrawCarRequest,
   isLDrawUsed = true,
   chassisModels: ReadonlyMap<string, string> = NO_CHASSIS_MODELS,
-  onWheels: ((wheels: readonly BodyWheel[], detail: LDrawDetail) => void) | null = null,
+  onWheels: ((wheels: readonly SplitSubModel[], detail: LDrawDetail) => void) | null = null,
   isStudioIncluded = true
 ): LDrawCarDrawing => {
   const database = parseBrickDatabase(archive.readFile(BRICK_DATABASE_PATH))

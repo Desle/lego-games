@@ -1,12 +1,8 @@
 import type { SceneMesh } from '@lego-games/lego-racers/scene'
 import { Group as ThreeGroup, Matrix4, Vector3 } from 'three'
-import type { RacerPartDrawingRequest } from './ldraw-racer-drawing.types.ts'
-import { LDrawDetail } from '../ldraw-library/ldraw-library-loader.types.ts'
-import {
-  createMaterialSet,
-  getPreparedModel,
-  instantiateModel,
-} from '../ldraw-car/detailed-model.ts'
+import type { LDrawRacerPartDrawing, RacerPartDrawingRequest } from './ldraw-racer-drawing.types.ts'
+import { LDrawDetail } from '@lego-games/ldraw/library'
+import { createMaterialSet, getPreparedModel, instantiateModel } from '@lego-games/ldraw/geometry'
 import { getBatchSurfaces } from './model-surface.ts'
 import { createPoseControls, createSkeletonPoseSampler } from './skeleton-pose.ts'
 import { getWheelSet } from './ldraw-wheel-sets.ts'
@@ -14,7 +10,6 @@ import { ensureStudioLights } from './studio-scene-lights.ts'
 import { findWheels } from './wheel-analysis.ts'
 import { getHubColor, getWheelKind } from './wheel-kind.ts'
 import type { WheelShape } from './wheel-analysis.types.ts'
-import type { LDrawRacerPartDrawing } from './ldraw-racer-drawing.types.ts'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 
 const LDRAW_UNITS_PER_STUD = 20

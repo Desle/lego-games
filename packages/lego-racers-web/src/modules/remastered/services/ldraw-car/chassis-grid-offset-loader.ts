@@ -1,7 +1,8 @@
 import type { CarDesign } from '@lego-games/lego-racers/car-builder'
 import { Mesh, Vector3 } from 'three'
 import type { Group, Object3D } from 'three'
-import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
+import { parseLDrawModel } from '@lego-games/ldraw/library'
+import { DEVELOPMENT_LDRAW_ROUTE } from '../ldraw-library/ldraw-library-route.ts'
 import { getDeckStuds, getFootprintCoverage } from './chassis-footprint-coverage.ts'
 import { loadDesignChassisDeck } from './chassis-deck-loader.ts'
 import { getGridOffset, getStudAreaBounds } from './chassis-grid-offset.ts'
@@ -36,7 +37,9 @@ export const loadDesignGridOffset = async (
   for (const brick of design.bricks) {
     const recipeText = chassisModels.get(brick.piece.name.toLowerCase())
     if (recipeText === undefined) continue
-    const bounds = getStudAreaBounds(getFacePositions(await parseLDrawModel(recipeText)))
+    const bounds = getStudAreaBounds(
+      getFacePositions(await parseLDrawModel(recipeText, DEVELOPMENT_LDRAW_ROUTE))
+    )
     return bounds === null ? NO_GRID_OFFSET : getGridOffset(brick.piece.footprint, bounds)
   }
   return NO_GRID_OFFSET
@@ -51,7 +54,7 @@ export const loadChassisFit = async (
   for (const brick of design.bricks) {
     const recipeText = chassisModels.get(brick.piece.name.toLowerCase())
     if (recipeText === undefined) continue
-    const positions = getFacePositions(await parseLDrawModel(recipeText))
+    const positions = getFacePositions(await parseLDrawModel(recipeText, DEVELOPMENT_LDRAW_ROUTE))
     const bounds = getStudAreaBounds(positions)
     const deck = await loadDesignChassisDeck(design, chassisModels)
     const gridOffset =
