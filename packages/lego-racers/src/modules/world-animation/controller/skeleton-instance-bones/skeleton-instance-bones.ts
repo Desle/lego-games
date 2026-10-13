@@ -83,9 +83,10 @@ export const getSkeletonInstanceBonePoint = (
   if (bone === undefined) return null
   const { rotation, translation } = bone
   const getComponent = (column: number): number => {
-    // @check-allow traced-constants: 3 and 6 are the offsets of the second and third rows in a 3×3 rotation matrix
     const first = storeFloat(multiply(rotation[column] ?? 0, point[0]))
+    // @check-allow traced-constants: 3 is the offset of the second row in a 3×3 rotation matrix
     const second = storeFloat(add(multiply(rotation[column + 3] ?? 0, point[1]), first))
+    // @check-allow traced-constants: 6 is the offset of the third row in a 3×3 rotation matrix
     const third = storeFloat(add(multiply(rotation[column + 6] ?? 0, point[2]), second))
     return storeFloat(add(translation[column] ?? 0, third))
   }

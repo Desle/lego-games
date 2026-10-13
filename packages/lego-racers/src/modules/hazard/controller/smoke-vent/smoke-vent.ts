@@ -28,24 +28,36 @@ const RANDOM_CHOICE_MASK = 0x3
 // two bits of a draw.
 const SMOKE_PLACES: readonly (readonly [number, number, number])[] = Object.freeze([
   Object.freeze([
-    getFloatFromBits(0xc1c3999a), // 0x004b45b0
-    getFloatFromBits(0x41d5eb85), // 0x004b45b4
-    getFloatFromBits(0xc19c7ae1), // 0x004b45b8
+    // 0x004b45b0
+    getFloatFromBits(0xc1c3999a),
+    // 0x004b45b4
+    getFloatFromBits(0x41d5eb85),
+    // 0x004b45b8
+    getFloatFromBits(0xc19c7ae1),
   ] as const),
   Object.freeze([
-    getFloatFromBits(0xc20ee148), // 0x004b45bc
-    getFloatFromBits(0x41168f5c), // 0x004b45c0
-    getFloatFromBits(0xc19347ae), // 0x004b45c4
+    // 0x004b45bc
+    getFloatFromBits(0xc20ee148),
+    // 0x004b45c0
+    getFloatFromBits(0x41168f5c),
+    // 0x004b45c4
+    getFloatFromBits(0xc19347ae),
   ] as const),
   Object.freeze([
-    getFloatFromBits(0xc0dccccd), // 0x004b45c8
-    getFloatFromBits(0xc112147b), // 0x004b45cc
-    getFloatFromBits(0xc177d70a), // 0x004b45d0
+    // 0x004b45c8
+    getFloatFromBits(0xc0dccccd),
+    // 0x004b45cc
+    getFloatFromBits(0xc112147b),
+    // 0x004b45d0
+    getFloatFromBits(0xc177d70a),
   ] as const),
   Object.freeze([
-    getFloatFromBits(0x408bd70a), // 0x004b45d4
-    getFloatFromBits(0x4108a3d7), // 0x004b45d8
-    getFloatFromBits(0xc1853333), // 0x004b45dc
+    // 0x004b45d4
+    getFloatFromBits(0x408bd70a),
+    // 0x004b45d8
+    getFloatFromBits(0x4108a3d7),
+    // 0x004b45dc
+    getFloatFromBits(0xc1853333),
   ] as const),
 ])
 
