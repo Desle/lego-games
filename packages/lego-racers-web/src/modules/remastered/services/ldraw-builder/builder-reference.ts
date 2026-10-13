@@ -14,7 +14,8 @@ import {
 } from '@lego-games/lego-racers/racer-appearance'
 import type { ModelResourceNames } from '@lego-games/lego-racers/racer-appearance'
 import { loadModelScene } from '@lego-games/lego-racers/scene'
-import { CylinderGeometry, Group, Mesh, MeshBasicMaterial } from 'three'
+import { Box3, CylinderGeometry, Group, Mesh, MeshBasicMaterial } from 'three'
+import type { Material, Object3D } from 'three'
 import { createModelObject, loadEffectModel } from '../../../track-viewer/index.ts'
 import {
   createOriginalObject,
@@ -40,6 +41,8 @@ import {
   parseBuilderDocument,
 } from '@lego-games/ldraw/building'
 import { getBuilderItemFile } from './builder-items.ts'
+import { getPowerUpReferenceShape } from './builder-reference-shape.ts'
+import { ReferenceShape } from './builder-reference.types.ts'
 import type { BuilderItemStart, OriginalReference } from './builder-reference.types.ts'
 import { BuilderItemKind } from './ldraw-builder.types.ts'
 import type { BuilderItem, BuilderPart } from './ldraw-builder.types.ts'
@@ -73,16 +76,52 @@ const createOriginalWheels = (archive: JamArchive, names: ModelResourceNames) =>
   return createOriginalObject(model, createSkeletonPoseSampler(model)?.createState() ?? null)
 }
 
+const getIsSeeThrough = (object: Object3D): boolean => {
+  let isSeeThrough = false
+  object.traverse((child) => {
+    if (!(child instanceof Mesh)) return
+    const materials: readonly Material[] = Array.isArray(child.material)
+      ? child.material
+      : [child.material]
+    if (materials.some((material) => material.transparent)) isSeeThrough = true
+  })
+  return isSeeThrough
+}
+
+// The reference with its world matrices brought up to date (a group the race poses has no automatic matrix, so a bounds query
+// before the first frame would see its mesh unscaled) and the bounds of what it shows.
+const createShownReference = (
+  object: Group,
+  dispose: () => void,
+  getShape: (bounds: Box3) => ReferenceShape
+): OriginalReference => {
+  object.updateMatrixWorld(true)
+  const bounds = new Box3().setFromObject(object)
+  return { object, dispose, bounds, shape: getShape(bounds) }
+}
+
 // A power-up object's mesh as its file stores it (the frame its LDraw file is drawn in), shown in studs of the power-up brick on the
-// ground (powerup-object-frame.ts).
+// ground (powerup-object-frame.ts), drawn as race-effects draws it.
 const createPowerUpReference = (archive: JamArchive, name: string): OriginalReference => {
   const model = loadEffectModel(archive, name, false)
   const original = createModelObject(model)
-  original.group.matrix.copy(getPowerUpReferenceMatrix(getOriginalModelBounds(model)))
+  const posedBounds = getOriginalModelBounds(model)
+  original.group.updateMatrixWorld(true)
+  // A mesh with no triangle on its posed bone gives the frame no bounds: it stands on the ground by all it draws instead.
+  const standingBounds = posedBounds.isEmpty()
+    ? new Box3().setFromObject(original.group)
+    : posedBounds
+  original.group.matrix.copy(getPowerUpReferenceMatrix(standingBounds))
   const object = new Group()
   object.add(original.group)
-  return { object, dispose: () => original.object.dispose() }
+  return createShownReference(
+    object,
+    () => original.object.dispose(),
+    (bounds) => getPowerUpReferenceShape(posedBounds, bounds, getIsSeeThrough(object))
+  )
 }
+
+const getSolidShape = (): ReferenceShape => ReferenceShape.SOLID
 
 // The original's model of the item at rest, as the race draws it, in the car's frame (studs, z up): a champion's body and wheels, or
 // a chassis brick alone with the wheels the game puts on it; a power-up object's mesh. None for a driver.
@@ -101,13 +140,14 @@ export const createOriginalReference = (
     const wheels = createOriginalWheels(archive, appearance.wheelModel)
     const object = new Group()
     object.add(body.group, wheels.group)
-    return {
+    return createShownReference(
       object,
-      dispose: () => {
+      () => {
         body.object.dispose()
         wheels.object.dispose()
       },
-    }
+      getSolidShape
+    )
   }
   const piece = findBrickPieceByName(
     parseBrickDatabase(archive.readFile(BRICK_DATABASE_PATH)),
@@ -121,13 +161,14 @@ export const createOriginalReference = (
   )
   const object = new Group()
   object.add(chassis.group, wheels.group)
-  return {
+  return createShownReference(
     object,
-    dispose: () => {
+    () => {
       chassis.object.dispose()
       wheels.object.dispose()
     },
-  }
+    getSolidShape
+  )
 }
 
 // See-through cylinders where the game puts the item's wheels (car frame, studs): a body leaves room for them.

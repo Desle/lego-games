@@ -1,11 +1,16 @@
 import type { BuilderGroundAxes, BuilderView } from './builder-camera.types.ts'
 import type { Vector } from './ldraw-builder.types.ts'
 
+// The build view's vertical field of view (degrees) and the direction it first looks from (target to camera).
+export const BUILDER_FIELD_OF_VIEW = 32
+export const BUILDER_VIEW_DIRECTION: Vector = [0.7, -1, 0.6]
 const ORBIT_RADIANS_PER_PIXEL = 0.006
 const ZOOM_PER_PIXEL = 0.01
 const ELEVATION_LIMIT = Math.PI / 2 - 0.01
 const MINIMUM_DISTANCE = 0.5
 const MAXIMUM_DISTANCE = 500
+const MINIMUM_FRAMED_RADIUS = 0.25
+const FRAME_MARGIN = 1.25
 
 const clamp = (value: number, minimum: number, maximum: number): number =>
   Math.min(maximum, Math.max(minimum, value))
@@ -23,6 +28,33 @@ export const createBuilderView = (
     elevation: clamp(Math.asin(direction[2] / length), -ELEVATION_LIMIT, ELEVATION_LIMIT),
     distance: clamp(distance, MINIMUM_DISTANCE, MAXIMUM_DISTANCE),
   })
+}
+
+// A view from the direction that holds the whole box (min and max corners) inside a viewport of the given aspect (width over height)
+// and vertical field of view (degrees): the box's bounding sphere fits the narrower of the two angles, with a margin.
+export const getFramingView = (
+  minimum: Vector,
+  maximum: Vector,
+  direction: Vector,
+  aspect: number,
+  fieldOfView: number
+): BuilderView => {
+  const halfHeight = (fieldOfView * Math.PI) / 360
+  const halfWidth = Math.atan(Math.tan(halfHeight) * Math.max(aspect, Number.EPSILON))
+  const radius = Math.max(
+    Math.hypot(maximum[0] - minimum[0], maximum[1] - minimum[1], maximum[2] - minimum[2]) / 2,
+    MINIMUM_FRAMED_RADIUS
+  )
+  const centre: Vector = [
+    (minimum[0] + maximum[0]) / 2,
+    (minimum[1] + maximum[1]) / 2,
+    (minimum[2] + maximum[2]) / 2,
+  ]
+  return createBuilderView(
+    centre,
+    direction,
+    (radius * FRAME_MARGIN) / Math.sin(Math.min(halfHeight, halfWidth))
+  )
 }
 
 export const getBuilderViewPosition = (view: BuilderView): Vector => {

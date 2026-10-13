@@ -2,6 +2,7 @@ import {
   createBuilderView,
   getBuilderGroundAxes,
   getBuilderViewPosition,
+  getFramingView,
   orbitBuilderView,
   panBuilderView,
   zoomBuilderView,
@@ -56,5 +57,21 @@ describe('builder camera', () => {
 
     // Assert
     expect(round([...axes.right, ...axes.forward])).toEqual([0, 1, 0, -1, 0, 0])
+  })
+
+  it('frames a box about its centre, further back in a narrow viewport, never closer than a small radius', () => {
+    // Arrange
+    const minimum = [-1, -1, 0] as const
+    const maximum = [1, 1, 2] as const
+
+    // Act
+    const wide = getFramingView(minimum, maximum, [1, 0, 0], 2, 32)
+    const narrow = getFramingView(minimum, maximum, [1, 0, 0], 0.5, 32)
+    const tiny = getFramingView([0, 0, 0], [0.01, 0.01, 0.01], [1, 0, 0], 1, 32)
+
+    // Assert
+    expect(round(wide.target)).toEqual([0, 0, 1])
+    expect(narrow.distance).toBeGreaterThan(wide.distance)
+    expect(tiny.distance).toBeGreaterThan(0.5)
   })
 })
