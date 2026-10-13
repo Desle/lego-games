@@ -38,3 +38,19 @@ export const CHASSIS_NAMES: readonly string[] = Object.freeze([
   'rrchas0',
   'vvchas0',
 ])
+
+// The chassis the other 12 champions' cars stand on (lower case); no garage design uses them, so they are not in CHASSIS_NAMES.
+export const CHAMPION_CHASSIS_NAMES: readonly string[] = Object.freeze([
+  'bkchas0',
+  'rkchas0',
+  'rhchas0',
+  'ccchas0',
+  'achas0',
+  'phchas0',
+  'gbchas0',
+  'bhchas0',
+  'sbchas0',
+  'tcchas0',
+  'nhchas0',
+  'apchas0',
+])

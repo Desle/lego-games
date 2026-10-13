@@ -1,7 +1,7 @@
 import { getBuilderItemFile, getBuilderItems, getNextBuilderItem } from './builder-items.ts'
 
 describe('getBuilderItems', () => {
-  it('queues the 12 chassis, then the 20 cars on their chassis', () => {
+  it('queues the 24 chassis (garage and champions), then the 20 cars on their chassis', () => {
     // Arrange
     const championChassis = new Map([['RRCM', 'RRchas0']])
 
@@ -9,7 +9,8 @@ describe('getBuilderItems', () => {
     const items = getBuilderItems(championChassis)
 
     // Assert
-    expect(items).toHaveLength(32)
+    expect(items).toHaveLength(44)
+    expect(items[12]?.id).toBe('chassis/bkchas0')
     expect(items[0]?.id).toBe('chassis/jtchas0')
     expect(items.find((item) => item.id === 'RRCM')?.chassisName).toBe('rrchas0')
   })
@@ -21,12 +22,22 @@ describe('getBuilderItemFile', () => {
     const existing = ['chassis/RRchas0.ldr', 'KKCM.mpd']
 
     // Act
-    const files = ['chassis/rrchas0', 'chassis/jtchas0', 'KKCM', 'chassis/../x'].map((id) =>
-      getBuilderItemFile(id, existing)
-    )
+    const files = [
+      'chassis/rrchas0',
+      'chassis/jtchas0',
+      'chassis/bkchas0',
+      'KKCM',
+      'chassis/../x',
+    ].map((id) => getBuilderItemFile(id, existing))
 
     // Assert
-    expect(files).toEqual(['chassis/RRchas0.ldr', 'chassis/JTCHAS0.ldr', 'KKCM.ldr', null])
+    expect(files).toEqual([
+      'chassis/RRchas0.ldr',
+      'chassis/JTCHAS0.ldr',
+      'chassis/BKCHAS0.ldr',
+      'KKCM.ldr',
+      null,
+    ])
   })
 })
 
