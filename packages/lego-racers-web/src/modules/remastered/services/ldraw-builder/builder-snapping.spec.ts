@@ -106,6 +106,22 @@ describe('applySelectionEdit', () => {
     expect(lowered[1]?.position).toEqual(ON_BASE.position)
   })
 
+  it('lifts straight up to the next plate level, from off the grid too, without sliding across', () => {
+    // Arrange
+    const offGrid = createPart('3023b.dat', [23, -14, 7])
+    const parts = [BASE, offGrid]
+
+    // Act
+    const lifted = edit(parts, BuilderAction.RAISE_PLATE)
+    const raisedBrick = edit(parts, BuilderAction.RAISE_BRICK)
+    const lowered = edit(lifted, BuilderAction.LOWER_PLATE)
+
+    // Assert
+    expect(lifted[1]?.position).toEqual([23, -24, 7])
+    expect(raisedBrick[1]?.position).toEqual([23, -40, 7])
+    expect(lowered[1]?.position).toEqual([23, -16, 7])
+  })
+
   it('drops a part moved off the plate onto the ground', () => {
     // Arrange
     const parts = [BASE, createPart('3023b.dat', [20, -16, 10])]

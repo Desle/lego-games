@@ -237,6 +237,32 @@ const getTurnPivot = (
   return [getAxis(0), 0, getAxis(2)]
 }
 
+// Straight up or down by whole plates: the lowest part's bottom goes to the plate level that many levels from the one nearest it, and
+// nothing moves across (a lift never slides onto the grid of a part above or below).
+const liftSelection = (
+  parts: readonly BuilderPart[],
+  indices: readonly number[],
+  offset: Vector,
+  context: SnapContext
+): readonly BuilderPart[] => {
+  const bottoms = indices
+    .map((index) => parts[index])
+    .filter((part): part is BuilderPart => part !== undefined)
+    .map((part) => getSnappedPart(part, context))
+    .filter((entry): entry is SnappedPart => entry !== null)
+    .map((entry) => entry.bottom)
+  if (bottoms.length === 0) return moveParts(parts, indices, offset)
+  const bottom = Math.max(...bottoms)
+  const levels = Math.round(offset[1] / PLATE_HEIGHT)
+  const level = Math.round((bottom - context.groundHeight) / PLATE_HEIGHT) + levels
+  const rise = context.groundHeight + level * PLATE_HEIGHT - bottom
+  // Going down it stops on what is under it (y is down): it never sinks into a part or the ground.
+  const first = indices[0] ?? 0
+  const rested = snapSelection(parts, indices, context, true)
+  const fall = (rested[first]?.position[1] ?? 0) - (parts[first]?.position[1] ?? 0)
+  return moveParts(parts, indices, [0, Math.min(rise, Math.max(fall, 0)), 0])
+}
+
 // A key's edit of the selection: every edit but a nudge leaves it on the stud grid of what is under it, a step and a turn resting on
 // it when it rested before.
 export const applySelectionEdit = (
@@ -247,9 +273,8 @@ export const applySelectionEdit = (
 ): readonly BuilderPart[] => {
   if (indices.length === 0) return parts
   if (edit.kind === SelectionEditKind.NUDGE) return moveParts(parts, indices, edit.offset)
-  if (edit.kind === SelectionEditKind.LIFT) {
-    return snapSelection(moveParts(parts, indices, edit.offset), indices, context, false)
-  }
+  if (edit.kind === SelectionEditKind.LIFT)
+    return liftSelection(parts, indices, edit.offset, context)
   const isResting = getIsSelectionResting(parts, indices, context)
   const edited =
     edit.kind === SelectionEditKind.STEP
