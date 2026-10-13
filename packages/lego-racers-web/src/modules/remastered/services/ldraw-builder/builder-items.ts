@@ -1,10 +1,15 @@
 import { POWER_UP_OBJECT_MODEL_NAMES } from '../../../../shared/viewer-extensions/effect-model-names.ts'
+import { POWER_UP_SPRITE_NAMES } from '../ldraw-powerup/powerup-sprites.ts'
 import {
   CHAMPION_CAR_CODES,
   CHASSIS_NAMES,
   DRIVER_NAMES,
 } from '../ldraw-racer-model/known-racer-models.ts'
-import { LDRAW_POWER_UPS_FOLDER } from '../ldraw-models/ldraw-models-route.ts'
+import {
+  LDRAW_PARTICLES_FOLDER,
+  LDRAW_POWER_UPS_FOLDER,
+} from '../ldraw-models/ldraw-models-route.ts'
+import { LDrawParticleKind } from '../ldraw-particles/ldraw-particle-mappings.types.ts'
 import { BuilderItemKind } from './ldraw-builder.types.ts'
 import type { BuilderItem, StartFileGroup } from './ldraw-builder.types.ts'
 
@@ -12,6 +17,10 @@ const CHASSIS_RECIPE_FILE = /^chassis\/[^/]+\.ldr$/i
 const CAR_FILE = /^([^/]+)\.(ldr|mpd)$/i
 const DRIVER_FILE = /^drivers\/[^/]+\.ldr$/i
 const POWER_UP_FILE = /^powerups\/[^/]+\.ldr$/i
+const PARTICLE_FILE = /^particles\/[^/]+\.ldr$/i
+const PARTICLE_NAMES: readonly string[] = Object.values(LDrawParticleKind).map((kind) =>
+  kind.toUpperCase()
+)
 const DRAFTS_FOLDER = 'drafts/'
 
 export const getChassisItemId = (name: string): string => `chassis/${name.toLowerCase()}`
@@ -20,8 +29,11 @@ const getDriverItemId = (name: string): string => `drivers/${name.toUpperCase()}
 
 const getPowerUpItemId = (name: string): string => `${LDRAW_POWER_UPS_FOLDER}/${name.toUpperCase()}`
 
+const getParticleItemId = (name: string): string =>
+  `${LDRAW_PARTICLES_FOLDER}/${name.toUpperCase()}`
+
 // The queue: the 12 chassis first (the cars stand on them), then the 20 champions' cars, each on the chassis its champion drives, then
-// the 24 drivers, then the 24 power-up objects.
+// the 24 drivers, then the 24 power-up objects and the power-up sprites (the cannon ball), then the 11 kinds of particle.
 export const getBuilderItems = (
   championChassis: ReadonlyMap<string, string>
 ): readonly BuilderItem[] =>
@@ -50,10 +62,18 @@ export const getBuilderItems = (
         chassisName: '',
       })
     ),
-    ...POWER_UP_OBJECT_MODEL_NAMES.map((name) =>
+    ...[...POWER_UP_OBJECT_MODEL_NAMES, ...POWER_UP_SPRITE_NAMES].map((name) =>
       Object.freeze({
         id: getPowerUpItemId(name),
         kind: BuilderItemKind.POWER_UP,
+        name,
+        chassisName: '',
+      })
+    ),
+    ...PARTICLE_NAMES.map((name) =>
+      Object.freeze({
+        id: getParticleItemId(name),
+        kind: BuilderItemKind.PARTICLE,
         name,
         chassisName: '',
       })
@@ -65,12 +85,15 @@ const getWantedFile = (itemId: string): string | null => {
   if (chassisName !== undefined) return `chassis/${chassisName.toUpperCase()}.ldr`
   if (CHAMPION_CAR_CODES.includes(itemId)) return `${itemId}.ldr`
   const isDriver = DRIVER_NAMES.some((name) => getDriverItemId(name) === itemId)
-  const isPowerUp = POWER_UP_OBJECT_MODEL_NAMES.some((name) => getPowerUpItemId(name) === itemId)
-  return isDriver || isPowerUp ? `${itemId}.ldr` : null
+  const isPowerUp = [...POWER_UP_OBJECT_MODEL_NAMES, ...POWER_UP_SPRITE_NAMES].some(
+    (name) => getPowerUpItemId(name) === itemId
+  )
+  const isParticle = PARTICLE_NAMES.some((name) => getParticleItemId(name) === itemId)
+  return isDriver || isPowerUp || isParticle ? `${itemId}.ldr` : null
 }
 
 // The models folder's file an item is saved to: the file already there (whatever its case), else `chassis/<NAME>.ldr`, `<CODE>.ldr`,
-// `drivers/<NAME>.ldr` or `powerups/<MODEL>.ldr`. Null for an id that is not one of the items.
+// `drivers/<NAME>.ldr`, `powerups/<MODEL>.ldr` or `particles/<KIND>.ldr`. Null for an id that is not one of the items.
 export const getBuilderItemFile = (
   itemId: string,
   existingFiles: readonly string[]
@@ -96,8 +119,8 @@ const getStem = (path: string): string =>
 
 // The models folder's files an item may start from, grouped: for a car, every champion's car (its parts are copied in, a chassis
 // recipe it places made its own) and every chassis recipe; for a chassis, its own recipe; for a driver, every driver; for a power-up
-// object, every power-up object; then the item's own drafts and backups (a driver's and a power-up object's only in `drafts/`, by
-// `<NAME>-`: a short name is the start of many others).
+// object, every power-up object; for a particle, every particle; then the item's own drafts and backups (a driver's, a power-up
+// object's and a particle's only in `drafts/`, by `<NAME>-`: a short name is the start of many others).
 export const getStartFiles = (
   item: BuilderItem,
   paths: readonly string[]
@@ -106,7 +129,8 @@ export const getStartFiles = (
   const isCar = item.kind === BuilderItemKind.CAR
   const isDriver = item.kind === BuilderItemKind.DRIVER
   const isPowerUp = item.kind === BuilderItemKind.POWER_UP
-  const isNamedInDrafts = isDriver || isPowerUp
+  const isParticle = item.kind === BuilderItemKind.PARTICLE
+  const isNamedInDrafts = isDriver || isPowerUp || isParticle
   const carCodes = new Set(CHAMPION_CAR_CODES.map((code) => code.toLowerCase()))
   const cars = isCar
     ? paths.filter((path) => {
@@ -119,6 +143,7 @@ export const getStartFiles = (
     : paths.filter((path) => CHASSIS_RECIPE_FILE.test(path) && (isCar || getStem(path) === name))
   const drivers = isDriver ? paths.filter((path) => DRIVER_FILE.test(path)) : []
   const powerUps = isPowerUp ? paths.filter((path) => POWER_UP_FILE.test(path)) : []
+  const particles = isParticle ? paths.filter((path) => PARTICLE_FILE.test(path)) : []
   const getIsDraft = (path: string) =>
     isNamedInDrafts
       ? path.toLowerCase().startsWith(DRAFTS_FOLDER) &&
@@ -131,6 +156,7 @@ export const getStartFiles = (
       { label: 'Chassis', files: chassis },
       { label: 'Drivers', files: drivers },
       { label: 'Power-ups', files: powerUps },
+      { label: 'Particles', files: particles },
       { label: 'Backups/drafts', files: drafts },
     ]
       .filter((group) => group.files.length > 0)

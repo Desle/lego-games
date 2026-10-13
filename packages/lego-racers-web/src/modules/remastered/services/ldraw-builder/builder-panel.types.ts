@@ -31,6 +31,9 @@ export type BuilderPanelHandlers = {
   readonly onRotate: () => void
   readonly onDeleteSelected: () => void
   readonly onDone: () => void
+  // A step up (1) or down (-1) of the scale, or back to the fitted scale.
+  readonly onScaleStep: (direction: number) => void
+  readonly onScaleFit: () => void
   readonly onShortcutsToggle: () => void
   readonly getThumbnail: (
     partName: string,
@@ -53,6 +56,13 @@ export type BuilderToolView = {
   readonly isHolding: boolean
 }
 
+// The scale control of a power-up object or a particle: the factor the file is drawn at and what its reset is called.
+export type BuilderScaleView = {
+  readonly isShown: boolean
+  readonly factor: number
+  readonly fitLabel: string
+}
+
 export type BuilderPanel = {
   readonly showQueue: (view: BuilderQueueView) => void
   readonly showStartFiles: (groups: readonly StartFileGroup[], selected: string | null) => void
@@ -62,6 +72,7 @@ export type BuilderPanel = {
   readonly showUsedParts: (partNames: readonly string[]) => void
   readonly showColors: (colors: readonly LDrawColorName[]) => void
   readonly showTool: (tool: BuilderToolView) => void
+  readonly showScale: (view: BuilderScaleView) => void
   readonly showStatus: (text: string) => void
   // What a click in the build view does right now.
   readonly showHint: (text: string) => void

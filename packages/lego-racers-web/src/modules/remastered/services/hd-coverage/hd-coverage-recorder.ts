@@ -8,7 +8,7 @@ import type {
   ViewerExtension,
 } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import { getLDrawModelIndex } from '../ldraw-models/ldraw-model-client.ts'
-import { LDRAW_PARTICLE_MATERIALS } from '../ldraw-particles/ldraw-particle-mappings.ts'
+import { getIsParticleMaterialDrawn } from '../ldraw-particles/ldraw-particle-drawing.ts'
 import {
   getEffectModelDrawingSource,
   POWER_UP_DRAWING_FAILED_KEY,
@@ -77,7 +77,7 @@ const getParticleCall = (id: number, request: ParticleDrawingRequest): HookCall 
     hook: HookKind.PARTICLE,
     key: request.materialName,
     wheelsKey: null,
-    isModelPresent: LDRAW_PARTICLE_MATERIALS[request.materialName] !== undefined,
+    isModelPresent: getIsParticleMaterialDrawn(request.materialName),
     isDrawingReturned: false,
     isFailed: false,
   })

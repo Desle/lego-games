@@ -10,6 +10,7 @@ const INDEX: LDrawModelIndex = {
   chassis: {},
   drivers: {},
   powerUps: { DMISSILE: 'powerups/DMISSILE.ldr', PUBRICKY: 'powerups/PUBRICKY.ldr' },
+  particles: {},
 }
 
 describe('getEffectModelDrawingSource', () => {

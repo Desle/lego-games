@@ -38,6 +38,9 @@ export const BuilderAction = createEnum({
   REFERENCE: 'reference',
   WHEEL_GUIDES: 'wheel_guides',
   SHORTCUTS: 'shortcuts',
+  SCALE_UP: 'scale_up',
+  SCALE_DOWN: 'scale_down',
+  SCALE_FIT: 'scale_fit',
 })
 export type BuilderAction = EnumValues<typeof BuilderAction>
 

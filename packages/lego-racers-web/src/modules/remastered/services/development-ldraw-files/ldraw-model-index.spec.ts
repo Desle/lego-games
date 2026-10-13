@@ -5,12 +5,13 @@ import { readLDrawModelFolders } from '@lego-games/ldraw-studio/files'
 import { createLDrawModelIndex } from './ldraw-model-index.ts'
 
 describe('createLDrawModelIndex', () => {
-  it('lists cars by upper-case code and chassis recipes by lower-case name, drivers and power-up objects by upper-case name, leaving out notes', () => {
+  it('lists cars by upper-case code and chassis recipes by lower-case name, drivers, power-up objects and particles by upper-case name, leaving out notes', () => {
     // Arrange
     const root = mkdtempSync(join(tmpdir(), 'ldraw-models-'))
     mkdirSync(join(root, 'chassis'))
     mkdirSync(join(root, 'drivers'))
     mkdirSync(join(root, 'powerups'))
+    mkdirSync(join(root, 'particles'))
     mkdirSync(join(root, 'drafts'))
     for (const file of ['rrcm.ldr', 'KKCM.mpd', 'KKCM.ldr', '_convention-test.ldr', 'README.md']) {
       writeFileSync(join(root, file), '')
@@ -19,6 +20,7 @@ describe('createLDrawModelIndex', () => {
     writeFileSync(join(root, 'drivers', 'bvb.ldr'), '')
     writeFileSync(join(root, 'powerups', 'dmissile.ldr'), '')
     writeFileSync(join(root, 'powerups', '_test.ldr'), '')
+    writeFileSync(join(root, 'particles', 'white_smoke.ldr'), '')
     writeFileSync(join(root, 'drafts', 'RRCM.ldr'), '')
 
     // Act
@@ -30,6 +32,7 @@ describe('createLDrawModelIndex', () => {
       chassis: { jtchas0: 'chassis/JTCHAS0.ldr' },
       drivers: { BVB: 'drivers/bvb.ldr' },
       powerUps: { DMISSILE: 'powerups/dmissile.ldr' },
+      particles: { WHITE_SMOKE: 'particles/white_smoke.ldr' },
     })
   })
 
@@ -41,6 +44,6 @@ describe('createLDrawModelIndex', () => {
     const index = createLDrawModelIndex(readLDrawModelFolders(root))
 
     // Assert
-    expect(index).toEqual({ cars: {}, chassis: {}, drivers: {}, powerUps: {} })
+    expect(index).toEqual({ cars: {}, chassis: {}, drivers: {}, powerUps: {}, particles: {} })
   })
 })

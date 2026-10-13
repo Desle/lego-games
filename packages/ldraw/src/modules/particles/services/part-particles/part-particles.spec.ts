@@ -29,7 +29,8 @@ const createPart = (): Group => {
 const getShader = (): WebGLProgramParametersWithUniforms =>
   ({
     uniforms: {},
-    vertexShader: '#include <common>\nvoid main() {\n#include <begin_vertex>\n}',
+    vertexShader:
+      '#include <common>\nvoid main() {\n#include <begin_vertex>\n#include <project_vertex>\n}',
     fragmentShader: '#include <common>\nvoid main() {\n#include <opaque_fragment>\n}',
   }) as unknown as WebGLProgramParametersWithUniforms
 
@@ -122,6 +123,23 @@ describe('createParticleMaterial', () => {
       shader.fragmentShader.startsWith('// look'),
       shader.fragmentShader.includes('diffuseColor.a *= vParticleOpacity;'),
       shader.vertexShader.includes(`vParticleOpacity = ${PARTICLE_OPACITY_ATTRIBUTE};`),
-    ]).toEqual([true, 'ldraw-look|part-particles', true, true, true])
+    ]).toEqual([true, 'ldraw-look|part-particles|0', true, true, true])
+  })
+
+  it('fades a particle out closer to the camera than the near distance, as a program of its own', () => {
+    // Arrange
+    const shader = getShader()
+
+    // Act
+    const material = createParticleMaterial(new MeshPhysicalMaterial(), 6)
+    material.onBeforeCompile(shader, {} as WebGLRenderer)
+
+    // Assert
+    expect([
+      material.customProgramCacheKey().endsWith('|part-particles|6'),
+      shader.vertexShader.includes('vParticleDepth = -mvPosition.z;'),
+      shader.fragmentShader.includes('smoothstep(3.0, 6.0, vParticleDepth)'),
+      shader.fragmentShader.includes('discard;'),
+    ]).toEqual([true, true, true, true])
   })
 })

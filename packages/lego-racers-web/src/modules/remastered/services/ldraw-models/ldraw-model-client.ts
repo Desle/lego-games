@@ -6,6 +6,7 @@ const EMPTY_INDEX: LDrawModelIndex = Object.freeze({
   chassis: Object.freeze({}),
   drivers: Object.freeze({}),
   powerUps: Object.freeze({}),
+  particles: Object.freeze({}),
 })
 
 let index: LDrawModelIndex = EMPTY_INDEX
