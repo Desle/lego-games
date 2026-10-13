@@ -25,6 +25,7 @@ import type { EmitterPool } from '@lego-games/lego-racers/emitter'
 import {
   getMaterialSlotWrites,
   getSkeletonInstanceSphere,
+  getTextureScrollOffsets,
 } from '@lego-games/lego-racers/world-animation'
 import type { RaceWorlds } from '@lego-games/lego-racers/world-animation'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-racers/simulation-math'
@@ -459,6 +460,16 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
           sphere: null,
         })
       }
+    }
+    for (const { name, textureScroll } of [
+      ...worlds.track.meshInstances,
+      ...worlds.track.skeletonInstances,
+      ...worlds.blended.meshInstances,
+      ...worlds.blended.skeletonInstances,
+    ]) {
+      if (textureScroll.rateU === 0 && textureScroll.rateV === 0) continue
+      const [offsetU, offsetV] = getTextureScrollOffsets(textureScroll)
+      shown.track.setInstanceTextureOffset(name, offsetU, offsetV)
     }
     for (const write of getMaterialSlotWrites(worlds.track)) {
       shown.track.setMaterialSlot(

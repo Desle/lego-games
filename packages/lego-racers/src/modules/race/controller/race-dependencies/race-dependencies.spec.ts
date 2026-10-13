@@ -1,6 +1,6 @@
 import { HazardLifecycle } from '../../../hazard/index.ts'
 import { getRacer } from '../../../racer/index.ts'
-import { EMPTY_WORLD_ANIMATION } from '../../../world-animation/index.ts'
+import { EMPTY_WORLD_ANIMATION, NO_TEXTURE_SCROLL } from '../../../world-animation/index.ts'
 import type { SkeletonInstanceRuntime } from '../../../world-animation/index.ts'
 import type { Checkpoint } from '../../../checkpoint/index.ts'
 import { RacePhase } from '../../types/race-phase/race-phase.ts'
@@ -147,6 +147,7 @@ describe('the track hazards in the collision registry', () => {
     otherFlags: 0,
     position: [0, 0, 0],
     levelSquaredDistances: [FLOAT_MAXIMUM, FLOAT_MAXIMUM, FLOAT_MAXIMUM],
+    textureScroll: NO_TEXTURE_SCROLL,
   }
 
   const createLavaState = (lifecycle: number): RaceState => {

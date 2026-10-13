@@ -5,6 +5,7 @@ import {
 import type { SkeletonAnimationState, Vector3 } from '../../../skeletal-animation/index.ts'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
 import type { SkeletonInstanceRuntime } from '../../types/world-animation.types.ts'
+import { getAdvancedTextureScroll } from '../texture-scroll/texture-scroll.ts'
 
 const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
 const { add, multiply, storeFloat } = arithmetic
@@ -181,5 +182,6 @@ export const advanceSkeletonInstance = (
       advanced?.velocity ?? ZERO_VELOCITY,
       milliseconds
     ),
+    textureScroll: getAdvancedTextureScroll(instance.textureScroll, milliseconds),
   })
 }

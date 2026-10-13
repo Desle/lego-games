@@ -8,6 +8,15 @@ import type { Matrix3 } from '../../simulation-math/index.ts'
 import type { Skeleton } from '../../skeleton/index.ts'
 import type { World } from '../../world/index.ts'
 
+// The texture scroll of an instance (GolDP.dll instance +0x60, +0x62 offsets and +0x64, +0x68 rates): the offsets are
+// 16-bit words (65536 is one texture), the rates are the integers world keyword 0x3f sets.
+export type TextureScroll = {
+  readonly offsetU: number
+  readonly offsetV: number
+  readonly rateU: number
+  readonly rateV: number
+}
+
 // A skeleton instance of a world as the race moves it (GolDP.dll class 0x10023420, 0xf4 bytes).
 export type SkeletonInstanceRuntime = {
   readonly name: string
@@ -32,6 +41,7 @@ export type SkeletonInstanceRuntime = {
   readonly position: Vector3
   // +0x84, +0x88, +0x8c: the squared distance each level shows up to (the largest float: always).
   readonly levelSquaredDistances: readonly number[]
+  readonly textureScroll: TextureScroll
   // A mirrored race: the bones' own translations have y negated (the emulator's capture hazard sphere, aar2).
   readonly isMirrored?: boolean
 }
@@ -55,6 +65,7 @@ export type MeshInstanceRuntime = {
   readonly position: Vector3
   readonly levelSquaredDistances: readonly number[]
   readonly otherFlags: number
+  readonly textureScroll: TextureScroll
 }
 
 // One 0x18-byte entry of a material animation, as the race plays it (exe 0x004104c0; GolDP.dll 0x10025da0 starts the

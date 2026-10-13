@@ -2,7 +2,7 @@ import { createSkeletonAnimationState } from '../../../skeletal-animation/index.
 import type { SkeletalAnimation } from '../../../skeletal-animation/index.ts'
 import type { Skeleton } from '../../../skeleton/index.ts'
 import { createFloatArithmetic, FpuPrecision } from '../../../simulation-math/index.ts'
-import { EMPTY_WORLD_ANIMATION } from '../../../world-animation/index.ts'
+import { EMPTY_WORLD_ANIMATION, NO_TEXTURE_SCROLL } from '../../../world-animation/index.ts'
 import type {
   MeshInstanceRuntime,
   SkeletonInstanceRuntime,
@@ -65,6 +65,7 @@ export const createTestSkeletonInstance = (
   otherFlags: 0,
   position: [1, 2, 3],
   levelSquaredDistances: [FLOAT_MAXIMUM, FLOAT_MAXIMUM, FLOAT_MAXIMUM],
+  textureScroll: NO_TEXTURE_SCROLL,
   ...overrides,
 })
 
@@ -72,6 +73,7 @@ export const createTestMeshInstance = (name: string): MeshInstanceRuntime => ({
   name,
   position: [0, 0, 0],
   levelSquaredDistances: [100, 200, 300],
+  textureScroll: NO_TEXTURE_SCROLL,
   otherFlags: 0,
 })
 

@@ -44,6 +44,13 @@ export {
   getMaterialSlotWrites,
 } from './controller/world-animation/world-animation.ts'
 export {
+  createTextureScroll,
+  getAdvancedTextureScroll,
+  getTextureScrollOffsets,
+  getTextureScrollWithRates,
+  NO_TEXTURE_SCROLL,
+} from './controller/texture-scroll/texture-scroll.ts'
+export {
   getInstanceLevelDistances,
   getWorldWithInstanceLevelDistances,
   getWorldWithMaterialPlayback,
@@ -61,6 +68,7 @@ export type {
   SkeletonInstanceCameraView,
   SkeletonInstanceRuntime,
   SkeletonInstanceSphere,
+  TextureScroll,
   WorldAnimation,
   WorldCameraRuntime,
   WorldAnimationInput,

@@ -2,6 +2,7 @@ import { createFloatArithmetic, FpuPrecision } from '../../../simulation-math/in
 import type { SkeletalAnimation } from '../../../skeletal-animation/index.ts'
 import type { Skeleton } from '../../../skeleton/index.ts'
 import type { SkeletonInstanceRuntime } from '../../types/world-animation.types.ts'
+import { NO_TEXTURE_SCROLL } from '../texture-scroll/texture-scroll.ts'
 import { createSkeletonAnimationState } from '../../../skeletal-animation/index.ts'
 import {
   getSkeletonInstanceBoneAxes,
@@ -36,6 +37,7 @@ const instance: SkeletonInstanceRuntime = {
   otherFlags: 0,
   position: [10, 20, 30],
   levelSquaredDistances: [],
+  textureScroll: NO_TEXTURE_SCROLL,
 }
 
 describe('getSkeletonInstanceCameraView', () => {

@@ -968,6 +968,9 @@
 0042f240 Profile_GetGhostBeatenFlags
 00488010 RaceSelectScreen_ShowRace
 00487b50 RaceSelectScreen_CreateWidgets
+00411700 Instance_SetScrollRateU
+00411730 Instance_SetScrollRateV
+0048b240 TextureScroller_Update
 00410300 MaterialAnimation_AdvanceEntries
 00410430 MaterialAnimationEntry_Start
 00410750 MaterialTable_SetSlot

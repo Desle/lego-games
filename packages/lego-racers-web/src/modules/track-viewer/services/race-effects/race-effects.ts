@@ -12,6 +12,11 @@ import type { Mesh, MeshBasicMaterial } from 'three'
 import { BRICK_LEVEL_DISTANCE } from '@lego-games/lego-racers/race-presentation'
 import type { FigureAnimation } from '@lego-games/lego-racers/racer'
 import {
+  createTextureScroll,
+  getAdvancedTextureScroll,
+  getTextureScrollOffsets,
+} from '@lego-games/lego-racers/world-animation'
+import {
   ENHANCEMENT_BRICK_MODEL_NAME,
   POWER_UP_BRICK_MODEL_NAME,
 } from '../../../../shared/viewer-extensions/effect-model-names.ts'
@@ -138,12 +143,15 @@ const getExplosionFigureScale = (progress: number): number =>
 const getExplosionFigureAlpha = (progress: number): number =>
   Math.trunc(Math.max(Math.fround((1 - progress) * EXPLOSION_ALPHA_MAXIMUM), 0))
 
-// Skeleton update (GolDP.dll 0x10027f40) adds `milliseconds * rate` to a 16-bit offset (+0x60, +0x62) every update, so a
-// texture's scroll is an integer number of 1/65536 per millisecond: the instance's keyword 0x3f rate per second, as
-// truncated units of 65.536 (a rate of 1 turns 0.8 percent slower than a second). **Hypothesis:** the conversion truncates
-// toward zero; measured against the curse's rings (rates 1 and -1; the offset drifted 0.00027 a frame of 33 ms).
-const SCROLL_UNITS_PER_RATE = 65.536
-const SCROLL_UNITS_PER_TURN = 65536
+// The figure's scroll from its start: 0x10027f40 adds the 16-bit products step by step, which wraps to the same offset.
+const getScrollOffsets = (
+  scroll: readonly [number, number],
+  elapsedMilliseconds: number
+): readonly [number, number] =>
+  getTextureScrollOffsets(
+    getAdvancedTextureScroll(createTextureScroll(scroll), Math.trunc(elapsedMilliseconds))
+  )
+
 // Hypothesis, measured against the render trace (turbo levels 0 to 2): once the turbo is active its figures have advanced one
 // frame more than the effect's timer shows.
 const TURBO_ANIMATION_LEAD_MILLISECONDS = 33
@@ -152,24 +160,13 @@ const setTextureScroll = (
   scroll: readonly [number, number],
   elapsedMilliseconds: number
 ) => {
-  const [scrollU, scrollV] = scroll
+  const [offsetU, offsetV] = getScrollOffsets(scroll, elapsedMilliseconds)
   copy.group.traverse((object) => {
     if (object.type !== 'Mesh') return
     const { map } = (object as Mesh).material as MeshBasicMaterial
-    map?.offset.set(
-      getScrollOffset(scrollU, elapsedMilliseconds),
-      getScrollOffset(scrollV, elapsedMilliseconds)
-    )
+    map?.offset.set(offsetU, offsetV)
   })
 }
-// The offset stays below 1 (it wraps).
-const getWrappedFraction = (value: number): number => value - Math.floor(value)
-const getScrollOffset = (rate: number, elapsedMilliseconds: number): number =>
-  getWrappedFraction(
-    (Math.trunc(rate * SCROLL_UNITS_PER_RATE) * Math.trunc(elapsedMilliseconds)) /
-      SCROLL_UNITS_PER_TURN
-  )
-
 // 0x0045cf90 sets the figures' orientation (slot 0x40, 0x00410900) from the display figure's second row and third row: the
 // first row of the turbo's frame is the car's side, the second its backwards axis.
 const getTurboRotation = (pose: RacerPose): Matrix3 => {

@@ -4,6 +4,7 @@ import {
   type SkeletalAnimation,
 } from '../../../skeletal-animation/index.ts'
 import type { SkeletonInstanceRuntime } from '../../types/world-animation.types.ts'
+import { NO_TEXTURE_SCROLL } from '../texture-scroll/texture-scroll.ts'
 import { getSkeletonInstanceSphere } from './skeleton-instance-sphere.ts'
 
 const arithmetic = createFloatArithmetic(FpuPrecision.SINGLE)
@@ -35,6 +36,7 @@ const instance: SkeletonInstanceRuntime = {
   otherFlags: 0,
   position: [100, 200, 300],
   levelSquaredDistances: [640000],
+  textureScroll: NO_TEXTURE_SCROLL,
 }
 
 describe('getSkeletonInstanceSphere', () => {

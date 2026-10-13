@@ -12,7 +12,7 @@ import {
   encodeFloat,
   encodeString,
 } from '../../../../shared/token-encoding/token-encoding.ts'
-import { EMPTY_WORLD_ANIMATION } from '../../../world-animation/index.ts'
+import { EMPTY_WORLD_ANIMATION, NO_TEXTURE_SCROLL } from '../../../world-animation/index.ts'
 import type { RaceWorlds } from '../../../world-animation/index.ts'
 import { TrackEventKind, TrackEventState } from '../../types/track-event-state/track-event-state.ts'
 import type { TrackEvent, TrackLogicContext } from '../../types/track-logic.types.ts'
@@ -75,6 +75,7 @@ const BEAM_WORLDS: RaceWorlds = Object.freeze({
         position: Object.freeze([0, 0, 0] as const),
         levelSquaredDistances: BEAM_DISTANCES,
         otherFlags: 0,
+        textureScroll: NO_TEXTURE_SCROLL,
       }),
     ]),
   }),

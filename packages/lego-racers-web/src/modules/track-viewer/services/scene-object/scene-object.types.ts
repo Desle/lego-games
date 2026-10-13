@@ -29,6 +29,9 @@ export type SceneObject = {
   readonly setColourShift: (shift: ColourShiftLike | null) => void
   // The same for the instances with this name only (a cinema's vertex effect on one model).
   readonly setInstanceColourShift: (name: string, shift: ColourShiftLike | null) => void
+  // The texture scroll of the instances with this name (GolDP.dll 0x10028030): added to the texture coordinates of every
+  // vertex.
+  readonly setInstanceTextureOffset: (name: string, offsetU: number, offsetV: number) => void
   // Shows, for every instance with several levels, the level the squared distance to this camera position selects
   // (GolDP.dll 0x10027cc0), and none past the last.
   // An instance the race moves (hazards, clips) shows the level its own distances and sphere select, and none when its
