@@ -4,6 +4,10 @@ import type { BrickView, EffectViews } from '@lego-games/lego-racers/race-presen
 import { Group, Matrix4, Mesh, PerspectiveCamera, Scene, Vector3 } from 'three'
 import type { BufferAttribute, Object3D } from 'three'
 import {
+  ENHANCEMENT_BRICK_MODEL_NAME,
+  POWER_UP_BRICK_MODEL_NAME,
+} from '../../../../shared/viewer-extensions/effect-model-names.ts'
+import {
   clearViewerExtensions,
   NEUTRAL_EXTENSION,
   registerViewerExtension,
@@ -20,6 +24,10 @@ import { createRaceEffects } from './race-effects.ts'
 
 // The bricks' clips (pubricky, enhabrik) turn them once in 800 ms on the world clock (0x00457900, 0x0045a490): 200 ms is a quarter.
 const QUARTER_TURN_MILLISECONDS = 200
+const BRICK_MODEL_NAMES: readonly string[] = [
+  POWER_UP_BRICK_MODEL_NAME,
+  ENHANCEMENT_BRICK_MODEL_NAME,
+]
 const EYE = Object.freeze({ x: 0, y: -12, z: 4 })
 const BRICK_CASES = [
   {
@@ -117,7 +125,11 @@ describe.skipIf(!getIsOriginalGamePresent())('the bricks on the track', () => {
     // Arrange
     const assets = getAssets()
     const drawing = new Group()
-    registerViewerExtension({ ...NEUTRAL_EXTENSION, getEffectModelDrawing: () => drawing })
+    registerViewerExtension({
+      ...NEUTRAL_EXTENSION,
+      getEffectModelDrawing: (request) =>
+        BRICK_MODEL_NAMES.includes(request.modelName) ? drawing : null,
+    })
 
     // Act
     const [first, second] = getFrames(assets, caseIndex, drawing)

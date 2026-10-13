@@ -18,15 +18,16 @@ const getIsDrawingSomething = (object: Object3D): boolean => {
   return object.children.some(getIsDrawingSomething)
 }
 
-const LAYER_KINDS: Readonly<Record<HookKind, RacerPartKind>> = Object.freeze({
+const LAYER_PART_KINDS: Readonly<Record<HookKind, RacerPartKind>> = Object.freeze({
   [HookKind.CAR]: RacerPartKind.BODY,
   [HookKind.DRIVER]: RacerPartKind.DRIVER,
+  [HookKind.EFFECT_MODEL]: RacerPartKind.POWER_UP,
   [HookKind.PARTICLE]: RacerPartKind.PARTICLE,
 })
 
 const getLayerSighting = (call: HookCall): CensusSighting => ({
   origin: CoverageOrigin.LAYER,
-  kind: LAYER_KINDS[call.hook],
+  kind: LAYER_PART_KINDS[call.hook],
   key: call.key,
   callId: call.id,
 })

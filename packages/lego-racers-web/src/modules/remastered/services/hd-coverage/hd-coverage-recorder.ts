@@ -3,11 +3,16 @@ import type { Object3D } from 'three'
 import type {
   CarDrawingRequest,
   DriverDrawingRequest,
+  EffectModelDrawingRequest,
   ParticleDrawingRequest,
   ViewerExtension,
 } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import { getLDrawModelIndex } from '../ldraw-models/ldraw-model-client.ts'
 import { LDRAW_PARTICLE_MATERIALS } from '../ldraw-particles/ldraw-particle-mappings.ts'
+import {
+  getEffectModelDrawingSource,
+  POWER_UP_DRAWING_FAILED_KEY,
+} from '../ldraw-powerup/powerup-object-drawing.ts'
 import { findDriverSource } from '../ldraw-racer/driver-records.ts'
 import { HookKind } from './hd-coverage.types.ts'
 import type { HookCall } from './hd-coverage.types.ts'
@@ -55,6 +60,17 @@ const getDriverCall = (id: number, request: DriverDrawingRequest): HookCall =>
     isFailed: false,
   })
 
+const getEffectModelCall = (id: number, request: EffectModelDrawingRequest): HookCall =>
+  Object.freeze({
+    id,
+    hook: HookKind.EFFECT_MODEL,
+    key: request.modelName,
+    wheelsKey: null,
+    isModelPresent: getEffectModelDrawingSource(request, getLDrawModelIndex()) !== null,
+    isDrawingReturned: false,
+    isFailed: false,
+  })
+
 const getParticleCall = (id: number, request: ParticleDrawingRequest): HookCall =>
   Object.freeze({
     id,
@@ -69,8 +85,15 @@ const getParticleCall = (id: number, request: ParticleDrawingRequest): HookCall 
 const getHasMesh = (object: Object3D): boolean =>
   object.getObjectByProperty('isMesh', true) !== undefined
 
-// Wraps an extension so every call of its car, driver and particle hooks is recorded with its outcome, and the drawings it returns can be
-// told apart in a rendered scene.
+// A drawing is settled once it has a mesh, or when it draws nothing by design (in place of a shield's inside).
+const getIsSettled = (object: Object3D): boolean =>
+  getHasMesh(object) || object.children.length === 0
+
+const getIsDrawingFailed = (object: Object3D | undefined): boolean =>
+  object?.userData[POWER_UP_DRAWING_FAILED_KEY] === true
+
+// Wraps an extension so every call of its car, driver, effect model and particle hooks is recorded with its outcome, and the
+// drawings it returns can be told apart in a rendered scene.
 export const createRecordingExtension = (extension: ViewerExtension): RecordingExtension => {
   let calls = new Map<number, HookCall>()
   let drawings = new Map<number, Object3D>()
@@ -110,6 +133,12 @@ export const createRecordingExtension = (extension: ViewerExtension): RecordingE
       if (drawing !== null) keep(id, drawing.object)
       return drawing
     },
+    getEffectModelDrawing: (request) => {
+      const id = begin(getEffectModelCall(nextId, request))
+      const drawing = extension.getEffectModelDrawing(request)
+      if (drawing !== null) keep(id, drawing)
+      return drawing
+    },
     getParticleDrawing: (request) => {
       const id = begin(getParticleCall(nextId, request))
       const drawing = extension.getParticleDrawing(request)
@@ -122,14 +151,19 @@ export const createRecordingExtension = (extension: ViewerExtension): RecordingE
       calls = new Map()
       drawings = new Map()
     },
-    getCalls: () => [...calls.values()],
+    getCalls: () =>
+      [...calls.values()].map((call) =>
+        getIsDrawingFailed(drawings.get(call.id)) ? { ...call, isFailed: true } : call
+      ),
     getCallId: (object) => {
       const id: unknown = object.userData[CALL_ID_KEY]
       return typeof id === 'number' ? id : null
     },
     getUnsettledCallIds: () =>
       [...drawings].flatMap(([id, object]) =>
-        calls.get(id)?.isFailed === true || getHasMesh(object) ? [] : [id]
+        calls.get(id)?.isFailed === true || getIsDrawingFailed(object) || getIsSettled(object)
+          ? []
+          : [id]
       ),
   }
   return { extension: recorded, recorder }

@@ -2,6 +2,7 @@ import { BlendFactor } from '@lego-games/lego-racers/scene'
 import type { SceneRenderState } from '@lego-games/lego-racers/scene'
 import { CustomBlending, OneMinusSrcAlphaFactor, SrcAlphaFactor } from 'three'
 import type { BufferAttribute, BufferGeometry, Material, Mesh, Object3D } from 'three'
+import { ALPHA_OVERRIDE_KEY } from '../../../../shared/viewer-extensions/effect-model-names.ts'
 import { KEPT_SURFACE_ALPHA } from './scene-material.ts'
 import type { AlphaOverrideOriginal } from './alpha-override.types.ts'
 
@@ -67,11 +68,13 @@ const setMaterialOverride = (material: Material, isOverridden: boolean): void =>
 }
 
 // The device's alpha override (GolDP.dll slot 0xb8 with mode 1, cleared by slot 0xbc): every vertex drawn takes this alpha
-// (0..255) and the blend is source alpha over inverse source alpha. null takes the override off again.
+// (0..255) and the blend is source alpha over inverse source alpha. null takes the override off again. Each mesh notes the alpha
+// (`ALPHA_OVERRIDE_KEY`) for a drawing a layer put in the model's place.
 export const setAlphaOverride = (root: Object3D, alpha: number | null): void =>
   root.traverse((object) => {
     if (object.type !== 'Mesh') return
     const mesh = object as Mesh
+    mesh.userData[ALPHA_OVERRIDE_KEY] = alpha
     setGeometryAlpha(mesh.geometry, alpha)
     setMaterialOverride(mesh.material as Material, alpha !== null)
   })

@@ -12,14 +12,16 @@ import type {
 import { BUILT_CAR_KEY, getMatchingCalls } from './racer-part-classification.ts'
 
 // Whether the folder has what the layer needs for a part nobody asked about: a champion's car file, any chassis recipe for a
-// built car (its chassis is not known without the call); a driver is always a minifigure of the library. The viewer asks for the
-// particles of every material of a race when it loads, so a particle material nobody asked about is a path that skips the hook.
+// built car (its chassis is not known without the call), a power-up object's file or a pickup brick's part; a driver is always a
+// minifigure of the library. The viewer asks for the particles of every material of a race when it loads, so a particle material
+// nobody asked about is a path that skips the hook.
 const getIsModelPresentWithoutCall = (
   identity: RacerPartIdentity,
   index: ModelFolderIndex
 ): boolean => {
   if (identity.kind === RacerPartKind.DRIVER || identity.kind === RacerPartKind.PARTICLE)
     return true
+  if (identity.kind === RacerPartKind.POWER_UP) return index.effectModels.includes(identity.key)
   if (identity.key === BUILT_CAR_KEY) return index.chassis.length > 0
   return index.cars.includes(identity.key)
 }

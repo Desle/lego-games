@@ -240,7 +240,7 @@ const renderEffectSheet = async (
     const gameScene = new Scene()
     const isSkeletal = modelName !== 'BARREL'
     gameScene.add(createModelObject(loadEffectModel(archive, modelName, isSkeletal)).group)
-    const drawing = createLDrawPickupDrawing({ modelName, variant })
+    const drawing = createLDrawPickupDrawing(modelName, variant)
     const drawingScene = new Scene()
     if (drawing !== null) drawingScene.add(drawing)
     for (let attempt = 0; attempt < 50 && !getHasMesh(drawingScene); attempt += 1) {

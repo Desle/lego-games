@@ -1,4 +1,4 @@
-import { describeLDrawModel } from './ldraw-model-description.ts'
+import { describeLDrawModel } from './model-description.ts'
 
 describe('describeLDrawModel', () => {
   it('counts the parts of the main file and reads the opening comments', () => {

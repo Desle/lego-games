@@ -1,5 +1,5 @@
-import { createLDrawFileRoutes } from '@lego-games/ldraw/files'
-import type { LDrawFileMiddleware } from '@lego-games/ldraw/files'
+import { createLDrawFileRoutes } from '@lego-games/ldraw-studio/files'
+import type { LDrawFileMiddleware } from '@lego-games/ldraw-studio/files'
 import type { Plugin } from 'vite'
 import {
   getBuilderSavePath,

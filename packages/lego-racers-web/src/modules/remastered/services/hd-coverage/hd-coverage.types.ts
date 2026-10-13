@@ -8,6 +8,7 @@ export const RacerPartKind = createEnum({
   BODY: 'body',
   WHEELS: 'wheels',
   DRIVER: 'driver',
+  POWER_UP: 'power_up',
   PARTICLE: 'particle',
 })
 
@@ -19,6 +20,7 @@ export const CoverageOrigin = createEnum({
 export const HookKind = createEnum({
   CAR: 'car',
   DRIVER: 'driver',
+  EFFECT_MODEL: 'effect_model',
   PARTICLE: 'particle',
 })
 
@@ -45,7 +47,7 @@ export type HookKind = EnumValues<typeof HookKind>
 export type FallbackReason = EnumValues<typeof FallbackReason>
 
 // What an original racer mesh is: a car body (a champion's by its code, or a built car), a chassis's wheels, or a driver (a
-// champion's race model by its name, or a figure built from part bytes).
+// champion's race model by its name, or a figure built from part bytes); or a power-up object or brick (by its POWERUP.WDB model).
 export type RacerPartIdentity = {
   readonly kind: RacerPartKind
   readonly key: string
@@ -58,11 +60,12 @@ export type InstanceSource = {
   readonly worldPath: string
 }
 
-// One call of `getCarDrawing`, `getDriverDrawing` or `getParticleDrawing` in a place, and what came of it.
+// One call of `getCarDrawing`, `getDriverDrawing`, `getEffectModelDrawing` or `getParticleDrawing` in a place, and what came of it.
 export type HookCall = {
   readonly id: number
   readonly hook: HookKind
-  // A car: its champion code or `design:<chassis>`; a driver: its model name or `parts:<bytes>`; particles: their material.
+  // A car: its champion code or `design:<chassis>`; a driver: its model name or `parts:<bytes>`; an effect: its model name;
+  // particles: their material.
   readonly key: string
   // A car's wheel model name (lower case); null for a driver.
   readonly wheelsKey: string | null
@@ -109,10 +112,12 @@ export type ModelPartsPlace = {
   readonly name: string
 }
 
-// The models the folder has, as the layer reads them (`index.json`).
+// The models the folder has, as the layer reads them (`index.json`), and the effect models the layer draws (the pickup bricks' parts
+// and the power-up objects' files).
 export type ModelFolderIndex = {
   readonly cars: readonly string[]
   readonly chassis: readonly string[]
+  readonly effectModels: readonly string[]
 }
 
 export type HdCoveragePlaceResult = {
@@ -173,6 +178,8 @@ export type RacePlace = {
   readonly isBestRunShown: boolean
   // The player holds accelerate, steer and power slide from the start (its wheels kick up dust and tire smoke); else touches nothing.
   readonly isPlayerSliding: boolean
+  // The power-ups the player is given and fires (the developer overlay's keys do the same in play).
+  readonly powerUpUses: readonly PowerUpUse[]
   readonly frameCount: number
   readonly recordFrames: readonly number[]
 }
@@ -190,6 +197,16 @@ export type OnScreenPlace = {
   readonly name: string
   readonly subject: FrontEndPlace | RacePlace
   readonly expectedHooks: readonly HookKind[]
+  // Every power-up object the place fires that the folder has a file for must reach the screen in one of its frames.
+  readonly isEveryPowerUpFileShown: boolean
+}
+
+// A power-up handed to the player at a frame (kind 1 projectile, 2 shield, 3 turbo, 4 hazard; level 0 to 3) and fired three frames
+// later.
+export type PowerUpUse = {
+  readonly frame: number
+  readonly kind: number
+  readonly level: number
 }
 
 export type HdCoveragePlace =

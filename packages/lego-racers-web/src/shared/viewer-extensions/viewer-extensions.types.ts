@@ -80,6 +80,8 @@ export type EffectModelDrawingRequest = {
   readonly modelName: string
   // Which look of the model the effect has (the kind of a power-up brick); null when it has one.
   readonly variant: string | null
+  // The original's model the drawing stands in for: its mesh's vertices give the drawing's frame.
+  readonly model: ModelScene
 }
 
 // The particles the original draws with a material (a camera-facing quad each, the material's picture on it).

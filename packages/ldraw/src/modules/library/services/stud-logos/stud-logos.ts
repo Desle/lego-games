@@ -1,15 +1,8 @@
 import { LDrawDetail } from '../ldraw-library-loader/ldraw-library-loader.types.ts'
 
-export const STUD_LOGOS_PARAMETER = 'studlogos'
-const HIDDEN_VALUE = '0'
+let isStudLogoShown = false
 
-let isStudLogoShown = true
-
-// `studlogos=0` draws plain studs everywhere; by default a model near the camera shows the LEGO logo on its studs.
-export const getIsStudLogoRequested = (search: string): boolean =>
-  new URLSearchParams(search).get(STUD_LOGOS_PARAMETER) !== HIDDEN_VALUE
-
-// Set once by the registration, before the first model is drawn.
+// Plain studs unless an app turns the LEGO logo on, once, before the first model is drawn.
 export const setIsStudLogoShown = (isShown: boolean) => {
   isStudLogoShown = isShown
 }

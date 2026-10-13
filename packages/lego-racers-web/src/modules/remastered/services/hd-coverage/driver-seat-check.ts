@@ -4,7 +4,7 @@ import type { DriverDrawing } from '../../../../shared/viewer-extensions/viewer-
 import { getPosedBonePoints } from '../ldraw-fidelity/fidelity-anchors.ts'
 import { getVisibleBounds } from '../ldraw-fidelity/fidelity-render.ts'
 import { waitForStableMeshes } from '../ldraw-fidelity/fidelity-pairs.ts'
-import { MinifigPartKey } from '../ldraw-racer/minifig-assembly.types.ts'
+import { MinifigRole } from '@lego-games/ldraw/minifig'
 import { getMinifigRig } from '../ldraw-racer/minifig-rig.ts'
 import { createSkeletonPoseSampler } from '../ldraw-racer/skeleton-pose.ts'
 import type { SkeletonPoseSampler } from '../ldraw-racer/skeleton-pose.types.ts'
@@ -51,7 +51,7 @@ const getOriginalTorsoOffset = (
 const getLDrawTorsoOffset = (drawing: DriverDrawing, scene: Scene): number | null => {
   scene.updateMatrixWorld(true)
   const figure = drawing.object.children[0]?.children[0]
-  const torso = figure?.children[Object.values(MinifigPartKey).indexOf(MinifigPartKey.TORSO)]
+  const torso = figure?.children[Object.values(MinifigRole).indexOf(MinifigRole.TORSO)]
   return torso === undefined ? null : getSideways(getVisibleBounds(torso))
 }
 

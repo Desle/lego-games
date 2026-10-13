@@ -15,6 +15,7 @@ import {
 import type { ModelResourceNames } from '@lego-games/lego-racers/racer-appearance'
 import { loadModelScene } from '@lego-games/lego-racers/scene'
 import { CylinderGeometry, Group, Mesh, MeshBasicMaterial } from 'three'
+import { createModelObject, loadEffectModel } from '../../../track-viewer/index.ts'
 import {
   createOriginalObject,
   findChampionAppearance,
@@ -28,6 +29,10 @@ import {
   getChassisReferenceLine,
 } from '../reference-kit/chassis-reference-line.ts'
 import { getWheelMounts } from '../reference-kit/wheel-mounts.ts'
+import {
+  getOriginalModelBounds,
+  getPowerUpReferenceMatrix,
+} from '../ldraw-powerup/powerup-object-frame.ts'
 import {
   getDefaultHeaderLines,
   getReferencedModelName,
@@ -68,13 +73,25 @@ const createOriginalWheels = (archive: JamArchive, names: ModelResourceNames) =>
   return createOriginalObject(model, createSkeletonPoseSampler(model)?.createState() ?? null)
 }
 
+// A power-up object's mesh as its file stores it (the frame its LDraw file is drawn in), shown in studs of the power-up brick on the
+// ground (powerup-object-frame.ts).
+const createPowerUpReference = (archive: JamArchive, name: string): OriginalReference => {
+  const model = loadEffectModel(archive, name, false)
+  const original = createModelObject(model)
+  original.group.matrix.copy(getPowerUpReferenceMatrix(getOriginalModelBounds(model)))
+  const object = new Group()
+  object.add(original.group)
+  return { object, dispose: () => original.object.dispose() }
+}
+
 // The original's model of the item at rest, as the race draws it, in the car's frame (studs, z up): a champion's body and wheels, or
-// a chassis brick alone with the wheels the game puts on it. None for a driver.
+// a chassis brick alone with the wheels the game puts on it; a power-up object's mesh. None for a driver.
 export const createOriginalReference = (
   archive: JamArchive,
   item: BuilderItem
 ): OriginalReference | null => {
   if (item.kind === BuilderItemKind.DRIVER) return null
+  if (item.kind === BuilderItemKind.POWER_UP) return createPowerUpReference(archive, item.name)
   if (item.kind === BuilderItemKind.CAR) {
     const appearance = findChampionAppearance({ archive }, item.name)
     if (appearance?.bodyModel == null) return null
@@ -138,6 +155,8 @@ const ITEM_TITLES: Readonly<Record<BuilderItemKind, (name: string) => string>> =
   [BuilderItemKind.CHASSIS]: (name: string) =>
     `Racers chassis ${name.toUpperCase()} (recipe frame: footprint corner, x width, y depth, z up from the brick bottom)`,
   [BuilderItemKind.CAR]: (name: string) => `Racers champion car ${name}`,
+  [BuilderItemKind.POWER_UP]: (name: string) =>
+    `Racers power-up object ${name} (fitted to the original's size in the race, front along x)`,
   [BuilderItemKind.DRIVER]: (name: string) =>
     `${name} driver (origin the top of the hips, standing rest pose; each part after its 0 !RACERS ROLE line)`,
 })
@@ -181,6 +200,7 @@ export const loadBuilderItemStart = async (
     ...Object.values(index.cars),
     ...Object.values(index.chassis),
     ...Object.values(index.drivers),
+    ...Object.values(index.powerUps),
   ]
   const file = getBuilderItemFile(item.id, existing) ?? `${item.name}.ldr`
   const sourceFile =
