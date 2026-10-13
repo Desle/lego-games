@@ -2,6 +2,7 @@ import { Matrix4 } from 'three'
 import { MinifigPartKey } from './minifig-assembly.types.ts'
 import { MINIFIG_GEOMETRY } from './minifig-geometry.ts'
 import type { MinifigPartPlan } from './minifig-assembly.types.ts'
+import type { MinifigSide } from './minifig-geometry.types.ts'
 import type { MinifigSpec } from './minifig-spec.types.ts'
 
 const DIRECT_COLOR_PREFIX = '0x2'
@@ -23,8 +24,10 @@ export const createMinifigPartPlans = (spec: MinifigSpec): readonly MinifigPartP
   const head = MINIFIG_GEOMETRY.head
   const skinColor = getDirectColor(surfaces.skinColor)
   const legsColor = getDirectColor(surfaces.legsColor)
-  const armColor = torso === null ? getDirectColor(surfaces.armColor) : torso.armColorCode
-  const handColor = torso === null ? skinColor : torso.handColorCode
+  const getArmColor = (side: MinifigSide) =>
+    torso === null ? getDirectColor(surfaces.armColors[side]) : torso.armColorCode
+  const getHandColor = (side: MinifigSide) =>
+    torso === null ? getDirectColor(surfaces.handColors[side]) : torso.handColorCode
   const plan = (
     key: MinifigPartKey,
     part: string,
@@ -73,13 +76,13 @@ export const createMinifigPartPlans = (spec: MinifigSpec): readonly MinifigPartP
     ...sides.flatMap(({ side, arm, key, handKey }) => {
       const isHook = spec.isHookTorso && side === 'left'
       return [
-        plan(key, arm, armColor, MINIFIG_GEOMETRY.arms[side]),
+        plan(key, arm, getArmColor(side), MINIFIG_GEOMETRY.arms[side]),
         plan(
           handKey,
           isHook ? '2531' : '3820',
-          isHook ? HOOK_COLOR : handColor,
+          isHook ? HOOK_COLOR : getHandColor(side),
           MINIFIG_GEOMETRY.hands[side],
-          !isHook
+          !isHook && getHandColor(side) === skinColor
         ),
       ]
     }),

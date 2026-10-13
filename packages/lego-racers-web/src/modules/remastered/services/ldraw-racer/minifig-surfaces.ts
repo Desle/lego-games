@@ -1,5 +1,7 @@
 import type { ModelScene, SceneMesh } from '@lego-games/lego-racers/scene'
 import { getBatchSurfaces, getColorShares, getDominantColor } from './model-surface.ts'
+import { MINIFIG_SIDES } from './minifig-geometry.ts'
+import type { MinifigSide } from './minifig-geometry.types.ts'
 import type { BatchSurface, BitmapRegion } from './model-surface.types.ts'
 import type {
   BoneClass,
@@ -24,6 +26,9 @@ const FACE_WIDTH = 32
 const FACE_HEIGHT = 20
 const TWO_TONE_DOMINANT_SHARE = 0.85
 const TWO_TONE_PATCH_SHARE = 0.03
+// The bones of the arms (`arm_l`, `arm_r`); an arm reaches along its bone's x, and its far quarter is the hand.
+const ARM_BONES: Readonly<Record<MinifigSide, number>> = Object.freeze({ left: 2, right: 3 })
+const HAND_SHARE = 0.25
 
 // The bones of the figure builder's driver model (`pelvis`, `torso`, `arm_l`, `arm_r`, `dummy01`, `head`) by what they carry.
 const BONE_CLASSES: readonly BoneClass[] = Object.freeze(['legs', 'torso', 'arm', 'arm', 'head'])
@@ -35,8 +40,10 @@ const getTriangles = (mesh: SceneMesh, batchIndex: number): readonly SurfaceTria
     const vertices = [0, 1, 2].map((corner) => batch.vertexIndices[triangle * 3 + corner] ?? 0)
     const normalX =
       vertices.reduce((sum, vertex) => sum + (mesh.normals?.[vertex * 3] ?? 0), 0) / vertices.length
+    const boneIndex = batch.transformIndices[triangle * 3] ?? 0
     return {
-      boneClass: BONE_CLASSES[batch.transformIndices[triangle * 3] ?? 0] ?? 'head',
+      boneIndex,
+      boneClass: BONE_CLASSES[boneIndex] ?? 'head',
       vertices,
       normalX,
     }
@@ -95,11 +102,32 @@ const getPicture = (
   })
 }
 
+const getMeanX = (mesh: SceneMesh, triangle: SurfaceTriangle): number =>
+  triangle.vertices.reduce((sum, vertex) => sum + (mesh.positions[vertex * 3] ?? 0), 0) /
+  triangle.vertices.length
+
+// One arm's triangles split into the sleeve and the hand (the far quarter of its reach).
+const getArmParts = (
+  mesh: SceneMesh,
+  triangles: readonly SurfaceTriangle[],
+  side: MinifigSide
+): { readonly sleeve: readonly SurfaceTriangle[]; readonly hand: readonly SurfaceTriangle[] } => {
+  const arm = triangles.filter((triangle) => triangle.boneIndex === ARM_BONES[side])
+  const reaches = arm.map((triangle) => getMeanX(mesh, triangle))
+  const [nearest, farthest] = reaches.length === 0 ? [0, 0] : getBounds(reaches)
+  const handStart = farthest - (farthest - nearest) * HAND_SHARE
+  return {
+    sleeve: arm.filter((_triangle, index) => (reaches[index] ?? 0) < handStart),
+    hand: arm.filter((_triangle, index) => (reaches[index] ?? 0) >= handStart),
+  }
+}
+
 const findBatchIndex = (surfaces: readonly BatchSurface[], pattern: RegExp): number =>
   surfaces.findIndex((surface) => pattern.test(surface.materialName))
 
 // The colours and pictures the figure builder's model of a driver (`loadBuiltDriverScene`) gives his parts: the skin is the colour the face card is mostly
-// printed on, the torso and the arms the dominant colours of the parts of the chest picture they use, and the legs the common
+// printed on, the torso, each sleeve and each hand the dominant colours of the parts of the chest picture they use (a racer's sleeves
+// differ, and his gloves are not his skin), and the legs the common
 // colours of their picture (a patch of another colour is the hips).
 export const readMinifigSurfaces = (model: ModelScene): MinifigSurfaces => {
   const mesh = model.scene.meshes[model.scene.instances[0]?.levels[0]?.meshIndex ?? -1]
@@ -124,8 +152,15 @@ export const readMinifigSurfaces = (model: ModelScene): MinifigSurfaces => {
   }
   const torsoFront = torsoTriangles.filter((triangle) => triangle.normalX > FRONT_NORMAL_X)
   const torsoColor = getChestColor(torsoFront) ?? skinColor
-  const armColor =
-    getChestColor(chestTriangles.filter((triangle) => triangle.boneClass === 'arm')) ?? torsoColor
+  const armParts = MINIFIG_SIDES.map((side) =>
+    mesh === undefined ? { sleeve: [], hand: [] } : getArmParts(mesh, chestTriangles, side)
+  )
+  const getSideColors = (part: 'sleeve' | 'hand', fallback: number) =>
+    Object.freeze({
+      left: getChestColor(armParts[0]?.[part] ?? []) ?? fallback,
+      right: getChestColor(armParts[1]?.[part] ?? []) ?? fallback,
+    })
+  const armColors = getSideColors('sleeve', torsoColor)
   const [first, second] = legs?.bitmap == null ? [] : getColorShares(legs.bitmap)
   const legsColor = first?.color ?? FALLBACK_COLOR
   const isTwoTone =
@@ -133,7 +168,8 @@ export const readMinifigSurfaces = (model: ModelScene): MinifigSurfaces => {
   return Object.freeze({
     skinColor,
     torsoColor,
-    armColor,
+    armColors,
+    handColors: getSideColors('hand', skinColor),
     legsColor,
     hipsColor: isTwoTone ? (second?.color ?? legsColor) : legsColor,
     face:

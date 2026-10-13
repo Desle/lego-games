@@ -1,4 +1,5 @@
 import type { SceneBitmap } from '@lego-games/lego-racers/scene'
+import type { MinifigSide } from './minifig-geometry.types.ts'
 
 // What the figure builder's model carries on each bone.
 export type BoneClass = 'legs' | 'torso' | 'arm' | 'head'
@@ -25,7 +26,8 @@ export type PictureSource = {
 export type MinifigSurfaces = {
   readonly skinColor: number
   readonly torsoColor: number
-  readonly armColor: number
+  readonly armColors: Readonly<Record<MinifigSide, number>>
+  readonly handColors: Readonly<Record<MinifigSide, number>>
   readonly hipsColor: number
   readonly legsColor: number
   readonly face: PictureSource | null
@@ -34,6 +36,7 @@ export type MinifigSurfaces = {
 
 // A triangle of the model's mesh with the class of the bone that carries it and the x of its normal (positive faces forward).
 export type SurfaceTriangle = {
+  readonly boneIndex: number
   readonly boneClass: BoneClass
   readonly vertices: readonly number[]
   readonly normalX: number

@@ -16,7 +16,8 @@ const createSpec = (overrides: Partial<MinifigSpec> = {}): MinifigSpec => ({
   surfaces: {
     skinColor: 0xffdf00,
     torsoColor: 0xda1f1f,
-    armColor: 0xda1f1f,
+    armColors: { left: 0xda1f1f, right: 0xda1f1f },
+    handColors: { left: 0xffdf00, right: 0xffdf00 },
     hipsColor: 0x2d2d2d,
     legsColor: 0x0000ff,
     face: null,
