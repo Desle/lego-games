@@ -130,6 +130,8 @@ export type GateData = {
   readonly parts: readonly (InstanceReference | null)[]
   // +0x20: the collision object that goes away when the gate opens.
   readonly collisionObjectName: string
+  // +0x24..+0x2c: the first part's level distances as it loaded; the gate's draw (0x0048f080) lends them to every part.
+  readonly drawnLevelSquaredDistances: readonly number[]
 }
 
 // 0x33 (0x0048f6e0) and 0x3d (0x0048f200): a cannon that fires a ball.

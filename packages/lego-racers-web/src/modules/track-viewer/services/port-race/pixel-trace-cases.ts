@@ -1,4 +1,5 @@
 import type { PixelTraceCase } from './pixel-trace-cases.types.ts'
+import { BARRIER_REQUEST } from './play-test-visual-cases.ts'
 
 // The render trace's scenarios (render-trace.trace.spec.ts), with the pixels the viewer puts on the screen compared.
 // Thresholds are the measured baseline plus a margin: lower them when a case improves. See pixel-trace.md for the open
@@ -137,6 +138,15 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
       recordFrames: [392, 400, 410, 420],
     },
     maximumDifferingShare: 0.02,
+    watchedTextures: [],
+  },
+  {
+    // A cannon ball breaks the pirate shortcut's barrels at frame 1477: the gate draws the pieces flying apart and fading
+    // with their clip (LEGORacers.exe 0x0048f080) while the camera still sees them. They are about 700 units away and
+    // cover few pixels, so this case only guards the frame; the render trace's barrier case counts their triangles.
+    request: { ...BARRIER_REQUEST, name: 'RACEC0R1, breaking barrels', recordFrames: [1478, 1480] },
+    // 0.64 percent measured (smoke, skid marks and the HUD's known differences).
+    maximumDifferingShare: 0.01,
     watchedTextures: [],
   },
   {
