@@ -288,13 +288,14 @@ export const activateLauncherWarp = (
 
 // 0x0045a9b0 case 3 with a hazard as the launcher (the dropper, 0x0048b3c0): a curse that belongs to no racer and sits at
 // the launcher's place.
+const CURSE_LEVEL = 3 // 0x0045a9b0 case 3 → 0x0045aeb0
+
 export const activateLauncherCurse = (step: PowerUpStep, position: Vector3): PowerUpStep => {
   if (!getIsAttachmentRoomFor(step.world.effects.attachmentSlots, OTHER_REQUIRED_SLOTS)) return step
   return startAttachedEffect(
     step,
     PowerUpEffectKind.CURSE,
-    // level 3: 0x0045a9b0 case 3 → 0x0045aeb0
-    { ...getPlainStart(0, 3, 0, null), ownerRacer: null },
+    { ...getPlainStart(0, CURSE_LEVEL, 0, null), ownerRacer: null },
     (started) => started,
     position
   )
