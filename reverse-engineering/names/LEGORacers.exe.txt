@@ -991,3 +991,21 @@
 00463700 Event53_Setup
 004637c0 Event53_Begin
 00463800 Event53_End
+# Effects sweep: snow, smoke vent, trails (effects-sweep.md)
+0048e980 HazardSnowfall_Construct
+0048eb00 HazardSnowfall_Update
+0048eb70 HazardSnowfall_FollowCamera
+0048e710 HazardSmokeVent_Load
+0048e7f0 HazardSmokeVent_Update
+004400a0 Vehicle_SetColourShift
+004400e0 Vehicle_ClearColourShift
+00492ae0 Trail_Start
+00492be0 Trail_Update
+00492c30 Trail_Advance
+00492ee0 Trail_PushRing
+00492f10 Trail_PushRingTimed
+004931a0 Trail_BuildMesh
+004939b0 Trails_Take
+00493a20 Trails_Update
+00492ab0 Trail_SetColour
+00492a90 Trail_SetMaterial
