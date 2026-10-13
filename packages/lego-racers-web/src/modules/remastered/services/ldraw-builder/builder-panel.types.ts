@@ -16,6 +16,7 @@ export type BuilderPanelElements = {
   readonly bar: HTMLElement
   readonly palette: HTMLElement
   readonly help: HTMLElement
+  readonly shortcuts: HTMLElement
   readonly status: HTMLElement
 }
 
@@ -30,6 +31,8 @@ export type BuilderPanelHandlers = {
   readonly onRotate: () => void
   readonly onDeleteSelected: () => void
   readonly onDone: () => void
+  readonly onShortcutsToggle: () => void
+  readonly getThumbnail: (partName: string, colorCode: number) => Promise<string | null>
 }
 
 export type BuilderQueueView = {
@@ -43,6 +46,7 @@ export type BuilderToolView = {
   readonly description: string
   readonly colorCode: number
   readonly colorName: string
+  readonly isHolding: boolean
 }
 
 export type BuilderPanel = {
@@ -53,5 +57,9 @@ export type BuilderPanel = {
   readonly showColors: (colors: readonly LDrawColorName[]) => void
   readonly showTool: (tool: BuilderToolView) => void
   readonly showStatus: (text: string) => void
+  // What a click in the build view does right now.
+  readonly showHint: (text: string) => void
+  readonly setIsShortcutsShown: (isShown: boolean) => void
+  readonly getIsShortcutsShown: () => boolean
   readonly setIsBusy: (isBusy: boolean) => void
 }
