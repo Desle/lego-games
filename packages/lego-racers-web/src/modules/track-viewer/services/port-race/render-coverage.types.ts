@@ -35,6 +35,8 @@ export type CoverageTextureRow = {
   readonly stateLabel: string
   readonly originalTriangles: number
   readonly missingTriangles: number
+  // Pieces the original's driver cut at the viewport or the near plane that lie in a triangle the port cuts alike: not missing.
+  readonly clippedTriangles: number
   // Screen pixels the unmatched triangles cover, summed over the recorded frames.
   readonly missingPixels: number
   readonly missingFrames: readonly number[]
@@ -89,6 +91,7 @@ export type TextureAccumulator = {
   readonly stateLabel: string
   originalTriangles: number
   missingTriangles: number
+  clippedTriangles: number
   missingPixels: number
   readonly missingFrames: number[]
   missingBounds: CoverageBounds | null

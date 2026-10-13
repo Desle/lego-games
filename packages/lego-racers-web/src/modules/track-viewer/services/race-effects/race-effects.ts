@@ -111,6 +111,17 @@ const getTurboFlameAlpha = (attachment: AttachmentView): number | null => {
   return Math.trunc(Math.fround(fade * TURBO_ENDING_ALPHA_SCALE) * TURBO_ENDING_ALPHA_PEAK)
 }
 
+// 0x0045c160 draws an ending shield (state 4) with the device's alpha override: the timer (1000 ms down to 0) times
+// 0.001 (0x004af6fc) times 191 (0x004b0b4c), truncated. A shield in any other state draws without it.
+const SHIELD_ENDING_ALPHA_SCALE = Math.fround(0.001)
+const getShieldAlpha = (attachment: AttachmentView): number | null =>
+  attachment.state === 'ending'
+    ? Math.trunc(
+        Math.fround(attachment.timerMilliseconds * SHIELD_ENDING_ALPHA_SCALE) *
+          TURBO_ENDING_ALPHA_PEAK
+      )
+    : null
+
 // 0x00421850: the figure's scale grows from 0.05 (0x004b0148) to the explosion's end scale of 1 with the growth progress
 // (never past 1) and its opacity falls from 255 to 0 with it.
 const EXPLOSION_FIGURE_START_SCALE = 0.05
@@ -134,9 +145,8 @@ const getExplosionFigureAlpha = (progress: number): number =>
 const SCROLL_UNITS_PER_RATE = 65.536
 const SCROLL_UNITS_PER_TURN = 65536
 // Hypothesis, measured against the render trace (turbo levels 0 to 2): once the turbo is active its figures have advanced one
-// frame more than the effect's timer shows, and their texture scroll runs about two frames behind it.
+// frame more than the effect's timer shows.
 const TURBO_ANIMATION_LEAD_MILLISECONDS = 33
-const TURBO_SCROLL_LAG_MILLISECONDS = 71
 const setTextureScroll = (
   copy: ModelObject,
   scroll: readonly [number, number],
@@ -360,13 +370,14 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
         for (const pool of [shieldBackPools[attachment.level], shieldPools[attachment.level]]) {
           if (pool === undefined) continue
           const copy = pool.use()
+          setAlphaOverride(copy.group, getShieldAlpha(attachment))
           copy.group.matrix.copy(
             getFrameMatrix(
               getUprightRotation({ x: pose.rotation[0], y: pose.rotation[1], z: pose.rotation[2] }),
               { x: pose.position.x, y: pose.position.y, z: pose.position.z + SHIELD_HEIGHT }
             )
           )
-          setTextureScroll(copy, models.shieldScroll, attachment.elapsedMilliseconds)
+          setTextureScroll(copy, models.shieldScroll, attachment.scrollMilliseconds)
           copy.object.setAnimationState(
             getEffectFigureState(models.shieldAnimations, {
               animationId: 0,
@@ -401,9 +412,7 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
           setTextureScroll(
             copy,
             figureModels[figureIndex]?.scroll ?? [0, 0],
-            attachment.state === 'starting'
-              ? attachment.elapsedMilliseconds
-              : attachment.elapsedMilliseconds - TURBO_SCROLL_LAG_MILLISECONDS
+            attachment.scrollMilliseconds
           )
           if (animations !== undefined) {
             const isStarting = attachment.state === 'starting'

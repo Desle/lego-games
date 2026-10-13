@@ -23,7 +23,7 @@ Part 2 added:
 | Warp shrink     | `0x0045dbe0`, `0x00440160`               | In the last 250 ms of the portal phase the car's three parts take the portal's fade scale (frame scale `+0x58`); the car wears the previous frame's scale (hypothesis: it is drawn before the portal sets it).                                                                                                                                                                                                                                                                                        |
 | Plain explosion | `0x00421850`, `0x00421ae0`, `0x00459b80` | The figure `Explsn` (mesh `hedra01`, radius 12.8) at the explosion's position, scale `0.95 * progress + 0.05` (not the collision scale), alpha `(1 - progress) * 255` through the override, only while growing; a fading explosion draws only its scar. Matches the trace of cannon 1/0 and 1/3 exactly (its texture is reported as `skid`).                                                                                                                                                          |
 
-Hypotheses: the turbo figures' animation leads the effect timer by one frame (33 ms) and their texture scroll lags it by 71 ms (measured against the trace); the warp portal keeps the racer's current rotation (the original copies it at the start).
+Hypotheses: the turbo figures' animation leads the effect timer by one frame (33 ms) (measured against the trace); the warp portal keeps the racer's current rotation (the original copies it at the start). The old second hypothesis, a texture scroll lagging by 71 ms, was the starting state's length in disguise: the figures are stepped every update (`0x0045ce20`), so their scroll has run `figureAgeMilliseconds` (the starting state lasts 13 frames of 33 ms, 429 ms, not the 400 of its timer), see [effects-sweep.md](effects-sweep.md).
 
 Part 3 added (the `ribbon` module):
 
@@ -59,7 +59,7 @@ Hypotheses and open points of the curse:
 ## Not ported (open)
 
 - **Debris bricks (`brick1..4`, `0x004514b0`, `0x004515d0`)**: not drawn. The piece's figure takes the model, the attachment slot, a position (stack argument 2) and a first axis (argument 3, third axis up) and clip `thrownCount % clipCount`; no sampled frame shows a piece (frames 492 to 520 of `Royal Knights, debris` have pieces far from the camera), so there is nothing to verify against.
-- **Effect emitters**: the cannon's and grapple's `cannsmk` follow the owner (above); `dynsprk`, `lghthit`, `oilbub`, `trbsmke` (`0x0045ce20`) are still never positioned.
+- **Effect emitters**: the cannon's and grapple's `cannsmk` follow the owner (above); `oilbub` (at the ground point the slick lands on) and `trbsmke` (`(-2, 0, 3)` of the owner's frame) are positioned now ([effects-sweep.md](effects-sweep.md)); `dynsprk` and `lghthit` are still never positioned.
 - **Spiked explosion**: drawn (`spikexp`, scale and opacity as the plain one) and equal to the original's triangles on `Royal Knights, barrel explosion` (frames 388 to 430). Its flash (`exflash`) is not created by `0x00421250` for these pools and its scar (`exscar`) is a decal (another branch).
-- **Cannon and rocket trails (`canstrk`, `mslstrk`)** are skid-trail decals (another branch).
-- The shield's starting and ending alpha (`0x0045c2a0`) is not ported; the turbo's level-2 ending frame 355 still differs by about 3 pixels (the car turns).
+- **Cannon and rocket trails (`canstrk`, `mslstrk`)** are not skid trails: they are a trail class of their own (`0x00492ae0`..`0x004931a0`), ported as the `projectile-trail` module and described in [effects-sweep.md](effects-sweep.md) (mechanism 9).
+- The shield's ending alpha is ported (`0x0045c160`: `trunc(timer * 0.001 * 191)` in state 4, [effects-sweep.md](effects-sweep.md) 3); the turbo's level-2 ending frame 355 still differs by about 3 pixels (the car turns).

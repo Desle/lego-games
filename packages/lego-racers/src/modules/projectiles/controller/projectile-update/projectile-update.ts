@@ -1,6 +1,8 @@
 import {
   advancePowerUpEffect,
   checkEffectEmitter,
+  placeEffectEmitter,
+  placeTurboSmoke,
   startEffectEmitter,
   EffectState,
   getEffect,
@@ -16,6 +18,7 @@ import type {
   PowerUpEffect,
   PowerUpStep,
 } from '../../../power-ups/index.ts'
+import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
 import { BallisticFlightState } from '../../types/ballistic-flight/ballistic-flight.ts'
 import {
@@ -34,11 +37,21 @@ import {
   getStepWithConsequences,
   getStepWithExplosionsAndDebris,
 } from '../projectile-consequences/projectile-consequences.ts'
-import { getBarrelSpun, NO_BARREL_SPIN } from '../../types/barrel-spin/barrel-spin.ts'
+import {
+  getBarrelLaunchSparksPosition,
+  getBarrelSparksPosition,
+  getBarrelSpun,
+  NO_BARREL_SPIN,
+} from '../../types/barrel-spin/barrel-spin.ts'
 import { updateRocket } from '../rocket-effect/rocket-effect.ts'
 import { updateWarp } from '../warp-effect/warp-effect.ts'
 import { updateWand } from '../wand-effect/wand-effect.ts'
 import { updateGrapple } from '../grapple-effect/grapple-effect.ts'
+import {
+  getWorldWithTrailFed,
+  getWorldWithTrailsReleased,
+  getWorldWithTrailsStepped,
+} from '../projectile-trail-feed/projectile-trail-feed.ts'
 import { getIsSpeedNearZero } from '../../types/turbo-early-end/turbo-early-end.ts'
 import {
   createMagnetMotion,
@@ -151,19 +164,33 @@ const updateBarrel: EffectUpdate = (step, world, context, before, stepMillisecon
             stepMilliseconds
           )
         )
-  const counted = updatePowerUpEffect(
-    afterFlight.step,
-    context.powerUps,
-    before.id,
-    stepMilliseconds
-  )
+  // The sparks follow the frame position read before the flight advanced (0x00452ff0).
+  const frameBefore = motion?.kind === 'ballistic' ? motion.flight.framePosition : null
+  const spin = spunWorld.barrelSpins[before.id]
+  const { arithmetic } = context.powerUps
+  const followed =
+    before.state === EffectState.FINISHED || frameBefore === null || spin === undefined
+      ? afterFlight.step
+      : placeEffectEmitter(
+          afterFlight.step,
+          before.id,
+          getBarrelSparksPosition(arithmetic, frameBefore, spin)
+        )
+  const counted = updatePowerUpEffect(followed, context.powerUps, before.id, stepMilliseconds)
   const after = getEffect(counted, before.id)
+  const isLaunching = before.state === EffectState.STARTING && after.state === EffectState.ACTIVE
   return Object.freeze({
-    step: counted,
-    world:
-      before.state === EffectState.STARTING && after.state === EffectState.ACTIVE
-        ? getWithBallisticMotion(spunWorld, before.id, getBarrelFlight(context, after))
-        : spunWorld,
+    // 0x00453240: the sparks start where the barrel's frame was before it launched.
+    step: isLaunching
+      ? placeEffectEmitter(
+          counted,
+          before.id,
+          getBarrelLaunchSparksPosition(arithmetic, frameBefore ?? ZERO_VECTOR3)
+        )
+      : counted,
+    world: isLaunching
+      ? getWithBallisticMotion(spunWorld, before.id, getBarrelFlight(context, after))
+      : spunWorld,
   })
 }
 
@@ -242,10 +269,15 @@ const getStepWithTurboSmoke = (
 
 // 0x0045ce20 (turbo vtable slot 2): after the countdown, a tumbling racer who has stopped ends the turbo early.
 const updateTurbo: EffectUpdate = (step, world, context, before, stepMilliseconds) => {
-  const counted = getStepWithTurboSmoke(
-    updatePowerUpEffect(step, context.powerUps, before.id, stepMilliseconds),
-    context,
-    before.id
+  const counted = placeTurboSmoke(
+    getStepWithTurboSmoke(
+      updatePowerUpEffect(step, context.powerUps, before.id, stepMilliseconds),
+      context,
+      before.id
+    ),
+    before.id,
+    context.powerUps.arithmetic,
+    getEmitterOwner(context, before.ownerRacer)
   )
   const after = getEffect(counted, before.id)
   const owner = after.ownerRacer === null ? undefined : context.racers[after.ownerRacer]
@@ -307,8 +339,12 @@ const updateHazard: EffectUpdate = (step, world, context, before, stepMillisecon
     context.powerUps.getGroundPoint
   )
   const routeNode = racer.routeNodeIndex === null ? undefined : context.route[racer.routeNodeIndex]
+  // 0x004573a0 puts the slick's bubbles where it lands.
   return Object.freeze({
-    step: counted,
+    step:
+      after.kind === PowerUpEffectKind.OIL_SLICK
+        ? placeEffectEmitter(counted, before.id, landing.position)
+        : counted,
     world: getWorldWithMotion(
       world,
       before.id,
@@ -360,9 +396,10 @@ export const updateProjectileEffect = (
     step.events.length,
     context
   )
+  const moved = getWorldWithFinishedMotionCleared(updated.world, updated.step, effectId)
   return Object.freeze({
     step: updated.step,
-    world: getWorldWithFinishedMotionCleared(updated.world, updated.step, effectId),
+    world: getWorldWithTrailFed(moved, updated.step, context, before, stepMilliseconds),
   })
 }
 
@@ -400,5 +437,11 @@ export const updatePowerUpsWithProjectiles = (
       return settled.step
     }
   )
-  return Object.freeze({ step: updated, world: currentWorld })
+  return Object.freeze({
+    step: updated,
+    world: getWorldWithTrailsStepped(
+      getWorldWithTrailsReleased(currentWorld, updated),
+      stepMilliseconds
+    ),
+  })
 }

@@ -1,9 +1,12 @@
 import type { BrickBase } from '../../power-ups/index.ts'
-import type { CameraState, CameraView } from '../../race-camera/index.ts'
+import type { CameraState, CameraUpdate, CameraView } from '../../race-camera/index.ts'
 import type {
   EngineLoop,
   EngineSoundState,
+  LoopedSoundRequest,
   MusicCue,
+  NearestRacerSound,
+  SoundListener,
   SoundRequest,
 } from '../../race-audio/index.ts'
 import type {
@@ -22,6 +25,7 @@ import type { Matrix3, Vector3 } from '../../simulation-math/index.ts'
 import type { RacePhaseValue, RaceState } from '../../race/index.ts'
 import type { GhostRunSelection } from '../../ghost/index.ts'
 import type { RibbonView } from '../../ribbon/index.ts'
+import type { TrailDrawing } from '../../projectile-trail/index.ts'
 
 // A ghost car of a time trial (FUN_00422960): the champion's, drawn from GHOST.WDB, or the session's best run, drawn with
 // the player's own car. All three parts take the run's one orientation; the driver sits at the seat point carried by it.
@@ -51,6 +55,8 @@ export type RacePresentation = {
   // The entries of the race's music list (`LEGOMSC`, seven in Royal Knights Raceway).
   readonly musicListCount: number
   readonly camera: CameraState
+  // The node pose the introduction camera's clip last gave (0x004047b0) until the clip ends; null otherwise.
+  readonly introductionView: CameraView | null
   readonly hud: HudState
   // Racer +0xd68 of the player's racer, from the last turbo start.
   readonly turboLevel: number
@@ -89,6 +95,11 @@ export type RacerEngineLoops = {
   readonly loops: readonly EngineLoop[]
 }
 
+// The player camera after a frame's updates and the node pose of the introduction clip while it still holds the camera.
+export type CameraFrameUpdate = CameraUpdate & {
+  readonly introductionView: CameraView | null
+}
+
 export type RacePresentationFrame = {
   readonly presentation: RacePresentation
   readonly cameraView: CameraView
@@ -101,6 +112,12 @@ export type RacePresentationFrame = {
   // null in the introduction and the results, when the original draws no HUD.
   readonly hudFrame: HudFrame | null
   readonly sounds: readonly SoundRequest[]
+  // The looped sounds the frame's events start or stop (the shield's hum, the oil slick, track events, hazards).
+  readonly loopedSounds: readonly LoopedSoundRequest[]
+  // Who hears the sounds: the player's racer and the way it faces (0x00417de0 measures every sound from it).
+  readonly soundListener: SoundListener
+  // The racer the camera's racer hears the loop of (sound 0x4f), or null when none is within 200 units.
+  readonly nearestRacerSound: NearestRacerSound | null
   readonly engineLoops: readonly RacerEngineLoops[]
   // The music track to switch to this frame, if any.
   readonly music: MusicCue | null
@@ -243,6 +260,8 @@ export type AttachmentView = {
   readonly state: AttachmentState
   readonly timerMilliseconds: number
   readonly elapsedMilliseconds: number
+  // The milliseconds the figures were stepped since the effect started: their texture scroll has run this long.
+  readonly scrollMilliseconds: number
   // The figure's scale (+0x58): 1, except the warp portal's, which follows the fade table (0x0045dbe0).
   readonly scale: number
 }
@@ -282,4 +301,6 @@ export type EffectViews = {
   readonly effects: readonly EffectView[]
   readonly explosions: readonly ExplosionView[]
   readonly decals: readonly DecalView[]
+  // The streaks behind the cannonballs and rockets (the trail pool, 0x00493aa0).
+  readonly trails: readonly TrailDrawing[]
 }

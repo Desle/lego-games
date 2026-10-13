@@ -61,6 +61,7 @@ const createIdleEffect = (id: number, kind: PowerUpEffectKindValue): PowerUpEffe
     state: EffectState.IDLE,
     timerMilliseconds: 0,
     level: 0,
+    figureAgeMilliseconds: 0,
     ownerRacer: null,
     targetRacer: null,
     targetTrackPoint: null,

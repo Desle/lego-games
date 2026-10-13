@@ -1,7 +1,12 @@
 import { parseCircuitDatabase } from '@lego-games/lego-racers/circuit-database'
 import { decodeBitmap, getBitmapColors } from '@lego-games/lego-racers/bitmap'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
-import { matchTextures, readOriginalPresentation } from '@lego-games/lego-racers/presentation-trace'
+import {
+  getIsFragmentOfPolygon,
+  getIsCutPiece,
+  matchTextures,
+  readOriginalPresentation,
+} from '@lego-games/lego-racers/presentation-trace'
 import type {
   DrawnTriangle,
   DrawState,
@@ -18,7 +23,7 @@ import { createRaceStage } from '../race-viewport/race-viewport.ts'
 import { readOriginalJam } from './original-game-files.ts'
 import { loadScenarioAssets } from './scenario-assets.ts'
 import { ORIGINAL_STAGE_SIZE, runPortRace } from './port-race.ts'
-import { compareWorldFrame, getSceneTextures } from './render-comparison.ts'
+import { compareWorldFrame, getSceneTextures, RACE_DEPTH_RANGE } from './render-comparison.ts'
 import type {
   CoverageExtraRow,
   CoverageBounds,
@@ -271,6 +276,7 @@ export const runRenderCoverage = async (
         stateLabel,
         originalTriangles: 0,
         missingTriangles: 0,
+        clippedTriangles: 0,
         missingPixels: 0,
         missingFrames: [],
         missingBounds: null,
@@ -278,6 +284,13 @@ export const runRenderCoverage = async (
       }))
       row.originalTriangles += 1
       if (matched.has(triangle)) continue
+      if (
+        getIsCutPiece(triangle.vertices, ORIGINAL_STAGE_SIZE, RACE_DEPTH_RANGE) &&
+        getIsFragmentOfPolygon(triangle, comparison.clippedPolygons, textureMatches)
+      ) {
+        row.clippedTriangles += 1
+        continue
+      }
       row.missingTriangles += 1
       row.missingPixels += getScreenArea(triangle)
       if (row.missingFrames[row.missingFrames.length - 1] !== frame) row.missingFrames.push(frame)

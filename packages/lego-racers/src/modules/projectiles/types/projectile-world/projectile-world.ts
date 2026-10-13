@@ -3,6 +3,8 @@ import { IDENTITY_MATRIX3, ZERO_VECTOR3 } from '../../../simulation-math/index.t
 import type { Matrix3, Vector3 } from '../../../simulation-math/index.ts'
 import { NO_BARREL_SPIN } from '../barrel-spin/barrel-spin.ts'
 import type { BarrelSpin } from '../barrel-spin/barrel-spin.types.ts'
+import { createTrailPool } from '../../../projectile-trail/index.ts'
+import type { TrailPool } from '../../../projectile-trail/index.ts'
 import { createDebrisPool } from '../debris/debris.ts'
 import {
   createExplosionPool,
@@ -18,6 +20,8 @@ export const createProjectileWorld = (step: PowerUpStep): ProjectileWorld =>
   Object.freeze({
     motions: Object.freeze(step.world.effects.effects.map(() => null)),
     rocketWobbleAngles: Object.freeze(step.world.effects.effects.map(() => 0)),
+    trails: createTrailPool(),
+    effectTrails: Object.freeze(step.world.effects.effects.map(() => null)),
     hookFrame: Object.freeze({ rotation: IDENTITY_MATRIX3, position: ZERO_VECTOR3 }),
     barrelSpins: Object.freeze(step.world.effects.effects.map(() => NO_BARREL_SPIN)),
     events: Object.freeze([]),
@@ -38,6 +42,20 @@ export const getWorldWithMotion = (
     ...world,
     motions: Object.freeze(
       world.motions.map((current, index) => (index === effectId ? motion : current))
+    ),
+  })
+
+export const getWorldWithTrail = (
+  world: ProjectileWorld,
+  trails: TrailPool,
+  effectId: number,
+  trailIndex: number | null
+): ProjectileWorld =>
+  Object.freeze({
+    ...world,
+    trails,
+    effectTrails: Object.freeze(
+      world.effectTrails.map((current, index) => (index === effectId ? trailIndex : current))
     ),
   })
 

@@ -84,6 +84,7 @@ const getPortCommands = (definition: TouchSuiteDefinition, item: TouchCase): Tou
     test.session,
     createTestRacer(1, item.racerFlags, {
       isSpinning: (item.spinFlags & 2) !== 0,
+      isColourShifted: false,
       forwardSpeed: item.forwardSpeed,
     })
   )

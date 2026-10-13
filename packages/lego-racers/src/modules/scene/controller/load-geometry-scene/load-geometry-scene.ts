@@ -76,6 +76,7 @@ export const loadGeometryScene = (
         })
       )
     ),
+    boundingSphere: null,
   })
   const instance: SceneInstance = Object.freeze({
     name: MESH_NAME,

@@ -83,6 +83,11 @@ describe('the ghost', () => {
         reaction: 'flung',
         vector: [0, 0, 150],
       },
+      expect.objectContaining({
+        type: 'hazard.sound_played',
+        keyword: 0x2b,
+        soundIdentifier: 0xbc7,
+      }),
     ])
   })
 
