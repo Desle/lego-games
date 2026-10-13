@@ -2,10 +2,9 @@ import type { BrickFootprint } from '@lego-games/lego-racers/car-builder'
 import type { PartStud } from '@lego-games/ldraw/building'
 import { getDominantDeckPlates, getStudAlignedShift } from './chassis-grid-offset.ts'
 import type { ChassisDeck, StudBase } from './chassis-deck.types.ts'
+import { PLATE_HEIGHT, STUD_WIDTH } from '@lego-games/ldraw/building'
 
-const LDRAW_UNITS_PER_STUD = 20
-const LDRAW_UNITS_PER_PLATE = 8
-const HALF_STUD = LDRAW_UNITS_PER_STUD / 2
+const HALF_STUD = STUD_WIDTH / 2
 const ATTACHABLE_TOP_FLAG = 0x80
 const HEIGHT_MASK = 0x3f
 // A stud counts when it points up: a side stud or one on a tilted part holds no brick of the grid.
@@ -45,17 +44,14 @@ export const getStudBases = (studs: readonly PartStud[]): readonly StudBase[] =>
   )
 
 const getPhase = (coordinate: number): number =>
-  getModulo(
-    getRounded(getModulo(coordinate - HALF_STUD, LDRAW_UNITS_PER_STUD)),
-    LDRAW_UNITS_PER_STUD
-  )
+  getModulo(getRounded(getModulo(coordinate - HALF_STUD, STUD_WIDTH)), STUD_WIDTH)
 
 // The shift along one axis that puts the grid's cell centres on the studs most of them line up with, centred on those studs.
 const getAxisShift = (coordinates: readonly number[], gridCentre: number): number => {
   const phase = getMostCommon(coordinates.map(getPhase)) ?? 0
   const onPhase = coordinates.filter((coordinate) => {
-    const distance = getModulo(getPhase(coordinate) - phase, LDRAW_UNITS_PER_STUD)
-    return Math.min(distance, LDRAW_UNITS_PER_STUD - distance) <= PHASE_TOLERANCE
+    const distance = getModulo(getPhase(coordinate) - phase, STUD_WIDTH)
+    return Math.min(distance, STUD_WIDTH - distance) <= PHASE_TOLERANCE
   })
   const minimum = onPhase.reduce((least, value) => Math.min(least, value), Infinity)
   const maximum = onPhase.reduce((most, value) => Math.max(most, value), -Infinity)
@@ -86,8 +82,8 @@ const getCellLevels = (
   const cellLevels = new Map<number, number>()
   for (let x = 0; x < footprint.width; x += 1) {
     for (let y = 0; y < footprint.height; y += 1) {
-      const centreX = (x + 0.5) * LDRAW_UNITS_PER_STUD + shiftX
-      const centreZ = (y + 0.5) * LDRAW_UNITS_PER_STUD + shiftZ
+      const centreX = (x + 0.5) * STUD_WIDTH + shiftX
+      const centreZ = (y + 0.5) * STUD_WIDTH + shiftZ
       const highest = studBases
         .filter(
           (stud) =>
@@ -110,17 +106,17 @@ export const getChassisDeck = (
   if (studBases.length === 0) return null
   const shiftX = getAxisShift(
     studBases.map((stud) => stud.x),
-    (footprint.width * LDRAW_UNITS_PER_STUD) / 2
+    (footprint.width * STUD_WIDTH) / 2
   )
   const shiftZ = getAxisShift(
     studBases.map((stud) => stud.z),
-    (footprint.height * LDRAW_UNITS_PER_STUD) / 2
+    (footprint.height * STUD_WIDTH) / 2
   )
   const cellLevels = getCellLevels(footprint, studBases, shiftX, shiftZ)
   const deckLevel = getMostCommon([...cellLevels.values()].map(getRounded))
   if (deckLevel === null) return null
   const getRelativePlates = (level: number): number =>
-    Math.round((deckLevel - level) / LDRAW_UNITS_PER_PLATE)
+    Math.round((deckLevel - level) / PLATE_HEIGHT)
   const lowestRelative = [...cellLevels.values()].reduce(
     (lowest, level) => Math.min(lowest, getRelativePlates(level)),
     0
@@ -136,7 +132,7 @@ export const getChassisDeck = (
   return Object.freeze({
     gridOffset: Object.freeze({
       x: shiftX,
-      y: deckPlates * LDRAW_UNITS_PER_PLATE + deckLevel,
+      y: deckPlates * PLATE_HEIGHT + deckLevel,
       z: shiftZ,
     }),
     studFootprint: getFootprintWithTops(
@@ -154,7 +150,7 @@ export const getChassisDeck = (
         const level = cellLevels.get(cellIndex)
         return level === undefined
           ? 0
-          : (deckLevel - level) / LDRAW_UNITS_PER_PLATE - getRelativePlates(level)
+          : (deckLevel - level) / PLATE_HEIGHT - getRelativePlates(level)
       })
     ),
   })

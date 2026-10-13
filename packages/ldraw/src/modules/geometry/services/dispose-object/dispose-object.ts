@@ -1,22 +1,44 @@
-import { Mesh } from 'three'
-import type { Material, Object3D } from 'three'
+import type { BufferGeometry, Material, Object3D } from 'three'
+import { getIsGeometry, getIsMesh } from '../object-guards/object-guards.ts'
 
-const getIsMesh = (object: Object3D): object is Mesh => object instanceof Mesh
+// The geometry of the prepared models: every drawing of a model draws it, so only the prepared-model cache frees it.
+const sharedGeometries = new WeakSet<BufferGeometry>()
 
-const getMeshes = (object: Object3D): readonly Mesh[] => {
-  const meshes: Mesh[] = []
+const getGeometries = (object: Object3D): readonly BufferGeometry[] => {
+  const geometries: BufferGeometry[] = []
   object.traverse((child) => {
-    if (getIsMesh(child)) meshes.push(child)
+    const geometry: unknown = Reflect.get(child, 'geometry')
+    if (getIsGeometry(geometry)) geometries.push(geometry)
   })
-  return meshes
+  return geometries
 }
 
-// Frees what an object's meshes hold: their geometries, and their materials once each however many meshes share them.
+export const markGeometryShared = (object: Object3D) => {
+  for (const geometry of getGeometries(object)) sharedGeometries.add(geometry)
+}
+
+const getMeshMaterials = (object: Object3D): ReadonlySet<Material> => {
+  const materials = new Set<Material>()
+  object.traverse((child) => {
+    if (!getIsMesh(child)) return
+    for (const material of Array.isArray(child.material) ? child.material : [child.material]) {
+      materials.add(material)
+    }
+  })
+  return materials
+}
+
+// Frees what an object's meshes own: their geometries (not a prepared model's, which other drawings share) and their materials, once
+// each however many meshes share them.
 export const disposeObject = (object: Object3D) => {
-  const meshes = getMeshes(object)
-  const materials = new Set<Material>(
-    meshes.flatMap((mesh) => (Array.isArray(mesh.material) ? mesh.material : [mesh.material]))
-  )
-  for (const mesh of meshes) mesh.geometry.dispose()
-  for (const material of materials) material.dispose()
+  object.traverse((child) => {
+    if (getIsMesh(child) && !sharedGeometries.has(child.geometry)) child.geometry.dispose()
+  })
+  for (const material of getMeshMaterials(object)) material.dispose()
+}
+
+// Frees a prepared model the cache lets go: every geometry, the lines' too, and its meshes' materials (the lines' are shared by colour).
+export const disposeSharedObject = (object: Object3D) => {
+  for (const geometry of getGeometries(object)) geometry.dispose()
+  for (const material of getMeshMaterials(object)) material.dispose()
 }

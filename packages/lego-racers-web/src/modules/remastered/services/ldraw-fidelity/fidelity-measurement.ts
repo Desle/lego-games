@@ -16,8 +16,8 @@ import type {
   FidelityResult,
   FidelityViewResult,
 } from './ldraw-fidelity.types.ts'
+import { STUD_WIDTH } from '@lego-games/ldraw/building'
 
-const LDRAW_UNITS_PER_STUD = 20
 const MINIMUM_EXTENT = 1e-6
 const AXIS_COUNT = 3
 
@@ -62,7 +62,7 @@ const getCentroidOffset = (
 const getVectorInLDrawUnits = (vector: Vector3): readonly number[] =>
   vector
     .clone()
-    .multiplyScalar(LDRAW_UNITS_PER_STUD)
+    .multiplyScalar(STUD_WIDTH)
     .toArray()
     .map((value) => getRounded(value, 2))
 
@@ -118,7 +118,7 @@ export const getFidelityResult = (
     chassis === null
       ? getFidelityScore({
           meanIntersectionOverUnion,
-          centroidDistance: centroidOffset.length() * LDRAW_UNITS_PER_STUD,
+          centroidDistance: centroidOffset.length() * STUD_WIDTH,
           scaleRatio: scaleRatio > 0 ? scaleRatio : Number.NaN,
           meanColorDifference,
           meanAnchorDistance,
@@ -178,4 +178,4 @@ export const getAnchorResult = (
 ): readonly FidelityAnchorResult[] =>
   original === null || replacement === null
     ? []
-    : [{ name, distance: getRounded(original.distanceTo(replacement) * LDRAW_UNITS_PER_STUD, 2) }]
+    : [{ name, distance: getRounded(original.distanceTo(replacement) * STUD_WIDTH, 2) }]

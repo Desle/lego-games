@@ -1,7 +1,7 @@
 import { Box3, Group, Vector3 } from 'three'
 import type { Object3D } from 'three'
 import { disposeObject } from '@lego-games/ldraw/geometry'
-import type { FoundWheel } from './ldraw-racer-model.types.ts'
+import type { SplitSubModel } from '@lego-games/ldraw/geometry'
 
 const WHEEL_CATEGORIES: readonly string[] = ['wheel', 'tyre']
 const FIGURE_CATEGORY = 'minifig'
@@ -26,7 +26,10 @@ const getCategory = (object: Object3D): string => {
 
 // Gives the wheels found in the low resolution model the parts of the same wheels found in the high one (the units stay where they are
 // drawn: only what they hold changes), nearest first. A wheel has no studs, so its high resolution is drawn at any distance.
-export const upgradeWheels = (found: readonly FoundWheel[], detailed: readonly FoundWheel[]) => {
+export const upgradeWheels = (
+  found: readonly SplitSubModel[],
+  detailed: readonly SplitSubModel[]
+) => {
   for (const wheel of detailed) {
     const target = found.find(
       (candidate) => candidate.centre.distanceTo(wheel.centre) < SAME_WHEEL_DISTANCE
@@ -70,11 +73,11 @@ export const getPartsTakenFromCarBody = (model: Object3D): ReadonlySet<Object3D>
 
 // Takes the wheels and any minifigure out of a parsed LDraw model (`getPartsTakenFromCarBody`). The model is the root, at the
 // origin. A wheel's tyre and rim come out together; the figure is only removed.
-export const takeWheelsAndFigures = (model: Group): readonly FoundWheel[] => {
+export const takeWheelsAndFigures = (model: Group): readonly SplitSubModel[] => {
   const taken = getPartsTakenFromCarBody(model)
   const parts = [...taken].filter((part) => WHEEL_CATEGORIES.includes(getCategory(part)))
   for (const part of taken) if (!parts.includes(part)) part.removeFromParent()
-  const wheels: FoundWheel[] = []
+  const wheels: SplitSubModel[] = []
   for (const part of parts) {
     const centre = new Box3().setFromObject(part).getCenter(new Vector3())
     const wheel = wheels.find(

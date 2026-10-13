@@ -7,12 +7,14 @@ The pure maths of building with LDraw parts on the stud grid, in LDraw units and
 ## User flows
 
 - **Read and write a model**: `parseBuilderDocument` splits a model file into header, reference lines, parts and kept lines; `serializeBuilderDocument` writes it back unchanged where it was not edited; `inlineReferencedModels` and `placeReferencedParts` resolve submodel references.
-- **Read a part's shape**: `createPartShapes(readFile)` (or `createPartStudLists`) walks a part's files with a `LibraryFileReader`, such as `createCachedReader(createLibraryFileReader(libraryUrl))`, and gives its studs, box, footprint and bottom.
+- **Read library files**: `createLibraryFileReader(readText)` is the one reader of library files: it turns a part line's name into `parts/<name>` or `p/<name>` in lower case, asks `readText` for it (the app's served library: `createServedLibraryReader(libraryUrl)`; a folder on disk in a spec) and reads each file once.
+- **Read a part's shape**: `createPartShapes(readFile)` (or `createPartStudLists`) walks a part's files with that reader and gives its studs, box, footprint and bottom; `findModelFacePoints(text, readFile)` gives the corners of every face a whole model draws, without building it.
 - **Place a part**: `getPlacementPosition`, `getGridPoint`, `getTopGridPoint` and `getSideStudPosition` snap a part to the grid of the part or ground under the cursor; `getFacingRotation` and `turnAbout` turn it in quarter turns.
 - **Edit parts**: `moveParts`, `turnParts`, `tiltParts`, `addParts`, `removeParts`, `recolorParts` return new part lists; `pushBuilderHistory`, `undoBuilderHistory` and `redoBuilderHistory` keep the history.
 
 ## Invariants
 
+- `STUD_WIDTH` (20) and `PLATE_HEIGHT` (8) are the one place the LDraw units are written; apps convert with them.
 - Every function is pure and returns new frozen data; nothing here touches three.js, the DOM or a game.
 - Rotations stay exact quarter turns (`cleanRotation` removes floating-point drift).
 

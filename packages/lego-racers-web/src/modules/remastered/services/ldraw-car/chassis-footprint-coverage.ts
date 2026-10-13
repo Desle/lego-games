@@ -1,8 +1,8 @@
 import type { BrickFootprint } from '@lego-games/lego-racers/car-builder'
 import type { GridOffset } from './chassis-grid-offset.types.ts'
 import type { DeckStud, PointGroupBox } from './chassis-footprint-coverage.types.ts'
+import { STUD_WIDTH } from '@lego-games/ldraw/building'
 
-const LDRAW_UNITS_PER_STUD = 20
 const COORDINATES_PER_POINT = 3
 const ATTACHABLE_TOP_FLAG = 0x80
 const DECK_TOLERANCE = 1
@@ -106,8 +106,8 @@ export const getFootprintCoverage = (
       const top = footprint.cells[(x * footprint.height + y) * 2] ?? 0
       if ((top & ATTACHABLE_TOP_FLAG) === 0) continue
       attachable += 1
-      const centreX = (x + 0.5) * LDRAW_UNITS_PER_STUD + offset.x
-      const centreZ = (y + 0.5) * LDRAW_UNITS_PER_STUD + offset.z
+      const centreX = (x + 0.5) * STUD_WIDTH + offset.x
+      const centreZ = (y + 0.5) * STUD_WIDTH + offset.z
       const isOnStud = studs.some(
         (stud) => Math.hypot(stud.x - centreX, stud.z - centreZ) <= CELL_ON_STUD_DISTANCE
       )

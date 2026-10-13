@@ -1,5 +1,6 @@
 import { rotateVector } from '../builder-document/builder-document.ts'
 import { getNearestAxis, PART_UP } from '../builder-rotation/builder-rotation.ts'
+import { PLATE_HEIGHT, STUD_WIDTH } from '../ldraw-units/ldraw-units.constants.ts'
 import type { FootprintGrid, PartShape, PartStud } from '../builder-studs/builder-studs.types.ts'
 import type {
   BuilderBox,
@@ -9,8 +10,6 @@ import type {
   Vector,
 } from '../../types/building.types.ts'
 
-export const STUD_WIDTH = 20
-export const PLATE_HEIGHT = 8
 const FACING = 0.5
 const FACING_STUD = 0.99
 const STUD_HEIGHT = 4

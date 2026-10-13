@@ -133,7 +133,6 @@ const createBrickPair = async (
     { archive: context.archive, design },
     true,
     chassisModels,
-    null,
     false
   )
   await drawing.shown

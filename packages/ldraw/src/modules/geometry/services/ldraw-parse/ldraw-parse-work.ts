@@ -1,9 +1,10 @@
-import { BufferAttribute, Color, LineSegments, Material, Mesh, MeshStandardMaterial } from 'three'
-import type { BufferGeometry, Group, Object3D } from 'three'
+import { BufferAttribute, Color, LineSegments, Mesh, MeshStandardMaterial } from 'three'
+import type { BufferGeometry, Group, Material, Object3D } from 'three'
 import { bakeOcclusionGrid } from '../../../material/index.ts'
 import { mergeModelByMaterial } from '../ldraw-model-merge/ldraw-model-merge.ts'
 import { MergedPrimitiveKind } from '../ldraw-model-merge/ldraw-model-merge.types.ts'
 import { parseLDrawModel } from '../../../library/index.ts'
+import { getIsGeometry, getIsMaterial } from '../object-guards/object-guards.ts'
 import { LDRAW_COLOR_SPACE } from './ldraw-parse.constants.ts'
 import type {
   ParseRequest,
@@ -60,7 +61,7 @@ export const serializeModel = (merged: Group): SerializedModel => {
     const list: unknown = Reflect.get(child, 'material')
     const source: unknown = Array.isArray(list) ? list[0] : list
     const geometry: unknown = Reflect.get(child, 'geometry')
-    if (kind === null || !getIsMaterial(source) || !isGeometry(geometry)) continue
+    if (kind === null || !getIsMaterial(source) || !getIsGeometry(geometry)) continue
     if (!materials.includes(source)) materials.push(source)
     primitives.push({
       kind,
@@ -71,11 +72,6 @@ export const serializeModel = (merged: Group): SerializedModel => {
   }
   return { materials: materials.map(serializeMaterial), primitives }
 }
-
-const getIsMaterial = (value: unknown): value is Material => value instanceof Material
-
-const isGeometry = (value: unknown): value is BufferGeometry =>
-  value instanceof Object && Reflect.get(value, 'isBufferGeometry') === true
 
 // Everything the main thread needs of a model, built away from it: the parts parsed (the slow step), the occlusion grid baked, the
 // sub-models split out of it, and each of them merged into a few primitives.

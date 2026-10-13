@@ -2,7 +2,13 @@ import type { SceneMesh } from '@lego-games/lego-racers/scene'
 import { Group as ThreeGroup, Matrix4, Vector3 } from 'three'
 import type { LDrawRacerPartDrawing, RacerPartDrawingRequest } from './ldraw-racer-drawing.types.ts'
 import { LDrawDetail } from '@lego-games/ldraw/library'
-import { createMaterialSet, getPreparedModel, instantiateModel } from '@lego-games/ldraw/geometry'
+import {
+  createMaterialSet,
+  holdPreparedModel,
+  instantiateModel,
+  PreparedModelKind,
+} from '@lego-games/ldraw/geometry'
+import { STUD_WIDTH } from '@lego-games/ldraw/building'
 import { getBatchSurfaces } from './model-surface.ts'
 import { createPoseControls, createSkeletonPoseSampler } from './skeleton-pose.ts'
 import { getWheelSet } from './ldraw-wheel-sets.ts'
@@ -12,9 +18,8 @@ import { getHubColor, getWheelKind } from './wheel-kind.ts'
 import type { WheelShape } from './wheel-analysis.types.ts'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 
-const LDRAW_UNITS_PER_STUD = 20
 const RAW_UNITS_PER_STUD = 64
-const LDRAW_UNITS_PER_RAW_UNIT = LDRAW_UNITS_PER_STUD / RAW_UNITS_PER_STUD
+const LDRAW_UNITS_PER_RAW_UNIT = STUD_WIDTH / RAW_UNITS_PER_STUD
 const TYRE_COLOR_CODE = 256
 const DEFAULT_RIM_COLOR_CODE = 72
 const DIRECT_COLOR_PREFIX = '0x2'
@@ -102,8 +107,8 @@ export const createLDrawWheelsDrawing = (
       ...(set.tyrePart === null ? [] : [getPartLine(TYRE_COLOR_CODE, set.tyrePart)]),
       getPartLine(set.rimColorCode ?? hubColorCode, set.rimPart),
     ].join('\n')
-    return getPreparedModel(text, LDrawDetail.HIGH, true).then(
-      (prepared) => {
+    return holdPreparedModel(text, LDrawDetail.HIGH, PreparedModelKind.WHEEL).prepared.then(
+      ({ model: prepared }) => {
         if (isDisposed) return
         for (const placement of placements.filter((candidate) => candidate.set === set)) {
           // A drum is one tyre stretched along its axle to the drum's width, not tyres side by side (eight wheels on a car).

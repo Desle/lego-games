@@ -1,8 +1,7 @@
 import type { BrickFootprint } from '@lego-games/lego-racers/car-builder'
 import type { BaseBounds, GridOffset, StudSpan } from './chassis-grid-offset.types.ts'
+import { PLATE_HEIGHT, STUD_WIDTH } from '@lego-games/ldraw/building'
 
-const LDRAW_UNITS_PER_STUD = 20
-const LDRAW_UNITS_PER_PLATE = 8
 const STUD_HEIGHT = 4
 const ATTACHABLE_TOP_FLAG = 0x80
 const HEIGHT_MASK = 0x3f
@@ -30,7 +29,7 @@ export const getDominantDeckPlates = (footprint: BrickFootprint): number => {
 
 // The same in LDU.
 export const getDominantDeckHeight = (footprint: BrickFootprint): number =>
-  getDominantDeckPlates(footprint) * LDRAW_UNITS_PER_PLATE
+  getDominantDeckPlates(footprint) * PLATE_HEIGHT
 
 const STUD_TOP_TOLERANCE = 1
 const COORDINATES_PER_POINT = 3
@@ -44,8 +43,7 @@ const getMaximum = (values: readonly number[]): number =>
 // studs as fit (a top is narrower than a stud).
 const getStudSpan = (first: number, last: number): StudSpan => {
   const centre = (first + last) / 2
-  const halfWidth =
-    ((Math.floor((last - first) / LDRAW_UNITS_PER_STUD) + 1) * LDRAW_UNITS_PER_STUD) / 2
+  const halfWidth = ((Math.floor((last - first) / STUD_WIDTH) + 1) * STUD_WIDTH) / 2
   return Object.freeze({ minimum: centre - halfWidth, maximum: centre + halfWidth })
 }
 
@@ -78,10 +76,7 @@ export const getStudAlignedShift = (
   gridCentre: number
 ): number => {
   const centreShift = (baseMinimum + baseMaximum) / 2 - gridCentre
-  return (
-    baseMinimum +
-    LDRAW_UNITS_PER_STUD * Math.round((centreShift - baseMinimum) / LDRAW_UNITS_PER_STUD)
-  )
+  return baseMinimum + STUD_WIDTH * Math.round((centreShift - baseMinimum) / STUD_WIDTH)
 }
 
 // The translation (LDU, recipe axes) for every built brick: the game's grid (10 x 6 cells from the footprint's corner, first layer
@@ -90,16 +85,8 @@ export const getGridOffset = (footprint: BrickFootprint, bounds: BaseBounds | nu
   if (bounds === null) return NO_GRID_OFFSET
   const deckTop = -bounds.minimumY - STUD_HEIGHT
   return Object.freeze({
-    x: getStudAlignedShift(
-      bounds.minimumX,
-      bounds.maximumX,
-      (footprint.width * LDRAW_UNITS_PER_STUD) / 2
-    ),
+    x: getStudAlignedShift(bounds.minimumX, bounds.maximumX, (footprint.width * STUD_WIDTH) / 2),
     y: getDominantDeckHeight(footprint) - deckTop,
-    z: getStudAlignedShift(
-      bounds.minimumZ,
-      bounds.maximumZ,
-      (footprint.height * LDRAW_UNITS_PER_STUD) / 2
-    ),
+    z: getStudAlignedShift(bounds.minimumZ, bounds.maximumZ, (footprint.height * STUD_WIDTH) / 2),
   })
 }

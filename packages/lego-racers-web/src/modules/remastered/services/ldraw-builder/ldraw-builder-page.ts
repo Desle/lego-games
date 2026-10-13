@@ -36,8 +36,6 @@ import type { LDrawColorName } from '../reference-kit/reference-kit.types.ts'
 import {
   addParts,
   createBuilderHistory,
-  createCachedReader,
-  createLibraryFileReader,
   createPartShapes,
   findSideStud,
   getFacingRotation,
@@ -119,6 +117,7 @@ import type {
   PointerPress,
 } from './ldraw-builder-page.types.ts'
 import { setUpLDrawModelParser } from '../ldraw-worker/ldraw-model-parser.ts'
+import { readDevelopmentLibraryFile } from '../ldraw-library/ldraw-library-reader.ts'
 
 const BACKGROUND_COLOR = 0x2b3340
 const SELECTION_COLOR = 0xffd400
@@ -219,9 +218,7 @@ const panel = createBuilderPanel(
 )
 
 const templates = createPartTemplates()
-const partShapes = createPartShapes(
-  createCachedReader(createLibraryFileReader(DEVELOPMENT_LDRAW_ROUTE))
-)
+const partShapes = createPartShapes(readDevelopmentLibraryFile)
 const thumbnails = createBuilderThumbnails()
 let archive: JamArchive | null = null
 let items: readonly BuilderItem[] = []

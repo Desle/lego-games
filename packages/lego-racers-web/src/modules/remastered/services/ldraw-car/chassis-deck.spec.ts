@@ -1,11 +1,10 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { createBuildGrid } from '@lego-games/lego-racers/car-builder'
 import type { BrickPiece, CarDesign, PlacedBrick } from '@lego-games/lego-racers/car-builder'
-import { createPartStudLists } from '@lego-games/ldraw/building'
-import type { LibraryFileReader } from '@lego-games/ldraw/building'
+import { PLATE_HEIGHT, STUD_WIDTH, createPartStudLists } from '@lego-games/ldraw/building'
+import { createDiskLibraryReader } from '../ldraw-library/disk-library-reader.ts'
 import { loadDesignChassisDeck, loadRecipeStudBases } from './chassis-deck-loader.ts'
 import type { ChassisDeck, StudBase } from './chassis-deck.types.ts'
 import { getDeckRestedDesign } from './deck-rested-design.ts'
@@ -13,8 +12,6 @@ import { getDeckRestedDesign } from './deck-rested-design.ts'
 const ATTACHABLE = 0x80
 const CONNECTOR = 0x80
 const BRICK_PLATES = 3
-const LDRAW_UNITS_PER_PLATE = 8
-const LDRAW_UNITS_PER_STUD = 20
 const CELL_ON_STUD_DISTANCE = 5
 const CHASSIS_NAME = 'testchas'
 const IDENTITY = '1 0 0 0 1 0 0 0 1'
@@ -70,20 +67,18 @@ const chassis = place(chassisPiece, 0, 0, 0)
 
 // Where a brick's bottom is drawn, in the recipe's LDraw axes (y down): the grid offset moves every built brick.
 const getBottom = (deck: ChassisDeck, brick: PlacedBrick): number =>
-  deck.gridOffset.y - (brick.baseHeight - chassis.baseHeight) * LDRAW_UNITS_PER_PLATE
+  deck.gridOffset.y - (brick.baseHeight - chassis.baseHeight) * PLATE_HEIGHT
 
 const getCell = (deck: ChassisDeck, stud: StudBase) => ({
-  x: Math.floor((stud.x - deck.gridOffset.x) / LDRAW_UNITS_PER_STUD),
-  y: Math.floor((stud.z - deck.gridOffset.z) / LDRAW_UNITS_PER_STUD),
+  x: Math.floor((stud.x - deck.gridOffset.x) / STUD_WIDTH),
+  y: Math.floor((stud.z - deck.gridOffset.z) / STUD_WIDTH),
 })
 
 const getIsOnCellCentre = (deck: ChassisDeck, stud: StudBase): boolean => {
   const cell = getCell(deck, stud)
   return (
-    Math.abs((cell.x + 0.5) * LDRAW_UNITS_PER_STUD + deck.gridOffset.x - stud.x) <=
-      CELL_ON_STUD_DISTANCE &&
-    Math.abs((cell.y + 0.5) * LDRAW_UNITS_PER_STUD + deck.gridOffset.z - stud.z) <=
-      CELL_ON_STUD_DISTANCE
+    Math.abs((cell.x + 0.5) * STUD_WIDTH + deck.gridOffset.x - stud.x) <= CELL_ON_STUD_DISTANCE &&
+    Math.abs((cell.y + 0.5) * STUD_WIDTH + deck.gridOffset.z - stud.z) <= CELL_ON_STUD_DISTANCE
   )
 }
 
@@ -165,7 +160,7 @@ describe('chassis deck', () => {
     expect(bottoms?.length).toBeGreaterThan(0)
     for (const { studBase, first, second } of bottoms ?? []) {
       expect(first).toBe(studBase)
-      expect(second).toBe(studBase - BRICK_PLATES * LDRAW_UNITS_PER_PLATE)
+      expect(second).toBe(studBase - BRICK_PLATES * PLATE_HEIGHT)
     }
   })
 
@@ -180,8 +175,8 @@ describe('chassis deck', () => {
       new Map([[CHASSIS_NAME, recipe]]),
       fixtureStudLists
     )
-    const cellX = Math.floor((80 - (deck?.gridOffset.x ?? 0)) / LDRAW_UNITS_PER_STUD)
-    const cellY = Math.floor((60 - (deck?.gridOffset.z ?? 0)) / LDRAW_UNITS_PER_STUD)
+    const cellX = Math.floor((80 - (deck?.gridOffset.x ?? 0)) / STUD_WIDTH)
+    const cellY = Math.floor((60 - (deck?.gridOffset.z ?? 0)) / STUD_WIDTH)
 
     // Act
     const rested =
@@ -231,24 +226,10 @@ const recipeNames = existsSync(chassisFolder)
     )
   : []
 
-const readLibraryFile: LibraryFileReader = async (name) => {
-  const path = name.replace(/\\/g, '/')
-  for (const folder of ['parts', 'p']) {
-    for (const candidate of [path, path.toLowerCase()]) {
-      try {
-        return await readFile(join(libraryRoot, folder, candidate), 'utf8')
-      } catch {
-        // the next place
-      }
-    }
-  }
-  return null
-}
-
 describe.skipIf(recipeNames.length === 0 || !existsSync(join(libraryRoot, 'parts')))(
   'chassis deck of the player recipes',
   () => {
-    const libraryStudLists = createPartStudLists(readLibraryFile)
+    const libraryStudLists = createPartStudLists(createDiskLibraryReader(libraryRoot))
 
     it.each(recipeNames)('rests every brick of %s on the stud base under it', async (name) => {
       // Arrange
@@ -261,7 +242,7 @@ describe.skipIf(recipeNames.length === 0 || !existsSync(join(libraryRoot, 'parts
       expect(bottoms?.length).toBeGreaterThan(0)
       for (const { studBase, first, second } of bottoms ?? []) {
         expect(first).toBeCloseTo(studBase, 3)
-        expect(second).toBeCloseTo(studBase - BRICK_PLATES * LDRAW_UNITS_PER_PLATE, 3)
+        expect(second).toBeCloseTo(studBase - BRICK_PLATES * PLATE_HEIGHT, 3)
       }
     })
   }

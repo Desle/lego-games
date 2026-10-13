@@ -5,7 +5,7 @@ import type { LDrawRacerPartDrawing, RacerPartDrawingRequest } from './ldraw-rac
 import {
   createMaterialSet,
   disposeObject,
-  getPreparedModel,
+  holdPreparedModel,
   instantiateModel,
 } from '@lego-games/ldraw/geometry'
 import type { MaterialSet } from '@lego-games/ldraw/geometry'
@@ -110,8 +110,8 @@ export const createLDrawDriverDrawing = (
   const materials = createMaterialSet()
   const skinMaterials: MaterialSet[] = []
   const loads = plans.map((plan) =>
-    getPreparedModel(getPartText(plan), LDrawDetail.HIGH).then(
-      (prepared) => {
+    holdPreparedModel(getPartText(plan), LDrawDetail.HIGH).prepared.then(
+      ({ model: prepared }) => {
         const placed = new Group()
         placed.matrixAutoUpdate = false
         placed.matrix.copy(plan.matrix)

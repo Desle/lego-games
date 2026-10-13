@@ -1,8 +1,6 @@
 import type { CarDesign } from '@lego-games/lego-racers/car-builder'
-import { Mesh, Vector3 } from 'three'
-import type { Group, Object3D } from 'three'
-import { parseLDrawModel } from '@lego-games/ldraw/library'
-import { DEVELOPMENT_LDRAW_ROUTE } from '../ldraw-library/ldraw-library-route.ts'
+import { findModelFacePoints } from '@lego-games/ldraw/building'
+import { readDevelopmentLibraryFile } from '../ldraw-library/ldraw-library-reader.ts'
 import { getDeckStuds, getFootprintCoverage } from './chassis-footprint-coverage.ts'
 import { loadDesignChassisDeck } from './chassis-deck-loader.ts'
 import { getGridOffset, getStudAreaBounds } from './chassis-grid-offset.ts'
@@ -10,23 +8,9 @@ import type { ChassisFit, GridOffset } from './chassis-grid-offset.types.ts'
 
 const NO_GRID_OFFSET: GridOffset = Object.freeze({ x: 0, y: 0, z: 0 })
 
-const getIsMesh = (object: Object3D): object is Mesh => object instanceof Mesh
-
-// Every vertex of the model's faces in the model's frame, as x, y, z in turn.
-const getFacePositions = (model: Group): readonly number[] => {
-  model.updateMatrixWorld(true)
-  const positions: number[] = []
-  const point = new Vector3()
-  model.traverse((object) => {
-    if (!getIsMesh(object)) return
-    const attribute = object.geometry.getAttribute('position')
-    for (let index = 0; index < attribute.count; index += 1) {
-      point.fromBufferAttribute(attribute, index).applyMatrix4(object.matrixWorld)
-      positions.push(point.x, point.y, point.z)
-    }
-  })
-  return positions
-}
+// Every corner of the recipe's faces, read from the library's files (recipe axes), as x, y, z in turn.
+const loadFacePositions = async (recipeText: string): Promise<readonly number[]> =>
+  (await findModelFacePoints(recipeText, readDevelopmentLibraryFile)).flat()
 
 // The grid offset of the design's chassis recipe, measured on the studs of the real base the recipe builds (recipes are keyed by
 // the chassis part's name in lower case).
@@ -37,9 +21,7 @@ export const loadDesignGridOffset = async (
   for (const brick of design.bricks) {
     const recipeText = chassisModels.get(brick.piece.name.toLowerCase())
     if (recipeText === undefined) continue
-    const bounds = getStudAreaBounds(
-      getFacePositions(await parseLDrawModel(recipeText, DEVELOPMENT_LDRAW_ROUTE))
-    )
+    const bounds = getStudAreaBounds(await loadFacePositions(recipeText))
     return bounds === null ? NO_GRID_OFFSET : getGridOffset(brick.piece.footprint, bounds)
   }
   return NO_GRID_OFFSET
@@ -54,7 +36,7 @@ export const loadChassisFit = async (
   for (const brick of design.bricks) {
     const recipeText = chassisModels.get(brick.piece.name.toLowerCase())
     if (recipeText === undefined) continue
-    const positions = getFacePositions(await parseLDrawModel(recipeText, DEVELOPMENT_LDRAW_ROUTE))
+    const positions = await loadFacePositions(recipeText)
     const bounds = getStudAreaBounds(positions)
     const deck = await loadDesignChassisDeck(design, chassisModels)
     const gridOffset =

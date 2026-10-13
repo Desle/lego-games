@@ -1,5 +1,5 @@
 import { rotateVector, turnQuarter } from '../builder-document/builder-document.ts'
-import { PLATE_HEIGHT, STUD_WIDTH } from '../builder-placement/builder-placement.ts'
+import { PLATE_HEIGHT, STUD_WIDTH } from '../ldraw-units/ldraw-units.constants.ts'
 import { getQuarterTurnAbout, turnAbout } from '../builder-rotation/builder-rotation.ts'
 import type { AddedParts } from './builder-editing.types.ts'
 import type { BuilderPart, Vector } from '../../types/building.types.ts'

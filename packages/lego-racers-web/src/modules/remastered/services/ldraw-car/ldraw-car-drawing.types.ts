@@ -11,6 +11,8 @@ export type LDrawCarDrawing = {
   readonly shown: Promise<void>
   // Resolves when the high resolution is there too, the one drawn up close.
   readonly settled: Promise<void>
+  // Lets go of the shared body model; the drawing's own meshes and materials are freed with `disposeObject`.
+  readonly release: () => void
 }
 
 // The design a car's drawing is made from, and the archive that has its bricks' meshes.

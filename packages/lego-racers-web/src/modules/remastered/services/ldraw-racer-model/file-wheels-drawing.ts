@@ -5,13 +5,13 @@ import { disposeObject } from '@lego-games/ldraw/geometry'
 import { createSkeletonPoseSampler } from '../ldraw-racer/skeleton-pose.ts'
 import { findWheels } from '../ldraw-racer/wheel-analysis.ts'
 import type { RacerPartDrawingRequest } from '../ldraw-racer/ldraw-racer-drawing.types.ts'
-import type { FoundWheel } from './ldraw-racer-model.types.ts'
+import type { SplitSubModel } from '@lego-games/ldraw/geometry'
 
 // The wheels a model brings (a tyre and rim of its own), posed by the bones of the original's wheels: each wheel of the model follows
 // the bone of the original's wheel nearest to it, so the animation spins and steers it where the original's wheel is. The object is
 // in the original model's frame before the model's scale, like the library wheels.
 export const createFileWheelsDrawing = (
-  found: readonly FoundWheel[],
+  found: readonly SplitSubModel[],
   request: RacerPartDrawingRequest
 ) => {
   const sampler = createSkeletonPoseSampler(request.model)

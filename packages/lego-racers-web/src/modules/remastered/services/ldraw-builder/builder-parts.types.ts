@@ -5,6 +5,8 @@ import type { BuilderBox } from './ldraw-builder.types.ts'
 export type PartTemplate = {
   readonly object: Group
   readonly box: BuilderBox
+  // Lets go of the shared model the template is (a palette picture's, once drawn).
+  readonly release: () => void
 }
 
 export type PartTemplates = {

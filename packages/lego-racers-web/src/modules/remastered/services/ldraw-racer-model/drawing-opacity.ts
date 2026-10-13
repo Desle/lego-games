@@ -1,9 +1,7 @@
-import { Mesh } from 'three'
 import type { Material, Object3D } from 'three'
+import { getIsMesh } from '@lego-games/ldraw/geometry'
 
 const OPAQUE = 1
-
-const getIsMesh = (object: Object3D): object is Mesh => object instanceof Mesh
 
 const setMaterialOpacity = (material: Material, opacity: number) =>
   Object.assign(material, {

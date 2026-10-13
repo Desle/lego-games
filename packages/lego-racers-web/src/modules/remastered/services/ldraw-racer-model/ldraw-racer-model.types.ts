@@ -1,6 +1,5 @@
 import type { BrickPiece } from '@lego-games/lego-racers/car-builder'
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
-import type { Group, Vector3 } from 'three'
 import type { RacerPartDrawing } from '../ldraw-racer/ldraw-racer-drawing.types.ts'
 
 // What the page asks of the racer drawings: whether a chassis without a recipe is drawn from the game's own geometry.
@@ -22,10 +21,4 @@ export type LDrawCarLiveState = {
   state: SkeletonAnimationState | null
   opacity: number
   isDisposed: boolean
-}
-
-// A wheel found in a model: its parts gathered in one group that keeps the places they had in the model (LDraw units), and its centre.
-export type FoundWheel = {
-  readonly unit: Group
-  readonly centre: Vector3
 }

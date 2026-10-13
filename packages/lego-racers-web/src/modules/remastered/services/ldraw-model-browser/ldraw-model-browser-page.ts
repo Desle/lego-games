@@ -30,15 +30,14 @@ import { DEVELOPMENT_JAM_ROUTE } from '../../../../shared/development-jam/develo
 import { createChassisFallbackText } from '../ldraw-chassis/chassis-fallback.ts'
 import { LDRAW_TO_STUDS, getChassisFileName } from '../ldraw-car/ldraw-car-document.ts'
 import {
-  applyPlasticLook,
   createStudioLights,
   getLookPreset,
   LOOK_APPEARANCES,
   LookPreset,
   setActiveLookPreset,
 } from '@lego-games/ldraw/material'
-import { parseLDrawModel } from '@lego-games/ldraw/library'
-import { DEVELOPMENT_LDRAW_ROUTE } from '../ldraw-library/ldraw-library-route.ts'
+import { createMaterialSet, holdPreparedModel, instantiateModel } from '@lego-games/ldraw/geometry'
+import { LDrawDetail } from '@lego-games/ldraw/library'
 import {
   DEVELOPMENT_LDRAW_MODELS_ROUTE,
   LDRAW_CHASSIS_FOLDER,
@@ -86,6 +85,8 @@ let files: readonly LDrawModelFile[] = []
 let shown: LDrawModelFile | null = null
 let scenes: DrawnScenes | null = null
 let loadCounter = 0
+// Lets go of the shared models the scenes on screen copy.
+let shownReleases: readonly (() => void)[] = []
 
 let archivePromise: Promise<JamArchive | null> | null = null
 const getArchive = (): Promise<JamArchive | null> => {
@@ -109,9 +110,10 @@ const getBaseName = (path: string): string =>
   (path.split('/').pop() ?? path).replace(/\.[^.]*$/, '').toLowerCase()
 
 // A model's parts in the frame the game uses (studs, z up), its look applied.
-const createLDrawObject = async (text: string): Promise<Group> => {
-  const model = await parseLDrawModel(text, DEVELOPMENT_LDRAW_ROUTE)
-  applyPlasticLook(model)
+const createLDrawObject = async (text: string, releases: (() => void)[]): Promise<Group> => {
+  const hold = holdPreparedModel(text, LDrawDetail.HIGH)
+  releases.push(hold.release)
+  const model = instantiateModel((await hold.prepared).model, createMaterialSet())
   const holder = new Group()
   holder.matrixAutoUpdate = false
   holder.matrix.copy(LDRAW_TO_STUDS)
@@ -182,7 +184,8 @@ const createFacesObject = (archive: JamArchive, code: string): Group | null => {
 // The original's model for a file named like a car code (its body mesh) or a chassis part (the game's geometry as a part).
 const createOriginalObject = async (
   path: string,
-  archive: JamArchive | null
+  archive: JamArchive | null,
+  releases: (() => void)[]
 ): Promise<Object3D | null> => {
   if (archive === null) return null
   const name = getBaseName(path)
@@ -193,25 +196,29 @@ const createOriginalObject = async (
   if (piece === null) return null
   const part = createChassisFallbackText(archive, database, piece)
   const object = await createLDrawObject(
-    `0 FILE original.ldr\n${IDENTITY_REFERENCE} ${getChassisFileName(name)}\n0 FILE ${getChassisFileName(name)}\n${part}`
+    `0 FILE original.ldr\n${IDENTITY_REFERENCE} ${getChassisFileName(name)}\n0 FILE ${getChassisFileName(name)}\n${part}`,
+    releases
   )
   object.add(createStudioLights())
   return object
 }
 
-const createScenes = async (file: LDrawModelFile): Promise<BrowserScenes | null> => {
+const createScenes = async (
+  file: LDrawModelFile,
+  releases: (() => void)[]
+): Promise<BrowserScenes | null> => {
   const text = await fetchText(file.path)
   if (text === null) return null
   const archive = await getArchive()
   const references = await createChassisReferenceTexts(text, archive)
-  const model = await createLDrawObject([text, ...references].join('\n'))
+  const model = await createLDrawObject([text, ...references].join('\n'), releases)
   model.add(createStudioLights())
   const description = describeLDrawModel(text)
   info.textContent = [
     `${file.path}: ${String(description.partCount)} parts`,
     ...description.headerLines,
   ].join('\n')
-  return { model, original: await createOriginalObject(file.path, archive) }
+  return { model, original: await createOriginalObject(file.path, archive, releases) }
 }
 
 const frameCamera = (scene: Scene) => {
@@ -251,8 +258,13 @@ const showFile = async (file: LDrawModelFile) => {
   const counter = ++loadCounter
   info.textContent = `Loading ${file.path}...`
   try {
-    const loaded = await createScenes(file)
+    const releases: (() => void)[] = []
+    const loaded = await createScenes(file, releases).finally(() => {
+      if (counter !== loadCounter) for (const release of releases) release()
+    })
     if (counter !== loadCounter) return
+    for (const release of shownReleases) release()
+    shownReleases = releases
     const isFirstOfFile = shown?.path !== file.path
     shown = { path: file.path, modifiedMilliseconds: file.modifiedMilliseconds }
     const modelScene = loaded === null ? null : wrapInScene(loaded.model)

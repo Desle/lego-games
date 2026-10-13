@@ -1,6 +1,6 @@
-import { Mesh, Vector3 } from 'three'
-import type { Material, Object3D } from 'three'
-import { DetailSwitch } from '@lego-games/ldraw/geometry'
+import { Vector3 } from 'three'
+import type { Material, Mesh, Object3D } from 'three'
+import { DetailSwitch, getIsMesh } from '@lego-games/ldraw/geometry'
 import { LDrawDetail, parseLDrawModel } from '@lego-games/ldraw/library'
 import { DEVELOPMENT_LDRAW_ROUTE } from '../ldraw-library/ldraw-library-route.ts'
 import { getPartsTakenFromCarBody } from '../ldraw-racer-model/racer-model-parts.ts'
@@ -40,8 +40,6 @@ const getIsMaterialShown = (material: Material | readonly Material[]): boolean =
   (Array.isArray(material) ? material : [material]).some(
     (entry: Material) => entry.visible && entry.opacity > 0
   )
-
-const getIsMesh = (object: Object3D): object is Mesh => object instanceof Mesh
 
 const getIsShownInWorld = (object: Object3D): boolean => {
   let current: Object3D | null = object
