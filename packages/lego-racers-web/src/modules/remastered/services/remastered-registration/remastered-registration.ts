@@ -33,11 +33,6 @@ import {
   createLDrawEffectModelDrawing,
   preparePowerUpObjects,
 } from '../ldraw-powerup/powerup-object-drawing.ts'
-import {
-  getIsStudLogoRequested,
-  setIsStudLogoShown,
-  STUD_LOGOS_PARAMETER,
-} from '@lego-games/ldraw/library'
 import { loadLDrawModelIndex, getLDrawModelIndex } from '../ldraw-models/ldraw-model-client.ts'
 import { createLDrawRacerCar } from '../ldraw-racer-model/ldraw-racer-car.ts'
 import { createLDrawRacerDriver } from '../ldraw-racer-model/ldraw-racer-driver.ts'
@@ -81,7 +76,6 @@ export const createRemasteredExtension = async (search: string): Promise<ViewerE
   const index = await loadLDrawModelIndex()
   setUpLDrawModelParser()
   setActiveLookPreset(getLookPreset(search))
-  setIsStudLogoShown(getIsStudLogoRequested(search))
   if (getIsLDrawRequested(search)) await preparePowerUpObjects(index)
   setPlasticLightingExtension(
     getShadowMode(search) === ShadowMode.CLASSIC ? null : createPlasticShadowExtension()
@@ -139,7 +133,6 @@ export const createRemasteredExtension = async (search: string): Promise<ViewerE
       `chassis=${getIsChassisFallbackRequested(search) ? GAME_CHASSIS : 'recipe'}`,
       `shadows=${getShadowMode(search)}`,
       `look=${getLookPreset(search)}`,
-      `studlogos=${getIsStudLogoRequested(search) ? 'on' : 'off'}`,
     ],
     getSoundReplacement: (context, archivePath) =>
       audioVariant === null
@@ -185,17 +178,6 @@ const selectChassis = (chassis: string | null) => {
 const selectLook = (label: string | null) => {
   const url = new URL(globalThis.location.href)
   url.searchParams.set(LOOK_PARAMETER, getLookPresetFromLabel(label))
-  if (!url.searchParams.has('hd')) url.searchParams.set('hd', '')
-  globalThis.location.assign(url.toString())
-}
-
-const STUD_LOGOS_LABEL = 'On'
-
-// Switching the stud logos reloads the page too: the models are built with their studs. Off draws plain studs everywhere.
-const selectStudLogos = (label: string | null) => {
-  const url = new URL(globalThis.location.href)
-  if (label === null) url.searchParams.set(STUD_LOGOS_PARAMETER, '0')
-  else url.searchParams.delete(STUD_LOGOS_PARAMETER)
   if (!url.searchParams.has('hd')) url.searchParams.set('hd', '')
   globalThis.location.assign(url.toString())
 }
@@ -259,15 +241,6 @@ export const getRemasteredSelectors = async (
         ? LOOK_APPEARANCES[getLookPreset(search)].label
         : null,
       onSelected: selectLook,
-    },
-    {
-      label: 'Stud logos (reloads)',
-      options: [STUD_LOGOS_LABEL],
-      selected:
-        getIsRemasteredRequested(search) && getIsStudLogoRequested(search)
-          ? STUD_LOGOS_LABEL
-          : null,
-      onSelected: selectStudLogos,
     },
     getModelSelector(),
   ]

@@ -2,7 +2,7 @@
 
 ## How this package works
 
-Generic LDraw for every LEGO game port in this repository: the parts library, parsing and merging models in a worker, the plastic looks, and the maths of building on the stud grid. It knows no game. An app (today `@lego-games/lego-racers-web`) serves the library, passes its URL in, and adds anything game-specific through the hooks below. Stack: TypeScript and three.js (`three/examples` `LDrawLoader`), run in the browser through the app's Vite build.
+Generic LDraw for every LEGO game port in this repository: the parts library, parsing and merging models in a worker, the plastic looks, the maths of building on the stud grid, and the editor tools an app embeds (the model viewer). It knows no game and reads no files: browser code only. An app (today `@lego-games/lego-racers-web`) serves the library, passes its URL in, and adds anything game-specific through the hooks below. Stack: TypeScript and three.js (`three/examples` `LDrawLoader`), run in the browser through the app's Vite build.
 
 Every rule is enforced by a check. When one fails, its output ends in a `Fix:` line: do that. Never weaken, skip or delete a check to get green. The full rule list is `.docs/rules.md` at the repository root. Run the commands below inside this package's folder.
 
@@ -24,16 +24,16 @@ src/
     geometry/   parse in a worker, merge by material, the two details, the prepared-model cache and its copies
     material/   plastic, the look presets (shadings, edges), occlusion bake, shader precompile
     building/   pure stud-grid maths: documents, rotation, part shapes, placement, editing, history
-    minifig/    where the library's minifigure parts sit, assembled
-    files/      node only, for an app's dev server: the routes that serve the library and a models folder, list parts, save models
+    minifig/    the minifigure skeleton: where the library's parts sit, their roles, the hinges and their limits, posing
+    editor/     embeddable UI: createModelViewer(element, { libraryUrl }) shows a model's text (later the builder and minifigure poser)
   shared/types/enum.types.ts   createEnum, used instead of `enum`
 ```
 
-Each module is imported only through its `index.ts`, by apps as `@lego-games/ldraw/<module>` (the `exports` of `package.json`). `files` uses `node:` modules: only an app's Vite config and node scripts import it, never browser code. The index exports what apps use: that is the module's public API, so keep it small and add to it on purpose. The layer table is the one in `packages/lego-racers/AGENTS.md`; types that name three.js types sit beside their code in `services/`, since `types/` imports no package.
+Each module is imported only through its `index.ts`, by apps as `@lego-games/ldraw/<module>` (the `exports` of `package.json`). The dev server's file routes (library, models folder, part list, save) live in the studio, `@lego-games/ldraw-studio/files`; the editor's own dev page is that studio (`pnpm studio`). The index exports what apps use: that is the module's public API, so keep it small and add to it on purpose. The layer table is the one in `packages/lego-racers/AGENTS.md`; types that name three.js types sit beside their code in `services/`, since `types/` imports no package.
 
 ### Conventions
 
-- **No game code.** Never import `@lego-games/lego-racers*` or reach into another package by a relative path (`tooling.config.ts` `forbiddenImports`, the `layer-boundaries` check). A game-specific step comes in from the app as a parameter or setting: the library URL, the parse worker's sub-model splitter, the performance measurer, the shader precompiler.
+- **No game code, no files.** Never import `@lego-games/lego-racers*` or `@lego-games/ldraw-studio`, or reach into another package by a relative path (`tooling.config.ts` `forbiddenImports`, the `layer-boundaries` check). A game-specific step comes in from the app as a parameter or setting: the library URL, the parse worker's sub-model splitter, the performance measurer, the shader precompiler.
 - **LDraw units and axes** everywhere: a stud is 20 wide, a plate 8 high, a brick 24; y points down. Convert to a game's units in the app.
 - A file with a spec gets its own folder: `services/builder-studs/builder-studs.ts` beside `builder-studs.spec.ts`. Types live in a sibling `<name>.types.ts`.
 - Arrow functions, full words, `createEnum` instead of `enum`. A class only `extends` something (`DetailSwitch extends Object3D`).

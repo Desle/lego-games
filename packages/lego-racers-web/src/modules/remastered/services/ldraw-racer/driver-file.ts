@@ -1,73 +1,36 @@
 import { parseBuilderDocument } from '@lego-games/ldraw/building'
 import type { BuilderPart } from '@lego-games/ldraw/building'
-import { MinifigPartKey } from './minifig-assembly.types.ts'
-import { DriverPartRole } from './driver-file.types.ts'
+import { findMinifigRole, getMinifigRoles } from '@lego-games/ldraw/minifig'
+import type { MinifigRole } from '@lego-games/ldraw/minifig'
 import type { DriverFilePart, DriverRecordKey, DriverRecordMatch } from './driver-file.types.ts'
 
 const ROLE_PREFIX = '0 !RACERS ROLE '
 const PART_BYTE_COUNT = 5
 // The bytes that pick the parts (hat, face, torso, legs); the fifth, the expression, does not change what is drawn.
 const PART_CHOICE_BYTE_COUNT = 4
-// The neck (LDraw units, y down): a part with no role whose origin is above it is worn on the head, anything else on the torso.
-const NECK_Y = -32
-
-// The library's minifigure parts by number (older numbers too, prints and assemblies included); a sided part with no side of its own
-// in its number takes the side it sits on (the figure's left is +x).
-const PART_NUMBER_ROLES: readonly (readonly [RegExp, DriverPartRole | 'arm' | 'hand'])[] = [
-  [/^3626/, DriverPartRole.HEAD],
-  [/^(?:973|76382)/, DriverPartRole.TORSO],
-  [/^(?:3815|970)/, DriverPartRole.HIPS],
-  [/^(?:3817|972)/, DriverPartRole.LEFT_LEG],
-  [/^(?:3816|971|2532)/, DriverPartRole.RIGHT_LEG],
-  [/^(?:3818|3819|981|982)/, 'arm'],
-  [/^(?:3820|983|2531)/, 'hand'],
-]
-
-const PART_KEYS: Readonly<Record<DriverPartRole, MinifigPartKey>> = Object.freeze({
-  [DriverPartRole.HEAD]: MinifigPartKey.HEAD,
-  [DriverPartRole.HAT]: MinifigPartKey.HEAD,
-  [DriverPartRole.ACCESSORY]: MinifigPartKey.HEAD,
-  [DriverPartRole.TORSO]: MinifigPartKey.TORSO,
-  [DriverPartRole.LEFT_ARM]: MinifigPartKey.LEFT_ARM,
-  [DriverPartRole.RIGHT_ARM]: MinifigPartKey.RIGHT_ARM,
-  [DriverPartRole.LEFT_HAND]: MinifigPartKey.LEFT_HAND,
-  [DriverPartRole.RIGHT_HAND]: MinifigPartKey.RIGHT_HAND,
-  [DriverPartRole.HIPS]: MinifigPartKey.HIPS,
-  [DriverPartRole.LEFT_LEG]: MinifigPartKey.LEFT_LEG,
-  [DriverPartRole.RIGHT_LEG]: MinifigPartKey.RIGHT_LEG,
-})
 
 const getPartNumber = (partName: string): string =>
   (partName.split(/[\\/]/).pop() ?? '').toLowerCase().replace(/\.dat$/, '')
 
-const getStatedRole = (part: BuilderPart): DriverPartRole | null => {
+const getStatedRole = (part: BuilderPart): MinifigRole | null => {
   const stated = part.commentLines
     .filter((line) => line.startsWith(ROLE_PREFIX))
-    .map((line) => line.slice(ROLE_PREFIX.length).trim().toLowerCase())
+    .map((line) => line.slice(ROLE_PREFIX.length))
     .at(-1)
-  return Object.values(DriverPartRole).find((role) => role === stated) ?? null
-}
-
-// The role of a part the file names none for (a hand-edited file): a minifigure part by its number, anything else by where it sits.
-export const getRoleByPart = (part: BuilderPart): DriverPartRole => {
-  const number = getPartNumber(part.partName)
-  const known = PART_NUMBER_ROLES.find(([pattern]) => pattern.test(number))?.[1]
-  const isLeft = part.position[0] >= 0
-  if (known === 'arm') return isLeft ? DriverPartRole.LEFT_ARM : DriverPartRole.RIGHT_ARM
-  if (known === 'hand') return isLeft ? DriverPartRole.LEFT_HAND : DriverPartRole.RIGHT_HAND
-  if (known !== undefined) return known
-  return part.position[1] < NECK_Y ? DriverPartRole.HAT : DriverPartRole.TORSO
+  return stated === undefined ? null : findMinifigRole(stated)
 }
 
 // The parts of a driver file, each with its role: the `!RACERS ROLE` line before it, else what its part number or place says.
-export const parseDriverFile = (text: string): readonly DriverFilePart[] =>
-  Object.freeze(
-    parseBuilderDocument(text).parts.map((part) =>
-      Object.freeze({ role: getStatedRole(part) ?? getRoleByPart(part), part })
-    )
+export const parseDriverFile = (text: string): readonly DriverFilePart[] => {
+  const { parts } = parseBuilderDocument(text)
+  const statedRoles = new Map(
+    parts.flatMap((part, index) => {
+      const role = getStatedRole(part)
+      return role === null ? [] : [[index, role] as const]
+    })
   )
-
-export const getMinifigPartKey = (role: DriverPartRole): MinifigPartKey => PART_KEYS[role]
+  return getMinifigRoles(parts, statedRoles)
+}
 
 // A head or a torso of the library with no print of its own (`3626b`, `3626c`, `973`, `76382`): the game's picture goes on it.
 export const getIsPlainHead = (partName: string): boolean =>

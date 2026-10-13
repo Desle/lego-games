@@ -17,17 +17,12 @@ import { loadLDrawModelText } from '../ldraw-models/ldraw-model-client.ts'
 import { restoreDisplayColors } from './skin-colors.ts'
 import { createFaceDecal, createTorsoDecal } from './minifig-decals.ts'
 import type { MinifigDecal, PlacedDecal } from './minifig-decals.types.ts'
-import { MinifigPartKey, MinifigPosture } from './minifig-assembly.types.ts'
-import { getJointMatrices } from './minifig-joints.ts'
+import { MinifigRole, poseMinifig } from '@lego-games/ldraw/minifig'
+import { getMinifigPose } from './minifig-joints.ts'
 import { getMinifigRig } from './minifig-rig.ts'
+import { MinifigPosture } from './minifig-rig.types.ts'
 import type { MinifigRig } from './minifig-rig.types.ts'
-import {
-  getIsPlainHead,
-  getIsPlainTorso,
-  getMinifigPartKey,
-  parseDriverFile,
-} from './driver-file.ts'
-import { DriverPartRole } from './driver-file.types.ts'
+import { getIsPlainHead, getIsPlainTorso, parseDriverFile } from './driver-file.ts'
 import type { DriverFilePart } from './driver-file.types.ts'
 import { findDriverSource } from './driver-records.ts'
 import { readMinifigPictures } from './minifig-pictures.ts'
@@ -40,9 +35,9 @@ const RAW_UNITS_PER_LDRAW_UNIT = 3.2
 const IDENTITY_ROTATION = '1 0 0 0 1 0 0 0 1'
 // A helmet that is a whole hat takes the face out of the figure builder's model; the model with no hat has the face and the torso.
 const NO_HAT = 0
-const HAND_ROLES: ReadonlySet<DriverPartRole> = new Set([
-  DriverPartRole.LEFT_HAND,
-  DriverPartRole.RIGHT_HAND,
+const HAND_ROLES: ReadonlySet<MinifigRole> = new Set([
+  MinifigRole.LEFT_HAND,
+  MinifigRole.RIGHT_HAND,
 ])
 
 // The figure's frame in the model's: LDraw's (x to the viewer's right, y down, front toward -z) into the model's (x forward, y to the
@@ -67,10 +62,10 @@ const getFigureFrame = (rig: MinifigRig): Matrix4 =>
     1
   )
 
-const LEG_PART_KEYS: ReadonlySet<MinifigPartKey> = new Set([
-  MinifigPartKey.HIPS,
-  MinifigPartKey.LEFT_LEG,
-  MinifigPartKey.RIGHT_LEG,
+const LEG_ROLES: ReadonlySet<MinifigRole> = new Set([
+  MinifigRole.HIPS,
+  MinifigRole.LEFT_LEG,
+  MinifigRole.RIGHT_LEG,
 ])
 
 // A bone whose drawn corners span less than this (raw units, up the model) carries only a lid, not a part of the figure.
@@ -107,7 +102,7 @@ const getPartMatrix = (part: BuilderPart): Matrix4 => {
 
 // Flesh the menus' lighting must show as the yellow it is: the head, and a hand in the head's colour.
 const getIsSkin = (entry: DriverFilePart, headColorCode: number | null): boolean =>
-  entry.role === DriverPartRole.HEAD ||
+  entry.role === MinifigRole.HEAD ||
   (HAND_ROLES.has(entry.role) && entry.part.colorCode === headColorCode)
 
 // The game's picture on a head or torso of the file that has no print of its own; a printed part of the library keeps its print.
@@ -118,14 +113,14 @@ const getDecals = (
 ): readonly PlacedDecal[] =>
   parts.flatMap((entry) => {
     const decal =
-      entry.role === DriverPartRole.HEAD && getIsPlainHead(entry.part.partName)
+      entry.role === MinifigRole.HEAD && getIsPlainHead(entry.part.partName)
         ? getPictures().face
-        : entry.role === DriverPartRole.TORSO && getIsPlainTorso(entry.part.partName)
+        : entry.role === MinifigRole.TORSO && getIsPlainTorso(entry.part.partName)
           ? getPictures().torso
           : null
     if (decal === null) return []
     const created =
-      entry.role === DriverPartRole.HEAD
+      entry.role === MinifigRole.HEAD
         ? createFaceDecal(decal, search)
         : createTorsoDecal(decal, search)
     return created === null ? [] : [{ decal: created, entry }]
@@ -157,13 +152,13 @@ export const createLDrawDriverDrawing = (
   const figureFrame = getFigureFrame(rig)
   const object = new Group()
   const isLegsDrawn = getIsBoneDrawn(request.model, rig.pelvisIndex)
-  const holders = new Map<MinifigPartKey, Group>(
-    Object.values(MinifigPartKey).map((key) => {
+  const holders = new Map<MinifigRole, Group>(
+    Object.values(MinifigRole).map((role) => {
       const holder = new Group()
       holder.matrixAutoUpdate = false
-      holder.visible = isLegsDrawn || !LEG_PART_KEYS.has(key)
+      holder.visible = isLegsDrawn || !LEG_ROLES.has(role)
       object.add(holder)
-      return [key, holder]
+      return [role, holder]
     })
   )
   const materials = createMaterialSet()
@@ -184,7 +179,7 @@ export const createLDrawDriverDrawing = (
         const model = instantiateModel(prepared, partMaterials)
         if (isSkin) restoreDisplayColors(model)
         placed.add(model)
-        holders.get(getMinifigPartKey(entry.role))?.add(placed)
+        holders.get(entry.role)?.add(placed)
       },
       (error: unknown) =>
         console.error(`The LDraw library has no part ${entry.part.partName}`, error)
@@ -194,13 +189,13 @@ export const createLDrawDriverDrawing = (
     if (live.isDisposed || (source.kind === 'file' && text === null)) return
     const parts = source.kind === 'file' ? parseDriverFile(text ?? '') : source.parts
     const headColorCode =
-      parts.find((entry) => entry.role === DriverPartRole.HEAD)?.part.colorCode ?? null
+      parts.find((entry) => entry.role === MinifigRole.HEAD)?.part.colorCode ?? null
     const decals = getDecals(parts, getPictures, search)
     for (const { decal, entry } of decals) {
       decal.mesh.matrixAutoUpdate = false
       decal.mesh.matrix.copy(getPartMatrix(entry.part))
       decalMeshes.push(decal.mesh)
-      holders.get(getMinifigPartKey(entry.role))?.add(decal.mesh)
+      holders.get(entry.role)?.add(decal.mesh)
     }
     await Promise.all([
       ...parts.map((entry) => addPart(entry, getIsSkin(entry, headColorCode))),
@@ -209,9 +204,9 @@ export const createLDrawDriverDrawing = (
   }
   const pose = (state: SkeletonAnimationState | null) => {
     const posed = getRestOrPose(sampler, state)
-    const jointMatrices = getJointMatrices(rig, sampler.restMatrices, posed, figureFrame)
-    for (const [key, holder] of holders) {
-      holder.matrix.copy(jointMatrices.get(key) ?? figureFrame)
+    const matrices = poseMinifig(getMinifigPose(rig, sampler.restMatrices, posed, figureFrame))
+    for (const [role, holder] of holders) {
+      holder.matrix.copy(matrices[role])
       holder.matrixWorldNeedsUpdate = true
     }
     ensureStudioLights(object, rig.posture === MinifigPosture.STANDING)

@@ -1,4 +1,4 @@
-import type { LDrawModelDescription } from './ldraw-model-description.types.ts'
+import type { LDrawModelDescription } from './model-description.types.ts'
 
 const FILE_LINE = /^0\s+FILE\s/i
 const PART_LINE = /^1\s/
