@@ -1028,3 +1028,23 @@
 00493790 Trail_Draw
 00493aa0 Trails_Draw
 00493850 Trails_Create
+# Full-screen cinemas and the start of a circuit (cutscenes.md)
+00466ec0 CinemaWidget_OnKeyPress
+00466f20 CinemaWidget_OnClick
+00466b10 CinemaWidget_Reset
+004692b0 WidgetManager_DispatchEvents
+00479a10 CinemaScreen_Update
+00479a50 CinemaScreen_Leave
+00479a80 CircuitIntroductionScreen_Constructor
+00479b10 CircuitIntroductionScreen_Load
+00479d10 CircuitIntroductionScreen_Leave
+00480b50 CircuitIntroductionScreen_Update
+00475c30 AwardScreen_Constructor
+00476a00 AwardScreen_Leave
+00476ad0 AwardScreen_Update
+004861b0 PickRacer_PushSaveAll
+004869b0 PickRacer_GetIsReactionDone
+00486b30 MemoryCardScreen_Constructor
+00487020 MemoryCardScreen_Update
+00435860 Race_RenderState4
+004358e0 Race_RenderState5

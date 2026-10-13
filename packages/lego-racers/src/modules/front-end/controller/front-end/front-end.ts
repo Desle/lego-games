@@ -12,6 +12,7 @@ import type {
   OpenedScreen,
 } from '../../types/front-end.types.ts'
 import { createBuilderSession } from '../../../car-builder/index.ts'
+import { getIsCinemaFinished, getIsCinemaSkippedByKey } from '../../../cinema/index.ts'
 import { getSettingsWithMemory } from '../profile/profile.ts'
 import { getDriverForScreen } from '../driver-base/driver-base.ts'
 import { FrontEndScreen } from '../../types/front-end-screen/front-end-screen.ts'
@@ -21,6 +22,7 @@ import {
   getInitialSelection,
   getScreenDefinition,
   getScreenFileName,
+  PICK_RACER_IDS,
 } from '../front-end-screens/front-end-screens.ts'
 import { createFrontEndSettings } from '../screen-helpers/screen-helpers.ts'
 import {
@@ -199,13 +201,47 @@ const applyNavigation = (
   }
 }
 
+// 0x004861b0: the racer pick, leaving for another screen, puts `saveall` on top of it. The music of the screen below
+// starts when that one shows, after `saveall` has gone.
+const applyScreenNavigation = (
+  issuerScreenId: number,
+  navigated: FrontEndState,
+  navigation: ScreenNavigation,
+  soundNames: readonly string[],
+  resources: FrontEndResources,
+  environment: FrontEndEnvironment
+): FrontEndStep => {
+  const step = applyNavigation(navigated, navigation, soundNames, resources, environment)
+  const runtime = getRuntime(step.state, resources, environment)
+  const isLeaving = navigation.kind === 'push' || navigation.kind === 'pop'
+  if (!PICK_RACER_IDS.includes(issuerScreenId) || !isLeaving || runtime === null) return step
+  const saveScreen = {
+    screenId: FrontEndScreen.SAVE_ALL,
+    selection: getInitialSelection(FrontEndScreen.SAVE_ALL, runtime),
+  }
+  return {
+    ...step,
+    state: {
+      ...step.state,
+      screens: [...step.state.screens, saveScreen],
+      musicListIndex: navigated.musicListIndex,
+    },
+    musicListIndex: null,
+  }
+}
+
+// `saveall` takes itself off in its first update (0x00487020). The screen under it is made again: its first update is the
+// next frame's, so its clocks start from zero.
+const SAVE_SCREEN_LEAVE: ScreenNavigation = Object.freeze({ kind: 'pop' })
+
 // The current screen's answer to the input, if any. A racer picked on the race select starts his reaction clip and the
 // screen leaves when it has ended (0x00484f40, 0x004869b0).
 const getInputStep = (
   advanced: FrontEndState,
   resources: FrontEndResources,
   environment: FrontEndEnvironment,
-  input: FrontEndInput | null
+  input: FrontEndInput | null,
+  frameMilliseconds: number
 ): FrontEndStep => {
   const runtime = getRuntime(advanced, resources, environment)
   const current = advanced.screens.at(-1)
@@ -227,11 +263,24 @@ const getInputStep = (
     builder: result.builder,
     driver: result.driver,
   }
-  const delayed = getStateWithShowcaseReaction(navigated, result.navigation, resources, environment)
+  const delayed = getStateWithShowcaseReaction(
+    navigated,
+    result.navigation,
+    resources,
+    environment,
+    frameMilliseconds
+  )
   if (delayed !== null) {
     return { state: delayed, soundNames: result.soundNames, musicListIndex: null }
   }
-  return applyNavigation(navigated, result.navigation, result.soundNames, resources, environment)
+  return applyScreenNavigation(
+    current.screenId,
+    navigated,
+    result.navigation,
+    result.soundNames,
+    resources,
+    environment
+  )
 }
 
 // The main menu figure (0x00481450, 0x00480e10): its timers and clips run while that screen is the top one, and it
@@ -326,17 +375,27 @@ const getStateWithPreviewEmitters = (
   }
 }
 
-// A full-screen cinema that has run its length is done (Cinema_Update 0x00466d90 sets its finished flag): the screen takes
-// the way out a key would give it.
-const getIsCinemaScreenEnded = (state: FrontEndState, resources: FrontEndResources): boolean => {
-  const screenId = state.screens.at(-1)?.screenId
+// The keys the dispatch (0x004692b0) keeps for moving the focus, so no widget sees them (as tab, control and shift).
+const FOCUS_INPUTS: readonly FrontEndInput[] = ['up', 'down']
+
+// A full-screen cinema is done when the widget's update finds the end its previous update reached (0x00466d90), or when a
+// key reaches the widget once the cinema may be skipped (0x00466ec0, read after that update); the screen then takes its
+// way out in the same frame (0x00479a10), which it gets as `accept`. A key reaches the port one frame after the
+// original's, so the cinema's clock before this step is the one the original's key saw. No other input is the screen's.
+const getCinemaScreenInput = (
+  before: FrontEndState,
+  resources: FrontEndResources,
+  input: FrontEndInput | null
+): FrontEndInput | null => {
+  const screenId = before.screens.at(-1)?.screenId
   const source = screenId === undefined ? null : getCinemaScreenSource(screenId)
   const cinema = source === null ? undefined : resources.getCinemaFiles(source).cinemas.cinemas[0]
-  return (
-    cinema !== undefined &&
-    cinema.framesPerSecond !== 0 &&
-    state.racePreview.cinemaMilliseconds >= (cinema.lengthFrames * 1000) / cinema.framesPerSecond
-  )
+  if (cinema === undefined) return input
+  const milliseconds = before.racePreview.cinemaMilliseconds
+  if (getIsCinemaFinished(cinema, milliseconds)) return 'accept'
+  const isKeySkipping =
+    input !== null && !FOCUS_INPUTS.includes(input) && getIsCinemaSkippedByKey(cinema, milliseconds)
+  return isKeySkipping ? 'accept' : null
 }
 
 // A race changed on the screen that stays open: its handler (0x00488010) restarts the best time's countdown at 2,500 ms, and
@@ -365,16 +424,21 @@ export const stepFrontEnd = (
     menuFigure: figureStep?.figure ?? state.menuFigure,
   }
   const figureSounds = figureStep?.soundNames ?? []
-  const pending = getPendingShowcaseNavigation(advanced, resources)
+  const topScreenId = state.screens.at(-1)?.screenId ?? FrontEndScreen.MAIN_MENU
+  const isSaveScreenLeaving = topScreenId === FrontEndScreen.SAVE_ALL
+  const pending = isSaveScreenLeaving
+    ? SAVE_SCREEN_LEAVE
+    : getPendingShowcaseNavigation(advanced, resources)
   const stepped =
     pending === null
       ? getInputStep(
           advanced,
           resources,
           environment,
-          input ?? (getIsCinemaScreenEnded(advanced, resources) ? 'accept' : null)
+          getCinemaScreenInput(state, resources, input),
+          frameMilliseconds
         )
-      : applyNavigation(advanced, pending, [], resources, environment)
+      : applyScreenNavigation(topScreenId, advanced, pending, [], resources, environment)
   if (
     stepped.state.outcome === 'running' &&
     stepped.state.screens.at(-1)?.screenId === FrontEndScreen.MAIN_MENU &&
@@ -395,16 +459,18 @@ export const stepFrontEnd = (
     {
       ...stepped.state,
       // The frame that opens a screen already runs its update (0x0047a3f0).
-      racePreview: isPreviewRestarted
-        ? getRestartedClock(
-            advanceRacePreviewClock(
-              createRacePreviewClock(),
-              frameMilliseconds,
-              getIsPreviewCycling(stepped.state, resources)
-            ),
-            isScreenChanged
-          )
-        : stepped.state.racePreview,
+      racePreview: isSaveScreenLeaving
+        ? createRacePreviewClock()
+        : isPreviewRestarted
+          ? getRestartedClock(
+              advanceRacePreviewClock(
+                createRacePreviewClock(),
+                frameMilliseconds,
+                getIsPreviewCycling(stepped.state, resources)
+              ),
+              isScreenChanged
+            )
+          : stepped.state.racePreview,
       menuFigure:
         stepped.state.screens.length === advanced.screens.length &&
         stepped.state.screens.at(-1)?.screenId === advanced.screens.at(-1)?.screenId

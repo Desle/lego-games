@@ -130,12 +130,15 @@ const environment: FrontEndEnvironment = {
   standingRows: [],
 }
 
-// A racer picked on the race select leaves the screen when his reaction clip has ended.
+// A racer picked on the race select leaves the screen when his reaction clip has ended, and `saveall` is on top for the
+// frame after.
 const settleReaction = (state: FrontEndState, options: FrontEndEnvironment): FrontEndState => {
   let current = state
   for (
     let frame = 0;
-    frame < MAXIMUM_SETTLE_FRAMES && current.showcase?.pendingNavigation != null;
+    frame < MAXIMUM_SETTLE_FRAMES &&
+    (current.showcase?.pendingNavigation != null ||
+      current.screens.at(-1)?.screenId === FrontEndScreen.SAVE_ALL);
     frame += 1
   ) {
     current = stepFrontEnd(current, resources, options, null, 16).state
@@ -282,11 +285,16 @@ describe('the front end', () => {
   })
 
   it('keeps all the races of the circuit in a circuit race and gives it five opponents', () => {
-    // Arrange / Act
-    const state = play(['down', 'accept', 'accept', 'accept'])
+    // Arrange
+    const introduced = play(['down', 'accept', 'accept', 'accept'])
+
+    // Act
+    const state = stepFrontEnd(introduced, resources, environment, 'accept', 16).state
     const request = getFrontEndRaceRequest(state)
 
     // Assert
+    expect(getScreenIds(introduced).at(-1)).toBe(FrontEndScreen.CIRCUIT_ONE_INTRODUCTION)
+    expect(getFrontEndRaceRequest(introduced)).toBeNull()
     expect(request?.mode).toBe('circuit')
     expect(request?.racerCount).toBe(6)
     expect(request?.circuitRaces.map((race) => race.raceFolder)).toEqual(['racec0r1', 'racec1r0'])
@@ -335,6 +343,87 @@ describe('the front end', () => {
       racerCount: 2,
       playerRacerNames: ['ALICE', 'BOB'],
     })
+  })
+
+  it('puts saveall on top for one frame as the racer pick leaves, then shows the circuit introduction', () => {
+    // Arrange
+    const picked = stepFrontEnd(
+      play(['down', 'accept', 'accept']),
+      resources,
+      environment,
+      'accept',
+      16
+    ).state
+    let current = picked
+    while (current.showcase?.pendingNavigation != null) {
+      current = stepFrontEnd(current, resources, environment, null, 16).state
+    }
+
+    // Act
+    const saved = current
+    const introduced = stepFrontEnd(saved, resources, environment, 'accept', 16).state
+
+    // Assert
+    expect(getScreenIds(saved).slice(-2)).toEqual([
+      FrontEndScreen.CIRCUIT_ONE_INTRODUCTION,
+      FrontEndScreen.SAVE_ALL,
+    ])
+    expect(getScreenIds(introduced).at(-1)).toBe(FrontEndScreen.CIRCUIT_ONE_INTRODUCTION)
+    expect(introduced.racePreview.cinemaMilliseconds).toBe(0)
+    expect(introduced.musicListIndex).toBe(5)
+    expect(introduced.outcome).toBe('running')
+  })
+
+  it('starts the circuit when its introduction ends or a key ends it from one second in', () => {
+    // Arrange
+    const withCinema: FrontEndResources = {
+      ...resources,
+      getCinemaFiles: () => ({
+        cinemas: {
+          worldNames: [],
+          cinemas: [
+            {
+              name: 'cir1-01',
+              lengthFrames: 60,
+              framesPerSecond: 30,
+              objects: [],
+              actions: [],
+              dummies: [],
+              ambientLights: [],
+              directionalLights: [],
+            },
+          ],
+          readByteCount: 0,
+        },
+        events: { poolNames: [], emitterEvents: [], vertexEffects: [], reactionLists: [] },
+        pools: [],
+      }),
+    }
+    const introduction = createFrontEnd(
+      withCinema,
+      environment,
+      FrontEndScreen.CIRCUIT_ONE_INTRODUCTION
+    )
+    const run = (inputs: readonly (FrontEndInput | null)[]) =>
+      inputs.reduce(
+        (state, input) => stepFrontEnd(state, withCinema, environment, input, 33).state,
+        introduction
+      )
+    const idle = (count: number): readonly null[] => Array.from({ length: count }, () => null)
+
+    // Act
+    const earlyKey = run([...idle(29), 'accept'])
+    const focusKey = run([...idle(40), 'down', 'up'])
+    const skipped = run([...idle(31), 'back'])
+    const beforeEnd = run(idle(61))
+    const ended = run(idle(62))
+
+    // Assert
+    expect(earlyKey.outcome).toBe('running')
+    expect(focusKey.outcome).toBe('running')
+    expect(skipped.outcome).toBe('race')
+    expect(beforeEnd.outcome).toBe('running')
+    expect(ended.outcome).toBe('race')
   })
 
   it('chooses the options of the game tab', () => {

@@ -146,25 +146,29 @@ export const stepRacerShowcase = (
 
 // 0x00486890 (the button handler 0x00484f40 calls it when a racer is picked): a random reaction clip (`random table[++cursor]
 // % 3`: `jump`, `yes!` or `spin`) blends in over 200 ms and plays once; the screen leaves by `navigation` when it has ended.
+// The key's frame already plays it for `elapsedMilliseconds` (the port gets a key a frame after the original; measured: the
+// racer pick leaves in the frame the original does, circuit-start.golden.spec.ts).
 export const startRacerShowcaseReaction = (
   current: RacerShowcase,
   showcase: RacerShowcaseAnimation,
   randomTable: RandomTable,
   randomPosition: number,
-  navigation: ScreenNavigation
+  navigation: ScreenNavigation,
+  elapsedMilliseconds: number
 ): RacerShowcaseStep => {
   const draw = drawRandomRemainder(randomTable, randomPosition, showcase.reactionClipIndices.length)
   const clipIndex = showcase.reactionClipIndices[draw.value] ?? -1
+  const blended = blendToSkeletonClip(showcase.animation, current.driverAnimation, {
+    clipIndex,
+    durationMilliseconds: RACER_SHOWCASE_REACTION_BLEND_MILLISECONDS,
+    isFirstAdvancing: false,
+    isSecondAdvancing: false,
+    isTargetLooping: false,
+  })
   return {
     showcase: Object.freeze({
       ...current,
-      driverAnimation: blendToSkeletonClip(showcase.animation, current.driverAnimation, {
-        clipIndex,
-        durationMilliseconds: RACER_SHOWCASE_REACTION_BLEND_MILLISECONDS,
-        isFirstAdvancing: false,
-        isSecondAdvancing: false,
-        isTargetLooping: false,
-      }),
+      driverAnimation: advanceSkeletonAnimation(blended, showcase.animation, elapsedMilliseconds),
       pendingNavigation: navigation,
     }),
     randomPosition: draw.position,

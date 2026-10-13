@@ -69,6 +69,7 @@ export type {
   OriginalDecalTriangle,
   OriginalDraw,
   OriginalPresentation,
+  OriginalScreenEvent,
   OriginalRenderFrame,
   OriginalRenderState,
   OriginalTexture,

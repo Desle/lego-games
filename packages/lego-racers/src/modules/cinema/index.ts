@@ -1,3 +1,13 @@
+export {
+  CINEMA_CLOCK_START,
+  getCinemaClock,
+  getIsCinemaFinished,
+  getIsCinemaSkipped,
+  getIsCinemaSkippedByKey,
+  KEYBOARD_EVENT_CLASS,
+  stepCinemaClock,
+} from './controller/cinema-clock/cinema-clock.ts'
+export type { CinemaClock, CinemaSkipInput } from './controller/cinema-clock/cinema-clock.types.ts'
 export { parseCinemaDatabase } from './controller/parse-cinema-database/parse-cinema-database.ts'
 export {
   getActiveCinemaActions,

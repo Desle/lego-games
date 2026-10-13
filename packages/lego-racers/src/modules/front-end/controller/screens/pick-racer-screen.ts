@@ -1,4 +1,5 @@
 import { getRacerShowcaseView } from '../racer-showcase/racer-showcase.ts'
+import { getCircuitIntroductionScreenId } from './circuit-introduction-screen.ts'
 import type { FrontEndInput } from '../../types/front-end.types.ts'
 import type { FrontEndWidget } from '../../types/front-end-widget.types.ts'
 import { FrontEndScreen, FrontEndText } from '../../types/front-end-screen/front-end-screen.ts'
@@ -130,6 +131,9 @@ const handleInput = (runtime: ScreenRuntime, input: FrontEndInput): ScreenResult
     })
   }
   const playerCount = playerRacerNames.length
+  // 0x004850a0 case 0x41: a circuit race with one player first shows the circuit's introduction, which starts the race
+  // when it is done; anything else starts the race at once.
+  const isIntroduced = settings.mode === 'circuit' && playerCount === 1
   return createResult(runtime, {
     settings: {
       ...settings,
@@ -137,7 +141,9 @@ const handleInput = (runtime: ScreenRuntime, input: FrontEndInput): ScreenResult
       localPlayerCount: playerCount,
       racerCount: getRacerCount(runtime, playerCount),
     },
-    navigation: { kind: 'race' },
+    navigation: isIntroduced
+      ? { kind: 'push', screenId: getCircuitIntroductionScreenId(runtime) }
+      : { kind: 'race' },
     soundNames: [MenuSound.ACCEPT],
   })
 }
