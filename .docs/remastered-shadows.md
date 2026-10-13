@@ -4,7 +4,7 @@ With `?hd` in development, races get real shadows. Everything lives in `packages
 
 ## Choices
 
-`shadows=classic` keeps the original's blob decals (`carshadN`), `shadows=real` (the default with `?hd`) draws real shadows and hides the blobs, `shadows=scenery` also lets the static scenery (the BSP tree: walls, bridge posts, rails; and the plain mesh instances) cast, from a map baked once per track (below). The developer panel's **Shadows (reloads)** selector sets the parameter (Classic blobs / Real / Real + scenery). `sun=<azimuth>,<elevation>[,<ambient share>]` overrides the sun (degrees, in the track's own frame: azimuth from +x towards +y, elevation above the horizon); `sun=estimate` uses the estimator.
+`shadows=classic` keeps the original's blob decals (`carshadN`), `shadows=real` draws real shadows and hides the blobs, `shadows=scenery` (the default with `?hd`, the user's choice) also lets the static scenery (the BSP tree: walls, bridge posts, rails; and the plain mesh instances) cast, from a map baked once per track (below). The developer panel's **Shadows (reloads)** selector sets the parameter (Classic blobs / Real / Real + scenery). `sun=<azimuth>,<elevation>[,<ambient share>]` overrides the sun (degrees, in the track's own frame: azimuth from +x towards +y, elevation above the horizon); `sun=estimate` uses the estimator.
 
 ## How it works
 
