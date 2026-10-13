@@ -26,7 +26,7 @@ import type { BakedSceneryShadow } from './baked-scenery-shadow.types.ts'
 import { createLightFrame } from './light-frame.ts'
 import { hideBlobShadows, hideNonCasters, showAgain } from './shadow-casters.ts'
 import { makeTrackReceivers } from './shadow-receiver.ts'
-import { SHARED_SHADOW_UNIFORMS } from './shadow-uniforms.ts'
+import { PLACEHOLDER_SHADOW_MAP, SHARED_SHADOW_UNIFORMS } from './shadow-uniforms.ts'
 import { ShadowMode } from './shadow-mode.types.ts'
 
 const NEAR_PLANE = 0.1
@@ -131,8 +131,8 @@ export const createShadowPass = (
       if (uniforms.shadowMap.value === depthTexture) {
         uniforms.shadowStrength.value = 0
         uniforms.isBakedShadowEnabled.value = 0
-        uniforms.shadowMap.value = null
-        uniforms.bakedShadowMap.value = null
+        uniforms.shadowMap.value = PLACEHOLDER_SHADOW_MAP
+        uniforms.bakedShadowMap.value = PLACEHOLDER_SHADOW_MAP
       }
       target.dispose()
       depthTexture.dispose()
