@@ -37,6 +37,7 @@ import { parseBuildableColorNames } from '../reference-kit/ldraw-color-names.ts'
 import type { LDrawColorName } from '../reference-kit/reference-kit.types.ts'
 import {
   addParts,
+  applyConnectionSnap,
   createBuilderHistory,
   createPartShapes,
   findSideStud,
@@ -50,7 +51,6 @@ import {
   getRotatedBox,
   getSameColorIndices,
   getSideStudPosition,
-  getStudOffset,
   getTopGridPoint,
   pickParts,
   pushBuilderHistory,
@@ -85,11 +85,19 @@ import { ReferenceMode } from './builder-panel.types.ts'
 import { createGhostInstance, createPartInstance, createPartTemplates } from './builder-parts.ts'
 import {
   applySelectionEdit,
-  dragSelection as dragSnappedSelection,
   getCameraStudStep as getViewStudStep,
   getSelectionEdit,
 } from './builder-snapping.ts'
 import type { SnapContext } from './builder-snapping.types.ts'
+import {
+  createConnectionLists,
+  findSnap,
+  getDragMode,
+  startDrag,
+  updateDrag,
+} from './builder-drag.ts'
+import type { DragModifiers, DragState, DragView, EditRay } from './builder-drag.types.ts'
+import { createDragGuides } from './builder-drag-guides.ts'
 import {
   createOriginalReference,
   createWheelGuides,
@@ -112,6 +120,7 @@ import type {
   BuilderBox,
   BuilderItem,
   BuilderPart,
+  BuilderPartLine,
   BuilderProgress,
   BuilderSaveRequest,
   BuilderSaveResult,
@@ -338,10 +347,10 @@ const getHint = (): string =>
 
 const getActionHint = (): string => {
   if (isHolding) {
-    return `Click to place ${getPartName(tool.partName)} ${getDescription(tool.partName)} · R rotate · T tilt · side studs snap · ⎋ put down`
+    return `Click to place ${getPartName(tool.partName)} ${getDescription(tool.partName)} · R rotate · T tilt · snaps to studs and joints · ⎋ put down`
   }
   if (selectedIndices.length > 0) {
-    return 'Drag to move · arrows a stud · ⌘↑↓ a plate · ⌥ arrows nudge · R rotate · T tilt · ⌫ delete · ⎋ deselect'
+    return 'Drag to move (snaps to studs and joints) · ⇧ drag straight · ⌘ drag up, down · arrows a stud · ⌘↑↓ a plate · ⌥ arrows nudge · R rotate · ⌫ delete · ⎋ deselect'
   }
   return 'Pick a part on the right to build · click a part to select it · ⇧ click adds'
 }
@@ -448,13 +457,27 @@ const getShape = (partName: string): PartShape | undefined => {
 
 const getStuds = (partName: string): readonly PartStud[] => getShape(partName)?.studs ?? []
 
-const NO_SHAPE: PartShape = Object.freeze({ studs: [], box: null, footprint: null, bottom: null })
+const NO_SHAPE: PartShape = Object.freeze({
+  studs: [],
+  holes: [],
+  box: null,
+  footprint: null,
+  bottom: null,
+  description: '',
+})
 
 const snapContext: SnapContext = {
   getShape,
   getBox: getTemplateBox,
   groundHeight: GROUND_HEIGHT,
 }
+
+const getConnections = createConnectionLists(getShape)
+// The connection a drag joins and its guide line; the connection the part in hand joins.
+const dragGuides = createDragGuides()
+const ghostGuides = createDragGuides()
+editFrame.add(dragGuides.object, ghostGuides.object)
+let drag: DragState | null = null
 
 const getSideStudUnder = (part: BuilderPart, point: Vector, normal: Vector): PartStud | null =>
   findSideStud(getPlacedStuds(getStuds(part.partName), part), point, normal)
@@ -520,6 +543,7 @@ const syncGhost = () => {
   if (template == null || hit === null) {
     removeGhost()
     ghostPosition = null
+    ghostGuides.show(null, null)
     return
   }
   const stud = hit.sideStud
@@ -536,6 +560,9 @@ const syncGhost = () => {
           getPartBottom(shape, template.box, ghostRotation)
         )
       : getSideStudPosition(hit.target.point, stud, box, gridPoint)
+  const snapped = snapGhost({ ...tool, rotation: ghostRotation, position: ghostPosition })
+  ghostPosition = snapped.position
+  ghostRotation = snapped.rotation
   const part = { ...tool, rotation: ghostRotation, position: ghostPosition }
   const key = `${tool.partName}|${String(tool.colorCode)}`
   if (ghost === null || key !== ghostKey) {
@@ -545,6 +572,15 @@ const syncGhost = () => {
     editFrame.add(ghost)
   }
   ghost.matrix.copy(createPartInstance(template, part).matrix)
+}
+
+// The part in hand pulled onto the nearest connection near it (a head onto a neck, a hat onto a head), its target marked.
+const snapGhost = (part: BuilderPartLine): BuilderPartLine => {
+  const parts = [...history.present, { ...part, commentLines: [] }]
+  const index = parts.length - 1
+  const snap = findSnap(parts, [index], dragView, pointer, () => true)
+  ghostGuides.show(snap?.target ?? null, null)
+  return snap === null ? part : (applyConnectionSnap(parts, [index], snap)[index] ?? part)
 }
 
 const commit = (parts: readonly BuilderPart[]) => {
@@ -1002,16 +1038,45 @@ const onPointerDown = (event: PointerEvent) => {
   })
 }
 
-const dragSelection = (current: PointerPress, position: PointerPosition) => {
-  const from = current.groundStart
-  const to = from === null ? null : getGroundPoint(position, from[1])
-  if (from === null || to === null) return
-  draftParts = dragSnappedSelection(
-    history.present,
-    selectedIndices,
-    getStudOffset(from, to),
-    snapContext
-  )
+const getEditRay = (position: PointerPosition): EditRay | null => {
+  const raycaster = getRay(position)
+  if (raycaster === null) return null
+  buildScene.updateMatrixWorld(true)
+  const ray = raycaster.ray.clone().applyMatrix4(editFrame.matrixWorld.clone().invert())
+  return { origin: [...ray.origin.toArray()], direction: [...ray.direction.toArray()] }
+}
+
+const projectToScreen = (point: Vector): readonly [number, number] => {
+  const projected = editFrame.localToWorld(new Vector3(...point)).project(camera)
+  return [((projected.x + 1) / 2) * getViewWidth(), ((1 - projected.y) / 2) * canvas.clientHeight]
+}
+
+const dragView: DragView = {
+  getGroundPoint,
+  getRay: getEditRay,
+  project: projectToScreen,
+  toScreen: (position) => {
+    const bounds = canvas.getBoundingClientRect()
+    return [position.clientX - bounds.left, position.clientY - bounds.top]
+  },
+  getConnections,
+  snapContext,
+}
+
+// A drag of the selection: onto the nearest connection, else along the stud grid; ⇧ holds it to one axis, ⌘ moves it up and down.
+const dragSelection = (
+  current: PointerPress,
+  position: PointerPosition,
+  modifiers: DragModifiers
+) => {
+  const grabbed = current.groundStart
+  if (grabbed === null) return
+  const state =
+    drag ?? startDrag(history.present, grabbed, current.start, getDragMode(modifiers), dragView)
+  const draft = updateDrag(state, selectedIndices, position, modifiers, dragView)
+  drag = draft.state
+  draftParts = draft.state.parts
+  dragGuides.show(draft.target, draft.guide)
   syncScene()
 }
 
@@ -1036,8 +1101,12 @@ const onPointerMove = (event: PointerEvent) => {
   if (current.gesture === PointerGesture.ORBIT) view = orbitBuilderView(view, deltaX, deltaY)
   else if (current.gesture === PointerGesture.PAN) {
     view = panBuilderView(view, deltaX, deltaY, getUnitsPerPixel())
-  } else if (current.gesture === PointerGesture.MOVE) dragSelection(current, position)
-  else syncGhost()
+  } else if (current.gesture === PointerGesture.MOVE) {
+    dragSelection(current, position, {
+      isShift: event.shiftKey,
+      isCommand: event.metaKey || event.ctrlKey,
+    })
+  } else syncGhost()
 }
 
 const onClick = (current: PointerPress) => {
@@ -1055,6 +1124,8 @@ const onClick = (current: PointerPress) => {
 const onPointerUp = (event: PointerEvent) => {
   const current = press
   press = null
+  drag = null
+  dragGuides.show(null, null)
   if (current === null || event.button !== 0) return
   if (!current.isDragging) {
     onClick(current)
