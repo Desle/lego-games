@@ -1,7 +1,7 @@
 import { COMMON_PART_GROUPS } from './common-parts.ts'
 import type { LibraryPart, PaletteGroup } from './ldraw-builder.types.ts'
 
-const MAXIMUM_RESULTS = 150
+const MAXIMUM_RESULTS = 60
 
 const getNumber = (name: string): string => name.replace(/\.dat$/i, '').toLowerCase()
 

@@ -1,7 +1,17 @@
-import { Box3, Color, Group, Matrix4, Mesh, MeshBasicMaterial } from 'three'
+import {
+  Box3,
+  BufferGeometry,
+  Color,
+  Group,
+  LineSegments,
+  Matrix4,
+  Mesh,
+  MeshBasicMaterial,
+} from 'three'
 import type { Material, Object3D } from 'three'
 import { applyPlasticLook } from '../ldraw-car/ldraw-plastic.ts'
 import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
+import { LDrawDetail } from '../ldraw-library/ldraw-library-loader.types.ts'
 import { formatPartLine } from './builder-document.ts'
 import type { BuilderBox, BuilderPartLine } from './ldraw-builder.types.ts'
 import type { PartTemplate, PartTemplates } from './builder-parts.types.ts'
@@ -29,15 +39,32 @@ const getMeshBox = (object: Object3D): BuilderBox | null => {
 
 const createTemplate = async (
   partName: string,
-  colorCode: number
+  colorCode: number,
+  detail: LDrawDetail = LDrawDetail.HIGH
 ): Promise<PartTemplate | null> => {
   const model = await parseLDrawModel(
-    formatPartLine({ colorCode, position: [0, 0, 0], rotation: IDENTITY_ROTATION, partName })
+    formatPartLine({ colorCode, position: [0, 0, 0], rotation: IDENTITY_ROTATION, partName }),
+    detail
   )
   applyPlasticLook(model)
   const box = getMeshBox(model)
   return box === null ? null : Object.freeze({ object: model, box })
 }
+
+// A part drawn once and thrown away (a palette picture): plain studs, and the caller disposes it, so browsing thousands of parts keeps
+// no memory.
+export const createThrowawayTemplate = (
+  partName: string,
+  colorCode: number
+): Promise<PartTemplate | null> =>
+  createTemplate(partName, colorCode, LDrawDetail.LOW).catch(() => null)
+
+export const disposeTemplate = (template: PartTemplate) =>
+  template.object.traverse((child) => {
+    if (!(child instanceof Mesh || child instanceof LineSegments)) return
+    const geometry: unknown = child.geometry
+    if (geometry instanceof BufferGeometry) geometry.dispose()
+  })
 
 // Each part in each colour is read from the library and given its plastic once; placed parts are copies that share its geometry and
 // materials.

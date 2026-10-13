@@ -39,6 +39,7 @@ const createButton = (text: string, className: string, onClick: () => void) => {
   return button
 }
 
+const SEARCH_PAUSE_MILLISECONDS = 250
 const TRANSPARENT_PREFIX = 'Trans_'
 
 const getHex = (color: LDrawColorName): string =>
@@ -110,9 +111,11 @@ export const createBuilderPanel = (
         thumbnailObserver.unobserve(image)
         const partName = image.dataset['part'] ?? ''
         const wantedColor = colorCode
-        void handlers.getThumbnail(partName, wantedColor).then((url) => {
-          if (url !== null && image.dataset['color'] === String(wantedColor)) image.src = url
-        })
+        void handlers
+          .getThumbnail(partName, wantedColor, () => image.isConnected)
+          .then((url) => {
+            if (url !== null && image.dataset['color'] === String(wantedColor)) image.src = url
+          })
       }
     },
     { root: partList, rootMargin: '64px' }
@@ -156,7 +159,12 @@ export const createBuilderPanel = (
     const grids = partList.querySelectorAll('.tiles')
     shown.forEach((group, index) => grids[index]?.append(...group.parts.map(createTile)))
   }
-  search.addEventListener('input', showParts)
+  // Waits for a pause in typing: every keystroke would otherwise rebuild the list and queue its pictures.
+  let searchTimer: ReturnType<typeof setTimeout> | undefined
+  search.addEventListener('input', () => {
+    clearTimeout(searchTimer)
+    searchTimer = setTimeout(showParts, SEARCH_PAUSE_MILLISECONDS)
+  })
 
   const hintLines = BUILDER_SHORTCUT_HINTS.map((line) => createElement('div', 'hint', line))
   const modeLine = createElement('div', 'mode')

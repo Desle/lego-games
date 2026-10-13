@@ -62,6 +62,7 @@ import {
   turnParts,
 } from './builder-editing.ts'
 import { createBuilderPanel } from './builder-panel.ts'
+import { clearDraft, getStoredDraft, storeDraft } from './builder-draft.ts'
 import { getBuilderKeyCommand, QUICK_COLOR_CODES } from './builder-shortcuts.ts'
 import { BuilderAction } from './builder-shortcuts.types.ts'
 import { createBuilderThumbnails } from './builder-thumbnails.ts'
@@ -197,12 +198,13 @@ const panel = createBuilderPanel(
     onDeleteSelected: () => deleteSelected(),
     onDone: () => void finishItem(),
     onShortcutsToggle: () => toggleShortcuts(),
-    getThumbnail: (partName, colorCode) => thumbnails.getThumbnail(partName, colorCode),
+    getThumbnail: (partName, colorCode, getIsWanted) =>
+      thumbnails.getThumbnail(partName, colorCode, getIsWanted),
   }
 )
 
 const templates = createPartTemplates()
-const thumbnails = createBuilderThumbnails(templates)
+const thumbnails = createBuilderThumbnails()
 let archive: JamArchive | null = null
 let items: readonly BuilderItem[] = []
 let progress: BuilderProgress = { done: [] }
@@ -331,7 +333,14 @@ const syncSelection = () => {
   }
 }
 
+const keepDraft = () => {
+  if (currentItem === null) return
+  if (getIsDirty()) storeDraft(currentItem.id, history.present)
+  else clearDraft(currentItem.id)
+}
+
 const syncScene = () => {
+  keepDraft()
   fillGroup(partsGroup, draftParts ?? history.present, true)
   fillGroup(lockedGroup, start?.lockedParts ?? [], false)
   syncSelection()
@@ -663,8 +672,10 @@ const openItem = async (item: BuilderItem, startFile: string | null) => {
   panel.showStatus(`Loading ${item.name}…`)
   showQueue()
   start = await loadBuilderItemStart(archive, item, startFile)
+  const storedDraft = startFile === null ? getStoredDraft(item.id) : null
   history = createBuilderHistory(start.document.parts)
   savedParts = history.present
+  if (storedDraft !== null) history = createBuilderHistory(storedDraft.parts)
   selectedIndices = Object.freeze([])
   draftParts = null
   editFrame.position.set(...start.editOffset)
@@ -722,6 +733,7 @@ const finishItem = async () => {
       return
     }
     savedParts = history.present
+    clearDraft(currentItem.id)
     progress = result.progress
     const next = getNextBuilderItem(items, currentItem.id, progress.done)
     if (next === null) {
@@ -914,6 +926,9 @@ const onGesture = (event: Event) => {
 }
 
 window.addEventListener('keydown', onKeyDown)
+window.addEventListener('beforeunload', (event) => {
+  if (getIsDirty()) event.preventDefault()
+})
 canvas.addEventListener('pointermove', onPointerMove)
 canvas.addEventListener('pointerdown', onPointerDown)
 canvas.addEventListener('pointerup', onPointerUp)
