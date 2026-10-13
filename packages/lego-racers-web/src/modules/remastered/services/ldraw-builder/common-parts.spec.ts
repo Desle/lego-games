@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { readLibraryParts } from './builder-files.ts'
+import { readLibraryParts } from '@lego-games/ldraw/files'
 import { COMMON_PART_GROUPS } from './common-parts.ts'
 
 const libraryRoot = process.env['LEGO_LDRAW_ROOT'] ?? join(homedir(), 'ldraw')

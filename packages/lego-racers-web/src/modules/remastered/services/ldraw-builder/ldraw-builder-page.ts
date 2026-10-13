@@ -105,6 +105,7 @@ import type {
   BuilderItem,
   BuilderPart,
   BuilderProgress,
+  BuilderSaveRequest,
   BuilderSaveResult,
   LibraryPart,
   Vector,
@@ -752,7 +753,7 @@ const postModel = async (itemId: string, text: string): Promise<BuilderSaveResul
   const response = await fetch(`${DEVELOPMENT_LDRAW_BUILDER_ROUTE}/${BUILDER_SAVE_PATH}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ itemId, text }),
+    body: JSON.stringify({ itemId, text } satisfies BuilderSaveRequest),
   })
   return response.ok ? ((await response.json()) as BuilderSaveResult) : response.text()
 }

@@ -1,22 +1,25 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { readLDrawModelIndex } from './read-ldraw-model-index.ts'
+import { readLDrawModelFolders } from '@lego-games/ldraw/files'
+import { createLDrawModelIndex } from './ldraw-model-index.ts'
 
-describe('readLDrawModelIndex', () => {
+describe('createLDrawModelIndex', () => {
   it('lists cars by upper-case code and chassis recipes by lower-case name, drivers by upper-case name, leaving out notes', () => {
     // Arrange
     const root = mkdtempSync(join(tmpdir(), 'ldraw-models-'))
     mkdirSync(join(root, 'chassis'))
     mkdirSync(join(root, 'drivers'))
+    mkdirSync(join(root, 'drafts'))
     for (const file of ['rrcm.ldr', 'KKCM.mpd', 'KKCM.ldr', '_convention-test.ldr', 'README.md']) {
       writeFileSync(join(root, file), '')
     }
     writeFileSync(join(root, 'chassis', 'JTCHAS0.ldr'), '')
     writeFileSync(join(root, 'drivers', 'bvb.ldr'), '')
+    writeFileSync(join(root, 'drafts', 'RRCM.ldr'), '')
 
     // Act
-    const index = readLDrawModelIndex(root)
+    const index = createLDrawModelIndex(readLDrawModelFolders(root))
 
     // Assert
     expect(index).toEqual({
@@ -31,7 +34,7 @@ describe('readLDrawModelIndex', () => {
     const root = join(tmpdir(), 'ldraw-models-missing-folder')
 
     // Act
-    const index = readLDrawModelIndex(root)
+    const index = createLDrawModelIndex(readLDrawModelFolders(root))
 
     // Assert
     expect(index).toEqual({ cars: {}, chassis: {}, drivers: {} })

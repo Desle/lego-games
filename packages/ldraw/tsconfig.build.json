@@ -1,7 +1,7 @@
 {
   "extends": "@lego-games/tooling/tsconfig/bundler",
   "compilerOptions": {
-    "types": []
+    "types": ["node"]
   },
   "include": ["src"],
   "exclude": ["src/**/*.spec.ts"]

@@ -5,9 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
-import { developmentLDrawBuilderPlugin } from './src/modules/remastered/services/ldraw-builder/development-ldraw-builder-server.ts'
-import { developmentLDrawModelsPlugin } from './src/modules/remastered/services/development-ldraw-models-server/development-ldraw-models-server.ts'
-import { developmentLDrawPlugin } from './src/modules/remastered/services/development-ldraw-server/development-ldraw-server.ts'
+import { developmentLDrawFilesPlugin } from './src/modules/remastered/services/development-ldraw-files/development-ldraw-files-plugin.ts'
 import {
   developmentHighDefinitionAudioPlugin,
   developmentHighDefinitionPlugin,
@@ -85,9 +83,7 @@ export default defineConfig({
     developmentHighDefinitionAudioPlugin(
       process.env['LEGO_HD_AUDIO_ROOT'] ?? join(homedir(), 'audio', 'lego-racers')
     ),
-    developmentLDrawPlugin(LDRAW_LIBRARY_ROOT),
-    developmentLDrawModelsPlugin(LDRAW_MODELS_ROOT),
-    developmentLDrawBuilderPlugin(LDRAW_MODELS_ROOT, LDRAW_LIBRARY_ROOT),
+    developmentLDrawFilesPlugin(LDRAW_LIBRARY_ROOT, LDRAW_MODELS_ROOT),
   ],
   // The ?hd layer reaches these only through a dynamic import: found late, Vite re-bundles them and the open page's imports fail.
   optimizeDeps: {

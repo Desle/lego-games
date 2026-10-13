@@ -1,74 +1,37 @@
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { readBuilderProgress, readLibraryParts, saveBuilderModel } from './builder-files.ts'
+import { getBuilderSavePath, markBuilderItemDone, readBuilderProgress } from './builder-files.ts'
 
-describe('saveBuilderModel', () => {
-  it('backs up the file it replaces, writes the model and marks the item done', () => {
+describe('getBuilderSavePath', () => {
+  it('saves an item to the file already there, and refuses what is not an item', () => {
     // Arrange
-    const root = mkdtempSync(join(tmpdir(), 'ldraw-builder-'))
-    mkdirSync(join(root, 'chassis'))
-    writeFileSync(join(root, 'chassis', 'RRchas0.ldr'), '0 old\n')
-    const text = '0 new\n1 4 0 -24 0 1 0 0 0 1 0 0 0 1 3001.dat\n'
+    const existing = ['chassis/RRchas0.ldr']
 
     // Act
-    const result = saveBuilderModel(
-      root,
-      { itemId: 'chassis/rrchas0', text },
-      new Date('2026-10-13T08:00:00Z')
-    )
+    const chassis = getBuilderSavePath({ itemId: 'chassis/rrchas0', text: '' }, existing)
+    const unknown = getBuilderSavePath({ itemId: '../x', text: '' }, existing)
+    const noItem = getBuilderSavePath({ path: 'RRCM.ldr', text: '' }, existing)
 
     // Assert
-    expect(result).toEqual({
-      path: 'chassis/RRchas0.ldr',
-      backupPath: 'drafts/backups/RRchas0-2026-10-13T08-00-00-000Z.ldr',
-      progress: { done: ['chassis/rrchas0'] },
-    })
-    expect(readFileSync(join(root, 'chassis', 'RRchas0.ldr'), 'utf8')).toBe(text)
-    expect(readdirSync(join(root, 'drafts', 'backups'))).toHaveLength(1)
-    expect(readBuilderProgress(root).done).toEqual(['chassis/rrchas0'])
-  })
-
-  it('refuses an unknown item and a text that is not LDraw', () => {
-    // Arrange
-    const root = mkdtempSync(join(tmpdir(), 'ldraw-builder-'))
-
-    // Act
-    const unknown = saveBuilderModel(root, { itemId: '../x', text: '0 x' }, new Date())
-    const notLDraw = saveBuilderModel(root, { itemId: 'RRCM', text: '<html>' }, new Date())
-
-    // Assert
-    expect(typeof unknown).toBe('string')
-    expect(typeof notLDraw).toBe('string')
+    expect(chassis).toBe('chassis/RRchas0.ldr')
+    expect(unknown).toBeNull()
+    expect(noItem).toBeNull()
   })
 })
 
-describe('readLibraryParts', () => {
-  it('lists parts by description and leaves out moved and sub parts', () => {
+describe('markBuilderItemDone', () => {
+  it('puts the item last in the progress, once', () => {
     // Arrange
-    const root = mkdtempSync(join(tmpdir(), 'ldraw-library-'))
-    mkdirSync(join(root, 'parts'))
-    writeFileSync(join(root, 'parts', '3001.dat'), '0 Brick  2 x  4\n')
-    writeFileSync(join(root, 'parts', '3023.dat'), '0 ~Moved to 3023b\n')
+    const root = mkdtempSync(join(tmpdir(), 'ldraw-builder-'))
+    markBuilderItemDone(root, { itemId: 'RRCM', text: '' })
+    markBuilderItemDone(root, { itemId: 'chassis/rrchas0', text: '' })
 
     // Act
-    const parts = readLibraryParts(root)
+    const answer = markBuilderItemDone(root, { itemId: 'RRCM', text: '' })
 
     // Assert
-    expect(parts).toEqual([{ name: '3001.dat', description: 'Brick  2 x  4' }])
-  })
-
-  it('gives a renumbered part its old number, so a search for it finds the part', () => {
-    // Arrange
-    const root = mkdtempSync(join(tmpdir(), 'ldraw-library-'))
-    mkdirSync(join(root, 'parts'))
-    writeFileSync(join(root, 'parts', '6141.dat'), '0 Plate  1 x  1 Round\n')
-    writeFileSync(join(root, 'parts', '4073.dat'), '0 ~Moved to 6141\n')
-
-    // Act
-    const parts = readLibraryParts(root)
-
-    // Assert
-    expect(parts).toEqual([{ name: '6141.dat', description: 'Plate  1 x  1 Round (was 4073)' }])
+    expect(answer).toEqual({ progress: { done: ['chassis/rrchas0', 'RRCM'] } })
+    expect(readBuilderProgress(root)).toEqual(answer.progress)
   })
 })
