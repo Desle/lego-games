@@ -15,6 +15,7 @@ export type LayerRules = {
   readonly sharedDirectories: readonly string[]
   readonly layers: Readonly<Record<string, readonly string[]>>
   readonly frameworkFreeLayers: readonly string[]
+  readonly forbiddenImports: readonly string[]
 }
 
 export type ImportResolver = (specifier: string, importerPath: string) => ResolvedImport

@@ -2,7 +2,7 @@ import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import { ColorManagement, LinearSRGBColorSpace, WebGLRenderer } from 'three'
 import { DEVELOPMENT_JAM_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
-import { useLookFromAddress } from '../ldraw-car/ldraw-look.ts'
+import { useLookFromAddress } from '@lego-games/ldraw/material'
 import { loadLDrawModelIndex } from '../ldraw-models/ldraw-model-client.ts'
 import { createDriverPair } from './fidelity-driver-pairs.ts'
 import { listFidelityItems } from './fidelity-items.ts'
@@ -20,6 +20,7 @@ import type {
   FidelitySheetRequest,
   FidelityWindow,
 } from './ldraw-fidelity.types.ts'
+import { setUpLDrawModelParser } from '../ldraw-worker/ldraw-model-parser.ts'
 
 // Pixels on a side of each view: a brick is about a tenth of an LDraw unit a pixel, a car about one.
 const VIEW_SIZE = 200
@@ -32,6 +33,7 @@ const DRIVER_KINDS: readonly FidelityItemKind[] = [
 ]
 
 useLookFromAddress()
+setUpLDrawModelParser()
 
 const canvas = document.getElementById('stage')
 if (!(canvas instanceof HTMLCanvasElement)) throw new Error('ldraw-fidelity.html has no canvas')

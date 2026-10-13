@@ -14,6 +14,8 @@ export type ToolingConfig = {
   readonly layers?: Readonly<Record<string, readonly string[]>>
   /** Layers that must not import any package (pure domain code). */
   readonly frameworkFreeLayers?: readonly string[]
+  /** Packages no file of this package may import: a package name or the start of one, e.g. '@lego-games/lego-racers'. */
+  readonly forbiddenImports?: readonly string[]
   readonly maximumTodoAgeInDays?: number
   readonly specsDirectory?: string
   readonly requiredSpecSections?: readonly string[]

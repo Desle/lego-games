@@ -4,7 +4,7 @@ import type {
 } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import { BufferGeometry, Light, LineSegments, Mesh } from 'three'
 import type { Object3D, Scene } from 'three'
-import { DetailSwitch } from '../ldraw-car/detail-switch.ts'
+import { DetailSwitch } from '@lego-games/ldraw/geometry'
 import type { HeaviestRow, PerformanceSnapshot } from './performance-monitor.types.ts'
 
 const PERFORMANCE_PARAMETER = 'perf'

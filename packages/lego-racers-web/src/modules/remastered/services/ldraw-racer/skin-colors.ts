@@ -1,6 +1,6 @@
 import { Mesh, MeshPhysicalMaterial } from 'three'
 import type { Object3D } from 'three'
-import { getIsLookEncoded } from '../ldraw-car/ldraw-look.ts'
+import { getIsLookEncoded } from '@lego-games/ldraw/material'
 
 // The viewer draws with no colour management, so the plastic's colours (taken as sRGB, lit in linear light) reach the screen without
 // the encoding back: a yellow face comes out orange and dark under any light. A flesh part gets its colours back as the library

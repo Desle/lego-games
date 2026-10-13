@@ -1,5 +1,5 @@
 import { LDRAW_BRICK_COLORS } from '../ldraw-car/ldraw-brick-colors.ts'
-import { formatPartLine } from '../ldraw-builder/builder-document.ts'
+import { formatPartLine } from '@lego-games/ldraw/building'
 import {
   LDRAW_FACES,
   LDRAW_HATS,

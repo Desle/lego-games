@@ -1,4 +1,4 @@
-import { parseBuilderDocument } from '../ldraw-builder/builder-document.ts'
+import { parseBuilderDocument } from '@lego-games/ldraw/building'
 import { LDRAW_HATS } from '../ldraw-racer/ldraw-minifig-parts.ts'
 import type { MinifigSpec } from '../ldraw-racer/minifig-spec.types.ts'
 import { getDriverLDrawText, getNearestBrickColorCode } from './driver-ldraw-export.ts'

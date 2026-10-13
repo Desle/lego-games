@@ -1,7 +1,7 @@
 import { MathUtils, Matrix4, Quaternion, Vector3 } from 'three'
 import { MinifigPartKey } from './minifig-assembly.types.ts'
-import { MINIFIG_GEOMETRY, MINIFIG_SIDES } from './minifig-geometry.ts'
-import type { MinifigHinge, MinifigSide } from './minifig-geometry.types.ts'
+import { MINIFIG_GEOMETRY, MINIFIG_SIDES } from '@lego-games/ldraw/minifig'
+import type { MinifigHinge, MinifigSide } from '@lego-games/ldraw/minifig'
 import type {
   MinifigJointLimit,
   MinifigJointLimits,

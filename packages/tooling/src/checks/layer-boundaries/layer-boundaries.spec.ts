@@ -77,6 +77,31 @@ describe('findLayerViolations', () => {
     expect(violations).toEqual([])
   })
 
+  it('keeps a package off its forbidden imports and out of other packages', () => {
+    // Arrange
+    const files = {
+      'src/modules/geometry/services/merge.ts':
+        "import { loadModelScene } from '@lego-games/lego-racers/scene'\nimport { Group } from 'three'",
+      'src/modules/geometry/services/parse.ts':
+        "import { takeWheels } from '../../../../../lego-racers-web/src/parts.ts'",
+      'src/modules/geometry/index.ts': "export { merge } from './services/merge.ts'",
+    }
+    const rules = { ...DEFAULT_CONFIG, forbiddenImports: ['@lego-games/lego-racers'] }
+
+    // Act
+    const violations = findLayerViolations(
+      new Map(Object.entries(files)),
+      rules,
+      resolveByPath
+    ).map((violation) => `${violation.path}: ${violation.message}`)
+
+    // Assert
+    expect(violations).toEqual([
+      "src/modules/geometry/services/merge.ts: this package must never import '@lego-games/lego-racers/scene' (forbiddenImports in tooling.config.ts)",
+      "src/modules/geometry/services/parse.ts: '../../../../../lego-racers-web/src/parts.ts' reaches outside this package; import the other package by its name",
+    ])
+  })
+
   it('honours a reasoned escape hatch', () => {
     // Arrange
     const files = {

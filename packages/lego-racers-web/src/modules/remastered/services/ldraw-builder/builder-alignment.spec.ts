@@ -1,8 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { turnQuarter } from './builder-document.ts'
 import {
+  createCachedReader,
+  findPartShape,
   getGridPoint,
   getPartBottom,
   getPartPhase,
@@ -11,12 +12,12 @@ import {
   getPlacementPosition,
   getRotatedBox,
   getTopGridPoint,
-} from './builder-placement.ts'
+  turnQuarter,
+} from '@lego-games/ldraw/building'
 import { getBuilderKeyCommand } from './builder-shortcuts.ts'
 import { applySelectionEdit, getSelectionEdit } from './builder-snapping.ts'
 import type { SnapContext } from './builder-snapping.types.ts'
-import { createCachedReader, findPartShape } from './builder-studs.ts'
-import type { PartShape } from './builder-studs.types.ts'
+import type { PartShape } from '@lego-games/ldraw/building'
 import { COMMON_PART_GROUPS } from './common-parts.ts'
 import type { BuilderPart, BuilderPartLine, Vector } from './ldraw-builder.types.ts'
 

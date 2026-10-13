@@ -33,7 +33,7 @@ import {
   getReferencedModelName,
   inlineReferencedModels,
   parseBuilderDocument,
-} from './builder-document.ts'
+} from '@lego-games/ldraw/building'
 import { getBuilderItemFile } from './builder-items.ts'
 import type { BuilderItemStart, OriginalReference } from './builder-reference.types.ts'
 import { BuilderItemKind } from './ldraw-builder.types.ts'

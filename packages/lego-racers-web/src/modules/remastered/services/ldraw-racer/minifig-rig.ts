@@ -1,5 +1,5 @@
 import { MinifigPosture } from './minifig-assembly.types.ts'
-import type { MinifigSide } from './minifig-geometry.types.ts'
+import type { MinifigSide } from '@lego-games/ldraw/minifig'
 import type {
   MinifigLimbAttachment,
   MinifigRig,

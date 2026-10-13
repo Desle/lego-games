@@ -1,5 +1,5 @@
 import type { BrickFootprint } from '@lego-games/lego-racers/car-builder'
-import type { PartStud } from '../ldraw-builder/builder-studs.types.ts'
+import type { PartStud } from '@lego-games/ldraw/building'
 import { getDominantDeckPlates, getStudAlignedShift } from './chassis-grid-offset.ts'
 import type { ChassisDeck, StudBase } from './chassis-deck.types.ts'
 

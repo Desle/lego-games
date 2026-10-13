@@ -6,7 +6,7 @@ import {
   snapSelection,
 } from './builder-snapping.ts'
 import type { SnapContext } from './builder-snapping.types.ts'
-import type { PartShape } from './builder-studs.types.ts'
+import type { PartShape } from '@lego-games/ldraw/building'
 import type { BuilderPart, Vector } from './ldraw-builder.types.ts'
 
 const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1]

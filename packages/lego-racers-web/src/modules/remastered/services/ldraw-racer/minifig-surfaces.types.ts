@@ -1,5 +1,5 @@
 import type { SceneBitmap } from '@lego-games/lego-racers/scene'
-import type { MinifigSide } from './minifig-geometry.types.ts'
+import type { MinifigSide } from '@lego-games/ldraw/minifig'
 
 // What the figure builder's model carries on each bone.
 export type BoneClass = 'legs' | 'torso' | 'arm' | 'head'

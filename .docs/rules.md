@@ -90,6 +90,13 @@ Team conventions, enforced mechanically; tunable per package in `tooling.config.
 - **Enforced by**: `tooling verify` → `layer-boundaries`
 - **Exception**: `// @check-allow layer-boundaries: <reason>`
 
+### Packages keep their own side of the boundary
+
+- **Rule**: A package imports another workspace package only by its name, never by a relative path out of its own folder. A package may also name packages it must never import (`forbiddenImports` in its `tooling.config.ts`): `@lego-games/ldraw` is generic LDraw for every game port and never imports `@lego-games/lego-racers*`; a game-specific step comes in from the app as a parameter or setting.
+- **Why**: Shared code that reaches into one game's package or app stops being shareable, and the next port copies it instead.
+- **Enforced by**: `tooling verify` → `layer-boundaries`
+- **Exception**: `// @check-allow layer-boundaries: <reason>`
+
 ### Types live in `.types.ts` files
 
 - **Rule**: `type` declarations, and object types like `{ id: string }` in parameters or casts, belong in a sibling `<name>.types.ts` file, never inline in implementation files.

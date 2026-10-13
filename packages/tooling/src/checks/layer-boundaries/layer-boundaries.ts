@@ -117,6 +117,23 @@ const getImportProblem = (
     : `the ${importer.layer} layer may not import the ${target.layer} layer (allowed: ${allowedLayers.join(', ') || 'none'})`
 }
 
+// Another workspace package is imported by its name, never through a relative path out of this one.
+const getPackageBoundaryProblem = (
+  specifier: string,
+  resolved: ResolvedImport,
+  rules: LayerRules
+): string | null => {
+  const isForbidden = rules.forbiddenImports.some((name) => specifier.startsWith(name))
+  if (isForbidden) {
+    return `this package must never import '${specifier}' (forbiddenImports in tooling.config.ts)`
+  }
+  const isOutsidePackage =
+    specifier.startsWith('.') && resolved.kind === 'project' && resolved.path.startsWith('../')
+  return isOutsidePackage
+    ? `'${specifier}' reaches outside this package; import the other package by its name`
+    : null
+}
+
 export const findLayerViolations = (
   files: ReadonlyMap<string, string>,
   rules: LayerRules,
@@ -127,7 +144,10 @@ export const findLayerViolations = (
     return getImportSpecifiers(sourceFile).flatMap(({ specifier, node }) => {
       const line = getLineNumber(sourceFile, node)
       if (getIsAllowedByEscapeHatch(sourceFile.text, line, CheckId.LAYER_BOUNDARIES)) return []
-      const problem = getImportProblem(path, resolve(specifier, path), rules)
+      const resolved = resolve(specifier, path)
+      const problem =
+        getPackageBoundaryProblem(specifier, resolved, rules) ??
+        getImportProblem(path, resolved, rules)
       return problem === null ? [] : [{ path, line, message: problem }]
     })
   })
@@ -144,7 +164,7 @@ const runLayerBoundaries = (context: CheckContext): Promise<readonly Violation[]
 export const layerBoundariesCheck: Check = {
   id: CheckId.LAYER_BOUNDARIES,
   description:
-    'Modules are imported only through their index.ts; layers point inward; framework-free layers import no packages; src/shared never imports modules.',
+    'Modules are imported only through their index.ts; layers point inward; framework-free layers import no packages; src/shared never imports modules; a package imports no forbidden package and reaches no other package by a relative path.',
   fix: `Restructure the dependency (see the layer table in AGENTS.md), or add '${getEscapeHatchComment(CheckId.LAYER_BOUNDARIES)}'.`,
   run: runLayerBoundaries,
 }

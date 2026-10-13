@@ -6,12 +6,13 @@ This repository is a workspace: several packages, one gate. Every rule is enforc
 
 ### Packages
 
-| Package                          | Folder                        | What it is                                                                                                         |
-| -------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `@lego-games/lego-racers`        | `packages/lego-racers`        | LEGO Racers (1999), ported exactly from `LEGORacers.exe` and `GolDP.dll`.                                          |
-| `@lego-games/lego-racers-web`    | `packages/lego-racers-web`    | Browser track viewer (Vite, React, Three.js) rendering scenes from the player's own `LEGO.JAM`; `pnpm run dev`.    |
-| `@lego-games/lego-racers-export` | `packages/lego-racers-export` | Exports every asset of the player's own game files (PNG, WAV, mkv, glTF) for a remaster; `pnpm run export-assets`. |
-| `@lego-games/tooling`            | `packages/tooling/`           | The rules as code: lint, TypeScript and Prettier config, the architecture checks, the git and Claude hooks.        |
+| Package                          | Folder                        | What it is                                                                                                            |
+| -------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `@lego-games/lego-racers`        | `packages/lego-racers`        | LEGO Racers (1999), ported exactly from `LEGORacers.exe` and `GolDP.dll`.                                             |
+| `@lego-games/lego-racers-web`    | `packages/lego-racers-web`    | Browser track viewer (Vite, React, Three.js) rendering scenes from the player's own `LEGO.JAM`; `pnpm run dev`.       |
+| `@lego-games/ldraw`              | `packages/ldraw`              | Generic LDraw for every port: parts library, worker parsing, plastic looks, stud-grid building. Never imports a game. |
+| `@lego-games/lego-racers-export` | `packages/lego-racers-export` | Exports every asset of the player's own game files (PNG, WAV, mkv, glTF) for a remaster; `pnpm run export-assets`.    |
+| `@lego-games/tooling`            | `packages/tooling/`           | The rules as code: lint, TypeScript and Prettier config, the architecture checks, the git and Claude hooks.           |
 
 Each package has its own `AGENTS.md` with its layout, commands and definition of done. Read it before changing code there, and run package commands inside its folder.
 

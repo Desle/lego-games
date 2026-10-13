@@ -1,8 +1,8 @@
 import { Matrix4 } from 'three'
 import { MinifigPartKey } from './minifig-assembly.types.ts'
-import { MINIFIG_GEOMETRY } from './minifig-geometry.ts'
+import { MINIFIG_GEOMETRY } from '@lego-games/ldraw/minifig'
 import type { MinifigPartPlan } from './minifig-assembly.types.ts'
-import type { MinifigSide } from './minifig-geometry.types.ts'
+import type { MinifigSide } from '@lego-games/ldraw/minifig'
 import type { MinifigSpec } from './minifig-spec.types.ts'
 
 const DIRECT_COLOR_PREFIX = '0x2'

@@ -1,7 +1,7 @@
 import type { ModelScene, SceneBitmap, SceneMesh } from '@lego-games/lego-racers/scene'
 import { getBatchSurfaces, getColorShares, getDominantColor } from './model-surface.ts'
-import { MINIFIG_SIDES } from './minifig-geometry.ts'
-import type { MinifigSide } from './minifig-geometry.types.ts'
+import { MINIFIG_SIDES } from '@lego-games/ldraw/minifig'
+import type { MinifigSide } from '@lego-games/ldraw/minifig'
 import type { BatchSurface, BitmapRegion } from './model-surface.types.ts'
 import type {
   ArmParts,

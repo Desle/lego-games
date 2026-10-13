@@ -22,18 +22,18 @@ import {
   LOOK_APPEARANCES,
   LOOK_PARAMETER,
   setActiveLookPreset,
-} from '../ldraw-car/ldraw-look.ts'
+  setShaderPrecompiler,
+} from '@lego-games/ldraw/material'
 import {
   createPerformancePass,
   getIsPerformanceRequested,
 } from '../performance-monitor/performance-monitor.ts'
-import { setShaderPrecompiler } from '../ldraw-car/shader-precompiler.ts'
 import { createLDrawPickupDrawing } from '../ldraw-pickup/ldraw-pickup-drawing.ts'
 import {
   getIsStudLogoRequested,
   setIsStudLogoShown,
   STUD_LOGOS_PARAMETER,
-} from '../ldraw-library/stud-logos.ts'
+} from '@lego-games/ldraw/library'
 import { loadLDrawModelIndex, getLDrawModelIndex } from '../ldraw-models/ldraw-model-client.ts'
 import { createLDrawRacerCar } from '../ldraw-racer-model/ldraw-racer-car.ts'
 import { createLDrawRacerDriver } from '../ldraw-racer-model/ldraw-racer-driver.ts'
@@ -52,6 +52,7 @@ import { getTrackSun } from '../real-shadows/sun-selection.ts'
 import { getAudioVariants, getTextureVariants } from '../texture-variants/texture-variants.ts'
 import { getNativeMenuSurfaceScale } from '../widescreen-display/menu-surface.ts'
 import { getWidescreenDisplay } from '../widescreen-display/widescreen-display.ts'
+import { setUpLDrawModelParser } from '../ldraw-worker/ldraw-model-parser.ts'
 
 export const getIsRemasteredRequested = (search: string): boolean =>
   import.meta.env.DEV && new URLSearchParams(search).has('hd')
@@ -73,6 +74,7 @@ const getIsLDrawRequested = (search: string): boolean =>
 // The remastered features as a viewer extension; `?hd=<variant>` picks the texture pack and `audio=<variant>` the audio pack.
 export const createRemasteredExtension = async (search: string): Promise<ViewerExtension> => {
   await loadLDrawModelIndex()
+  setUpLDrawModelParser()
   setActiveLookPreset(getLookPreset(search))
   setIsStudLogoShown(getIsStudLogoRequested(search))
   const settings = {
