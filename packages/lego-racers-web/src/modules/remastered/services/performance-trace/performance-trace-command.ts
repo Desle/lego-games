@@ -129,16 +129,20 @@ const getGraphicsName = (page: Page): Promise<string> =>
     return typeof name === 'string' ? name : 'unknown'
   })
 
-const getHarnessPath = (scenario: PerformanceScenario): string =>
-  scenario.isRemastered ? '/?hd&performance-trace' : '/?performance-trace'
+// `--hd-parameters=shadows=real&look=manual` adds to the address of the `?hd` scenarios: what a setting costs against the defaults.
+const getHarnessPath = (scenario: PerformanceScenario, hdParameters: string): string =>
+  scenario.isRemastered
+    ? `/?hd&performance-trace${hdParameters === '' ? '' : `&${hdParameters}`}`
+    : '/?performance-trace'
 
 const runHarnessScenario = async (
   page: Page,
   address: string,
   scenario: PerformanceScenario,
-  run: PerformanceScenarioRun
+  run: PerformanceScenarioRun,
+  hdParameters: string
 ): Promise<ScenarioMeasurement> => {
-  await page.goto(new URL(getHarnessPath(scenario), address).toString())
+  await page.goto(new URL(getHarnessPath(scenario, hdParameters), address).toString())
   await page.waitForFunction(() => 'runPerformanceScenario' in window)
   return page.evaluate<ScenarioMeasurement, PerformanceScenarioRun>(
     (given) => (window as unknown as PerformanceTraceWindow).runPerformanceScenario(given),
@@ -200,7 +204,8 @@ const measureScenario = async (
   browser: Browser,
   address: string,
   scenario: PerformanceScenario,
-  viewport: PerformanceViewport
+  viewport: PerformanceViewport,
+  hdParameters: string
 ): Promise<ScenarioMetrics> => {
   const context = await browser.newContext({
     viewport: { width: viewport.width, height: viewport.height },
@@ -215,10 +220,13 @@ const measureScenario = async (
     const measurement =
       scenario.subject.kind === 'builder'
         ? await runBuilderScenario(page, address, scenario.subject)
-        : await runHarnessScenario(page, address, scenario, {
-            subject: scenario.subject,
-            measuredFrameCount: MEASURED_FRAME_COUNT,
-          })
+        : await runHarnessScenario(
+            page,
+            address,
+            scenario,
+            { subject: scenario.subject, measuredFrameCount: MEASURED_FRAME_COUNT },
+            hdParameters
+          )
     return getScenarioMetrics(measurement)
   } finally {
     await context.close()
@@ -246,6 +254,7 @@ const run = async () => {
       scenarios: { type: 'string' },
       viewports: { type: 'string' },
       software: { type: 'boolean', default: false },
+      'hd-parameters': { type: 'string', default: '' },
     },
   })
   const isUpdating = values['update-baseline']
@@ -293,7 +302,13 @@ const run = async () => {
     for (const scenario of scenarios) {
       for (const viewport of viewports) {
         const started = Date.now()
-        const metrics = await measureScenario(browser, server.address, scenario, viewport)
+        const metrics = await measureScenario(
+          browser,
+          server.address,
+          scenario,
+          viewport,
+          values['hd-parameters']
+        )
         results[scenario.name] = { ...results[scenario.name], [viewport.name]: metrics }
         process.stdout.write(
           `${scenario.name} @ ${viewport.name}: ${String(metrics.deterministic.drawCalls)} calls, ${String(metrics.deterministic.triangles)} triangles, CPU ${metrics.timing.cpuFrameMedianMilliseconds.toFixed(2)} ms (${String(Math.round((Date.now() - started) / 1000))} s)\n`
