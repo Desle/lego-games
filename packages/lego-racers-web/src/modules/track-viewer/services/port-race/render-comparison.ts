@@ -87,7 +87,10 @@ const HUD_TOLERANCE_PIXELS = 0.25
 // The HUD never wraps its text (the overlay's width, race-hud-overlay.tsx).
 const HUD_UNBOUNDED_WIDTH = 0x7fff
 // The race camera's planes: the original's driver cuts at them (GolDP.dll 0x1000c630), the viewer's camera does too.
-export const RACE_DEPTH_RANGE = Object.freeze({ near: ORIGINAL_NEAR_PLANE, far: ORIGINAL_FAR_PLANE })
+export const RACE_DEPTH_RANGE = Object.freeze({
+  near: ORIGINAL_NEAR_PLANE,
+  far: ORIGINAL_FAR_PLANE,
+})
 export const TOLERANCES = Object.freeze({
   positionPixels: 0.25,
   textureCoordinate: 0.001,

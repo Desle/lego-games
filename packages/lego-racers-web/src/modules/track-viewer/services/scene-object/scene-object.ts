@@ -135,7 +135,10 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
           runtime?.sphere ??
           (meshSphere === null || localSphereCentre === null
             ? null
-            : { centre: localSphereCentre.clone().applyMatrix4(group.matrixWorld), radius: meshSphere.radius })
+            : {
+                centre: localSphereCentre.clone().applyMatrix4(group.matrixWorld),
+                radius: meshSphere.radius,
+              })
         const position = runtime?.position ?? localPosition.clone().applyMatrix4(group.matrixWorld)
         // 0x100240b0 measures a skeleton instance from its sphere's centre, 0x10027d80 a mesh instance from its position.
         const centre =

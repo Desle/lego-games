@@ -329,7 +329,9 @@ describe('createSceneObject', () => {
     const getSceneWithRock = (squaredDistance: number): Scene => ({
       ...SCENE,
       meshes: SCENE.meshes.map((mesh, index) =>
-        index === 0 ? { ...mesh, boundingSphere: { centre: { x: 0.5, y: 0.5, z: 0 }, radius: 1 } } : mesh
+        index === 0
+          ? { ...mesh, boundingSphere: { centre: { x: 0.5, y: 0.5, z: 0 }, radius: 1 } }
+          : mesh
       ),
       instances: SCENE.instances.map((instance) =>
         instance.name === 'rock01'

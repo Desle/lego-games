@@ -1,3 +1,4 @@
+import type { ClipCorner } from './clipped-polygon.types.ts'
 import { getIsInside, getTextureDifference } from '../compare-render-frame.ts'
 import { projectVertex } from '../screen-projection.ts'
 import type { TextureMatch } from '../texture-matching.types.ts'
@@ -14,12 +15,16 @@ import type {
 } from '../render-trace.types.ts'
 
 // Closer than this the clip is a numeric edge, not the near plane the original cuts at.
+// @check-allow traced-constants: measurement tolerance of the trace, not an original value
 const MINIMUM_CLIP_W = 0.001
+// @check-allow traced-constants: measurement tolerance of the trace, not an original value
 const PLANE_DEPTH_TOLERANCE = 0.05
 // Pixels a fragment's corner may lie outside the polygon of its whole triangle.
+// @check-allow traced-constants: measurement tolerance of the trace, not an original value
 const CONTAINMENT_TOLERANCE_PIXELS = 0.75
 
-type ClipCorner = { readonly x: number; readonly y: number; readonly w: number }
+// @check-allow traced-constants: the corners of a triangle
+const TRIANGLE_CORNER_COUNT = 3
 
 const getClipCorner = (vertex: WorldVertex, matrix: ScreenMatrix): ClipCorner => {
   const projected = projectVertex(vertex, matrix)
@@ -68,7 +73,7 @@ export const getClippedPolygon = (
       (depthRange === null || (corner.w >= depthRange.near && corner.w <= depthRange.far))
   )
   const kept = getCutAtNearPlane(corners)
-  if (kept.length < 3) return null
+  if (kept.length < TRIANGLE_CORNER_COUNT) return null
   const polygon = kept.map((corner): PixelPoint => ({
     x: corner.x / corner.w,
     y: corner.y / corner.w,
