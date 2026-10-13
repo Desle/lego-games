@@ -140,7 +140,13 @@ export const CAPTURE: HazardBehavior = Object.freeze({
     if ((racer.flags & SHIELDED_FLAG) !== 0) return instance
     if (data.capturedRacer !== null && data.capturedRacer !== racer.index) return instance
     // 0x0048e1c0 reads the bone again; the pull is horizontal, from the racer to the hazard.
-    const { centre } = getSphereOnBone(session, data.instance, FIRST_BONE_INDEX, data.sphere, data.posedClip)
+    const { centre } = getSphereOnBone(
+      session,
+      data.instance,
+      FIRST_BONE_INDEX,
+      data.sphere,
+      data.posedClip
+    )
     session.emit({
       type: 'hazard.racer_affected',
       keyword: HazardKeyword.HAZARD_48,

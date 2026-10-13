@@ -114,7 +114,9 @@ const getHammerWords = (
   })
 
 // The capture hazards' sphere, held racer flag, hold timer, phase and phase timer (track_trace.py `read_captures`).
-const getCaptureWords = (hazards: RaceState['trackLogic']['hazards']['instances']): readonly number[] =>
+const getCaptureWords = (
+  hazards: RaceState['trackLogic']['hazards']['instances']
+): readonly number[] =>
   hazards.flatMap((hazard) => {
     const { data } = hazard
     if (data.keyword !== HazardKeyword.HAZARD_48) return []

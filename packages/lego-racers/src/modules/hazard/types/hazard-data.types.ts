@@ -242,6 +242,9 @@ export type CraneData = {
   readonly flags: number
   // +0x10..: the shape; its centre is the origin of the instance's fourth bone, radius 3.
   readonly sphere: HazardSphere
+  // The bones hold the pose of the instance's last draw (the frame before): see CaptureData.
+  readonly posedClip: SkeletonInstanceRuntime['clip']
+  readonly nextPosedClip: SkeletonInstanceRuntime['clip']
 }
 
 // A class that is registered but whose behaviour is not ported yet.

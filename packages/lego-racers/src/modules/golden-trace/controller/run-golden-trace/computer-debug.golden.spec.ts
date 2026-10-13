@@ -62,7 +62,8 @@ describe('golden trace debug', () => {
         const fieldNames =
           FIELDS[0] === 'DIFFERING'
             ? Object.keys(original.frames[frame]?.fields ?? {}).filter(
-                (name) => hex(original.frames[frame]?.fields[name]) !== hex(port[frame]?.fields[name])
+                (name) =>
+                  hex(original.frames[frame]?.fields[name]) !== hex(port[frame]?.fields[name])
               )
             : FIELDS
         for (const field of fieldNames) {

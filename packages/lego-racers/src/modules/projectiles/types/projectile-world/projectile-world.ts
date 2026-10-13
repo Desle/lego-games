@@ -94,11 +94,15 @@ export const getWorldWithStartedBarrelsReset = (
     effect.kind === PowerUpEffectKind.BARREL &&
     effect.state === EffectState.STARTING &&
     effect.timerMilliseconds === 0
-  return world.barrelSpins.some((spin, index) => isStarted(effects[index]) && spin !== NO_BARREL_SPIN)
+  return world.barrelSpins.some(
+    (spin, index) => isStarted(effects[index]) && spin !== NO_BARREL_SPIN
+  )
     ? Object.freeze({
         ...world,
         barrelSpins: Object.freeze(
-          world.barrelSpins.map((spin, index) => (isStarted(effects[index]) ? NO_BARREL_SPIN : spin))
+          world.barrelSpins.map((spin, index) =>
+            isStarted(effects[index]) ? NO_BARREL_SPIN : spin
+          )
         ),
       })
     : world

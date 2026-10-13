@@ -123,6 +123,13 @@ const getRacerFields = (racer: Racer, index: number, context: RacerSetContext): 
     [`${prefix}.body.flags`]: getIntegerWords(rigidBody.flags),
     [`${prefix}.body.travelDirection`]: getVectorWords(rigidBody.velocityDirection),
     [`${prefix}.body.heading`]: getVectorWords(rigidBody.heading),
+    [`${prefix}.body.groundNormal`]: getVectorWords(rigidBody.groundNormal),
+    [`${prefix}.body.drift`]: getFloatWords([
+      rigidBody.driftYawFactor,
+      rigidBody.driftThreshold,
+      rigidBody.driftMaximumAngle,
+      rigidBody.driftBrake,
+    ]),
     [`${prefix}.body.gripScale`]: getFloatWords([rigidBody.gripScale]),
     [`${prefix}.body.steeringScale`]: getFloatWords([racer.carBody.steeringScale]),
     [`${prefix}.body.throttleScale`]: getFloatWords([racer.carBody.throttleScale]),

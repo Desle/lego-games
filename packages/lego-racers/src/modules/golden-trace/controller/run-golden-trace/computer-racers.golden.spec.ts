@@ -70,7 +70,10 @@ describe('golden trace: the computer racers', () => {
               circuit: scenario.circuitName,
               isMirrored: scenario.isMirrored,
               fpu: 'auto',
-              frames: scenario.frames.map((frame) => ({ dt: frame.milliseconds, keys: [] })),
+              frames: scenario.frames.map((frame) => ({
+                dt: frame.milliseconds,
+                keys: frame.scanCodes,
+              })),
             })
           )
         if (process.env['COMPUTER_DUMP_ONLY'] !== undefined) continue

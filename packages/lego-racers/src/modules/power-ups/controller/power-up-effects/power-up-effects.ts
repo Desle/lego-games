@@ -163,7 +163,7 @@ export const resetPowerUpEffect = (
       attachmentSlotIndices: Object.freeze([]),
       emitterHandleIndex: null,
       warpDestination: null,
-    launcherPosition: null,
+      launcherPosition: null,
     }),
     getResetEvents(effect, isStolen)
   )
