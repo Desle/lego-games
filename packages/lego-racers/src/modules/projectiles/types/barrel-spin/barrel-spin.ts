@@ -7,11 +7,13 @@ import {
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 import type { BarrelSpin } from './barrel-spin.types.ts'
 
-// 0x004b1474 (-0.7279), 0x004b1470 (0.1555) and 0x004b146c (5.178): where the barrel's sparks sit against the frame
-// position; 0x004b1478 (0.7279) is the launch's x offset.
+// float32 -0.7279 at 0x004b1474: where the barrel's sparks sit against the frame position
 const SPARKS_X_FACTOR = getFloatFromBits(0xbf3a495e)
+// float32 0.1555 at 0x004b1470
 const SPARKS_Y_FACTOR = getFloatFromBits(0x3e1f7fd0)
+// float32 5.178 at 0x004b146c
 const SPARKS_Z_FACTOR = getFloatFromBits(0x40a5b676)
+// float32 0.7279 at 0x004b1478: the launch's x offset
 const LAUNCH_SPARKS_X_OFFSET = getFloatFromBits(0x3f3a495e)
 
 // 0x004b1444: the spin grows by this per millisecond.

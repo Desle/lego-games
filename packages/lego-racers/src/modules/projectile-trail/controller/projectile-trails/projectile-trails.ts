@@ -26,14 +26,19 @@ const { add, subtract, multiply, divide, storeFloat, getIsEqual } = arithmetic
 
 // 0x00493850 (called with 6 by Race_LoadTrackContent at 0x00433520): the trails of a race.
 export const TRAIL_COUNT = 6
-// 0x004af388, 0x004b05d8 (1/255), 0x004b09c0 (255) and 0x004af58c.
+// float32 1.0 at 0x004af388
 const ONE = getFloatFromBits(0x3f800000)
+// float32 1/255 at 0x004b05d8
 const INVERSE_BYTE_MAXIMUM = getFloatFromBits(0x3b808081)
+// float32 255 at 0x004b09c0
 const BYTE_MAXIMUM = getFloatFromBits(0x437f0000)
+// float32 0.5 at 0x004af58c
 const HALF = getFloatFromBits(0x3f000000)
-// 0x00492a50: the dynamic mesh holds 0x6a points and 0x35 triangles; 0x004931a0 indexes at most 0x40 points.
+// 0x00492a50 sizes the dynamic mesh for 0x6a points
 const MAXIMUM_VERTICES = 0x6a
+// 0x00492a50 sizes the index buffer for 0x35 triangles (the bound at 0x004935a0 is 0xd4 bytes)
 const MAXIMUM_TRIANGLES = 0x35
+// 0x004931a0 (at 0x004934b6) indexes at most 0x40 points
 const MAXIMUM_INDEXED_VERTICES = 0x40
 // 0x00492ae0: a trail keeps two slots more than its ring size.
 const SLOTS_BEYOND_RING_SIZE = 2

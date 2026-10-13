@@ -13,7 +13,7 @@ import {
 import type { EmitterPool } from '../../../emitter/index.ts'
 import { getFrameTransformedPoint } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
-import type { EffectEmitterOwner } from './effect-emitters.types.ts'
+import type { EffectEmitterOwner, OrientedEmitterPlacement } from './effect-emitters.types.ts'
 import { getEffect, getStepWithEffect } from '../power-up-step/power-up-step.ts'
 import type { PowerUpStep } from '../power-up-step/power-up-step.types.ts'
 
@@ -109,7 +109,7 @@ export const placeOrientedEffectEmitter = (
   step: PowerUpStep,
   effectId: number,
   arithmetic: FloatArithmetic,
-  placement: { readonly position: Vector3; readonly facing: Vector3; readonly up: Vector3 }
+  placement: OrientedEmitterPlacement
 ): PowerUpStep => {
   const { emitterHandleIndex } = getEffect(step, effectId)
   const { common } = step.world.emitters

@@ -7,7 +7,7 @@ import {
   stepTrailPool,
   takeTrail,
 } from '../../../projectile-trail/index.ts'
-import type { TrailParameters, TrailRing } from '../../../projectile-trail/index.ts'
+import type { TrailColor, TrailParameters, TrailRing } from '../../../projectile-trail/index.ts'
 import { getFloatFromBits } from '../../../simulation-math/index.ts'
 import { getFlightVelocity } from '../../types/ballistic-flight/ballistic-flight.ts'
 import { getMotion, getWorldWithTrail } from '../../types/projectile-world/projectile-world.ts'
@@ -16,29 +16,46 @@ import type {
   ProjectileWorld,
 } from '../../types/projectile-world/projectile-world.types.ts'
 
-// 0x004b1384.. (0x00451f50) and 0x00456db0: the parameter blocks the cannon and the rocket start their trail with, the
-// colours at 0x004c1c4c and 0x004c1c64 and the fade 0.1 (0x3dcccccd); the ring is 3 wide for the ball (0x004b13a4) and 1
-// for the rocket (0x004b167c).
+// float32 0.1 pushed into the cannon's block at 0x00451fe0 and the rocket's at 0x00456e40
 const TRAIL_FADE_FACTOR = getFloatFromBits(0x3dcccccd)
+// 0x00451f50 (block at 0x00451fc0): 300 ms, 4 rings, 4 points; the colour is 0x004c1c4c (32 32 32 c8)
+const CANNON_DURATION_MILLISECONDS = 300
+const CANNON_RING_COUNT = 4 // block word 1 and 2 at 0x00451fc0
+const CANNON_COLOR: TrailColor = Object.freeze({
+  red: 0x32, // bytes of 0x004c1c4c
+  green: 0x32, // 0x004c1c4d
+  blue: 0x32, // 0x004c1c4e
+  alpha: 0xc8, // @check-allow traced-constants: the colour block 0x004c1c4c is 32 32 32 c8
+})
+// 0x00456db0 (block at 0x00456e20): 400 ms, 4 rings, 4 points; the colour is 0x004c1c64 (ff ff ff c8)
+const ROCKET_DURATION_MILLISECONDS = 400
+const ROCKET_COLOR: TrailColor = Object.freeze({
+  red: 0xff,
+  green: 0xff,
+  blue: 0xff,
+  alpha: 0xc8, // @check-allow traced-constants: the colour block 0x004c1c64 is ff ff ff c8
+})
 const CANNON_TRAIL: TrailParameters = Object.freeze({
-  durationMilliseconds: 300,
-  ringSize: 4,
-  verticesPerRing: 4,
+  durationMilliseconds: CANNON_DURATION_MILLISECONDS,
+  ringSize: CANNON_RING_COUNT,
+  verticesPerRing: CANNON_RING_COUNT,
   fadeFactor: TRAIL_FADE_FACTOR,
   alphaReduction: 0,
-  color: Object.freeze({ red: 0x32, green: 0x32, blue: 0x32, alpha: 0xc8 }),
+  color: CANNON_COLOR,
   materialName: 'canstrk',
 })
 const ROCKET_TRAIL: TrailParameters = Object.freeze({
-  durationMilliseconds: 400,
-  ringSize: 4,
-  verticesPerRing: 4,
+  durationMilliseconds: ROCKET_DURATION_MILLISECONDS,
+  ringSize: CANNON_RING_COUNT,
+  verticesPerRing: CANNON_RING_COUNT,
   fadeFactor: TRAIL_FADE_FACTOR,
   alphaReduction: 0,
-  color: Object.freeze({ red: 0xff, green: 0xff, blue: 0xff, alpha: 0xc8 }),
+  color: ROCKET_COLOR,
   materialName: 'mslstrk',
 })
+// float32 3.0 at 0x004b13a4: the cannon's ring is 3 wide and tall
 const CANNON_RING_SIZE = getFloatFromBits(0x40400000)
+// float32 1.0 at 0x004b167c: the rocket's ring is 1 wide and tall
 const ROCKET_RING_SIZE = getFloatFromBits(0x3f800000)
 
 const getTrailParameters = (kind: PowerUpEffect['kind']): TrailParameters | null => {
