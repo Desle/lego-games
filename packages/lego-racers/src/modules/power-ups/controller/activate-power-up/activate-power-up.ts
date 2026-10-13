@@ -28,7 +28,7 @@ import {
   takePowerUpEffect,
 } from '../power-up-effects/power-up-effects.ts'
 import { getEffect, getStepWithEffect, getStepWithEvents } from '../power-up-step/power-up-step.ts'
-import type { WarpDestination } from '../../types/power-ups.types.ts'
+import type { LauncherMuzzle, WarpDestination } from '../../types/power-ups.types.ts'
 import type { PowerUpContext, PowerUpStep } from '../power-up-step/power-up-step.types.ts'
 import type { ActivationTarget, EffectStart } from './activate-power-up.types.ts'
 
@@ -297,6 +297,28 @@ export const activateLauncherCurse = (step: PowerUpStep, position: Vector3): Pow
     (started) => started,
     position
   )
+}
+
+// 0x0045a950 case 2 with a hazard as the launcher (the turret, 0x0048b740): a wand that belongs to no racer, its beam
+// leaving the launcher's muzzle (0x00454cb0 stores the launcher's pointer at +0x23c).
+export const activateLauncherWand = (
+  step: PowerUpStep,
+  muzzle: LauncherMuzzle,
+  hazardIndex: number | null
+): PowerUpStep => {
+  const started = startEffect(step, PowerUpEffectKind.WAND, {
+    ...getPlainStart(0, 2, 500, null),
+    ownerRacer: null,
+  })
+  const effectId = started.world.effects.activeEffectIds[0]
+  const effect = effectId === undefined ? undefined : started.world.effects.effects[effectId]
+  return effect === undefined
+    ? started
+    : getStepWithEffect(started, {
+        ...effect,
+        launcherMuzzle: muzzle,
+        launcherHazardIndex: hazardIndex,
+      })
 }
 
 // 0x0045af80: three rockets, each taken separately, numbered 0..2.

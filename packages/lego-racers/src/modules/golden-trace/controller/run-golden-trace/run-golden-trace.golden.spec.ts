@@ -28,7 +28,7 @@ const CURSE_ACCELERATE_FRAME = 175
 // the original; the race of each is named in golden-trace.md.
 const OTHER_TRACKS = [
   { folder: 'RACEC0R1', expected: null },
-  { folder: 'RACEC0R2', expected: { frame: 278, field: 'racer0.body.forwardSpeed' } },
+  { folder: 'RACEC0R2', expected: null },
   { folder: 'RACEC0R3', expected: null },
   { folder: 'RACEC1R0', expected: null },
   { folder: 'RACEC3R0', expected: null },
@@ -113,7 +113,7 @@ const getCases = (): readonly ScenarioCase[] => {
       scenario: royalKnights('royal-knights-route-driving', [
         ...getRouteDrivingFrames(drivingDefinition, 3000),
       ]),
-      expected: { frame: 1882, field: 'powerUps.registry' },
+      expected: null,
     },
     {
       scenario: createTraceScenario({

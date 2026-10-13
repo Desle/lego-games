@@ -197,6 +197,15 @@ export type PowerUpEffect = {
   readonly warpDestination: WarpDestination | null
   // A curse a hazard dropped (0x0048b3c0): where its shape sits (0x00411cc0 in 0x00452550); null for a racer's own.
   readonly launcherPosition: Vector3 | null
+  // A wand a hazard fired (0x00454cb0 with the launcher's struct, +0x23c): where the beam leaves and which way it points.
+  readonly launcherMuzzle: LauncherMuzzle | null
+  // The hazard (index in the track logic) whose muzzle the beam follows each frame; null for a racer's wand.
+  readonly launcherHazardIndex: number | null
+}
+
+export type LauncherMuzzle = {
+  readonly position: Vector3
+  readonly direction: Vector3
 }
 
 // Where a launcher's warp puts the racer down (+0xc0, +0xc4, +0xc8) and which way it faces (+0xcc, +0xd0, +0xd4), and

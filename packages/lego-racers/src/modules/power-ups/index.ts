@@ -1,5 +1,6 @@
 export {
   activateLauncherCurse,
+  activateLauncherWand,
   activateLauncherWarp,
   activatePowerUp,
   getStepWithRacerTurbosEnded,
@@ -103,6 +104,7 @@ export type {
   PowerUpBrickPlacement,
   BrickBase,
   PowerUpEffect,
+  LauncherMuzzle,
   WarpDestination,
   PowerUpEffects,
   PowerUpWorld,

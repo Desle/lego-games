@@ -49,6 +49,8 @@ export type HazardEffect =
       readonly effectKind: number
       readonly racerIndex: number | null
       readonly launcher: HazardLauncher
+      // The hazard that asked, set by the update loop: a launched effect follows that hazard's muzzle.
+      readonly hazardIndex?: number
     }
   | {
       // 0x0045b470: an explosion starts at the point where a hazard's projectile landed.

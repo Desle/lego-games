@@ -23,6 +23,13 @@ const FRAME_COUNT = Number(process.env['COMPUTER_FRAMES'] ?? '700')
 const SELECTED = process.env['COMPUTER_RACES'] ?? ''
 const KIND = process.env['COMPUTER_KIND'] ?? 'idle'
 
+// The first field that differs, per race, in a run of every race (null for none). The mirrored hammer words are the
+// instance rotation of the hammer's skeleton (golden-trace-simulation-sweep.md).
+const EXPECTED_FIRST_FIELDS: Readonly<Record<string, Readonly<Record<string, string | null>>>> =
+  Object.freeze({
+    idle: Object.freeze({ rkr2: 'track.hammers[24]', att2: 'track.hammers[25]' }),
+  })
+
 const getIsGamePresent = (): boolean =>
   getIsOriginalJamPresent() && getIsOriginalExecutablePresent() && getIsOriginalTraceAvailable()
 
@@ -38,6 +45,7 @@ describe('golden trace: the computer racers', () => {
       const circuits = parseCircuitDatabase(archive.readFile('MENUDATA\\LEGORACE.CRB'))
       const catalog = parseRaceCatalog(archive.readFile('MENUDATA\\LEGORACE.RCB'), circuits)
       const lines: string[] = []
+      const firstFields: Record<string, string | null> = {}
       for (const entry of catalog.entries) {
         if (entry.name === 'test') continue
         if (SELECTED !== '' && !SELECTED.split(',').includes(entry.name)) continue
@@ -81,6 +89,9 @@ describe('golden trace: the computer racers', () => {
         const computers = result.comparison.divergenceByField
           .toSorted((left, right) => left.frame - right.frame)
           .slice(0, 10)
+        const [first] = computers
+        firstFields[entry.name] =
+          first === undefined ? null : `${first.field}[${String(first.wordIndex)}]`
         lines.push(
           `${scenario.name} (${entry.firstName} ${entry.circuitName} mirrored ${String(entry.isFlagged)}): ${String(result.comparison.divergenceByField.length)} fields differ` +
             computers.map((divergence) => `\n    ${formatDivergence(divergence)}`).join('')
@@ -88,6 +99,17 @@ describe('golden trace: the computer racers', () => {
         if (REPORT_PATH !== '') writeFileSync(REPORT_PATH, lines.join('\n'))
       }
       console.log(lines.join('\n'))
+      const expected = EXPECTED_FIRST_FIELDS[KIND]
+      if (
+        SELECTED === '' &&
+        expected !== undefined &&
+        process.env['COMPUTER_DUMP_ONLY'] === undefined
+      ) {
+        expect(
+          Object.fromEntries(Object.entries(firstFields).filter(([, field]) => field !== null)),
+          lines.join('\n')
+        ).toEqual(expected)
+      }
     },
     TRACE_TIMEOUT_MILLISECONDS
   )

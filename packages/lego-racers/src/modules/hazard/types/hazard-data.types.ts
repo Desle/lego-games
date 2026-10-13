@@ -75,6 +75,12 @@ export type TurretData = {
   readonly periodMilliseconds: number
   readonly cycleMilliseconds: number
   readonly shotMilliseconds: number
+  // +0x3c, +0x40, +0x44: the file's second vector, the aim's phase scale, its height amplitude and offset (0x47).
+  readonly aim: Vector3
+  // +0x54: a mirrored race negates the aim's y.
+  readonly isMirrored: boolean
+  // +0x28..+0x30: where the muzzle points, turned through the cosine table over the period; it leaves with every shot.
+  readonly direction: Vector3
 }
 
 // 0x2e (0x0048e2a0): a rock that swaps between two meshes and a collision object.
