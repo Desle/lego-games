@@ -2,18 +2,18 @@ import { getShadowMode, getShadowModeFromLabel, getShadowModeLabel } from './sha
 import { ShadowMode } from './shadow-mode.types.ts'
 
 describe('getShadowMode', () => {
-  it('turns real shadows on with the remastered layer and reads the other two from the address', () => {
+  it('turns real shadows with scenery on with the remastered layer and reads the other two from the address', () => {
     // Arrange / Act
-    const modes = ['?hd', '?hd&shadows=classic', '?hd&shadows=scenery', '?hd&shadows=odd'].map(
+    const modes = ['?hd', '?hd&shadows=classic', '?hd&shadows=real', '?hd&shadows=odd'].map(
       getShadowMode
     )
 
     // Assert
     expect(modes).toEqual([
-      ShadowMode.REAL,
-      ShadowMode.CLASSIC,
       ShadowMode.SCENERY,
+      ShadowMode.CLASSIC,
       ShadowMode.REAL,
+      ShadowMode.SCENERY,
     ])
   })
 })

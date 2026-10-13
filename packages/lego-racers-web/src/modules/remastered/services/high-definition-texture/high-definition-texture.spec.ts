@@ -47,7 +47,7 @@ describe('getHighDefinitionVariant', () => {
     const variants = [getHighDefinitionVariant(named), getHighDefinitionVariant(bare)]
 
     // Assert
-    expect(variants).toEqual(['nomos8k-dat', 'ultrasharp'])
+    expect(variants).toEqual(['nomos8k-dat', 'ultrasharp-v2'])
   })
 })
 

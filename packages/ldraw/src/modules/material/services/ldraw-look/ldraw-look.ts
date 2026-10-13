@@ -107,10 +107,10 @@ export const LOOK_APPEARANCES: Readonly<Record<LookPreset, LookAppearance>> = Ob
 
 const PRESETS: readonly LookPreset[] = Object.values(LookPreset)
 
-// `?look=manual|photo|instructions|toon|game|retro`; the default is the manual look.
-export const getLookPreset = (search: string): LookPreset => {
+// `?look=manual|photo|instructions|toon|game|retro`; without one, the app's default (the manual look unless it names another).
+export const getLookPreset = (search: string, fallback: LookPreset = DEFAULT_LOOK): LookPreset => {
   const requested = new URLSearchParams(search).get(LOOK_PARAMETER)
-  return PRESETS.find((preset) => preset === requested) ?? DEFAULT_LOOK
+  return PRESETS.find((preset) => preset === requested) ?? fallback
 }
 
 export const getLookLabels = (): readonly string[] =>
