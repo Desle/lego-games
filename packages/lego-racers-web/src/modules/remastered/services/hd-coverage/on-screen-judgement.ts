@@ -87,13 +87,18 @@ export const getPowerUpOnScreenFailures = (
   return [...unshown, ...getPosedPartFailures(frames, drawnKeys)]
 }
 
-// A drawing of several posed parts (the twin turbo's two burners: the file once for each group of the original's mesh) shows
-// every part at once in one of the measured frames.
+// The objects drawn as several posed parts that must show them side by side: the twin turbo's two burners. Not its flames (see
+// through, and one hides behind the car in the measured frames) nor ENHANER (its two trails start on the same spot).
+const SIDE_BY_SIDE_MODEL_NAMES: readonly string[] = ['DT2CBURN']
+
+// A drawing of several posed parts side by side (the file once for each group of the original's mesh) shows every part at once
+// in one of the measured frames.
 const getPosedPartFailures = (
   frames: readonly OnScreenFrame[],
   drawnKeys: readonly string[]
 ): readonly string[] =>
   drawnKeys.flatMap((key) => {
+    if (!SIDE_BY_SIDE_MODEL_NAMES.includes(key)) return []
     const partCounts = frames.flatMap((frame) =>
       frame.drawings
         .filter((drawing) => drawing.key === key && drawing.posedPartPixels.length > 1)
