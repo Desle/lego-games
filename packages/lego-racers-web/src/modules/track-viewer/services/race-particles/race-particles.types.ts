@@ -1,6 +1,7 @@
 import type { EmitterPool, EmitterQuad } from '@lego-games/lego-racers/emitter'
 import type { SpriteView } from '@lego-games/lego-racers/race-presentation'
 import type { RibbonView } from '@lego-games/lego-racers/ribbon'
+import type { TrailDrawing } from '@lego-games/lego-racers/projectile-trail'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type { Group, Mesh } from 'three'
 
@@ -15,7 +16,9 @@ export type RaceParticles = {
     // The strips of the effects (the grapple's rope, the wand's beam), in the world.
     ribbons?: readonly RibbonView[],
     // The track world's sprites (trees, torches, lamps) for this camera, drawn like the effects' sprites.
-    worldSpriteQuads?: readonly EmitterQuad[]
+    worldSpriteQuads?: readonly EmitterQuad[],
+    // The streaks behind the cannonballs and rockets (the trail pool's meshes).
+    trails?: readonly TrailDrawing[]
   ) => void
   readonly dispose: () => void
 }

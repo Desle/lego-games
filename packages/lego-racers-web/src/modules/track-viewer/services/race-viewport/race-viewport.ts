@@ -8,6 +8,7 @@ import type {
 } from '@lego-games/lego-racers/race-presentation'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type { RibbonView } from '@lego-games/lego-racers/ribbon'
+import type { TrailDrawing } from '@lego-games/lego-racers/projectile-trail'
 import { SceneInstanceKind } from '@lego-games/lego-racers/scene'
 import type { Scene } from '@lego-games/lego-racers/scene'
 import type { Mesh, MeshBasicMaterial } from 'three'
@@ -302,6 +303,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   let lastCameraView: CameraView | null = null
   let lastSprites: readonly SpriteView[] = []
   let lastRibbons: readonly RibbonView[] = []
+  let lastTrails: readonly TrailDrawing[] = []
   const update = (
     allPoses: readonly RacerPose[],
     allCameraView: CameraView,
@@ -334,6 +336,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     const frustum = getCameraFrustum(camera)
     lastSprites = warpView === null ? effectViews.sprites : []
     lastRibbons = warpView === null ? effectViews.ribbons : []
+    lastTrails = warpView === null ? effectViews.trails : []
     effects.update(
       warpView === null
         ? effectViews
@@ -473,7 +476,14 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
         lastCameraView,
         assets.definition.isMirrored
       )
-      particles.update(pools, lastCameraView, lastSprites, lastRibbons, worldSpriteQuads)
+      particles.update(
+        pools,
+        lastCameraView,
+        lastSprites,
+        lastRibbons,
+        worldSpriteQuads,
+        lastTrails
+      )
     }
   }
 
