@@ -2,6 +2,7 @@ import type { ModelScene, SceneMesh } from '@lego-games/lego-racers/scene'
 import { STUD_WIDTH } from '@lego-games/ldraw/building'
 import { Box3, Matrix4, Vector3 } from 'three'
 import { LDRAW_TO_GAME, LDRAW_TO_STUDS } from '../ldraw-car/ldraw-car-document.ts'
+import { createSkeletonPoseSampler } from '../ldraw-racer/skeleton-pose.ts'
 
 // The frames and scales of the effect files (`powerups/<MODEL>.ldr`, `particles/<KIND>.ldr`), in one place: the builder and the race
 // both take them from here, so what the builder shows is what the race draws.
@@ -68,12 +69,51 @@ export const getOriginalModelBounds = (model: ModelScene): Box3 => {
     : getScaledBounds(mesh, model.meshScales[0] ?? 1, getPosedTriangles(mesh))
 }
 
-// The bounds a file is framed by: the posed bounds, else (a mesh with no triangle on its posed bone) every vertex of the mesh.
+const SAMPLES_PER_CLIP = 8
+const SAMPLE_STEP_MILLISECONDS = 125
+
+// Every vertex of a skeletal mesh as its animation poses it, in the frame of the drawing's bone (the race poses the drawing with
+// that bone's matrix), every 125 ms over the first second of every clip: the room the mesh takes while it plays. Null without a
+// skeleton.
+const getAnimatedBounds = (model: ModelScene, mesh: SceneMesh): Box3 | null => {
+  const sampler = createSkeletonPoseSampler(model)
+  if (sampler === null) return null
+  const bone = getPosedBone(mesh)
+  const bounds = new Box3()
+  const point = new Vector3()
+  const addPose = (matrices: readonly Matrix4[]) => {
+    const toBone = (matrices[bone] ?? new Matrix4()).clone().invert()
+    for (const batch of mesh.drawBatches) {
+      batch.vertexIndices.forEach((vertex, corner) => {
+        const vertexBone = matrices[batch.transformIndices[corner] ?? 0] ?? new Matrix4()
+        point.fromArray(mesh.positions, vertex * VERTEX_SIZE).applyMatrix4(vertexBone)
+        bounds.expandByPoint(point.applyMatrix4(toBone))
+      })
+    }
+  }
+  addPose(sampler.restMatrices)
+  for (let clipIndex = 0; ; clipIndex += 1) {
+    let state = sampler.createState(clipIndex)
+    if (state === null) break
+    for (let sample = 0; sample < SAMPLES_PER_CLIP; sample += 1) {
+      addPose(sampler.getMatrices(state))
+      state = sampler.advance(state, SAMPLE_STEP_MILLISECONDS)
+    }
+  }
+  const scale = model.meshScales[0] ?? 1
+  return bounds.isEmpty() ? null : bounds.applyMatrix4(new Matrix4().makeScale(scale, scale, scale))
+}
+
+// The bounds a file is framed by: the posed bounds; else (a mesh with no triangle on its posed bone: the turbo flames, a curse
+// ring) every vertex as the animation poses it in the posed bone's frame; else every vertex as the file stores it.
 export const getOriginalFrameBounds = (model: ModelScene): Box3 => {
   const posed = getOriginalModelBounds(model)
   const mesh = getEffectMesh(model)
   if (!posed.isEmpty() || mesh === null) return posed
-  return getScaledBounds(mesh, model.meshScales[0] ?? 1, Array(mesh.vertexCount).keys())
+  return (
+    getAnimatedBounds(model, mesh) ??
+    getScaledBounds(mesh, model.meshScales[0] ?? 1, Array(mesh.vertexCount).keys())
+  )
 }
 
 const getLargestExtent = (bounds: Box3): number => {

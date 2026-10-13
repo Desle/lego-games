@@ -10,6 +10,11 @@ import {
   getBuilderViewPosition,
   getFramingView,
 } from './builder-camera.ts'
+import { loadEffectModel } from '../../../track-viewer/index.ts'
+import {
+  getOriginalFrameBounds,
+  POWER_UP_STUD_UNITS,
+} from '../ldraw-powerup/powerup-object-frame.ts'
 import { createOriginalReference } from './builder-reference.ts'
 import { getPowerUpGridStuds } from './builder-reference-shape.ts'
 import { ReferenceShape } from './builder-reference.types.ts'
@@ -84,4 +89,27 @@ describe.skipIf(!isPresent)("the builder's power-up references", () => {
       reference.dispose()
     }
   )
+
+  it("frames a turbo's flame by the room it takes while it plays, in the builder as in the race", () => {
+    // Arrange: DT0FLA1 has no triangle on its first vertex's bone; stored, it is 0.24 deep, playing it stretches to about 3.8
+    if (archive === null) throw new Error('no LEGO.JAM')
+    const model = loadEffectModel(archive, 'DT0FLA1', true)
+
+    // Act
+    const raceFrame = getOriginalFrameBounds(model).getSize(new Vector3())
+    const shown = createOriginalReference(archive, {
+      id: 'powerups/DT0FLA1',
+      kind: BuilderItemKind.POWER_UP,
+      name: 'DT0FLA1',
+      chassisName: '',
+    })
+    const shownSize = shown?.bounds.getSize(new Vector3()).multiplyScalar(POWER_UP_STUD_UNITS)
+
+    // Assert: the builder shows the same room, in studs of the power-up brick
+    expect([raceFrame.z > 3, Math.abs((shownSize?.z ?? 0) - raceFrame.z) < 0.01]).toEqual([
+      true,
+      true,
+    ])
+    shown?.dispose()
+  })
 })

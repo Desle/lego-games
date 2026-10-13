@@ -17,7 +17,7 @@ import { parseEmitters } from '@lego-games/lego-racers/emitter'
 import { loadModelScene, SceneInstanceKind } from '@lego-games/lego-racers/scene'
 import type { ModelScene, SceneMesh } from '@lego-games/lego-racers/scene'
 import { getParticlePartText } from '@lego-games/ldraw/particles'
-import { Box3, CylinderGeometry, Group, Mesh, MeshBasicMaterial } from 'three'
+import { Box3, Box3Helper, CylinderGeometry, Group, Mesh, MeshBasicMaterial } from 'three'
 import type { Material, Object3D } from 'three'
 import { createModelObject, loadEffectModel } from '../../../track-viewer/index.ts'
 import {
@@ -125,8 +125,14 @@ const createPowerUpReference = (archive: JamArchive, name: string): OriginalRefe
   const model = loadEffectModel(archive, name, false)
   const original = createModelObject(model)
   const posedBounds = getOriginalModelBounds(model)
-  const frameBounds = getOriginalFrameBounds(model)
+  const frameBounds = getOriginalFrameBounds(loadAnimatedEffectModel(archive, name) ?? model)
   original.group.matrix.copy(getPowerUpReferenceMatrix(frameBounds))
+  // A mesh the race poses bone by bone (a turbo's flame) is shown as stored; the box is the room it takes while it plays.
+  if (posedBounds.isEmpty() && !frameBounds.isEmpty()) {
+    const room = new Box3Helper(frameBounds, ANIMATED_ROOM_COLOR)
+    room.raycast = () => undefined
+    original.group.add(room)
+  }
   const object = new Group()
   object.add(original.group)
   return createShownReference(
@@ -135,6 +141,27 @@ const createPowerUpReference = (archive: JamArchive, name: string): OriginalRefe
     (bounds) => getPowerUpReferenceShape(posedBounds, bounds, getIsSeeThrough(object)),
     (fileBounds) => getFittedPowerUpScale(frameBounds, fileBounds)
   )
+}
+
+// The models the race loads without a skeleton (race-assets); the others play their own animation, the shields SHEOUT0's.
+const SKELETON_FREE_MODELS: readonly string[] = ['BARREL', 'HEDRA01', 'SPIKEXP', 'WARPHOLE']
+const SHIELD_PREFIX = 'SHEOUT'
+const SHIELD_SKELETON = 'SHEOUT0'
+const ANIMATED_ROOM_COLOR = 0xff9a3c
+
+// The model with its skeleton and animation, as the race loads it; null for one the race loads without.
+const loadAnimatedEffectModel = (archive: JamArchive, name: string): ModelScene | null => {
+  if (SKELETON_FREE_MODELS.includes(name)) return null
+  try {
+    return loadEffectModel(
+      archive,
+      name,
+      true,
+      name.startsWith(SHIELD_PREFIX) ? SHIELD_SKELETON : name
+    )
+  } catch {
+    return null
+  }
 }
 
 const WHITE = 255

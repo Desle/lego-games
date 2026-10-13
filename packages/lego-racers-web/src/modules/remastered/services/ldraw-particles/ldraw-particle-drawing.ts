@@ -7,7 +7,7 @@ import type {
   ParticleView,
   WorldVector,
 } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
-import { loadLDrawModelText } from '../ldraw-models/ldraw-model-client.ts'
+import { getHasPlacedParts, loadLDrawModelText } from '../ldraw-models/ldraw-model-client.ts'
 import type { LDrawModelIndex } from '../ldraw-models/ldraw-model-index.types.ts'
 import { getParticleUnitsPerLDrawUnit } from '../ldraw-powerup/powerup-object-frame.ts'
 import { findPowerUpSpriteName, POWER_UP_SPRITE_NAMES } from '../ldraw-powerup/powerup-sprites.ts'
@@ -99,7 +99,7 @@ const loadFile = async (
   isSizeCapped: boolean
 ): Promise<void> => {
   const text = file === undefined ? null : await loadLDrawModelText(file)
-  if (file === undefined || text === null) return
+  if (file === undefined || text === null || !getHasPlacedParts(text)) return
   loadedFiles.set(
     key,
     Object.freeze({
