@@ -3,6 +3,7 @@ import { Mesh, Vector3 } from 'three'
 import type { Group, Object3D } from 'three'
 import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
 import { getDeckStuds, getFootprintCoverage } from './chassis-footprint-coverage.ts'
+import { loadDesignChassisDeck } from './chassis-deck-loader.ts'
 import { getGridOffset, getStudAreaBounds } from './chassis-grid-offset.ts'
 import type { ChassisFit, GridOffset } from './chassis-grid-offset.types.ts'
 
@@ -41,7 +42,7 @@ export const loadDesignGridOffset = async (
   return NO_GRID_OFFSET
 }
 
-// How the design's chassis recipe holds the game's grid: the grid offset and the share of the chassis's building cells that land on a
+// How the design's chassis recipe holds the game's grid: the grid offset (on the recipe's upright studs when the library knows them) and the share of the chassis's building cells that land on a
 // stud of the base's deck; null when the design has no chassis with a recipe.
 export const loadChassisFit = async (
   design: CarDesign,
@@ -52,8 +53,10 @@ export const loadChassisFit = async (
     if (recipeText === undefined) continue
     const positions = getFacePositions(await parseLDrawModel(recipeText))
     const bounds = getStudAreaBounds(positions)
+    const deck = await loadDesignChassisDeck(design, chassisModels)
     const gridOffset =
-      bounds === null ? NO_GRID_OFFSET : getGridOffset(brick.piece.footprint, bounds)
+      deck?.gridOffset ??
+      (bounds === null ? NO_GRID_OFFSET : getGridOffset(brick.piece.footprint, bounds))
     return Object.freeze({
       gridOffset,
       footprintCoverage: getFootprintCoverage(
