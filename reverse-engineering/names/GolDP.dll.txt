@@ -129,10 +129,8 @@
 10023ef0 SkeletonInstance_UpdateBoundingSphere
 100240b0 SkeletonInstance_GetVisibility
 1002bc20 Frustum_TestSphere
-<<<<<<< HEAD
 10002a30 CameraNode_SetOrientation
 100029d0 CameraNode_GetForwardUp
-=======
 10027d80 MeshInstance_GetVisibility
 10027ea0 MeshInstance_UpdateBoundingSphere
 10027cc0 MeshInstance_SelectLevel
@@ -142,4 +140,3 @@
 100286d0 Instance_GetSphereCentre
 10028710 Instance_GetSphereRadius
 100278c0 Model_ComputeBoundingSphere
->>>>>>> a1f56b36 (Render coverage: depth range for the race camera, visibility trace cases, docs)
