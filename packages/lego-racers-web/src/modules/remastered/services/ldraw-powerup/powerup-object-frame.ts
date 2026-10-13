@@ -1,17 +1,20 @@
 import type { ModelScene, SceneMesh } from '@lego-games/lego-racers/scene'
+import { STUD_WIDTH } from '@lego-games/ldraw/building'
 import { Box3, Matrix4, Vector3 } from 'three'
-import { LDRAW_TO_GAME } from '../ldraw-car/ldraw-car-document.ts'
+import { LDRAW_TO_GAME, LDRAW_TO_STUDS } from '../ldraw-car/ldraw-car-document.ts'
 
-// The frame of a power-up object's LDraw file (`powerups/<MODEL>.ldr`), in one place.
+// The frame and scale of a power-up object's file (`powerups/<MODEL>.ldr`), in one place: the builder and the race
+// both take them from here, so what the builder shows is what the race draws.
 //
-// The drawing stands where the race puts the original's mesh as its file stores it, the model's scale applied (the frame
-// `getEffectModelDrawing` draws in; the race then poses it with the bone the mesh's first vertex hangs on, as that bone turns the
-// mesh). Of a mesh on several bones only that bone's vertices count. The file's LDraw axes become the game's ((x, y, z) to
-// (x, z, -y): -y up is z up, x stays x, the way a rocket flies), then the file is scaled uniformly until its largest extent is the
-// original's and centred on the original's bounds. So a file may be built at any size: the original's bounds give the scale, as
-// the pickup bricks' were fitted to their meshes. The builder shows the original in studs of the power-up brick
-// (POWER_UP_STUD_UNITS, the stud of PUBRICKY's 1 x 3 brick in its mesh), standing on the ground at the origin, so a file built on
-// it keeps its proportions in the race.
+// Power-up objects. The drawing stands where the race puts the original's mesh as its file stores it, the model's scale applied (the
+// frame `getEffectModelDrawing` draws in; the race then poses it with the bone the mesh's first vertex hangs on, as that bone turns
+// the mesh). Of a mesh on several bones only that bone's vertices count; a mesh with no triangle on that bone (the turbo flames, a
+// curse ring) is framed by all its vertices. The file's LDraw axes become the game's ((x, y, z) to (x, z, -y): -y up is z up, x stays
+// x, the way a rocket flies). The builder shows the original in studs of the power-up brick (POWER_UP_STUD_UNITS, the stud of
+// PUBRICKY's 1 x 3 brick in its mesh), the bottom centre of its bounds on the origin, and the file's parts in those studs times the
+// file's scale (`0 !RACERS SCALE`, 1: a stud of the file is a stud of the power-up brick), its origin on the same origin. The race
+// draws a file with a scale exactly so; a file without one is fitted: scaled uniformly until its largest extent is the original's and
+// centred on the original's bounds (the builder opens it at that fitted scale, and Done writes it).
 export const POWER_UP_STUD_UNITS = 2.34
 const VERTEX_SIZE = 3
 const TRIANGLE_CORNERS = 3
@@ -40,18 +43,32 @@ export const getPosedTriangles = (mesh: SceneMesh): readonly number[] => {
 export const getEffectMesh = (model: ModelScene): SceneMesh | null =>
   model.scene.meshes[model.scene.instances[0]?.levels[0]?.meshIndex ?? 0] ?? null
 
-// The bounds of the original's mesh in the drawing's frame: the vertices on the drawing's bone, the model's scale applied.
-export const getOriginalModelBounds = (model: ModelScene): Box3 => {
+const getScaledBounds = (mesh: SceneMesh, scale: number, indices: Iterable<number>): Box3 => {
   const bounds = new Box3()
-  const mesh = getEffectMesh(model)
-  if (mesh === null) return bounds
-  const scale = model.meshScales[0] ?? 1
   const point = new Vector3()
-  for (const index of getPosedTriangles(mesh)) {
+  for (const index of indices) {
     point.fromArray(mesh.positions, index * VERTEX_SIZE).multiplyScalar(scale)
     bounds.expandByPoint(point)
   }
   return bounds
+}
+
+// The bounds of the original's mesh in the drawing's frame: the vertices on the drawing's bone, the model's scale applied (empty
+// when no triangle is on it).
+export const getOriginalModelBounds = (model: ModelScene): Box3 => {
+  const mesh = getEffectMesh(model)
+  return mesh === null
+    ? new Box3()
+    : getScaledBounds(mesh, model.meshScales[0] ?? 1, getPosedTriangles(mesh))
+}
+
+// The bounds a file is framed by: the posed bounds, else (a mesh with no triangle on its posed bone: the turbo flames, a curse ring)
+// every vertex as the file stores it.
+export const getOriginalFrameBounds = (model: ModelScene): Box3 => {
+  const posed = getOriginalModelBounds(model)
+  const mesh = getEffectMesh(model)
+  if (!posed.isEmpty() || mesh === null) return posed
+  return getScaledBounds(mesh, model.meshScales[0] ?? 1, Array(mesh.vertexCount).keys())
 }
 
 const getLargestExtent = (bounds: Box3): number => {
@@ -59,31 +76,60 @@ const getLargestExtent = (bounds: Box3): number => {
   return Math.max(size.x, size.y, size.z)
 }
 
-// The matrix that takes the file's points (LDraw units and axes, `fileBounds` their bounds) into the drawing's frame: the game's
-// axes, the original's largest extent and centre. A file or an original without extent is only turned and moved.
-export const getPowerUpObjectMatrix = (originalBounds: Box3, fileBounds: Box3): Matrix4 => {
-  const turned = fileBounds.clone().applyMatrix4(LDRAW_TO_GAME)
-  const fileExtent = getLargestExtent(turned)
+// Where the builder's origin is in the drawing's frame: the bottom centre of the original's bounds.
+const getAnchor = (originalBounds: Box3): Vector3 =>
+  originalBounds.isEmpty()
+    ? new Vector3()
+    : originalBounds.getCenter(new Vector3()).setZ(originalBounds.min.z)
+
+const getPowerUpUnitsPerLDrawUnit = (scale: number): number =>
+  (scale * POWER_UP_STUD_UNITS) / STUD_WIDTH
+
+// The scale the fit gives a file (LDraw units and axes, `fileBounds` its bounds): its largest extent the original's; 1 when either
+// has no extent.
+export const getFittedPowerUpScale = (originalBounds: Box3, fileBounds: Box3): number => {
+  const fileExtent = getLargestExtent(fileBounds.clone().applyMatrix4(LDRAW_TO_GAME))
   const originalExtent = getLargestExtent(originalBounds)
-  const scale = fileExtent > 0 && originalExtent > 0 ? originalExtent / fileExtent : 1
+  return fileExtent > 0 && originalExtent > 0
+    ? originalExtent / fileExtent / getPowerUpUnitsPerLDrawUnit(1)
+    : 1
+}
+
+// The matrix that takes the file's points (LDraw units and axes, `fileBounds` their bounds) into the drawing's frame: with a scale,
+// the builder's frame (its origin on the original's bottom centre, a stud the power-up brick's times the scale); without one
+// (null), fitted to the original's largest extent and centred on its bounds.
+export const getPowerUpObjectMatrix = (
+  originalBounds: Box3,
+  fileBounds: Box3,
+  scale: number | null
+): Matrix4 => {
+  if (scale !== null) {
+    const unitsPerLDrawUnit = getPowerUpUnitsPerLDrawUnit(scale)
+    return new Matrix4()
+      .makeTranslation(getAnchor(originalBounds))
+      .multiply(new Matrix4().makeScale(unitsPerLDrawUnit, unitsPerLDrawUnit, unitsPerLDrawUnit))
+      .multiply(LDRAW_TO_GAME)
+  }
+  const turned = fileBounds.clone().applyMatrix4(LDRAW_TO_GAME)
+  const fitted = getPowerUpUnitsPerLDrawUnit(getFittedPowerUpScale(originalBounds, fileBounds))
   const fileCentre = turned.isEmpty() ? new Vector3() : turned.getCenter(new Vector3())
   const originalCentre = originalBounds.isEmpty()
     ? new Vector3()
     : originalBounds.getCenter(new Vector3())
   return new Matrix4()
     .makeTranslation(originalCentre)
-    .multiply(new Matrix4().makeScale(scale, scale, scale))
+    .multiply(new Matrix4().makeScale(fitted, fitted, fitted))
     .multiply(new Matrix4().makeTranslation(fileCentre.negate()))
     .multiply(LDRAW_TO_GAME)
 }
 
 // The matrix that shows the original's mesh (the drawing's frame) in the builder's (studs, the game's axes): a stud of the power-up
 // brick is one, the bounds' bottom centre on the origin.
-export const getPowerUpReferenceMatrix = (originalBounds: Box3): Matrix4 => {
-  const centre = originalBounds.isEmpty()
-    ? new Vector3()
-    : originalBounds.getCenter(new Vector3()).setZ(originalBounds.min.z)
-  return new Matrix4()
+export const getPowerUpReferenceMatrix = (originalBounds: Box3): Matrix4 =>
+  new Matrix4()
     .makeScale(1 / POWER_UP_STUD_UNITS, 1 / POWER_UP_STUD_UNITS, 1 / POWER_UP_STUD_UNITS)
-    .multiply(new Matrix4().makeTranslation(centre.negate()))
-}
+    .multiply(new Matrix4().makeTranslation(getAnchor(originalBounds).negate()))
+
+// The matrix that shows a file's parts in the builder (LDraw units and axes into its studs) at the file's scale.
+export const getBuildFrameMatrix = (scale: number): Matrix4 =>
+  LDRAW_TO_STUDS.clone().multiply(new Matrix4().makeScale(scale, scale, scale))

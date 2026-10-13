@@ -17,9 +17,11 @@ export type EffectModelDrawingSource = {
   readonly file: string | null
 }
 
-// A power-up object's file, read and prepared (plain studs) once for every drawing of it, with its bounds (LDraw units and axes).
+// A power-up object's file, read and prepared (plain studs) once for every drawing of it, with its bounds (LDraw units and axes) and
+// its scale line's factor (null: fitted to the original).
 export type PreparedPowerUpObject = {
   readonly text: string
   readonly model: Group
   readonly bounds: Box3
+  readonly scale: number | null
 }

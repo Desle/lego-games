@@ -31,9 +31,12 @@ import {
 } from '../reference-kit/chassis-reference-line.ts'
 import { getWheelMounts } from '../reference-kit/wheel-mounts.ts'
 import {
+  getFittedPowerUpScale,
+  getOriginalFrameBounds,
   getOriginalModelBounds,
   getPowerUpReferenceMatrix,
 } from '../ldraw-powerup/powerup-object-frame.ts'
+import { getModelFileScale, removeScaleMeta } from '../ldraw-scale-meta/ldraw-scale-meta.ts'
 import {
   getDefaultHeaderLines,
   getReferencedModelName,
@@ -93,12 +96,15 @@ const getIsSeeThrough = (object: Object3D): boolean => {
 const createShownReference = (
   object: Group,
   dispose: () => void,
-  getShape: (bounds: Box3) => ReferenceShape
+  getShape: (bounds: Box3) => ReferenceShape,
+  getFittedScale: (fileBounds: Box3) => number = getUnitScale
 ): OriginalReference => {
   object.updateMatrixWorld(true)
   const bounds = new Box3().setFromObject(object)
-  return { object, dispose, bounds, shape: getShape(bounds) }
+  return { object, dispose, bounds, shape: getShape(bounds), getFittedScale }
 }
+
+const getUnitScale = (): number => 1
 
 // A power-up object's mesh as its file stores it (the frame its LDraw file is drawn in), shown in studs of the power-up brick on the
 // ground (powerup-object-frame.ts), drawn as race-effects draws it.
@@ -106,18 +112,15 @@ const createPowerUpReference = (archive: JamArchive, name: string): OriginalRefe
   const model = loadEffectModel(archive, name, false)
   const original = createModelObject(model)
   const posedBounds = getOriginalModelBounds(model)
-  original.group.updateMatrixWorld(true)
-  // A mesh with no triangle on its posed bone gives the frame no bounds: it stands on the ground by all it draws instead.
-  const standingBounds = posedBounds.isEmpty()
-    ? new Box3().setFromObject(original.group)
-    : posedBounds
-  original.group.matrix.copy(getPowerUpReferenceMatrix(standingBounds))
+  const frameBounds = getOriginalFrameBounds(model)
+  original.group.matrix.copy(getPowerUpReferenceMatrix(frameBounds))
   const object = new Group()
   object.add(original.group)
   return createShownReference(
     object,
     () => original.object.dispose(),
-    (bounds) => getPowerUpReferenceShape(posedBounds, bounds, getIsSeeThrough(object))
+    (bounds) => getPowerUpReferenceShape(posedBounds, bounds, getIsSeeThrough(object)),
+    (fileBounds) => getFittedPowerUpScale(frameBounds, fileBounds)
   )
 }
 
@@ -197,7 +200,7 @@ const ITEM_TITLES: Readonly<Record<BuilderItemKind, (name: string) => string>> =
     `Racers chassis ${name.toUpperCase()} (recipe frame: footprint corner, x width, y depth, z up from the brick bottom)`,
   [BuilderItemKind.CAR]: (name: string) => `Racers champion car ${name}`,
   [BuilderItemKind.POWER_UP]: (name: string) =>
-    `Racers power-up object ${name} (fitted to the original's size in the race, front along x)`,
+    `Racers power-up object ${name} (front along x; 0 !RACERS SCALE: studs of the power-up brick)`,
   [BuilderItemKind.DRIVER]: (name: string) =>
     `${name} driver (origin the top of the hips, standing rest pose; each part after its 0 !RACERS ROLE line)`,
 })
@@ -257,7 +260,7 @@ export const loadBuilderItemStart = async (
       : sourceFile === null || sourceFile === EMPTY_START_FILE
         ? null
         : await fetchModelText(sourceFile)
-  const parsed = parseBuilderDocument(text ?? '')
+  const parsed = removeScaleMeta(parseBuilderDocument(text ?? ''))
   const document = isChassis
     ? parsed
     : inlineReferencedModels(parsed, await loadReferencedRecipes(parsed.referenceLines))
@@ -271,6 +274,7 @@ export const loadBuilderItemStart = async (
           ? document.headerLines
           : getDefaultHeaderLines(getTitle(item), file.split('/').pop() ?? file),
     }),
+    scale: getModelFileScale(text ?? ''),
     editOffset: isChassis && piece !== null ? getChassisRecipeOffset(database, piece) : NO_OFFSET,
   }
 }

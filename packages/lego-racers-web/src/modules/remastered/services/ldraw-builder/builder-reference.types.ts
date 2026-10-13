@@ -18,6 +18,8 @@ export type OriginalReference = {
   // The bounds of what is shown, in the builder's world (studs, z up).
   readonly bounds: Box3
   readonly shape: ReferenceShape
+  // The scale (powerup-object-frame.ts) that fits a file with these bounds (LDraw units and axes) to the original.
+  readonly getFittedScale: (fileBounds: Box3) => number
 }
 
 export type BuilderItemStart = {
@@ -25,7 +27,10 @@ export type BuilderItemStart = {
   readonly file: string
   // The file the model was read from, null when it starts empty.
   readonly sourceFile: string | null
+  // The document without its scale line.
   readonly document: BuilderDocument
+  // The file's scale line's factor, null when it has none (a power-up object is then fitted).
+  readonly scale: number | null
   // Where the editing frame sits in the car's frame (LDraw units and axes): a chassis recipe's offset, nothing for a car.
   readonly editOffset: Vector
 }

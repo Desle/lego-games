@@ -20,7 +20,8 @@ import { getLDrawModelIndex, loadLDrawModelText } from '../ldraw-models/ldraw-mo
 import type { LDrawModelIndex } from '../ldraw-models/ldraw-model-index.types.ts'
 import { brightenPlastic, createLDrawPickupDrawing } from '../ldraw-pickup/ldraw-pickup-drawing.ts'
 import { LDRAW_PICKUP_MAPPINGS } from '../ldraw-pickup/ldraw-pickup-mappings.ts'
-import { getOriginalModelBounds, getPowerUpObjectMatrix } from './powerup-object-frame.ts'
+import { getModelFileScale } from '../ldraw-scale-meta/ldraw-scale-meta.ts'
+import { getOriginalFrameBounds, getPowerUpObjectMatrix } from './powerup-object-frame.ts'
 import { EffectModelDrawingSourceKind } from './powerup-object-drawing.types.ts'
 import type {
   EffectModelDrawingSource,
@@ -40,7 +41,12 @@ const preparePowerUpObject = async (file: string): Promise<PreparedPowerUpObject
     if (text === null) return null
     const { model } = await holdPreparedModel(text, LDrawDetail.LOW).prepared
     model.updateMatrixWorld(true)
-    return Object.freeze({ text, model, bounds: new Box3().setFromObject(model) })
+    return Object.freeze({
+      text,
+      model,
+      bounds: new Box3().setFromObject(model),
+      scale: getModelFileScale(text),
+    })
   } catch (error: unknown) {
     console.error(`The power-up object ${file} could not be prepared`, error)
     return null
@@ -121,7 +127,9 @@ const createDetailSwitch = (object: PreparedPowerUpObject): DetailSwitch => {
 }
 
 const fillDrawing = (holder: Group, object: PreparedPowerUpObject, model: ModelScene) => {
-  holder.matrix.copy(getPowerUpObjectMatrix(getOriginalModelBounds(model), object.bounds))
+  holder.matrix.copy(
+    getPowerUpObjectMatrix(getOriginalFrameBounds(model), object.bounds, object.scale)
+  )
   holder.add(createDetailSwitch(object))
   Object.assign(holder, { matrixWorldNeedsUpdate: true })
 }
