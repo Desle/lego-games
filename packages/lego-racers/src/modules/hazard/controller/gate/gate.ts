@@ -19,6 +19,7 @@ import {
   findSkeletonReference,
   getSkeletonInstance,
   getActiveAfterEndRequest,
+  getInstanceDistances,
   setInstanceDistances,
   setSkeletonInstance,
 } from '../hazard-helpers/hazard-helpers.ts'
@@ -73,6 +74,7 @@ export const GATE: HazardBehavior = Object.freeze({
       return name === undefined ? null : findSkeletonReference(context.session, 'track', name)
     })
     parts.forEach((part) => changeFlags(context.session, part, 0, INSTANCE_ANIMATED_FLAG))
+    const drawnLevelSquaredDistances = getInstanceDistances(context.session, parts[0] ?? null)
     return Object.freeze({
       definition,
       identifier: integer ?? 0,
@@ -81,6 +83,7 @@ export const GATE: HazardBehavior = Object.freeze({
         keyword: HazardKeyword.HAZARD_34,
         parts: Object.freeze(parts),
         collisionObjectName: objectName ?? '',
+        drawnLevelSquaredDistances: Object.freeze([...(drawnLevelSquaredDistances ?? [])]),
       } satisfies GateData),
     })
   },

@@ -4,7 +4,19 @@ import type { CommonPartGroup } from './ldraw-builder.types.ts'
 export const COMMON_PART_GROUPS: readonly CommonPartGroup[] = Object.freeze([
   {
     label: 'Bricks',
-    partNames: ['3005', '3004', '3622', '3010', '3009', '3008', '3003', '3002', '3001', '2456'],
+    partNames: [
+      '3005',
+      '3004',
+      '3622',
+      '3010',
+      '3009',
+      '3008',
+      '3003',
+      '3002',
+      '3001',
+      '2456',
+      '2877',
+    ],
   },
   {
     label: 'Plates',

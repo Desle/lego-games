@@ -40,6 +40,7 @@ const createButton = (text: string, className: string, onClick: () => void) => {
 }
 
 const SEARCH_PAUSE_MILLISECONDS = 250
+const TRANSPARENT_PREFIX = 'Trans_'
 
 const getHex = (color: LDrawColorName): string =>
   `#${[color.red, color.green, color.blue].map((channel) => (channel & BYTE).toString(16).padStart(2, '0')).join('')}`
@@ -228,7 +229,10 @@ export const createBuilderPanel = (
       colorGrid.replaceChildren(
         ...colors.map((color) => {
           const swatch = createButton('', 'swatch', () => handlers.onColorSelect(color.code))
-          swatch.style.background = getHex(color)
+          // A see-through colour shows over a checkerboard, as image editors do.
+          swatch.style.background = color.name.startsWith(TRANSPARENT_PREFIX)
+            ? `linear-gradient(${getHex(color)}99, ${getHex(color)}99), repeating-conic-gradient(#ccc 0 25%, #fff 0 50%) 0 0 / 8px 8px`
+            : getHex(color)
           swatch.title = `${color.name} (${String(color.code)})`
           swatch.dataset['code'] = String(color.code)
           return swatch

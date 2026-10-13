@@ -75,3 +75,26 @@ export const setAlphaOverride = (root: Object3D, alpha: number | null): void =>
     setGeometryAlpha(mesh.geometry, alpha)
     setMaterialOverride(mesh.material as Material, alpha !== null)
   })
+
+const ownMaterials = new WeakSet<Material>()
+
+// A copy of a material for one mesh, keeping the alpha test code the scene material compiles with.
+const getOwnMaterial = (material: Material): Material => {
+  if (ownMaterials.has(material)) return material
+  const copy = material.clone()
+  copy.onBeforeCompile = (shader, renderer) => material.onBeforeCompile(shader, renderer)
+  copy.customProgramCacheKey = () => material.customProgramCacheKey()
+  ownMaterials.add(copy)
+  return copy
+}
+
+// The device's alpha override on one instance of a scene: the instance's meshes take materials of their own first, as the
+// scene's materials are shared by every instance that uses them.
+export const setInstanceAlphaOverride = (root: Object3D, alpha: number | null): void => {
+  root.traverse((object) => {
+    if (object.type !== 'Mesh') return
+    const mesh = object as Mesh
+    mesh.material = getOwnMaterial(mesh.material as Material)
+  })
+  setAlphaOverride(root, alpha)
+}

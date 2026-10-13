@@ -8,6 +8,11 @@ const isGamePresent = () => getIsOriginalGamePresent() && getIsOriginalPresentat
 // The textures of the bricks' trails (putraily: ptrailP, ptrailS, ptrailT, ptrailM; enhaner: p2trailw).
 const TRAIL_TEXTURE_PATTERN = /^pup(red|blue|gree|yell|whit)2$/
 const TRAIL_OBJECT_PATTERN = /^(PUTRAILY|ENHANER)\//
+// The frames just after the barrier opens, while the barrels' clip plays (19 frames) and the camera still sees them.
+const BREAKING_FRAMES = [1478, 1480]
+// What the barrier case leaves unmatched in every frame whatever the barrels do: two skid triangles and two of a picture
+// the matcher cannot name (render-trace.md).
+const KNOWN_UNMATCHED_PER_FRAME = 4
 
 // Three things the original draws that the port drew wrongly (docs/reverse-engineering/play-test-visuals.md). Each case
 // failed before its fix: the numbers in the comments are the render trace's findings on main.
@@ -52,20 +57,26 @@ describe.skipIf(!isGamePresent())('play-test visuals', () => {
     )
   })
 
-  it('stops drawing the shortcut barrels once they break (0x0048ef70)', async () => {
+  it('draws the shortcut barrels breaking, fading with their clip, as the original does (0x0048f080)', async () => {
     // Arrange: the closed-loop drive fires a cannon ball at the barrier at frame 1460; the original opens it at 1477
     const request = BARRIER_REQUEST
 
     // Act
     const result = await runRenderComparison(request)
 
-    // Assert: before the fix the port drew the 98 triangles of the four parts in every one of these frames
-    const [before, ...after] = result.watched
-    expect(before?.originalCount).toBeGreaterThan(0)
-    expect(before?.portCount).toBeGreaterThan(0)
-    expect(after.map((count) => [count.frame, count.originalCount, count.portCount])).toEqual(
-      [1478, 1490, 1550].map((frame) => [frame, 0, 0])
+    // Assert: the gate draws its four parts while their clip plays. Hiding them as the barrier opens (the world's own
+    // distances are 0) left the original's 98 triangles of them without a partner on 1478 and 1480 (missing_in_port);
+    // the original's triangles are counted by geometry, as most of the barrels' pictures have no name the matcher knows.
+    const breaking = result.watched.filter((count) => BREAKING_FRAMES.includes(count.frame))
+    const unmatched = result.totals
+      .filter((total) => BREAKING_FRAMES.includes(total.frame))
+      .map((total) => total.originalCount - total.matchedCount)
+    const extraBarrels = result.groups.filter(
+      (group) => group.kind === 'extra_in_port' && /^(block|barrel)/i.test(group.source)
     )
+    expect(breaking.map((count) => count.portCount > 0)).toEqual([true, true])
+    expect(Math.max(...unmatched)).toBeLessThanOrEqual(KNOWN_UNMATCHED_PER_FRAME)
+    expect(extraBarrels).toEqual([])
   })
 
   it('turns the power-up bricks with their clip, as the original does (0x00457900, 0x0045a490)', async () => {

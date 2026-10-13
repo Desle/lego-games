@@ -32,7 +32,7 @@ import {
   LDRAW_MODEL_FILES_FILE,
 } from '../ldraw-models/ldraw-models-route.ts'
 import type { LDrawModelFile } from '../ldraw-models/ldraw-model-index.types.ts'
-import { parseBrickColorNames } from '../reference-kit/ldraw-color-names.ts'
+import { parseBuildableColorNames } from '../reference-kit/ldraw-color-names.ts'
 import type { LDrawColorName } from '../reference-kit/reference-kit.types.ts'
 import { serializeBuilderDocument, turnQuarter } from './builder-document.ts'
 import {
@@ -985,7 +985,7 @@ const draw = () => {
 
 const loadColors = async (): Promise<readonly LDrawColorName[]> => {
   const response = await fetch(`${DEVELOPMENT_LDRAW_ROUTE}/LDConfig.ldr`)
-  return response.ok ? parseBrickColorNames(await response.text()) : []
+  return response.ok ? parseBuildableColorNames(await response.text()) : []
 }
 
 const run = async () => {
