@@ -11,6 +11,9 @@ const STUD_LINK_DISTANCE = 7
 const STUD_TOP_DIAMETER = 12
 const STUD_TOP_SLACK = 2
 const CELL_ON_STUD_DISTANCE = 2
+const NEIGHBOUR_STEPS: readonly (readonly [number, number])[] = Object.freeze(
+  [-1, 0, 1].flatMap((columnStep) => [-1, 0, 1].map((rowStep) => [columnStep, rowStep] as const))
+)
 
 const getTopPoints = (positions: readonly number[]): readonly (readonly [number, number])[] => {
   let top = Infinity
@@ -25,6 +28,10 @@ const getTopPoints = (positions: readonly number[]): readonly (readonly [number,
   return points
 }
 
+const getCellKey = (column: number, row: number): string => `${String(column)},${String(row)}`
+
+// Points closer than the link distance in one group; each point is compared only with those of its own and the neighbouring cells of a
+// grid as wide as the link distance (a base's logo studs put tens of thousands of points on its deck).
 const getGroupRoots = (points: readonly (readonly [number, number])[]): readonly number[] => {
   const parents = points.map((_point, index) => index)
   const findRoot = (index: number): number => {
@@ -32,11 +39,23 @@ const getGroupRoots = (points: readonly (readonly [number, number])[]): readonly
     while (parents[root] !== root) root = parents[root] ?? root
     return root
   }
+  const cells = new Map<string, number[]>()
+  for (const [index, [x, z]] of points.entries()) {
+    const key = getCellKey(Math.floor(x / STUD_LINK_DISTANCE), Math.floor(z / STUD_LINK_DISTANCE))
+    const cell = cells.get(key) ?? []
+    cell.push(index)
+    cells.set(key, cell)
+  }
   for (const [first, [firstX, firstZ]] of points.entries()) {
-    for (let second = first + 1; second < points.length; second += 1) {
-      const [secondX, secondZ] = points[second] ?? [0, 0]
-      if (Math.hypot(firstX - secondX, firstZ - secondZ) > STUD_LINK_DISTANCE) continue
-      parents[findRoot(second)] = findRoot(first)
+    const column = Math.floor(firstX / STUD_LINK_DISTANCE)
+    const row = Math.floor(firstZ / STUD_LINK_DISTANCE)
+    for (const [columnStep, rowStep] of NEIGHBOUR_STEPS) {
+      for (const second of cells.get(getCellKey(column + columnStep, row + rowStep)) ?? []) {
+        if (second <= first) continue
+        const [secondX, secondZ] = points[second] ?? [0, 0]
+        if (Math.hypot(firstX - secondX, firstZ - secondZ) > STUD_LINK_DISTANCE) continue
+        parents[findRoot(second)] = findRoot(first)
+      }
     }
   }
   return points.map((_point, index) => findRoot(index))
