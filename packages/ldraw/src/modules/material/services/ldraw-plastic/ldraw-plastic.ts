@@ -25,6 +25,7 @@ import {
   getLookNeedsShader,
 } from '../ldraw-look/ldraw-look-shader.ts'
 import { bakeOcclusionVolume } from '../ldraw-occlusion/ldraw-occlusion.ts'
+import { applyPlasticLighting } from '../plastic-lighting/plastic-lighting.ts'
 import type { OcclusionVolume } from '../ldraw-occlusion/ldraw-occlusion.types.ts'
 import {
   getMaterialCategory,
@@ -169,6 +170,7 @@ const createPlasticMaterial = (
   material.name = source.name
   if (getLookNeedsShader(look))
     applyLookShader(material, look, volume, category === MaterialCategory.RUBBER)
+  applyPlasticLighting(material)
   return material
 }
 

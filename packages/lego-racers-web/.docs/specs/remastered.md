@@ -21,6 +21,7 @@ An optional layer above the original port, for development only: with `?hd[=<tex
 - A production build contains none of it: the module is imported only dynamically behind `import.meta.env.DEV`.
 - The culling frustum uses the camera's real (wider) aspect, with the original's vertical field of view.
 - A race with an extension registered is not recorded for replay.
+- With real shadows (`shadows=real` or `scenery`) the LDraw plastic receives them as the track does, through the same map lookups and with no extra pass; with `shadows=classic` its shader is unchanged (`.docs/remastered-shadows.md`).
 - Every racer the viewer draws (the race's, the ghosts', the menus') is offered to `getCarDrawing` and `getDriverDrawing`; the full-screen cinemas' own cars and figures are the pinned exceptions of `hd-coverage-gaps.ts`.
 
 ## Out of scope

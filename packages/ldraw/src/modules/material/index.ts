@@ -32,6 +32,8 @@ export {
   createStudioLights,
 } from './services/ldraw-plastic/ldraw-plastic.ts'
 export type { PlasticMesh } from './services/ldraw-plastic/ldraw-plastic.types.ts'
+export { setPlasticLightingExtension } from './services/plastic-lighting/plastic-lighting.ts'
+export type { PlasticLightingExtension } from './services/plastic-lighting/plastic-lighting.types.ts'
 export {
   precompileShaders,
   setShaderPrecompiler,

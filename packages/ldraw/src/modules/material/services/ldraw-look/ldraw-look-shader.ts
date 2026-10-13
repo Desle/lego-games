@@ -4,6 +4,7 @@ import {
   OCCLUSION_POSITION_ATTRIBUTE,
 } from '../ldraw-occlusion/ldraw-occlusion.ts'
 import type { OcclusionVolume } from '../ldraw-occlusion/ldraw-occlusion.types.ts'
+import { PLASTIC_DIRECT_LIGHT_DEFINE } from '../plastic-lighting/plastic-lighting.ts'
 import { LookShading } from './ldraw-look.types.ts'
 import type { LookAppearance } from './ldraw-look.types.ts'
 
@@ -169,6 +170,10 @@ for (int lookIndex = 0; lookIndex < NUM_DIR_LIGHTS; lookIndex++) {
 #endif
 lookShade /= max(lookLightSum, 0.0001);
 lookHighlight /= max(lookLightSum, 0.0001);
+#ifdef ${PLASTIC_DIRECT_LIGHT_DEFINE}
+lookShade *= plasticDirectLight;
+lookHighlight *= plasticDirectLight;
+#endif
 #ifdef LOOK_MATTE
 lookHighlight = 0.0;
 #endif

@@ -2,67 +2,21 @@ import type { SceneRenderState } from '@lego-games/lego-racers/scene'
 import { Mesh } from 'three'
 import type { Group, Material, MeshBasicMaterial, WebGLProgramParametersWithUniforms } from 'three'
 import type { ShadowUniforms } from './shadow-receiver.types.ts'
+import {
+  SHADOW_FRAGMENT_DECLARATIONS,
+  SHADOW_VERTEX_DECLARATIONS,
+  SHADOW_WORLD_POSITION,
+} from './shadow-sampling.ts'
 
-const VERTEX_DECLARATIONS = `
-varying vec3 vShadowWorld;
-`
-
-const VERTEX_WORLD_POSITION = `
-#include <project_vertex>
-vec4 shadowLocal = vec4(transformed, 1.0);
-#ifdef USE_INSTANCING
-shadowLocal = instanceMatrix * shadowLocal;
-#endif
-vShadowWorld = (modelMatrix * shadowLocal).xyz;
-`
-
-const FRAGMENT_DECLARATIONS = `
-varying vec3 vShadowWorld;
-uniform mat4 shadowMatrix;
-uniform highp sampler2DShadow shadowMap;
-uniform vec3 sunDirection;
-uniform float ambientShare;
-uniform float shadowTexel;
-uniform float shadowMapTexel;
-uniform float shadowDepthBias;
-uniform float shadowStrength;
-uniform float isBakedShadowEnabled;
-uniform mat4 bakedShadowMatrix;
-uniform highp sampler2DShadow bakedShadowMap;
-uniform float bakedShadowTexel;
-uniform vec2 bakedShadowMapTexel;
-uniform float bakedShadowDepthBias;
-
-// Nine hardware-filtered comparisons around the point; 1 where the map does not reach.
-float getMapVisibility(highp sampler2DShadow map, vec3 coordinates, vec2 mapTexel, float depthBias) {
-  if (coordinates.z >= 1.0 || coordinates.z <= 0.0 || coordinates.x < 0.0 || coordinates.x > 1.0 || coordinates.y < 0.0 || coordinates.y > 1.0) return 1.0;
-  float visibility = 0.0;
-  for (int row = -1; row <= 1; row++) {
-    for (int column = -1; column <= 1; column++) {
-      vec2 offset = vec2(float(column), float(row)) * mapTexel * 1.25;
-      visibility += texture(map, vec3(coordinates.xy + offset, coordinates.z - depthBias));
-    }
-  }
-  return visibility / 9.0;
-}
-
+const TRACK_FRAGMENT_DECLARATIONS = `
+${SHADOW_FRAGMENT_DECLARATIONS}
 // How much of the baked brightness remains where the sun is blocked: the baked light is ambient + diffuse * cos, so a
-// surface that faces the sun by cos keeps ambient / (ambient + diffuse * cos) of it. The live map (cars, hazards) fades out
-// smoothly towards its rim; the baked map (the static scenery of the whole track) has no rim inside the track.
+// surface that faces the sun by cos keeps ambient / (ambient + diffuse * cos) of it.
 float getShadowShade() {
   vec3 normal = normalize(cross(dFdx(vShadowWorld), dFdy(vShadowWorld)));
   float cosine = dot(normal, sunDirection);
   float remaining = ambientShare / (ambientShare + (1.0 - ambientShare) * max(cosine, 0.0));
-  vec4 clip = shadowMatrix * vec4(vShadowWorld + normal * shadowTexel * 2.0, 1.0);
-  float edge = 1.0 - smoothstep(0.35, 0.95, length(clip.xy));
-  float visibility = 1.0;
-  if (edge > 0.0) {
-    visibility = mix(1.0, getMapVisibility(shadowMap, clip.xyz * 0.5 + 0.5, vec2(shadowMapTexel), shadowDepthBias), edge);
-  }
-  if (isBakedShadowEnabled > 0.5) {
-    vec4 bakedClip = bakedShadowMatrix * vec4(vShadowWorld + normal * bakedShadowTexel * 1.5, 1.0);
-    visibility = min(visibility, getMapVisibility(bakedShadowMap, bakedClip.xyz * 0.5 + 0.5, bakedShadowMapTexel, bakedShadowDepthBias));
-  }
+  float visibility = getSunVisibility(vShadowWorld + normal * shadowTexel * 2.0, vShadowWorld + normal * bakedShadowTexel * 1.5);
   return mix(1.0, mix(remaining, 1.0, visibility), shadowStrength);
 }
 `
@@ -85,11 +39,11 @@ const makeReceiver = (material: MeshBasicMaterial, uniforms: ShadowUniforms) => 
     Object.assign(shader.uniforms, uniforms)
 
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', `#include <common>\n${VERTEX_DECLARATIONS}`)
-      .replace('#include <project_vertex>', VERTEX_WORLD_POSITION)
+      .replace('#include <common>', `#include <common>\n${SHADOW_VERTEX_DECLARATIONS}`)
+      .replace('#include <project_vertex>', `#include <project_vertex>\n${SHADOW_WORLD_POSITION}`)
 
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', `#include <common>\n${FRAGMENT_DECLARATIONS}`)
+      .replace('#include <common>', `#include <common>\n${TRACK_FRAGMENT_DECLARATIONS}`)
       .replace(
         '#include <opaque_fragment>',
         'outgoingLight *= getShadowShade();\n#include <opaque_fragment>'

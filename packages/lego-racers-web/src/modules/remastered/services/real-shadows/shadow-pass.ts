@@ -3,10 +3,8 @@ import {
   DoubleSide,
   LessEqualCompare,
   LinearFilter,
-  Matrix4,
   MeshBasicMaterial,
   RedFormat,
-  Vector2,
   Vector3,
   WebGLRenderTarget,
 } from 'three'
@@ -28,7 +26,7 @@ import type { BakedSceneryShadow } from './baked-scenery-shadow.types.ts'
 import { createLightFrame } from './light-frame.ts'
 import { hideBlobShadows, hideNonCasters, showAgain } from './shadow-casters.ts'
 import { makeTrackReceivers } from './shadow-receiver.ts'
-import type { ShadowUniforms } from './shadow-receiver.types.ts'
+import { SHARED_SHADOW_UNIFORMS } from './shadow-uniforms.ts'
 import { ShadowMode } from './shadow-mode.types.ts'
 
 const NEAR_PLANE = 0.1
@@ -63,22 +61,16 @@ export const createShadowPass = (
   lightCamera.updateProjectionMatrix()
   const { right, up, back } = axes
   const texel = (2 * SHADOW_RADIUS) / SHADOW_MAP_SIZE
-  const uniforms: ShadowUniforms = {
-    shadowMatrix: { value: new Matrix4() },
-    shadowMap: { value: depthTexture },
-    sunDirection: { value: worldSun },
-    ambientShare: { value: sun.ambientShare },
-    shadowTexel: { value: texel },
-    shadowMapTexel: { value: 1 / SHADOW_MAP_SIZE },
-    shadowDepthBias: { value: (texel * SHADOW_DEPTH_BIAS_TEXELS) / (depthDistance * 2) },
-    shadowStrength: { value: SHADOW_STRENGTH },
-    isBakedShadowEnabled: { value: 0 },
-    bakedShadowMatrix: { value: new Matrix4() },
-    bakedShadowMap: { value: depthTexture },
-    bakedShadowTexel: { value: 1 },
-    bakedShadowMapTexel: { value: new Vector2(1, 1) },
-    bakedShadowDepthBias: { value: 0 },
-  }
+  const uniforms = SHARED_SHADOW_UNIFORMS
+  uniforms.shadowMap.value = depthTexture
+  uniforms.sunDirection.value.copy(worldSun)
+  uniforms.ambientShare.value = sun.ambientShare
+  uniforms.shadowTexel.value = texel
+  uniforms.shadowMapTexel.value = 1 / SHADOW_MAP_SIZE
+  uniforms.shadowDepthBias.value = (texel * SHADOW_DEPTH_BIAS_TEXELS) / (depthDistance * 2)
+  uniforms.shadowStrength.value = SHADOW_STRENGTH
+  uniforms.isBakedShadowEnabled.value = 0
+  uniforms.bakedShadowMap.value = depthTexture
   makeTrackReceivers(trackGroup, uniforms)
   const depthMaterial = new MeshBasicMaterial({ colorWrite: false, side: DoubleSide })
   const forward = new Vector3()
@@ -135,6 +127,13 @@ export const createShadowPass = (
       showAgain(hidden)
     },
     dispose: () => {
+      // A new race's pass may already own the shared uniforms.
+      if (uniforms.shadowMap.value === depthTexture) {
+        uniforms.shadowStrength.value = 0
+        uniforms.isBakedShadowEnabled.value = 0
+        uniforms.shadowMap.value = null
+        uniforms.bakedShadowMap.value = null
+      }
       target.dispose()
       depthTexture.dispose()
       depthMaterial.dispose()
