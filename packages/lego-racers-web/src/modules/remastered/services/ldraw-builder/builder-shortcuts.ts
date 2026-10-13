@@ -26,8 +26,19 @@ const COMMAND_SHIFT_ACTIONS: Readonly<Record<string, BuilderAction>> = {
   arrowup: BuilderAction.RAISE_BRICK,
   arrowdown: BuilderAction.LOWER_BRICK,
 }
+const OPTION_ACTIONS: Readonly<Record<string, BuilderAction>> = {
+  arrowleft: BuilderAction.NUDGE_LEFT,
+  arrowright: BuilderAction.NUDGE_RIGHT,
+  arrowup: BuilderAction.NUDGE_AWAY,
+  arrowdown: BuilderAction.NUDGE_TOWARD,
+}
+const OPTION_COMMAND_ACTIONS: Readonly<Record<string, BuilderAction>> = {
+  arrowup: BuilderAction.NUDGE_UP,
+  arrowdown: BuilderAction.NUDGE_DOWN,
+}
 const PLAIN_ACTIONS: Readonly<Record<string, BuilderAction>> = {
   r: BuilderAction.ROTATE,
+  t: BuilderAction.TILT,
   arrowleft: BuilderAction.MOVE_LEFT,
   arrowright: BuilderAction.MOVE_RIGHT,
   arrowup: BuilderAction.MOVE_AWAY,
@@ -43,6 +54,7 @@ const PLAIN_ACTIONS: Readonly<Record<string, BuilderAction>> = {
 }
 const SHIFT_ACTIONS: Readonly<Record<string, BuilderAction>> = {
   r: BuilderAction.ROTATE_BACK,
+  t: BuilderAction.TILT_BACK,
   e: BuilderAction.TAKE_PART,
   '?': BuilderAction.SHORTCUTS,
 }
@@ -52,10 +64,19 @@ const getQuickColorIndex = (key: string): number => {
   return /^[1-9]$/.test(key) && digit <= QUICK_COLOR_CODES.length ? digit - 1 : NO_QUICK_COLOR
 }
 
-// The builder's command for a key press, null for a key it leaves to the browser. Option is left alone: on a Mac it types symbols.
+const getOptionAction = (press: BuilderKeyPress, key: string): BuilderAction | undefined =>
+  press.isShift ? undefined : (press.isCommand ? OPTION_COMMAND_ACTIONS : OPTION_ACTIONS)[key]
+
+// The builder's command for a key press, null for a key it leaves to the browser. Option only nudges with the arrows: on a Mac it
+// types symbols with letters.
 export const getBuilderKeyCommand = (press: BuilderKeyPress): BuilderKeyCommand | null => {
-  if (press.isOption) return null
   const key = press.key.toLowerCase()
+  if (press.isOption) {
+    const optionAction = getOptionAction(press, key)
+    return optionAction === undefined
+      ? null
+      : Object.freeze({ action: optionAction, quickColorIndex: NO_QUICK_COLOR })
+  }
   const quickColorIndex =
     press.isCommand || press.isShift ? NO_QUICK_COLOR : getQuickColorIndex(key)
   if (quickColorIndex !== NO_QUICK_COLOR) {
@@ -98,9 +119,20 @@ export const BUILDER_SHORTCUT_GROUPS: readonly BuilderShortcutGroup[] = [
       { keys: '⇧ click', description: 'add to or remove from the selection' },
       { keys: 'Drag', description: 'move the selection along the stud grid' },
       { keys: 'R  ⇧R', description: 'rotate 90° left, right (selection, else part in hand)' },
+      {
+        keys: 'T  ⇧T',
+        description:
+          'tilt 90° about the axis across the view: lay a brick on its side, face it out',
+      },
+      {
+        keys: 'Side stud',
+        description: 'point at it: the part in hand turns its bottom to it and snaps on',
+      },
       { keys: '← → ↑ ↓', description: 'move the selection a stud, as the camera looks' },
       { keys: '⌘↑  ⌘↓', description: 'move the selection a plate up, down' },
       { keys: '⇧⌘↑  ⇧⌘↓', description: 'move the selection a brick up, down' },
+      { keys: '⌥← ⌥→ ⌥↑ ⌥↓', description: 'nudge the selection a quarter stud' },
+      { keys: '⌥⌘↑  ⌥⌘↓', description: 'nudge the selection half a plate up, down' },
       { keys: '⌫', description: 'delete the selection' },
       { keys: '⌘C  ⌘V  ⌘D', description: 'copy, paste, duplicate' },
       { keys: '⌘A', description: 'select every part' },
@@ -129,5 +161,5 @@ export const BUILDER_SHORTCUT_GROUPS: readonly BuilderShortcutGroup[] = [
 // The always visible reminder in the corner of the build view.
 export const BUILDER_SHORTCUT_HINTS: readonly string[] = [
   'Scroll orbit · ⇧ scroll pan · pinch zoom · ⌥ drag orbit',
-  'R rotate · ⌫ delete · ⌘Z undo · ⌘S done · ? all shortcuts',
+  'R rotate · T tilt · ⌫ delete · ⌘Z undo · ⌘S done · ? all shortcuts',
 ]

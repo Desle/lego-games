@@ -1,5 +1,6 @@
 import { createEnum } from '../../../../shared/types/enum.types.ts'
 import type { EnumValues } from '../../../../shared/types/enum.types.ts'
+import type { PartStud } from './builder-studs.types.ts'
 import type { BuilderPart, PlacementTarget, Vector } from './ldraw-builder.types.ts'
 
 // The part in hand: what a click places.
@@ -16,6 +17,8 @@ export type PointerHit = {
   readonly partIndex: number | null
   // The part, editable or not, null on the ground.
   readonly part: BuilderPart | null
+  // The stud the part in hand goes onto when it is a side stud (not pointing up), in the editing frame.
+  readonly sideStud: PartStud | null
 }
 
 export type PointerPosition = {
