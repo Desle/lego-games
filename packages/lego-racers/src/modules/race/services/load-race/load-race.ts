@@ -24,8 +24,12 @@ import type { BuiltCar } from '../../../racer-setup/index.ts'
 import { DEFAULT_SAVE_PATH, getCarWeight, loadSavedCars } from '../../../car-builder/index.ts'
 import type { SavedCar } from '../../../car-builder/index.ts'
 import { parseRaceDescription } from '../../../race-description/index.ts'
-import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
-import type { FloatArithmetic } from '../../../simulation-math/index.ts'
+import {
+  createFloatArithmetic,
+  RACE_FPU_PRECISION,
+  ZERO_VECTOR3,
+} from '../../../simulation-math/index.ts'
+import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 import { parseStartPositions } from '../../../start-position/index.ts'
 import { parseTaggedPositions } from '../../../tagged-position/index.ts'
 import { parseTimers } from '../../../timer/index.ts'
@@ -106,6 +110,9 @@ const loadRoutes = (
 // files: LEGO.JAM and LEGORacers.exe. The first race is Royal Knights Raceway, GAMEDATA\RACEC0R0. Racer 0 is
 // the player, drives a car built from bricks; the others are the computer racers of the race's circuit, each a
 // driver of the driver database with its champion's car on its chassis (RacerSet_Setup 0x0043b190, 0x0043b480).
+const getVectorFromTriple = (triple: readonly [number, number, number] | null): Vector3 =>
+  triple === null ? ZERO_VECTOR3 : Object.freeze({ x: triple[0], y: triple[1], z: triple[2] })
+
 export const loadRaceDefinition = (
   jam: Uint8Array,
   executable: Uint8Array,
@@ -255,6 +262,11 @@ export const loadRaceDefinition = (
     isPointsRecordPresent: options.isPointsRecordPresent ?? false,
     ghost: loadRaceGhost(readArchiveFile, options.ghost),
     introductionCameraObject: description.trackWorldObject,
+    introductionCameraPoint: getVectorFromTriple(description.cameraPoint),
+    introductionCameraVectors: Object.freeze([
+      getVectorFromTriple(description.cameraVectors?.[0] ?? null),
+      getVectorFromTriple(description.cameraVectors?.[1] ?? null),
+    ] as const),
     musicTuneCount:
       options.musicTuneCount ??
       (description.musicList === null

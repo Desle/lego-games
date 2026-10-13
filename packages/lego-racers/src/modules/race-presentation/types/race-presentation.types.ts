@@ -1,5 +1,5 @@
 import type { BrickBase } from '../../power-ups/index.ts'
-import type { CameraState, CameraView } from '../../race-camera/index.ts'
+import type { CameraState, CameraUpdate, CameraView } from '../../race-camera/index.ts'
 import type {
   EngineLoop,
   EngineSoundState,
@@ -54,6 +54,8 @@ export type RacePresentation = {
   // The entries of the race's music list (`LEGOMSC`, seven in Royal Knights Raceway).
   readonly musicListCount: number
   readonly camera: CameraState
+  // The node pose the introduction camera's clip last gave (0x004047b0) until the clip ends; null otherwise.
+  readonly introductionView: CameraView | null
   readonly hud: HudState
   // Racer +0xd68 of the player's racer, from the last turbo start.
   readonly turboLevel: number
@@ -90,6 +92,11 @@ export type RacerEngineLoops = {
   readonly position: Vector3
   readonly velocity: Vector3
   readonly loops: readonly EngineLoop[]
+}
+
+// The player camera after a frame's updates and the node pose of the introduction clip while it still holds the camera.
+export type CameraFrameUpdate = CameraUpdate & {
+  readonly introductionView: CameraView | null
 }
 
 export type RacePresentationFrame = {

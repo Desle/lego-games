@@ -9,6 +9,7 @@ An optional layer above the original port, for development only: with `?hd[=<tex
 - **Turn it on**: open the page with `?hd` (or `?hd=<pack>`) in development, or pick a pack in the developer panel (backquote key, Textures), which reloads the page.
 - **Turn it off**: open the page without `?hd`, or pick _Classic (original)_ in the developer panel.
 - **Play widescreen**: start a race; the canvas follows the window, including resizing. The menus stay 4:3.
+- **Judge LDraw work**: `pnpm run ldraw-fidelity [filter]` scores every LDraw replacement (bricks, chassis, track bricks, champion cars, wheels, drivers in four poses) against the original in the same scene; a replacement is done when its score passes (`.docs/remastered.md`, Judging LDraw work).
 
 ## Invariants
 

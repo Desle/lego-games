@@ -33,6 +33,7 @@ const getScenarioForEmulator = (scenario: GoldenTraceScenario) => ({
   fpu: scenario.precision,
   powerUpGrants: scenario.powerUpGrants,
   controller: scenario.controller ?? 'keyboard',
+  isCameraOnly: scenario.isCameraOnly ?? false,
   frames: scenario.frames.map((frame) => ({
     dt: frame.milliseconds,
     keys: frame.scanCodes,

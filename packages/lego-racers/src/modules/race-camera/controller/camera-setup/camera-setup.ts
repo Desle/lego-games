@@ -1,9 +1,14 @@
 import { getFloatFromBits, ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
-import type { Quaternion } from '../../../simulation-math/index.ts'
+import type { Quaternion, Vector3 } from '../../../simulation-math/index.ts'
 import { CAMERA_PRESETS } from '../../types/camera-presets/camera-presets.ts'
 import { CameraMode } from '../../types/camera-mode/camera-mode.ts'
-import type { CameraRacerView, CameraState } from '../../types/race-camera.types.ts'
-import { arithmetic, IDENTITY_BASIS } from '../camera-math/camera-math.ts'
+import type { CameraRacerView, CameraState, CameraView } from '../../types/race-camera.types.ts'
+import {
+  arithmetic,
+  getBasis,
+  getNodeOrientation,
+  IDENTITY_BASIS,
+} from '../camera-math/camera-math.ts'
 
 const ZERO_QUATERNION: Quaternion = Object.freeze({ x: 0, y: 0, z: 0, w: 0 })
 // 0x004b03ec: degrees to radians, 0x004b03e8: the divisor of the ease rates.
@@ -144,3 +149,33 @@ export const setCameraLookingBehind = (
 // Asks the next update to snap (the byte at camera +0x00 that 0x0043a300, 0x0043a360 and 0x0043a390 set to 1).
 export const requestCameraSnap = (camera: CameraState): CameraState =>
   Object.freeze({ ...camera, isSnapRequested: true })
+
+// 0x00428390 and 0x004282a0: the eye (current and previous) and the basis (current and previous) of the introduction mode.
+const getCameraPlacedAt = (camera: CameraState, position: Vector3, basis: CameraState['basis']) =>
+  Object.freeze({
+    ...camera,
+    position,
+    previousPosition: position,
+    basis,
+    previousBasis: basis,
+  })
+
+// Race_LoadTrackContent 0x00433480, after the camera's first update: the mode becomes the introduction (0x004283d0), and
+// the camera starts at the race description's point looking along its vectors.
+export const placeCameraAtIntroductionPoint = (
+  camera: CameraState,
+  point: Vector3,
+  vectors: readonly [Vector3, Vector3]
+): CameraState =>
+  getCameraPlacedAt(
+    Object.freeze({ ...camera, mode: CameraMode.INTRODUCTION, modeMilliseconds: 0 }),
+    point,
+    getBasis(vectors[0], vectors[1])
+  )
+
+// Race_UpdateState1 0x004349a0 when the introduction camera's clip has finished: the camera object takes the node's
+// position and orientation (0x00428390, 0x004282a0) and the introduction mode eases it to the chase target.
+export const placeCameraAtView = (camera: CameraState, view: CameraView): CameraState => {
+  const orientation = getNodeOrientation(view.forward, view.up)
+  return getCameraPlacedAt(camera, view.position, getBasis(orientation.forward, orientation.up))
+}

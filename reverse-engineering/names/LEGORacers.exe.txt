@@ -1000,3 +1000,6 @@
 0041ad80 SoundObject_Play
 0041ad90 SoundObject_Stop
 0041ae60 SoundBank_Load
+00428390 Camera_SetEye
+004282a0 Camera_SetBasisFromForwardUp
+004283d0 Camera_SetMode

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LDraw model browser</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #2b3340;
+        color: #e8ecf2;
+        font:
+          14px system-ui,
+          sans-serif;
+        overflow: hidden;
+      }
+      #bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        padding: 8px;
+        background: rgba(20, 25, 33, 0.85);
+        z-index: 1;
+      }
+      #bar select,
+      #bar button {
+        font: inherit;
+        padding: 6px;
+        max-width: 100%;
+      }
+      #stage {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+      }
+      #info {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        max-width: min(520px, 100%);
+        max-height: 35%;
+        overflow: auto;
+        box-sizing: border-box;
+        margin: 0;
+        padding: 8px;
+        background: rgba(20, 25, 33, 0.85);
+        white-space: pre-wrap;
+        font:
+          12px ui-monospace,
+          monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="bar"></div>
+    <canvas id="stage"></canvas>
+    <pre id="info"></pre>
+    <script
+      type="module"
+      src="/src/modules/remastered/services/ldraw-model-browser/ldraw-model-browser-page.ts"
+    ></script>
+  </body>
+</html>
