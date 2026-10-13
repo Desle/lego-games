@@ -24,13 +24,7 @@ import { setUpLDrawModelParser } from '../ldraw-worker/ldraw-model-parser.ts'
 
 // Pixels on a side of each view: a brick is about a tenth of an LDraw unit a pixel, a car about one.
 const VIEW_SIZE = 200
-const DRIVER_KINDS: readonly FidelityItemKind[] = [
-  FidelityItemKind.DRIVER,
-  FidelityItemKind.HAT,
-  FidelityItemKind.FACE,
-  FidelityItemKind.TORSO,
-  FidelityItemKind.LEGS,
-]
+const DRIVER_KINDS: readonly FidelityItemKind[] = [FidelityItemKind.DRIVER]
 
 useLookFromAddress()
 setUpLDrawModelParser()

@@ -1,6 +1,9 @@
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
+import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
+import { loadBuiltDriverScene } from '@lego-games/lego-racers/racer-appearance'
 import { Group, Matrix4 } from 'three'
+import type { BuilderPart } from '@lego-games/ldraw/building'
 import type { LDrawRacerPartDrawing, RacerPartDrawingRequest } from './ldraw-racer-drawing.types.ts'
 import {
   createMaterialSet,
@@ -10,22 +13,37 @@ import {
 } from '@lego-games/ldraw/geometry'
 import type { MaterialSet } from '@lego-games/ldraw/geometry'
 import { LDrawDetail } from '@lego-games/ldraw/library'
+import { loadLDrawModelText } from '../ldraw-models/ldraw-model-client.ts'
 import { restoreDisplayColors } from './skin-colors.ts'
 import { createFaceDecal, createTorsoDecal } from './minifig-decals.ts'
-import { createMinifigPartPlans } from './minifig-assembly.ts'
+import type { MinifigDecal, PlacedDecal } from './minifig-decals.types.ts'
 import { MinifigPartKey, MinifigPosture } from './minifig-assembly.types.ts'
-import type { MinifigPartPlan } from './minifig-assembly.types.ts'
-import { MINIFIG_GEOMETRY } from '@lego-games/ldraw/minifig'
 import { getJointMatrices } from './minifig-joints.ts'
 import { getMinifigRig } from './minifig-rig.ts'
 import type { MinifigRig } from './minifig-rig.types.ts'
-import { createMinifigSpec, getDriverPartBytes } from './minifig-spec.ts'
+import {
+  getIsPlainHead,
+  getIsPlainTorso,
+  getMinifigPartKey,
+  parseDriverFile,
+} from './driver-file.ts'
+import { DriverPartRole } from './driver-file.types.ts'
+import type { DriverFilePart } from './driver-file.types.ts'
+import { findDriverFile } from './driver-records.ts'
+import { readMinifigPictures } from './minifig-pictures.ts'
+import type { MinifigPictures } from './minifig-pictures.types.ts'
 import { createPoseControls, createSkeletonPoseSampler } from './skeleton-pose.ts'
 import type { SkeletonPoseSampler } from './skeleton-pose.types.ts'
 import { ensureStudioLights } from './studio-scene-lights.ts'
 
 const RAW_UNITS_PER_LDRAW_UNIT = 3.2
 const IDENTITY_ROTATION = '1 0 0 0 1 0 0 0 1'
+// A helmet that is a whole hat takes the face out of the figure builder's model; the model with no hat has the face and the torso.
+const NO_HAT = 0
+const HAND_ROLES: ReadonlySet<DriverPartRole> = new Set([
+  DriverPartRole.LEFT_HAND,
+  DriverPartRole.RIGHT_HAND,
+])
 
 // The figure's frame in the model's: LDraw's (x to the viewer's right, y down, front toward -z) into the model's (x forward, y to the
 // figure's left, z up), at the scale of the car's bricks, with the figure's hips at the height the skeleton's bind pose puts them.
@@ -74,27 +92,67 @@ const getIsBoneDrawn = (model: ModelScene, boneIndex: number): boolean => {
   return heights.length > 0 && Math.max(...heights) - Math.min(...heights) >= DRAWN_BONE_HEIGHT
 }
 
-const getPartText = (plan: MinifigPartPlan): string =>
-  `1 ${String(plan.color)} 0 0 0 ${IDENTITY_ROTATION} ${plan.part}.dat`
+const getPartText = (part: BuilderPart): string =>
+  `1 ${String(part.colorCode)} 0 0 0 ${IDENTITY_ROTATION} ${part.partName}`
+
+// A part line's placement (rotation rows and offset) as a matrix of the figure's frame.
+const getPartMatrix = (part: BuilderPart): Matrix4 => {
+  const rows = [0, 1, 2].flatMap((row) => [
+    ...part.rotation.slice(row * AXIS_COUNT, row * AXIS_COUNT + AXIS_COUNT),
+    part.position[row] ?? 0,
+  ])
+  // The rows of an LDraw placement, read as three.js reads its own (columns first).
+  return new Matrix4().fromArray([...rows, 0, 0, 0, 1]).transpose()
+}
+
+// Flesh the menus' lighting must show as the yellow it is: the head, and a hand in the head's colour.
+const getIsSkin = (entry: DriverFilePart, headColorCode: number | null): boolean =>
+  entry.role === DriverPartRole.HEAD ||
+  (HAND_ROLES.has(entry.role) && entry.part.colorCode === headColorCode)
+
+// The game's picture on a head or torso of the file that has no print of its own; a printed part of the library keeps its print.
+const getDecals = (
+  parts: readonly DriverFilePart[],
+  getPictures: () => MinifigPictures,
+  search: string
+): readonly PlacedDecal[] =>
+  parts.flatMap((entry) => {
+    const decal =
+      entry.role === DriverPartRole.HEAD && getIsPlainHead(entry.part.partName)
+        ? getPictures().face
+        : entry.role === DriverPartRole.TORSO && getIsPlainTorso(entry.part.partName)
+          ? getPictures().torso
+          : null
+    if (decal === null) return []
+    const created =
+      entry.role === DriverPartRole.HEAD
+        ? createFaceDecal(decal, search)
+        : createTorsoDecal(decal, search)
+    return created === null ? [] : [{ decal: created, entry }]
+  })
 
 const getRestOrPose = (sampler: SkeletonPoseSampler, state: SkeletonAnimationState | null) =>
   state === null ? sampler.restMatrices : sampler.getMatrices(state)
 
-// A driver as a minifigure of the library's parts: the hat, head, torso, arms, hands, hips and legs the part bytes name (a champion's are in
-// the driver database), put on the bones of the skeleton the original poses its own figure with (the race driver's seated one or the
-// menus' standing one), so its animations play on them; the face and the front of the torso are the original's pictures.
+const getPicturesOnce = (archive: JamArchive, partBytes: readonly number[]) => {
+  let pictures: MinifigPictures | null = null
+  return () => {
+    pictures ??= readMinifigPictures(loadBuiltDriverScene(archive, [NO_HAT, ...partBytes.slice(1)]))
+    return pictures
+  }
+}
+
+// A driver as the minifigure of his file in the models folder (`drivers/<NAME>.ldr`): each part, in the file's colours, put on the bone
+// its role names of the skeleton the original poses its own figure with (the race driver's seated one or the menus' standing one), so
+// its animations play on them; a head or torso with no print shows the original's picture. Null when the folder has no file for him.
 export const createLDrawDriverDrawing = (
   request: RacerPartDrawingRequest,
   search: string
 ): LDrawRacerPartDrawing | null => {
   const sampler = createSkeletonPoseSampler(request.model)
   const rig = sampler === null ? null : getMinifigRig(sampler.boneNames)
-  const partBytes =
-    request.partBytes ??
-    (request.modelName === null ? null : getDriverPartBytes(request.archive, request.modelName))
-  if (sampler === null || rig === null || partBytes === null) return null
-  const spec = createMinifigSpec(request.archive, partBytes)
-  const plans = createMinifigPartPlans(spec)
+  const source = findDriverFile(request.archive, request.modelName, request.partBytes)
+  if (sampler === null || rig === null || source === null) return null
   const figureFrame = getFigureFrame(rig)
   const object = new Group()
   const isLegsDrawn = getIsBoneDrawn(request.model, rig.pelvisIndex)
@@ -109,43 +167,44 @@ export const createLDrawDriverDrawing = (
   )
   const materials = createMaterialSet()
   const skinMaterials: MaterialSet[] = []
-  const loads = plans.map((plan) =>
-    holdPreparedModel(getPartText(plan), LDrawDetail.HIGH).prepared.then(
+  const decalMeshes: MinifigDecal['mesh'][] = []
+  const live = { isDisposed: false }
+  const getPictures = getPicturesOnce(request.archive, request.partBytes ?? source.partBytes)
+  const addPart = (entry: DriverFilePart, isSkin: boolean) =>
+    holdPreparedModel(getPartText(entry.part), LDrawDetail.HIGH).prepared.then(
       ({ model: prepared }) => {
+        if (live.isDisposed) return
         const placed = new Group()
         placed.matrixAutoUpdate = false
-        placed.matrix.copy(plan.matrix)
+        placed.matrix.copy(getPartMatrix(entry.part))
         // A flesh part has its colours changed once on its own copies of the materials, which no other part shares.
-        const partMaterials = plan.isSkin ? createMaterialSet() : materials
-        if (plan.isSkin) skinMaterials.push(partMaterials)
+        const partMaterials = isSkin ? createMaterialSet() : materials
+        if (isSkin) skinMaterials.push(partMaterials)
         const model = instantiateModel(prepared, partMaterials)
-        if (plan.isSkin) restoreDisplayColors(model)
+        if (isSkin) restoreDisplayColors(model)
         placed.add(model)
-        holders.get(plan.key)?.add(placed)
+        holders.get(getMinifigPartKey(entry.role))?.add(placed)
       },
-      (error: unknown) => console.error(`The LDraw library has no part ${plan.part}`, error)
+      (error: unknown) =>
+        console.error(`The LDraw library has no part ${entry.part.partName}`, error)
     )
-  )
-  const decals = [
-    spec.face !== null || spec.surfaces.face === null
-      ? null
-      : {
-          decal: createFaceDecal(spec.surfaces.face, search),
-          key: MinifigPartKey.HEAD,
-          origin: MINIFIG_GEOMETRY.head,
-        },
-    spec.torso !== null || spec.surfaces.torso === null
-      ? null
-      : {
-          decal: createTorsoDecal(spec.surfaces.torso, search),
-          key: MinifigPartKey.TORSO,
-          origin: MINIFIG_GEOMETRY.torso,
-        },
-  ]
-  for (const entry of decals) {
-    if (entry?.decal == null) continue
-    entry.decal.mesh.position.setFromMatrixPosition(entry.origin)
-    holders.get(entry.key)?.add(entry.decal.mesh)
+  const build = async () => {
+    const text = await loadLDrawModelText(source.file)
+    if (text === null || live.isDisposed) return
+    const parts = parseDriverFile(text)
+    const headColorCode =
+      parts.find((entry) => entry.role === DriverPartRole.HEAD)?.part.colorCode ?? null
+    const decals = getDecals(parts, getPictures, search)
+    for (const { decal, entry } of decals) {
+      decal.mesh.matrixAutoUpdate = false
+      decal.mesh.matrix.copy(getPartMatrix(entry.part))
+      decalMeshes.push(decal.mesh)
+      holders.get(getMinifigPartKey(entry.role))?.add(decal.mesh)
+    }
+    await Promise.all([
+      ...parts.map((entry) => addPart(entry, getIsSkin(entry, headColorCode))),
+      ...decals.map(({ decal }) => decal.settled),
+    ])
   }
   const pose = (state: SkeletonAnimationState | null) => {
     const posed = getRestOrPose(sampler, state)
@@ -158,18 +217,16 @@ export const createLDrawDriverDrawing = (
   }
   const controls = createPoseControls(sampler, pose)
   return Object.freeze({
-    settled: Promise.all([...loads, ...decals.map((entry) => entry?.decal?.settled)]).then(
-      () => undefined
+    settled: build().catch((error: unknown) =>
+      console.error(`The driver file ${source.file} could not be drawn`, error)
     ),
     object,
     ...controls,
     dispose: () => {
+      live.isDisposed = true
       materials.dispose()
       for (const skin of skinMaterials) skin.dispose()
-      for (const entry of decals) {
-        if (entry?.decal == null) continue
-        disposeObject(entry.decal.mesh)
-      }
+      for (const mesh of decalMeshes) disposeObject(mesh)
     },
   })
 }

@@ -23,6 +23,35 @@ export const CHAMPION_CAR_CODES: readonly string[] = Object.freeze([
   'GMCM',
 ])
 
+// The 24 drivers of the driver database (`DRIVERS.DDB`, the names of its records, upper case): a `drivers/<NAME>.ldr` in the models
+// folder is the minifigure the layer draws for that driver.
+export const DRIVER_NAMES: readonly string[] = Object.freeze([
+  'RR',
+  'VV',
+  'AD',
+  'IL',
+  'WW',
+  'GS',
+  'BK',
+  'RK',
+  'RH',
+  'AL',
+  'CC',
+  'PH',
+  'GB',
+  'BH',
+  'SB',
+  'TC',
+  'NH',
+  'AP',
+  'KK',
+  'CR',
+  'BVB',
+  'JT',
+  'BB',
+  'GM',
+])
+
 // The 12 chassis parts of the game (lower case): a recipe `chassis/<NAME>.ldr` in the models folder builds one from standard parts.
 export const CHASSIS_NAMES: readonly string[] = Object.freeze([
   'jtchas0',

@@ -69,11 +69,12 @@ const createOriginalWheels = (archive: JamArchive, names: ModelResourceNames) =>
 }
 
 // The original's model of the item at rest, as the race draws it, in the car's frame (studs, z up): a champion's body and wheels, or
-// a chassis brick alone with the wheels the game puts on it.
+// a chassis brick alone with the wheels the game puts on it. None for a driver.
 export const createOriginalReference = (
   archive: JamArchive,
   item: BuilderItem
 ): OriginalReference | null => {
+  if (item.kind === BuilderItemKind.DRIVER) return null
   if (item.kind === BuilderItemKind.CAR) {
     const appearance = findChampionAppearance({ archive }, item.name)
     if (appearance?.bodyModel == null) return null
@@ -133,10 +134,15 @@ export const createWheelGuides = (archive: JamArchive, chassisName: string): Gro
   return guides
 }
 
-const getTitle = (item: BuilderItem): string =>
-  item.kind === BuilderItemKind.CHASSIS
-    ? `Racers chassis ${item.name.toUpperCase()} (recipe frame: footprint corner, x width, y depth, z up from the brick bottom)`
-    : `Racers champion car ${item.name}`
+const ITEM_TITLES: Readonly<Record<BuilderItemKind, (name: string) => string>> = Object.freeze({
+  [BuilderItemKind.CHASSIS]: (name: string) =>
+    `Racers chassis ${name.toUpperCase()} (recipe frame: footprint corner, x width, y depth, z up from the brick bottom)`,
+  [BuilderItemKind.CAR]: (name: string) => `Racers champion car ${name}`,
+  [BuilderItemKind.DRIVER]: (name: string) =>
+    `${name} driver (origin the top of the hips, standing rest pose; each part after its 0 !RACERS ROLE line)`,
+})
+
+const getTitle = (item: BuilderItem): string => ITEM_TITLES[item.kind](item.name)
 
 // The parts of the chassis recipes a car's reference lines place, by recipe name, in the recipe's own frame.
 const loadReferencedRecipes = async (
@@ -171,7 +177,11 @@ export const loadBuilderItemStart = async (
   startFile: string | null
 ): Promise<BuilderItemStart> => {
   const index = await loadLDrawModelIndex()
-  const existing = [...Object.values(index.cars), ...Object.values(index.chassis)]
+  const existing = [
+    ...Object.values(index.cars),
+    ...Object.values(index.chassis),
+    ...Object.values(index.drivers),
+  ]
   const file = getBuilderItemFile(item.id, existing) ?? `${item.name}.ldr`
   const sourceFile =
     startFile ?? (existing.some((path) => path.toLowerCase() === file.toLowerCase()) ? file : null)

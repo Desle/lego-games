@@ -7,26 +7,12 @@ import { LDRAW_COMPOSITE_MAPPINGS } from '../ldraw-car/ldraw-composite-mappings.
 import type { LDrawModelIndex } from '../ldraw-models/ldraw-model-index.types.ts'
 import { LDRAW_PICKUP_MAPPINGS } from '../ldraw-pickup/ldraw-pickup-mappings.ts'
 import { CHAMPION_CAR_CODES, CHASSIS_NAMES } from '../ldraw-racer-model/known-racer-models.ts'
-import {
-  LDRAW_FACES,
-  LDRAW_HATS,
-  LDRAW_LEGS,
-  LDRAW_TORSOS,
-} from '../ldraw-racer/ldraw-minifig-parts.ts'
 import { FidelityItemKind, FidelityPose } from './ldraw-fidelity.types.ts'
 import type { FidelityItem } from './ldraw-fidelity.types.ts'
 
 const CHASSIS_DATABASE_PATH = 'GAMEDATA\\COMMON\\CHASSIS.CMB'
 const DRIVER_DATABASE_PATH = 'GAMEDATA\\COMMON\\DRIVERS.DDB'
-// The figure a catalogue part is measured on: Rocket Racer's five part bytes (`1 28 15 18 0`), the part put in its own slot.
-const BASE_PART_BYTES: readonly number[] = Object.freeze([1, 28, 15, 18, 0])
 const DRAFT_FOLDER = 'drafts'
-const CATALOGUE_SLOTS = Object.freeze([
-  { kind: FidelityItemKind.HAT, slot: 0, entries: LDRAW_HATS },
-  { kind: FidelityItemKind.FACE, slot: 1, entries: LDRAW_FACES },
-  { kind: FidelityItemKind.TORSO, slot: 2, entries: LDRAW_TORSOS },
-  { kind: FidelityItemKind.LEGS, slot: 3, entries: LDRAW_LEGS },
-])
 
 const createItem = (
   fields: Pick<FidelityItem, 'id' | 'kind' | 'name' | 'subject'> & Partial<FidelityItem>
@@ -121,10 +107,9 @@ const getWheelItems = (archive: JamArchive): readonly FidelityItem[] =>
 
 const POSES = Object.values(FidelityPose)
 
-// Every driver of the driver database (a champion: his fixed model seated in the race, his part bytes standing) and every hat, face,
-// torso and pair of legs of the catalogue on the base figure, each in every pose.
-const getDriverItems = (archive: JamArchive): readonly FidelityItem[] => [
-  ...parseDriverDatabase(archive.readFile(DRIVER_DATABASE_PATH)).drivers.flatMap((driver) =>
+// Every driver of the driver database (a champion: his fixed model seated in the race, his part bytes standing), in every pose.
+const getDriverItems = (archive: JamArchive): readonly FidelityItem[] =>
+  parseDriverDatabase(archive.readFile(DRIVER_DATABASE_PATH)).drivers.flatMap((driver) =>
     POSES.map((pose) =>
       createItem({
         id: `${FidelityItemKind.DRIVER}:${driver.name}:${pose}`,
@@ -136,24 +121,7 @@ const getDriverItems = (archive: JamArchive): readonly FidelityItem[] => [
         pose,
       })
     )
-  ),
-  ...CATALOGUE_SLOTS.flatMap(({ kind, slot, entries }) =>
-    entries.flatMap((entry, index) =>
-      POSES.map((pose) =>
-        createItem({
-          id: `${kind}:${String(index)}:${pose}`,
-          kind,
-          name: `${entry.catalogName} ${pose}`,
-          subject: entry.catalogName,
-          partBytes: BASE_PART_BYTES.map((value, byteIndex) =>
-            byteIndex === slot ? index : value
-          ),
-          pose,
-        })
-      )
-    )
-  ),
-]
+  )
 
 // Every replacement the remastered layer makes, in a fixed order.
 export const listFidelityItems = (

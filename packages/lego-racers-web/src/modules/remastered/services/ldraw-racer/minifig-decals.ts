@@ -10,7 +10,7 @@ import {
 } from 'three'
 import type { TexturePixels } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import { loadHighDefinitionPixels } from '../high-definition-texture/high-definition-texture.ts'
-import type { PictureSource, UvRectangle } from './minifig-surfaces.types.ts'
+import type { PictureSource, UvRectangle } from './minifig-pictures.types.ts'
 import type { MinifigDecal } from './minifig-decals.types.ts'
 
 const RAW_UNITS_PER_LDRAW_UNIT = 3.2

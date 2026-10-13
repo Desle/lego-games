@@ -8,6 +8,7 @@ Hand-built LDraw models for the cars of LEGO Racers. The viewer reads this folde
 | ----------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `<CODE>.ldr` or `<CODE>.mpd`              | A whole champion car, by the body code of its model (below). The `.ldr` wins over the `.mpd`. |
 | `chassis/<CHASSIS>.ldr`                   | A recipe for one of the 12 chassis parts, built from standard parts. Cars refer to it.        |
+| `drivers/<NAME>.ldr`                      | A driver's minifigure, by the name of his record in the driver database (below).              |
 | `reference/<CODE>.svg`, `.txt`            | The reference sheet of a champion's car (below).                                              |
 | `reference/chassis/<CHASSIS>.svg`, `.txt` | The reference sheet of a chassis.                                                             |
 | `chassis/_fallback/<CHASSIS>.dat`         | The unofficial LDraw part the converter makes from the game's own geometry (a stand-in).      |
@@ -33,7 +34,7 @@ A car is built in the game's own frame, written in LDraw's axes and units. Every
 
 - **The body and the chassis.** Build what the sheet shows, in the sheet's colours (the LDraw colour names are listed on each sheet). Use colour 16 where the part takes the colour its parent gives it.
 - **Wheels: optional.** If the file has none, the game's LDraw wheels (the tyre and rim sets of the library, sized to the game's wheel) are added at the wheel mounts and spin and steer with the game's animation. If it has some (parts of the library's `Wheel` or `Tyre` category), they are found, taken out of the body, and each one follows the game's wheel nearest to it. Build them at rest at the wheel mounts of the sheet.
-- **A minifigure: leave it out.** The driver is drawn apart, from the five part bytes of the driver (a champion's are in the driver database), and posed by the game's skeleton, seated in the car or standing in a menu. A minifigure in a car file is removed.
+- **A minifigure: leave it out.** The driver is drawn apart, from his own file `drivers/<NAME>.ldr` (below), and posed by the game's skeleton, seated in the car or standing in a menu. A minifigure in a car file is removed.
 - **The chassis by reference.** The chassis recipe is placed with the reference line printed on the champion's sheet (`1 16 <x> <y> <z> 1 0 0 0 1 0 0 0 1 <chassis>.ldr`). The champion's body model already contains the chassis frame, so a car file either refers to the recipe or builds the whole shape itself, not both.
 
 ## Chassis recipes
@@ -62,3 +63,7 @@ The race seats the driver at the chassis's seat point, which the sheets print an
 ## Official sets
 
 The LDraw Official Model Repository (OMR) has no set for any car of the game: the 1999 game predates its themes, and none of the 1,470 sets it holds is a LEGO Racers car. A model of a real set can still be used: save it as `<CODE>.mpd` and move it into the frame above.
+
+## Drivers
+
+`drivers/<NAME>.ldr` is a driver's minifigure (**driver names**: RR VV AD IL WW GS BK RK RH AL CC PH GB BH SB TC NH AP KK CR BVB JT BB GM). It stands in the rest pose, arms down, its origin the top of the hips (`3815b`'s own origin), in LDraw axes (y down, the figure faces -z). Each part line follows `0 !RACERS ROLE <hips|left-leg|right-leg|torso|head|hat|accessory|left-arm|right-arm|left-hand|right-hand>`: the bone of the game's skeleton it moves with (a part with no ROLE line is known by its minifigure part number). The colours are the file's. A head or torso with no print of its own (`3626b`, `3626c`, `973`) shows the game's picture of the face or the chest; a printed part keeps its print. A driver with no file is drawn as in the original game.

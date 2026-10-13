@@ -10,10 +10,6 @@ export const FidelityItemKind = createEnum({
   CAR: 'car',
   WHEELS: 'wheels',
   DRIVER: 'driver',
-  HAT: 'hat',
-  FACE: 'face',
-  TORSO: 'torso',
-  LEGS: 'legs',
 })
 export type FidelityItemKind = EnumValues<typeof FidelityItemKind>
 

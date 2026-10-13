@@ -15,16 +15,18 @@ export type {
 export const BuilderItemKind = createEnum({
   CHASSIS: 'chassis',
   CAR: 'car',
+  DRIVER: 'driver',
 })
 export type BuilderItemKind = EnumValues<typeof BuilderItemKind>
 
-// One thing to build: a chassis recipe (`chassis/<NAME>.ldr`) or a champion's whole car but its wheels (`<CODE>.ldr`).
+// One thing to build: a chassis recipe (`chassis/<NAME>.ldr`), a champion's whole car but its wheels (`<CODE>.ldr`) or a driver's
+// minifigure (`drivers/<NAME>.ldr`).
 export type BuilderItem = {
   readonly id: string
   readonly kind: BuilderItemKind
-  // The chassis name (lower case) or the car code (upper case).
+  // The chassis name (lower case), the car code or the driver's name (upper case).
   readonly name: string
-  // The chassis a car's wheels are on (lower case), which gives its wheel guides; for a chassis, its own name.
+  // The chassis a car's wheels are on (lower case), which gives its wheel guides; for a chassis, its own name; for a driver, empty.
   readonly chassisName: string
 }
 

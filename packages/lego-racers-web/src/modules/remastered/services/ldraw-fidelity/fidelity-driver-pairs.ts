@@ -12,11 +12,10 @@ import { RacerPartKind } from '../ldraw-racer/ldraw-racer-drawing.types.ts'
 import { getMinifigRig } from '../ldraw-racer/minifig-rig.ts'
 import { createSkeletonPoseSampler } from '../ldraw-racer/skeleton-pose.ts'
 import { getDriverMeasures } from './fidelity-anchors.ts'
-import type { DriverRegion } from './fidelity-anchors.types.ts'
 import { createSceneWith, createScaledScene } from './fidelity-pairs.ts'
 import type { FidelityContext, FidelityPairOutcome } from './fidelity-pairs.types.ts'
 import type { DriverModel, DriverPoseSource } from './fidelity-driver-pairs.types.ts'
-import { FidelityItemKind, FidelityPose } from './ldraw-fidelity.types.ts'
+import { FidelityPose } from './ldraw-fidelity.types.ts'
 import type { FidelityItem } from './ldraw-fidelity.types.ts'
 
 // The poses the game shows a driver in. Seated: the race's resting clip 9 (`RESTING_ANIMATION`, vehicle.ts); steering: clip 6
@@ -27,14 +26,6 @@ const POSE_SOURCES: Readonly<Record<FidelityPose, DriverPoseSource>> = Object.fr
   [FidelityPose.STEERING]: { animationName: null, clipIndex: 6, milliseconds: 200 },
   [FidelityPose.STANDING]: { animationName: 'LEGOMAN', clipIndex: 0, milliseconds: 0 },
   [FidelityPose.MENU_IDLE]: { animationName: 'RSANIM', clipIndex: 4, milliseconds: 1000 },
-})
-
-// A catalogue part is measured in the region of the figure it makes: a hat or a face on the head, a torso with its arms, legs with the hips.
-const SLOT_REGIONS: Partial<Record<FidelityItemKind, DriverRegion>> = Object.freeze({
-  [FidelityItemKind.HAT]: 'head',
-  [FidelityItemKind.FACE]: 'head',
-  [FidelityItemKind.TORSO]: 'torso',
-  [FidelityItemKind.LEGS]: 'seat',
 })
 
 // The original's figure in a pose: a champion seated in the race is his fixed model; anyone else seated is the figure builder's model
@@ -64,7 +55,7 @@ const loadDriverModel = (
   }
 }
 
-// A driver (a champion, or a catalogue part on the base figure) in one of the game's poses: the original's skeleton model against the
+// A driver of the database in one of the game's poses: the original's skeleton model against the
 // LDraw minifigure on the same skeleton state; the attachment points are the head, hat, hands and seat.
 export const createDriverPair = async (
   context: FidelityContext,
@@ -102,14 +93,12 @@ export const createDriverPair = async (
     sampler.getMatrices(state),
     drawing.object
   )
-  const region = SLOT_REGIONS[item.kind] ?? null
-  const focus = region === null ? null : measures.regions[region]
   return {
     pair: { original: createSceneWith(original.group), replacement },
     anchors: measures.anchors,
-    focus,
+    focus: null,
     chassis: null,
-    note: region !== null && focus === null ? `no ${region} region; whole figure` : '',
+    note: '',
     dispose: () => {
       original.object.dispose()
       drawing.dispose()
