@@ -584,8 +584,8 @@ const getRacerSpunByHazard = (arithmetic: FloatArithmetic, racer: Racer): Racer 
 // is car body slot 0x48 (cleared by slot 0x4c).
 // 0x0048e050 and 0x0048e230 with a vehicle (racer +0xb2c, the computers): the capture sets the target speed factors
 // (car body +0x7e8, and +0x7ec unless the pushed flag 0x40000 is set) to -0.4 and the release back to 1.
-const CAPTURED_TARGET_SPEED_FACTOR = Math.fround(-0.4)
-const PUSHED_FLAG = 0x40000
+const CAPTURED_TARGET_SPEED_FACTOR = Math.fround(-0.4) // MOV ECX,0xbecccccd at 0x0048e0fc
+const PUSHED_FLAG = 0x40000 // TEST EDX,0x40000 at 0x0048e101
 
 const getRacerWithHazardTargetSpeed = (racer: Racer, factor: number): Racer => {
   const isPushed = (racer.carBody.rigidBody.flags & PUSHED_FLAG) !== 0

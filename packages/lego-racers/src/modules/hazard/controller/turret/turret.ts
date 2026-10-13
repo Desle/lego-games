@@ -30,11 +30,11 @@ const UINT32_MODULUS = 0x1_0000_0000
 const ORIGIN = Object.freeze([0, 0, 0] as const)
 // 0x004b03f0, 0x004b0b48, 0x004b02f4, 0x004b02f8: pi, and the angle-to-table-index scales (1024 / 2 pi, negated) and 2 pi.
 const PI = getFloatFromBits(0x40490fdb)
-const TABLE_INDEX_PER_RADIAN = getFloatFromBits(0x4322f983)
-const TABLE_INDEX_PER_RADIAN_BACKWARDS = getFloatFromBits(0xc322f983)
-const TWO_PI = getFloatFromBits(0x40c90fdb)
-const TABLE_MASK = 0x3ff
-const TABLE_QUARTER_TURN = 0x100
+const TABLE_INDEX_PER_RADIAN = getFloatFromBits(0x4322f983) // float32 at 0x004b0b48
+const TABLE_INDEX_PER_RADIAN_BACKWARDS = getFloatFromBits(0xc322f983) // float32 at 0x004b02f4
+const TWO_PI = getFloatFromBits(0x40c90fdb) // float32 at 0x004b02f8
+const TABLE_MASK = 0x3ff // AND EAX,0x3ff at 0x0048b7ab
+const TABLE_QUARTER_TURN = 0x100 // MOV ECX,0xffffff00 at 0x0048b7c4
 
 // 0x0048b777..0x0048b824: the direction the muzzle points, from the position in the period: x from the first half-turn,
 // y from the same angle a quarter turn on (negated when mirrored), z from the quarter periods, then normalised.

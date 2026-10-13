@@ -293,6 +293,7 @@ export const activateLauncherCurse = (step: PowerUpStep, position: Vector3): Pow
   return startAttachedEffect(
     step,
     PowerUpEffectKind.CURSE,
+    // level 3: 0x0045a9b0 case 3 → 0x0045aeb0
     { ...getPlainStart(0, 3, 0, null), ownerRacer: null },
     (started) => started,
     position
@@ -307,6 +308,7 @@ export const activateLauncherWand = (
   hazardIndex: number | null
 ): PowerUpStep => {
   const started = startEffect(step, PowerUpEffectKind.WAND, {
+    // level 2 (0x0045a950 case 2), timer 500 (0x00454cb0 `+0x8 = 500`)
     ...getPlainStart(0, 2, 500, null),
     ownerRacer: null,
   })
