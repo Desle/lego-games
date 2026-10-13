@@ -1,4 +1,4 @@
-import type { ModelScene, SceneMesh } from '@lego-games/lego-racers/scene'
+import type { ModelScene, SceneBitmap, SceneMesh } from '@lego-games/lego-racers/scene'
 import { getBatchSurfaces, getColorShares, getDominantColor } from './model-surface.ts'
 import { MINIFIG_SIDES } from './minifig-geometry.ts'
 import type { MinifigSide } from './minifig-geometry.types.ts'
@@ -122,6 +122,47 @@ const getArmParts = (
   }
 }
 
+const RGBA_STRIDE = 4
+// Where in a triangle its picture is sampled (barycentric weights): the middle and toward each corner.
+const SAMPLE_WEIGHTS: readonly (readonly [number, number, number])[] = Object.freeze([
+  [1 / 3, 1 / 3, 1 / 3],
+  [2 / 3, 1 / 6, 1 / 6],
+  [1 / 6, 2 / 3, 1 / 6],
+  [1 / 6, 1 / 6, 2 / 3],
+])
+
+// The most common colour a picture shows on some triangles, sampled inside each one (v = 0 is the picture's bottom row, as the
+// engine hands the picture to Direct3D) (a bounding rectangle of a sleeve's pieces of the
+// chest picture takes in the other sleeve and the gloves).
+const getSampledColor = (
+  mesh: SceneMesh,
+  bitmap: SceneBitmap,
+  triangles: readonly SurfaceTriangle[]
+): number | null => {
+  const samples = triangles.flatMap((triangle) =>
+    SAMPLE_WEIGHTS.map((weights) => {
+      const [u, v] = [0, 1].map((axis) =>
+        triangle.vertices.reduce(
+          (sum, vertex, corner) =>
+            sum + (weights[corner] ?? 0) * (mesh.textureCoordinates[vertex * 2 + axis] ?? 0),
+          0
+        )
+      )
+      const column = Math.min(bitmap.width - 1, Math.max(0, Math.floor((u ?? 0) * bitmap.width)))
+      const row = Math.min(
+        bitmap.height - 1,
+        Math.max(0, Math.floor((1 - (v ?? 0)) * bitmap.height))
+      )
+      const start = (row * bitmap.width + column) * RGBA_STRIDE
+      return bitmap.colors.subarray(start, start + RGBA_STRIDE)
+    })
+  )
+  if (samples.length === 0) return null
+  const colors = new Uint8Array(samples.length * RGBA_STRIDE)
+  for (const [index, sample] of samples.entries()) colors.set(sample, index * RGBA_STRIDE)
+  return getColorShares({ width: samples.length, height: 1, colors })[0]?.color ?? null
+}
+
 const findBatchIndex = (surfaces: readonly BatchSurface[], pattern: RegExp): number =>
   surfaces.findIndex((surface) => pattern.test(surface.materialName))
 
@@ -155,10 +196,14 @@ export const readMinifigSurfaces = (model: ModelScene): MinifigSurfaces => {
   const armParts = MINIFIG_SIDES.map((side) =>
     mesh === undefined ? { sleeve: [], hand: [] } : getArmParts(mesh, chestTriangles, side)
   )
+  const getPartColor = (triangles: readonly SurfaceTriangle[]) =>
+    mesh === undefined || chest?.bitmap == null
+      ? null
+      : getSampledColor(mesh, chest.bitmap, triangles)
   const getSideColors = (part: 'sleeve' | 'hand', fallback: number) =>
     Object.freeze({
-      left: getChestColor(armParts[0]?.[part] ?? []) ?? fallback,
-      right: getChestColor(armParts[1]?.[part] ?? []) ?? fallback,
+      left: getPartColor(armParts[0]?.[part] ?? []) ?? fallback,
+      right: getPartColor(armParts[1]?.[part] ?? []) ?? fallback,
     })
   const armColors = getSideColors('sleeve', torsoColor)
   const [first, second] = legs?.bitmap == null ? [] : getColorShares(legs.bitmap)
