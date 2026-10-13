@@ -1,4 +1,3 @@
-import type { LDrawDetail } from '@lego-games/ldraw/library'
 import type { LookPreset } from '@lego-games/ldraw/material'
 import type { ModelFolder } from '../../types/studio.types.ts'
 
@@ -11,7 +10,6 @@ export type ModelsTabView = {
 export type ModelsTabController = {
   readonly selectModel: (path: string) => void
   readonly setLook: (preset: LookPreset) => void
-  readonly setDetail: (detail: LDrawDetail) => void
   readonly dispose: () => void
 }
 

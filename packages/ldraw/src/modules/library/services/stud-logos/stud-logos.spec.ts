@@ -1,20 +1,15 @@
 import { LDrawDetail } from '../ldraw-library-loader/ldraw-library-loader.types.ts'
-import {
-  getIsStudLogoRequested,
-  getIsStudLogoShown,
-  getModelDetail,
-  setIsStudLogoShown,
-} from './stud-logos.ts'
+import { getIsStudLogoShown, getModelDetail, setIsStudLogoShown } from './stud-logos.ts'
 
 describe('stud logos', () => {
   afterEach(() => setIsStudLogoShown(false))
 
-  it('reads the switch from the address, off by default', () => {
+  it('draws plain studs by default', () => {
     // Arrange / Act
-    const requests = ['?hd', '?hd&studlogos=1', '?hd&studlogos=0'].map(getIsStudLogoRequested)
+    const detail = getModelDetail(LDrawDetail.HIGH)
 
     // Assert
-    expect(requests).toEqual([false, true, false])
+    expect([getIsStudLogoShown(), detail]).toEqual([false, LDrawDetail.LOW])
   })
 
   it('builds every model with plain studs when the logos are off', () => {

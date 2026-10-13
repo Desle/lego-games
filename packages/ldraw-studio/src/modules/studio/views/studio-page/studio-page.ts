@@ -1,14 +1,9 @@
-import { LDrawDetail } from '@lego-games/ldraw/library'
 import { LOOK_APPEARANCES, LookPreset, getLookPreset } from '@lego-games/ldraw/material'
 import { createModelsTabController } from '../../controller/models-tab/models-tab-controller.ts'
 import type { ModelFolder } from '../../types/studio.types.ts'
 
 const TAB_NAMES: readonly string[] = ['Models']
 const LOOK_PRESETS: readonly LookPreset[] = Object.values(LookPreset)
-const DETAIL_LABELS: Readonly<Record<LDrawDetail, string>> = Object.freeze({
-  [LDrawDetail.HIGH]: 'Logo studs',
-  [LDrawDetail.LOW]: 'Plain studs',
-})
 
 const createElement = <Name extends keyof HTMLElementTagNameMap>(
   name: Name,
@@ -51,7 +46,7 @@ const fillModelSelect = (
     })
   )
 
-// The studio: a tab list (Models for now), and the Models tab's picker, look and detail over the editor's model viewer.
+// The studio: a tab list (Models for now), and the Models tab's picker and look over the editor's model viewer.
 export const mountStudioPage = (root: HTMLElement) => {
   const bar = createElement('div', 'bar')
   const modelSelect = createElement('select', 'model-select')
@@ -64,13 +59,7 @@ export const mountStudioPage = (root: HTMLElement) => {
       (preset) => new Option(LOOK_APPEARANCES[preset].label, preset, false, preset === initialLook)
     )
   )
-  const detailSelect = createElement('select', 'detail-select')
-  detailSelect.setAttribute('aria-label', 'Detail')
-  detailSelect.append(
-    ...Object.values(LDrawDetail).map((detail) => new Option(DETAIL_LABELS[detail], detail))
-  )
-  detailSelect.value = LDrawDetail.LOW
-  bar.append(modelSelect, lookSelect, detailSelect)
+  bar.append(modelSelect, lookSelect)
   const stage = createElement('div', 'stage')
   const status = createElement('pre', 'status')
   const panel = createElement('section', 'panel')
@@ -94,11 +83,6 @@ export const mountStudioPage = (root: HTMLElement) => {
     controller.setLook(
       LOOK_PRESETS.find((preset) => preset === lookSelect.value) ?? LookPreset.MANUAL
     )
-  const onDetailChange = () =>
-    controller.setDetail(
-      detailSelect.value === LDrawDetail.LOW ? LDrawDetail.LOW : LDrawDetail.HIGH
-    )
   modelSelect.addEventListener('change', onModelChange)
   lookSelect.addEventListener('change', onLookChange)
-  detailSelect.addEventListener('change', onDetailChange)
 }

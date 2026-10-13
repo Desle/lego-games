@@ -1,5 +1,4 @@
 import { createModelViewer, describeLDrawModel } from '@lego-games/ldraw/editor'
-import type { LDrawDetail } from '@lego-games/ldraw/library'
 import type { LookPreset } from '@lego-games/ldraw/material'
 import { collectModelText, groupModelFiles } from '../../services/model-files/model-files.ts'
 import { getModelFiles, getModelText } from '../../services/studio-files/studio-files.ts'
@@ -82,7 +81,6 @@ export const createModelsTabController = (
   }
 
   const setLook = (preset: LookPreset) => void viewer.setLook(preset)
-  const setDetail = (detail: LDrawDetail) => void viewer.setDetail(detail)
 
   const dispose = () => {
     isDisposed = true
@@ -91,5 +89,5 @@ export const createModelsTabController = (
   }
 
   void poll()
-  return Object.freeze({ selectModel, setLook, setDetail, dispose })
+  return Object.freeze({ selectModel, setLook, dispose })
 }
