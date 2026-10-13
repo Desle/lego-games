@@ -16,11 +16,7 @@ import {
   getAdvancedTextureScroll,
   getTextureScrollOffsets,
 } from '@lego-games/lego-racers/world-animation'
-import {
-  ENHANCEMENT_BRICK_MODEL_NAME,
-  POWER_UP_BRICK_MODEL_NAME,
-} from '../../../../shared/viewer-extensions/effect-model-names.ts'
-import type { EffectModelDrawingRequest } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
+import { BACK_FACES_VARIANT } from '../../../../shared/viewer-extensions/effect-model-names.ts'
 import type { FrustumView, Vector3Like } from '../race-viewport/race-viewport.types.ts'
 import { getIsSphereInFrustum } from '../scene-object/sphere-visibility.ts'
 import type { BrickSphere } from '../race-assets/race-assets.types.ts'
@@ -29,7 +25,10 @@ import { getEffectFigureState } from '@lego-games/lego-racers/race-presentation'
 import { setAlphaOverride } from '../scene-object/alpha-override.ts'
 import { getReversedModel } from '../model-object/reverse-faces.ts'
 import { getFrameMatrix, getUprightRotation } from '../frame-matrix/frame-matrix.ts'
-import { showEffectModelDrawing } from '../effect-model-drawing/effect-model-drawing.ts'
+import {
+  getEffectModelName,
+  showEffectModelDrawing,
+} from '../effect-model-drawing/effect-model-drawing.ts'
 import { createModelObject } from '../model-object/model-object.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
 import type { EffectModels } from '../race-assets/race-assets.types.ts'
@@ -203,12 +202,9 @@ const getIsBrickInstanceDrawn = (
 }
 
 // A growing pool of one model: `use` shows the next free copy, `reset` hides them all. A viewer extension may draw the copies of
-// a model it names (`drawingRequest`) in place of the original's.
-const createPool = (
-  scene: ThreeScene,
-  model: ModelScene,
-  drawingRequest: EffectModelDrawingRequest | null = null
-) => {
+// the model, in the look `variant` names, in place of the original's.
+const createPool = (scene: ThreeScene, model: ModelScene, variant: string | null = null) => {
+  const drawingRequest = { modelName: getEffectModelName(model), variant, model }
   const copies: ModelObject[] = []
   let used = 0
   return {
@@ -219,10 +215,7 @@ const createPool = (
     use: (): ModelObject => {
       let copy = copies[used]
       if (copy === undefined) {
-        copy =
-          drawingRequest === null
-            ? createModelObject(model)
-            : showEffectModelDrawing(createModelObject(model), model, drawingRequest)
+        copy = showEffectModelDrawing(createModelObject(model), drawingRequest)
         copy.group.visible = false
         copies.push(copy)
         scene.add(copy.group)
@@ -242,16 +235,12 @@ const createPool = (
 export const createRaceEffects = (scene: ThreeScene, models: EffectModels): RaceEffects => {
   const brickPools = new Map(
     Object.entries(models.powerUpBricks).map(
-      ([kind, model]) =>
-        [
-          kind,
-          createPool(scene, model, { modelName: POWER_UP_BRICK_MODEL_NAME, variant: kind }),
-        ] as const
+      ([kind, model]) => [kind, createPool(scene, model, kind)] as const
     )
   )
   const trailPools = new Map(
     Object.entries(models.powerUpTrails).map(
-      ([kind, model]) => [kind, createPool(scene, model)] as const
+      ([kind, model]) => [kind, createPool(scene, model, kind)] as const
     )
   )
   const enhancementTrailPool = createPool(scene, models.enhancementTrail)
@@ -261,15 +250,14 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
     magnet: createPool(scene, models.magnet),
     plainExplosion: createPool(scene, models.plainExplosion),
     spikedExplosion: createPool(scene, models.spikedExplosion),
-    enhancementBrick: createPool(scene, models.enhancementBrick, {
-      modelName: ENHANCEMENT_BRICK_MODEL_NAME,
-      variant: null,
-    }),
+    enhancementBrick: createPool(scene, models.enhancementBrick),
   }
   const portalPool = createPool(scene, models.warpPortal)
   const cursePools = models.curse.map(({ model }) => createPool(scene, model))
   const shieldPools = models.shields.map((model) => createPool(scene, model))
-  const shieldBackPools = models.shields.map((model) => createPool(scene, getReversedModel(model)))
+  const shieldBackPools = models.shields.map((model) =>
+    createPool(scene, getReversedModel(model), BACK_FACES_VARIANT)
+  )
   const turboPools = models.turbos.map((figures) =>
     figures.map(({ model }) => createPool(scene, model))
   )

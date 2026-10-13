@@ -3,7 +3,7 @@ import type { CensusSighting, HdCoveragePlaceResult, HookCall } from './hd-cover
 import { getIsFailure, getPlaceFindings, getStaleGaps } from './hd-coverage-judgement.ts'
 
 const PLACE = 'Time trial'
-const INDEX = { cars: ['VVCM'], chassis: ['crchas0'] }
+const INDEX = { cars: ['VVCM'], chassis: ['crchas0'], effectModels: ['PUBRICKY', 'DMISSILE'] }
 
 const getOriginal = (kind: CensusSighting['kind'], key: string): CensusSighting => ({
   origin: CoverageOrigin.ORIGINAL,
@@ -106,6 +106,33 @@ describe('getPlaceFindings', () => {
     expect(findings.map((finding) => [finding.kind, finding.reason])).toEqual([
       ['driver', 'hook_not_called'],
     ])
+  })
+
+  it('lets a power-up object without a file be drawn by the original, and fails one with a file the hook did not draw', () => {
+    // Arrange
+    const effectCall = (key: string, isModelPresent: boolean): HookCall => ({
+      ...getCarCall({ hook: HookKind.EFFECT_MODEL, key, wheelsKey: null, isModelPresent }),
+    })
+    const result = getResult(
+      [
+        getOriginal(RacerPartKind.POWER_UP, 'BARREL'),
+        getOriginal(RacerPartKind.POWER_UP, 'DMISSILE'),
+        getOriginal(RacerPartKind.POWER_UP, 'PUBRICKY'),
+      ],
+      [effectCall('BARREL', false), effectCall('DMISSILE', true)]
+    )
+
+    // Act
+    const findings = getPlaceFindings(result, [])
+
+    // Assert
+    expect(findings.map((finding) => [finding.key, finding.reason, getIsFailure(finding)])).toEqual(
+      [
+        ['BARREL', 'no_model_file', false],
+        ['DMISSILE', 'hook_returned_no_drawing', true],
+        ['PUBRICKY', 'hook_not_called', true],
+      ]
+    )
   })
 
   it('does not fail a known gap, and calls a gap no longer found stale', () => {

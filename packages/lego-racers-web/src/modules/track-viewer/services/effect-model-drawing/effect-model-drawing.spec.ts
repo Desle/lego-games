@@ -21,7 +21,7 @@ import {
   registerViewerExtension,
 } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
 import { createModelObject } from '../model-object/model-object.ts'
-import { showEffectModelDrawing } from './effect-model-drawing.ts'
+import { getEffectModelName, showEffectModelDrawing } from './effect-model-drawing.ts'
 
 const MATERIAL: SceneMaterial = {
   name: 'brick',
@@ -146,7 +146,7 @@ const MODEL: ModelScene = {
   },
 }
 
-const REQUEST = { modelName: 'brick', variant: null }
+const REQUEST = { modelName: 'BRICK', variant: null, model: MODEL }
 
 const getIsMesh = (object: Object3D): object is Mesh => object instanceof Mesh
 
@@ -181,7 +181,7 @@ describe('showEffectModelDrawing', () => {
     const modelObject = createModelObject(MODEL)
 
     // Act
-    const shown = showEffectModelDrawing(modelObject, MODEL, REQUEST)
+    const shown = showEffectModelDrawing(modelObject, REQUEST)
 
     // Assert
     expect(shown).toBe(modelObject)
@@ -191,7 +191,7 @@ describe('showEffectModelDrawing', () => {
     // Arrange: the drawing marks the mesh's frame, its unit along x being the file's vertex (2, 0, 0)
     const marker = new Group()
     registerViewerExtension({ ...NEUTRAL_EXTENSION, getEffectModelDrawing: () => marker })
-    const shown = showEffectModelDrawing(createModelObject(MODEL), MODEL, REQUEST)
+    const shown = showEffectModelDrawing(createModelObject(MODEL), REQUEST)
     const start = createSkeletonAnimationState(ANIMATION, 0)
     const vertex = new Vector3(1, 0, 0)
 
@@ -206,5 +206,18 @@ describe('showEffectModelDrawing', () => {
     expect(atStart).toEqual([1, 0, 0])
     expect(turned).not.toEqual(atStart)
     expect(turned).toEqual(meshVertexTurned)
+  })
+})
+
+describe('getEffectModelName', () => {
+  it('names a model by the stem of its mesh file', () => {
+    // Arrange
+    const model = MODEL
+
+    // Act
+    const name = getEffectModelName(model)
+
+    // Assert
+    expect(name).toBe('BRICK')
   })
 })

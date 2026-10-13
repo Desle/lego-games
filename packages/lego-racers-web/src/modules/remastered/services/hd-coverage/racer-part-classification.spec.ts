@@ -24,6 +24,20 @@ describe('getRacerPartIdentity', () => {
     ['MENUDATA\\CIRCUIT1\\CR_CAR.GDB', 'MENUDATA\\CIRCUIT1\\CIR1-01.WDB', 'cr_car', 'body', 'CRCM'],
     ['MENUDATA\\WINRRCAR\\RRCAR.GDB', 'MENUDATA\\WINRRCAR\\END.WDB', 'rrcar', 'body', 'RRCM'],
     ['MENUDATA\\C_AWARD1\\GUY1.GDB', 'MENUDATA\\C_AWARD1\\1STPLACE.WDB', 'guy1', 'driver', 'GUY1'],
+    [
+      'GAMEDATA\\COMMON\\DMISSILE.GDB',
+      'GAMEDATA\\COMMON\\POWERUP.WDB',
+      'dmissil',
+      'power_up',
+      'DMISSILE',
+    ],
+    [
+      'GAMEDATA\\COMMON\\PUBRICKY.GDB',
+      'GAMEDATA\\COMMON\\POWERUP.WDB',
+      'gen',
+      'power_up',
+      'PUBRICKY',
+    ],
   ])('reads %s as a racer part', (meshPath, worldPath, instanceName, kind, key) => {
     // Arrange
     const source = { meshPath, worldPath, instanceName }

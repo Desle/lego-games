@@ -1,4 +1,6 @@
-import type { HookKind } from './hd-coverage.types.ts'
+import { POWER_UP_OBJECT_MODEL_NAMES } from '../../../../shared/viewer-extensions/effect-model-names.ts'
+import { HookKind } from './hd-coverage.types.ts'
+import type { HookCall } from './hd-coverage.types.ts'
 import type { OnScreenDrawing, OnScreenFrame } from './on-screen-check.types.ts'
 
 // Fewer changed pixels than this (above the frame's own noise) is nothing on screen: a 640 x 480 frame's figure covers thousands.
@@ -52,6 +54,37 @@ export const getOnScreenFailures = (
       ...getMaterialFailures(frame, shownDrawings),
     ]
   })
+
+// Every power-up object the place drew from its file (a call that found the file and returned a drawing) reaches the screen in
+// one of the measured frames.
+export const getPowerUpOnScreenFailures = (
+  frames: readonly OnScreenFrame[],
+  calls: readonly HookCall[]
+): readonly string[] => {
+  const drawnKeys = [
+    ...new Set(
+      calls
+        .filter(
+          (call) =>
+            call.hook === HookKind.EFFECT_MODEL &&
+            call.isModelPresent &&
+            call.isDrawingReturned &&
+            POWER_UP_OBJECT_MODEL_NAMES.includes(call.key)
+        )
+        .map((call) => call.key)
+    ),
+  ].sort()
+  return drawnKeys
+    .filter(
+      (key) =>
+        !frames.some((frame) =>
+          frame.drawings.some(
+            (drawing) => drawing.key === key && getIsOnScreen(frame, drawing.changedPixels)
+          )
+        )
+    )
+    .map((key) => `the power-up object ${key} reached the screen in none of the frames`)
+}
 
 export const formatOnScreenDrawing = (frame: OnScreenFrame, drawing: OnScreenDrawing): string =>
   [

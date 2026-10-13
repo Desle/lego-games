@@ -181,7 +181,7 @@ const createPickupPair = async (
   const original = createOriginalObject(
     loadEffectModel(context.archive, item.subject, item.subject !== SKELETAL_EXCEPTION)
   )
-  const drawing = createLDrawPickupDrawing({ modelName: item.subject, variant: null })
+  const drawing = createLDrawPickupDrawing(item.subject, null)
   if (drawing === null) return 'no LDraw mapping'
   const replacement = createSceneWith(drawing)
   if (!(await waitForStableMeshes(replacement))) return 'the LDraw part never arrived'

@@ -9,6 +9,7 @@ import type {
   BuilderQueueView,
   BuilderToolView,
 } from './builder-panel.types.ts'
+import { POWER_UP_OBJECT_DESCRIPTIONS } from '../ldraw-powerup/powerup-object-descriptions.ts'
 import { EMPTY_START_FILE } from './ldraw-builder-route.ts'
 import { BuilderItemKind } from './ldraw-builder.types.ts'
 import type { LibraryPart } from './ldraw-builder.types.ts'
@@ -23,11 +24,14 @@ const QUEUE_LABELS: Readonly<Record<BuilderItemKind, (name: string) => string>> 
   [BuilderItemKind.CHASSIS]: (name) => `Chassis ${name.toUpperCase()}`,
   [BuilderItemKind.CAR]: (name) => `Car ${name}`,
   [BuilderItemKind.DRIVER]: (name) => `Driver ${name}`,
+  [BuilderItemKind.POWER_UP]: (name) =>
+    `${name} (${POWER_UP_OBJECT_DESCRIPTIONS[name] ?? 'power-up'})`,
 }
 const QUEUE_GROUPS: Readonly<Record<BuilderItemKind, string>> = {
   [BuilderItemKind.CHASSIS]: 'Chassis',
   [BuilderItemKind.CAR]: 'Cars',
   [BuilderItemKind.DRIVER]: 'Drivers',
+  [BuilderItemKind.POWER_UP]: 'Power-ups',
 }
 const BYTE = 255
 

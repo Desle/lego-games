@@ -5,6 +5,7 @@ const EMPTY_INDEX: LDrawModelIndex = Object.freeze({
   cars: Object.freeze({}),
   chassis: Object.freeze({}),
   drivers: Object.freeze({}),
+  powerUps: Object.freeze({}),
 })
 
 let index: LDrawModelIndex = EMPTY_INDEX

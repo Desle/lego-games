@@ -6,7 +6,7 @@ import {
 } from './builder-items.ts'
 
 describe('getBuilderItems', () => {
-  it('queues the 12 chassis, then the 20 cars on their chassis, then the 24 drivers', () => {
+  it('queues the 12 chassis, then the 20 cars on their chassis, then the 24 drivers, then the 24 power-up objects', () => {
     // Arrange
     const championChassis = new Map([['RRCM', 'RRchas0']])
 
@@ -14,10 +14,16 @@ describe('getBuilderItems', () => {
     const items = getBuilderItems(championChassis)
 
     // Assert
-    expect(items).toHaveLength(56)
+    expect(items).toHaveLength(80)
     expect(items[0]?.id).toBe('chassis/jtchas0')
     expect(items.find((item) => item.id === 'RRCM')?.chassisName).toBe('rrchas0')
-    expect(items.at(-1)).toEqual({ id: 'drivers/GM', kind: 'driver', name: 'GM', chassisName: '' })
+    expect(items.find((item) => item.id === 'drivers/GM')?.kind).toBe('driver')
+    expect(items.at(-1)).toEqual({
+      id: 'powerups/ENHANER',
+      kind: 'power_up',
+      name: 'ENHANER',
+      chassisName: '',
+    })
   })
 })
 
@@ -35,6 +41,8 @@ describe('getBuilderItemFile', () => {
       'drivers/BVB',
       'drivers/RR',
       'drivers/NOBODY',
+      'powerups/DMISSILE',
+      'powerups/PUBRICKY',
     ].map((id) => getBuilderItemFile(id, existing))
 
     // Assert
@@ -45,6 +53,8 @@ describe('getBuilderItemFile', () => {
       null,
       'drivers/bvb.ldr',
       'drivers/RR.ldr',
+      null,
+      'powerups/DMISSILE.ldr',
       null,
     ])
   })
@@ -122,6 +132,29 @@ describe('getStartFiles for a driver', () => {
     expect(groups).toEqual([
       { label: 'Drivers', files: ['drivers/BB.ldr', 'drivers/BVB.ldr'] },
       { label: 'Backups/drafts', files: ['drafts/BB-old.ldr', 'drafts/backups/BB-2026.ldr'] },
+    ])
+  })
+})
+
+describe('getStartFiles for a power-up object', () => {
+  it('offers every power-up object file and only its own drafts', () => {
+    // Arrange
+    const rocket = getBuilderItems(new Map()).find((item) => item.id === 'powerups/DMISSILE')
+    const paths = [
+      'powerups/DMISSILE.ldr',
+      'powerups/BARREL.ldr',
+      'drafts/DMISSILE-long.ldr',
+      'drafts/DMISSILEX.ldr',
+      'DMISSILE.ldr',
+    ]
+
+    // Act
+    const groups = rocket === undefined ? [] : getStartFiles(rocket, paths)
+
+    // Assert
+    expect(groups).toEqual([
+      { label: 'Power-ups', files: ['powerups/DMISSILE.ldr', 'powerups/BARREL.ldr'] },
+      { label: 'Backups/drafts', files: ['drafts/DMISSILE-long.ldr'] },
     ])
   })
 })

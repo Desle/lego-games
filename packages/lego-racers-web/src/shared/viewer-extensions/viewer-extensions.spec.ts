@@ -93,7 +93,7 @@ describe('viewer extensions', () => {
 
   it('draws an effect model as the original does until an extension offers a drawing', () => {
     // Arrange
-    const request = { modelName: 'PUBRICKY', variant: 'shield' }
+    const request = { modelName: 'PUBRICKY', variant: 'shield', model: {} as ModelScene }
     const drawing = new Group()
     registerViewerExtension(NEUTRAL_EXTENSION)
     const isOriginalKept = getEffectModelDrawing(request) === null

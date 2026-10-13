@@ -20,14 +20,11 @@ describe('the LDraw pickups', () => {
 
     // Act
     const codes = ['projectile', 'shield', 'turbo', 'hazard'].map((variant) =>
-      getPickupColorCode(mapping, { modelName: POWER_UP_BRICK_MODEL_NAME, variant })
+      getPickupColorCode(mapping, variant)
     )
 
     // Assert
-    expect([
-      codes,
-      getPickupColorCode(enhancement, { modelName: 'ENHABRIK', variant: null }),
-    ]).toEqual([[4, 1, 2, 14], 15])
+    expect([codes, getPickupColorCode(enhancement, null)]).toEqual([[4, 1, 2, 14], 15])
   })
 
   it('turns the brick without stretching it: a stud is 2.34 units along the length axis', () => {

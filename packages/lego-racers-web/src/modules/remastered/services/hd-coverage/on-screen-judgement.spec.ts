@@ -1,6 +1,7 @@
 import { HookKind } from './hd-coverage.types.ts'
+import type { HookCall } from './hd-coverage.types.ts'
 import type { OnScreenFrame, OnScreenMaterialGroup } from './on-screen-check.types.ts'
-import { getOnScreenFailures } from './on-screen-judgement.ts'
+import { getOnScreenFailures, getPowerUpOnScreenFailures } from './on-screen-judgement.ts'
 
 const INVALID_OPERATION = 0x502
 
@@ -156,5 +157,43 @@ describe('getOnScreenFailures', () => {
 
     // Assert
     expect(failures).toEqual([])
+  })
+})
+
+describe('getPowerUpOnScreenFailures', () => {
+  it('fails a power-up object drawn from its file that no frame shows, not one without a file', () => {
+    // Arrange
+    const getCall = (id: number, key: string, isModelPresent: boolean): HookCall => ({
+      id,
+      hook: HookKind.EFFECT_MODEL,
+      key,
+      wheelsKey: null,
+      isModelPresent,
+      isDrawingReturned: isModelPresent,
+      isFailed: false,
+    })
+    const calls = [
+      getCall(1, 'DMISSILE', true),
+      getCall(2, 'SHEOUT3', true),
+      getCall(3, 'BARREL', false),
+    ]
+    const getDrawing = (callId: number, key: string, changedPixels: number) => ({
+      callId,
+      hook: HookKind.EFFECT_MODEL,
+      key,
+      changedPixels,
+      groups: [PLASTIC],
+    })
+    const frames = [
+      getFrame({ drawings: [getDrawing(1, 'DMISSILE', 900), getDrawing(2, 'SHEOUT3', 10)] }),
+    ]
+
+    // Act
+    const failures = getPowerUpOnScreenFailures(frames, calls)
+
+    // Assert
+    expect(failures).toEqual([
+      'the power-up object SHEOUT3 reached the screen in none of the frames',
+    ])
   })
 })
