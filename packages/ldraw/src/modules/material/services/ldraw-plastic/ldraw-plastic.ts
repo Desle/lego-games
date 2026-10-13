@@ -1,7 +1,5 @@
 import {
-  AdditiveBlending,
   AmbientLight,
-  Color,
   DoubleSide,
   CubeTexture,
   DirectionalLight,
@@ -15,7 +13,6 @@ import {
 } from 'three'
 import type { Material, Object3D, Texture } from 'three'
 import type { StandardMesh } from './ldraw-plastic.types.ts'
-import { PLASTIC_APPEARANCE } from './ldraw-plastic.constants.ts'
 import { getActiveLook } from '../ldraw-look/ldraw-look.ts'
 import { LookEdges, LookShading, MaterialCategory } from '../ldraw-look/ldraw-look.types.ts'
 import type { LookAppearance } from '../ldraw-look/ldraw-look.types.ts'
@@ -105,30 +102,11 @@ const getEnvironment = (isStudio: boolean): CubeTexture | null => {
   return texture
 }
 
-// The manual look dims and darkens the edge lines; the photo look turns them into pale additive catch-lights along the brick
-// edges, where moulded plastic catches the light (not on rubber, which is matte: its lines are dimmed); the instructions draw them
-// in the library's edge colour (a black part gets a grey edge), the toon look as black ink, and the other looks not at all.
-const styleEdges = (
-  materials: ReadonlySet<LineBasicMaterial>,
-  rubberMaterials: ReadonlySet<LineBasicMaterial>,
-  look: LookAppearance
-) => {
+// The instructions draw the edge lines in the library's edge colour (a black part gets a grey edge), the toon look as black ink, and
+// the other looks not at all: real bricks have no outlines.
+const styleEdges = (materials: ReadonlySet<LineBasicMaterial>, look: LookAppearance) => {
   for (const material of materials) {
-    const isRubberCatchLight = look.edges === LookEdges.CATCH_LIGHT && rubberMaterials.has(material)
-    if (look.edges === LookEdges.DIMMED || isRubberCatchLight) {
-      material.transparent = true
-      material.opacity = PLASTIC_APPEARANCE.edgeOpacity
-      material.color.lerp(new Color(0x000000), PLASTIC_APPEARANCE.edgeDarkening)
-    } else if (look.edges === LookEdges.CATCH_LIGHT && isConditionalLineMaterial(material)) {
-      // A conditional line is a curved part's silhouette (spokes, tyres, studs), not a moulded edge: it catches no light.
-      material.visible = false
-    } else if (look.edges === LookEdges.CATCH_LIGHT) {
-      material.color.set(0xffffff)
-      material.transparent = true
-      material.opacity = look.catchLightOpacity
-      material.blending = AdditiveBlending
-      material.depthWrite = false
-    } else if (look.edges === LookEdges.LIBRARY) {
+    if (look.edges === LookEdges.LIBRARY) {
       // The renderer has no colour management: the edge colour is shown as the library names it, like the plastic of these looks.
       // The library shares a colour's line material between models, so it is encoded once.
       if (!encodedEdgeMaterials.has(material)) material.color.convertLinearToSRGB()
@@ -207,10 +185,6 @@ const getLineMaterials = (object: Object3D): readonly LineBasicMaterial[] => {
   )
 }
 
-// The library names a colour's edge materials after it (`Rubber_Black - Edge`, `Rubber_Black - Conditional Edge`).
-const getIsEdgeOf = (line: LineBasicMaterial, colorNames: ReadonlySet<string>): boolean =>
-  colorNames.has(line.name.split(' - ')[0] ?? '')
-
 // `bakedVolume` is the occlusion grid a worker has baked for the model, as a texture; left out, the model is baked here. A wheel's
 // rim is plastic like the rest, but its thin spokes face the studio at every angle as the wheel turns, so in a glossy look they
 // would read as white: pass `isWheel` for a wheel's model and its plastic takes less of the reflected studio.
@@ -233,21 +207,15 @@ export const applyPlasticLook = (
       : getLookNeedsOcclusion(look)
         ? bakeOcclusionVolume(model)
         : null
-  const rubberNames = new Set<string>()
   for (const mesh of meshes) {
     const category = getMaterialCategory(mesh.material)
-    if (category === MaterialCategory.RUBBER) rubberNames.add(mesh.material.name)
     const plastic =
       plasticBySource.get(mesh.material) ??
       createPlasticMaterial(mesh.material, look, category, volume, isWheel)
     plasticBySource.set(mesh.material, plastic)
     mesh.material = plastic
   }
-  const edgeMaterials = new Set(lines.flatMap(getLineMaterials))
-  const rubberEdgeMaterials = new Set(
-    [...edgeMaterials].filter((material) => getIsEdgeOf(material, rubberNames))
-  )
-  styleEdges(edgeMaterials, rubberEdgeMaterials, look)
+  styleEdges(new Set(lines.flatMap(getLineMaterials)), look)
 }
 
 // Key light from above and the front left, a cooler fill from the right, a sky and ground tint, and the studio in the plastic.

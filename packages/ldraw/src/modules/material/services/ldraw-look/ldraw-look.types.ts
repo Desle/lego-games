@@ -21,11 +21,9 @@ export const LookShading = createEnum({
 })
 export type LookShading = EnumValues<typeof LookShading>
 
-// What becomes of the LDraw edge lines: dimmed and darkened, pale additive catch-lights, drawn in the library's edge colour,
-// solid black ink, or not drawn.
+// What becomes of the LDraw edge lines: real bricks have none, so only the drawn looks show them (the library's edge colour, or
+// black ink).
 export const LookEdges = createEnum({
-  DIMMED: 'dimmed',
-  CATCH_LIGHT: 'catch_light',
   LIBRARY: 'library',
   INK: 'ink',
   HIDDEN: 'hidden',
@@ -53,7 +51,6 @@ export type LookAppearance = {
   readonly environmentIntensity: number
   // A dim room with bright strip lights instead of the bright small studio: contrast for a glossy clear coat.
   readonly isEnvironmentStudio: boolean
-  readonly catchLightOpacity: number
   readonly occlusionStrength: number
   readonly roughnessVariation: number
   // 1 keeps the library's colours; below 1 washes them toward grey, above 1 saturates them.

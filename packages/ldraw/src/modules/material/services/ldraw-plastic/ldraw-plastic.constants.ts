@@ -4,8 +4,6 @@ export const PLASTIC_APPEARANCE = Object.freeze({
   clearcoat: 0.7,
   clearcoatRoughness: 0.08,
   environmentIntensity: 0.9,
-  edgeOpacity: 0.7,
-  edgeDarkening: 0.5,
   ambientIntensity: 0.12,
   hemisphereIntensity: 0.8,
   keyIntensity: 2.8,
