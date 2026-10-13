@@ -50,7 +50,7 @@ export const createModelViewer = (
   if (options.look !== undefined) setActiveLookPreset(options.look)
   const { container, canvas, readout } = createViewerElements(element)
   const stage = createModelStage(canvas)
-  let detail = options.detail ?? LDrawDetail.HIGH
+  let detail = options.detail ?? LDrawDetail.LOW
   let shownText: string | null = null
   let shown: HeldModelObject | null = null
   let stats = NO_STATS
