@@ -454,6 +454,7 @@ const getHazardRacer = (racer: Racer | undefined, racerIndex: number): HazardRac
     position: Object.freeze([position.x, position.y, position.z] as const),
     isSpinning: (flags & SPINNING_FLAG) !== 0,
     forwardSpeed,
+    isColourShifted: racer.colourShift !== null,
   })
 }
 

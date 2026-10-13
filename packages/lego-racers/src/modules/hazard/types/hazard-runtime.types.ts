@@ -92,6 +92,8 @@ export type HazardRacer = {
   readonly position: Vector3
   readonly isSpinning: boolean
   readonly forwardSpeed: number
+  // Vehicle +0x3c0 (racer +0x3d8): a 4D track event put its colour shift on the racer (0x004400a0), clear after 0x004400e0.
+  readonly isColourShifted: boolean
 }
 
 export type HazardRandom = {

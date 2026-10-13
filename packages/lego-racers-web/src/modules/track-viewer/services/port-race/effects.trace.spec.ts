@@ -15,8 +15,14 @@ const CANDIDATE_COUNT = 80
 const VIEWPORT_EDGE_PIXELS = 1
 
 const EFFECT_CASES: readonly EffectTraceCase[] = Object.freeze([
-  // Snow: the emitter sits 100 in front of the camera, spread across the view (0x0048eb70).
-  { name: 'Ice Planet, snow', race: 'ipp', frames: [130, 170, 250, 340], texture: /snowflak/ },
+  // Snow: the emitter sits 100 in front of the camera, spread across the view, and goes while a track event's colour
+  // shift is on the racer (0x0048eb70; frames 520 and 610 are inside one).
+  {
+    name: 'Ice Planet, snow',
+    race: 'ipp',
+    frames: [170, 250, 340, 520, 610],
+    texture: /snowflak/,
+  },
   // Turbo flames and burn figures: their texture scroll has run since the effect started (0x0045ce20).
   {
     name: 'Ice Planet, turbo flames',
@@ -77,6 +83,13 @@ const runEffectCase = async (
       frame: portFrame.frame,
       originalCount: effectTriangles.length,
       unmatchedCount: unmatched.length,
+      extraCount: world.comparison.groups
+        .filter(
+          (group) =>
+            group.kind === 'extra_in_port' &&
+            effectCase.texture.test(group.firstPort?.textureKey ?? '')
+        )
+        .reduce((total, group) => total + group.count, 0),
       coordinateMismatchCount: world.comparison.groups
         .filter(
           (group) =>
@@ -100,6 +113,7 @@ describe.skipIf(!isGamePresent())('effects against the original', () =>
       // Assert
       expect(results.map((result) => result.frame)).toEqual(effectCase.frames)
       expect(results.map((result) => result.unmatchedCount)).toEqual(results.map(() => 0))
+      expect(results.map((result) => result.extraCount)).toEqual(results.map(() => 0))
       expect(results.map((result) => result.coordinateMismatchCount)).toEqual(results.map(() => 0))
       expect(results.some((result) => result.originalCount > 0)).toBe(true)
     },

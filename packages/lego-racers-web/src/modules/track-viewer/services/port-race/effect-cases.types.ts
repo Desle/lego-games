@@ -13,4 +13,6 @@ export type EffectFrameResult = {
   // driver clips them there).
   readonly unmatchedCount: number
   readonly coordinateMismatchCount: number
+  // The port's triangles of the texture the original has no partner for.
+  readonly extraCount: number
 }

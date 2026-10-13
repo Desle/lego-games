@@ -26,6 +26,8 @@ const SECOND_ROW_HEIGHT = -40
 // The flakes are spread over 200 units across the view: the table value modulo 200, less 100.
 const SPREAD_UNITS = 200
 const SPREAD_HALF = 100
+// The racer the hook reads is the first (race +0x2ba8 points at it, also in the demonstration).
+const PLAYER_RACER_INDEX = 0
 const WORLD_UP = Object.freeze({ x: 0, y: 0, z: 1 })
 
 const getIsSnowfallData = (data: HazardInstance['data']): data is SnowfallData =>
@@ -97,10 +99,19 @@ export const SNOWFALL: HazardBehavior = Object.freeze({
     if (instance.lifecycle === HazardLifecycle.IDLE) return instance
     const { data } = instance
     if (!getIsSnowfallData(data)) return instance
+    // 0x0048eb70: while a track event's colour shift is on the racer (+0x3d8) it does not snow and the emitter goes.
+    if (session.getRacer(PLAYER_RACER_INDEX)?.isColourShifted === true) {
+      releaseTrackEmitter(session, data.emitterHandle)
+      return getWithData(instance, { ...data, isEnabled: false, emitterHandle: null })
+    }
     const withFlag = getWithData(instance, { ...data, isEnabled: true })
-    // 0x0048eb70 draws once to place the flakes across the view (followCameras uses the value).
+    // It draws once to place the flakes across the view (followCameras uses the value).
     if (data.emitterHandle === null) return withFlag
-    return getWithData(withFlag, { ...data, isEnabled: true, placementValue: session.drawRandomValue() })
+    return getWithData(withFlag, {
+      ...data,
+      isEnabled: true,
+      placementValue: session.drawRandomValue(),
+    })
   },
   // The rest of 0x0048eb70: the emitter faces along the camera's horizontal heading and sits 100 in front of it (and
   // 40 against its second row up), moved across the view by the drawn value.
