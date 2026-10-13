@@ -89,4 +89,12 @@ export default defineConfig({
     developmentLDrawModelsPlugin(LDRAW_MODELS_ROOT),
     developmentLDrawBuilderPlugin(LDRAW_MODELS_ROOT, LDRAW_LIBRARY_ROOT),
   ],
+  // The ?hd layer reaches these only through a dynamic import: found late, Vite re-bundles them and the open page's imports fail.
+  optimizeDeps: {
+    include: [
+      'three/examples/jsm/controls/OrbitControls.js',
+      'three/examples/jsm/loaders/LDrawLoader.js',
+      'three/examples/jsm/materials/LDrawConditionalLineMaterial.js',
+    ],
+  },
 })
