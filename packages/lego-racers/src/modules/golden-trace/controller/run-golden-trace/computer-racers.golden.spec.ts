@@ -73,10 +73,10 @@ describe('golden trace: the computer racers', () => {
               frames: scenario.frames.map((frame) => ({ dt: frame.milliseconds, keys: [] })),
             })
           )
+        if (process.env['COMPUTER_DUMP_ONLY'] !== undefined) continue
         const result = await runGoldenTrace(scenario, jam, readOriginalExecutable())
         const computers = result.comparison.divergenceByField
-          .filter((divergence) => /^racer[1-9]\./u.test(divergence.field))
-          .sort((left, right) => left.frame - right.frame)
+          .toSorted((left, right) => left.frame - right.frame)
           .slice(0, 10)
         lines.push(
           `${scenario.name} (${entry.firstName} ${entry.circuitName} mirrored ${String(entry.isFlagged)}): ${String(result.comparison.divergenceByField.length)} fields differ` +

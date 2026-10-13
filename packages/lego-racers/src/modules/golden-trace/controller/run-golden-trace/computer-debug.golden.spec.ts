@@ -59,7 +59,13 @@ describe('golden trace debug', () => {
       const port = getPortTrace(scenario, definition)
       const lines: string[] = []
       for (let frame = FIRST; frame <= LAST; frame += 1) {
-        for (const field of FIELDS) {
+        const fieldNames =
+          FIELDS[0] === 'DIFFERING'
+            ? Object.keys(original.frames[frame]?.fields ?? {}).filter(
+                (name) => hex(original.frames[frame]?.fields[name]) !== hex(port[frame]?.fields[name])
+              )
+            : FIELDS
+        for (const field of fieldNames) {
           const left = hex(original.frames[frame]?.fields[field])
           const right = hex(port[frame]?.fields[field])
           lines.push(
