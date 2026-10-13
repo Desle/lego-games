@@ -1,4 +1,7 @@
-export { createPartParticles } from './services/part-particles/part-particles.ts'
+export {
+  createPartParticles,
+  getParticlePartText,
+} from './services/part-particles/part-particles.ts'
 export type {
   PartParticles,
   PartParticleSlot,

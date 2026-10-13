@@ -1,5 +1,9 @@
 import { LDrawParticleKind } from './ldraw-particle-mappings.types.ts'
-import type { LDrawParticleMaterial, LDrawParticlePart } from './ldraw-particle-mappings.types.ts'
+import type {
+  LDrawParticleMaterial,
+  LDrawParticlePart,
+  LDrawParticleReference,
+} from './ldraw-particle-mappings.types.ts'
 
 const ROUND_PLATE = '4073'
 const ROUND_TILE = '98138'
@@ -19,6 +23,52 @@ export const LDRAW_PARTICLE_PARTS: Readonly<Record<LDrawParticleKind, LDrawParti
     [LDrawParticleKind.SWAMP]: { partName: ROUND_PLATE, colorCode: 330 },
     [LDrawParticleKind.SNOW]: { partName: ROUND_TILE, colorCode: 15 },
   })
+
+const COMMON = 'GAMEDATA\\COMMON'
+const COMMON_EMITTERS = `${COMMON}\\EMITTER.EMB`
+
+const getTrackReference = (
+  track: string,
+  materialName: string,
+  emitterName: string
+): LDrawParticleReference =>
+  Object.freeze({
+    directory: `GAMEDATA\\RACE${track}`,
+    library: `EMIT${track}`,
+    materialName,
+    emitterPath: `GAMEDATA\\RACE${track}\\RACE${track}.EMB`,
+    emitterName,
+  })
+
+const getCommonReference = (materialName: string, emitterName: string): LDrawParticleReference =>
+  Object.freeze({
+    directory: COMMON,
+    library: 'EMITTER',
+    materialName,
+    emitterPath: COMMON_EMITTERS,
+    emitterName,
+  })
+
+// The builder's reference of each kind: the first row of its most seen material and an emitter that draws it. Dark smoke's
+// `cbsmoke` has no emitter of its own in the files; its card takes the lava smoke's size (`lavasmk`, the kind's other material).
+export const LDRAW_PARTICLE_REFERENCES: Readonly<
+  Record<LDrawParticleKind, LDrawParticleReference>
+> = Object.freeze({
+  [LDrawParticleKind.SMOKE]: getCommonReference('smoke1', 'carsmke'),
+  [LDrawParticleKind.WHITE_SMOKE]: getCommonReference('tbsmoke1', 'trbsmke'),
+  [LDrawParticleKind.DARK_SMOKE]: {
+    ...getTrackReference('C0R1', 'cbsmoke1', 'lavasmk'),
+    emitterPath: 'GAMEDATA\\RACEC0R3\\RACEC0R3.EMB',
+  },
+  [LDrawParticleKind.DUST]: getCommonReference('dust1', 'dust'),
+  [LDrawParticleKind.SAND]: getTrackReference('C0R2', 'sandpart', 'sandemt'),
+  [LDrawParticleKind.SPARKS]: getCommonReference('carspar1', 'carsprk'),
+  [LDrawParticleKind.HOT_SPARKS]: getCommonReference('brlspar1', 'dynsprk'),
+  [LDrawParticleKind.WATER]: getTrackReference('C0R2', 'waterprt', 'wateremt'),
+  [LDrawParticleKind.GRASS]: getTrackReference('C0R0', 'graspart', 'grassemt'),
+  [LDrawParticleKind.SWAMP]: getTrackReference('C1R1', 'swampprt', 'swampemt'),
+  [LDrawParticleKind.SNOW]: getTrackReference('C1R3', 'snowpart', 'snowkick'),
+})
 
 const getMaterials = (
   names: readonly string[],
@@ -41,6 +91,7 @@ export const LDRAW_PARTICLE_MATERIALS: Readonly<Record<string, LDrawParticleMate
       ...getMaterials(getRows('spsmoke'), LDrawParticleKind.SMOKE, 200),
       ...getMaterials(['dstsmoke'], LDrawParticleKind.SMOKE, 150),
       ...getMaterials(getRows('tbsmoke'), LDrawParticleKind.WHITE_SMOKE, 100),
+      // The cannon's smoke: despite its name, EMITTER.MDB draws it white (diffuse 255 255 255, the smoke pictures), as the turbo's.
       ...getMaterials(getRows('dksmoke'), LDrawParticleKind.WHITE_SMOKE, 100),
       ...getMaterials(getRows('cbsmoke'), LDrawParticleKind.DARK_SMOKE, 200),
       ...getMaterials(getRows('lvsmoke'), LDrawParticleKind.DARK_SMOKE, 200),

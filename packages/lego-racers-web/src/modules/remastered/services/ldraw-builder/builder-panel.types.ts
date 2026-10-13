@@ -56,7 +56,7 @@ export type BuilderToolView = {
   readonly isHolding: boolean
 }
 
-// The scale control of a power-up object: the factor the file is drawn at and what its reset is called.
+// The scale control of a power-up object or a particle: the factor the file is drawn at and what its reset is called.
 export type BuilderScaleView = {
   readonly isShown: boolean
   readonly factor: number

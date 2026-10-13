@@ -26,12 +26,14 @@ const QUEUE_LABELS: Readonly<Record<BuilderItemKind, (name: string) => string>> 
   [BuilderItemKind.DRIVER]: (name) => `Driver ${name}`,
   [BuilderItemKind.POWER_UP]: (name) =>
     `${name} (${POWER_UP_OBJECT_DESCRIPTIONS[name] ?? 'power-up'})`,
+  [BuilderItemKind.PARTICLE]: (name) => name.toLowerCase().replace('_', ' '),
 }
 const QUEUE_GROUPS: Readonly<Record<BuilderItemKind, string>> = {
   [BuilderItemKind.CHASSIS]: 'Chassis',
   [BuilderItemKind.CAR]: 'Cars',
   [BuilderItemKind.DRIVER]: 'Drivers',
   [BuilderItemKind.POWER_UP]: 'Power-ups',
+  [BuilderItemKind.PARTICLE]: 'Particles',
 }
 const SCALE_DECIMALS = 2
 const BYTE = 255

@@ -185,11 +185,11 @@ export const BUILDER_SHORTCUT_GROUPS: readonly BuilderShortcutGroup[] = [
       { keys: 'W', description: 'wheel guides on, off' },
       {
         keys: '⌥=  ⌥-',
-        description: 'power-up: draw the build bigger, smaller (the race draws it so)',
+        description: 'power-up or particle: draw the build bigger, smaller (the race draws it so)',
       },
       {
         keys: '⌥0',
-        description: "power-up: fit to the original's size",
+        description: "power-up: fit to the original's size; particle: real LEGO size",
       },
       { keys: '?', description: 'this list' },
     ],

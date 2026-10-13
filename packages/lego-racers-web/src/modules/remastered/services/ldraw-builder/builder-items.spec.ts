@@ -6,7 +6,7 @@ import {
 } from './builder-items.ts'
 
 describe('getBuilderItems', () => {
-  it('queues the 12 chassis, then the 20 cars on their chassis, then the 24 drivers, then the 24 power-up objects', () => {
+  it('queues the 12 chassis, then the 20 cars on their chassis, then the 24 drivers, the 24 power-up objects and the 11 particles', () => {
     // Arrange
     const championChassis = new Map([['RRCM', 'RRchas0']])
 
@@ -14,14 +14,21 @@ describe('getBuilderItems', () => {
     const items = getBuilderItems(championChassis)
 
     // Assert
-    expect(items).toHaveLength(80)
+    expect(items).toHaveLength(91)
     expect(items[0]?.id).toBe('chassis/jtchas0')
     expect(items.find((item) => item.id === 'RRCM')?.chassisName).toBe('rrchas0')
     expect(items.find((item) => item.id === 'drivers/GM')?.kind).toBe('driver')
+    expect(items.find((item) => item.id === 'powerups/ENHANER')?.kind).toBe('power_up')
     expect(items.at(-1)).toEqual({
-      id: 'powerups/ENHANER',
-      kind: 'power_up',
-      name: 'ENHANER',
+      id: 'particles/SNOW',
+      kind: 'particle',
+      name: 'SNOW',
+      chassisName: '',
+    })
+    expect(items.at(-11)).toEqual({
+      id: 'particles/SMOKE',
+      kind: 'particle',
+      name: 'SMOKE',
       chassisName: '',
     })
   })
@@ -43,6 +50,8 @@ describe('getBuilderItemFile', () => {
       'drivers/NOBODY',
       'powerups/DMISSILE',
       'powerups/PUBRICKY',
+      'particles/WHITE_SMOKE',
+      'particles/LAVA',
     ].map((id) => getBuilderItemFile(id, existing))
 
     // Assert
@@ -55,6 +64,8 @@ describe('getBuilderItemFile', () => {
       'drivers/RR.ldr',
       null,
       'powerups/DMISSILE.ldr',
+      null,
+      'particles/WHITE_SMOKE.ldr',
       null,
     ])
   })

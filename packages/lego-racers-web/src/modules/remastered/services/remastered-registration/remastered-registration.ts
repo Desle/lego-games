@@ -30,7 +30,10 @@ import {
   createPerformancePass,
   getIsPerformanceRequested,
 } from '../performance-monitor/performance-monitor.ts'
-import { createLDrawParticleDrawing } from '../ldraw-particles/ldraw-particle-drawing.ts'
+import {
+  createLDrawParticleDrawing,
+  prepareParticleFiles,
+} from '../ldraw-particles/ldraw-particle-drawing.ts'
 import {
   createLDrawEffectModelDrawing,
   preparePowerUpObjects,
@@ -82,7 +85,9 @@ export const createRemasteredExtension = async (search: string): Promise<ViewerE
   const index = await loadLDrawModelIndex()
   setUpLDrawModelParser()
   setActiveLookPreset(getLookPreset(search, RACERS_LOOK))
-  if (getIsLDrawRequested(search)) await preparePowerUpObjects(index)
+  if (getIsLDrawRequested(search)) {
+    await Promise.all([preparePowerUpObjects(index), prepareParticleFiles(index)])
+  }
   setPlasticLightingExtension(
     getShadowMode(search) === ShadowMode.CLASSIC ? null : createPlasticShadowExtension()
   )
