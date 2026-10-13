@@ -99,9 +99,13 @@ export const createScaledScene = (model: ModelScene, object: Object3D): Scene =>
   return createSceneWith(scaled)
 }
 
-// The original's model as the race draws it: the race's lights (none: the ambient of 255).
-export const createOriginalObject = (model: ModelScene) => {
+// The original's model as the race draws it: the race's lights (none: the ambient of 255), posed when a skeleton state is given.
+export const createOriginalObject = (
+  model: ModelScene,
+  state: SkeletonAnimationState | null = NO_STATE
+) => {
   const modelObject = createModelObject(model)
+  if (state !== null) modelObject.object.setAnimationState(state)
   modelObject.object.setLights(null)
   return modelObject
 }
@@ -241,7 +245,7 @@ const createWheelsPair = async (
   }
 }
 
-const findChampionAppearance = (context: FidelityContext, code: string) => {
+export const findChampionAppearance = (context: FidelityContext, code: string) => {
   const databases = readRacerDatabases((path) => context.archive.readFile(path))
   for (const driver of databases.drivers.drivers) {
     const appearance = getChampionRacerAppearance(databases, driver.name, 0)
@@ -289,9 +293,7 @@ const createCarPair = async (
   const body = createOriginalObject(
     loadModelScene(context.archive, getRacerModelFiles(appearance.bodyModel))
   )
-  const wheels = createModelObject(wheelModel)
-  if (state !== null) wheels.object.setAnimationState(state)
-  wheels.object.setLights(null)
+  const wheels = createOriginalObject(wheelModel, state)
   replacement.updateMatrixWorld(true)
   const wheelsObject = drawing.object.children[1]?.children[0]?.children[0]
   const matrices =

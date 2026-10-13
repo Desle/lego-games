@@ -222,7 +222,7 @@ const createPool = (
         copy =
           drawingRequest === null
             ? createModelObject(model)
-            : showEffectModelDrawing(createModelObject(model), drawingRequest)
+            : showEffectModelDrawing(createModelObject(model), model, drawingRequest)
         copy.group.visible = false
         copies.push(copy)
         scene.add(copy.group)
