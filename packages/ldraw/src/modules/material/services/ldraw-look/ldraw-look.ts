@@ -9,13 +9,12 @@ const DEFAULT_LOOK = LookPreset.MANUAL
 const MANUAL_LOOK: LookAppearance = Object.freeze({
   label: 'Manual',
   shading: LookShading.PLASTIC,
-  edges: LookEdges.DIMMED,
+  edges: LookEdges.HIDDEN,
   roughness: PLASTIC_APPEARANCE.roughness,
   clearcoat: PLASTIC_APPEARANCE.clearcoat,
   clearcoatRoughness: PLASTIC_APPEARANCE.clearcoatRoughness,
   environmentIntensity: PLASTIC_APPEARANCE.environmentIntensity,
   isEnvironmentStudio: false,
-  catchLightOpacity: 0,
   occlusionStrength: 0,
   roughnessVariation: 0,
   saturation: 1,
@@ -30,19 +29,17 @@ const MANUAL_LOOK: LookAppearance = Object.freeze({
   ambientIntensity: PLASTIC_APPEARANCE.ambientIntensity,
 })
 
-// A product photograph: a clear coat over glossy plastic in a dim studio with strip lights, baked ambient occlusion, the edge lines
-// as pale catch-lights, and a filmic grade. Graded looks are lit in linear light and encoded once at the end, so their lights are
+// A product photograph: a clear coat over glossy plastic in a dim studio with strip lights, baked ambient occlusion and a filmic
+// grade. Graded looks are lit in linear light and encoded once at the end, so their lights are
 // lower than the manual's.
 const PHOTO_LOOK: LookAppearance = Object.freeze({
   ...MANUAL_LOOK,
   label: 'Photo',
-  edges: LookEdges.CATCH_LIGHT,
   roughness: 0.2,
   clearcoat: 1,
   clearcoatRoughness: 0.04,
   environmentIntensity: 2.6,
   isEnvironmentStudio: true,
-  catchLightOpacity: 0.32,
   occlusionStrength: 0.7,
   roughnessVariation: 0.05,
   saturation: 1.04,

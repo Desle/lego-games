@@ -54,7 +54,7 @@ describe('look appearances', () => {
     // Assert
     expect([manual.shading, manual.edges, getLookNeedsShader(manual)]).toEqual([
       LookShading.PLASTIC,
-      LookEdges.DIMMED,
+      LookEdges.HIDDEN,
       false,
     ])
     expect([instructions, toon, game, retro].map((look) => [look.shading, look.edges])).toEqual([
@@ -66,7 +66,7 @@ describe('look appearances', () => {
     expect(game.occlusionStrength).toBeGreaterThan(0)
     expect([photo.shading, photo.edges, photo.isGraded, photo.occlusionStrength > 0]).toEqual([
       LookShading.PLASTIC,
-      LookEdges.CATCH_LIGHT,
+      LookEdges.HIDDEN,
       true,
       true,
     ])
