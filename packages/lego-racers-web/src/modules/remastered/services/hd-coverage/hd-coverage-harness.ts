@@ -64,6 +64,7 @@ import type {
   HdCoveragePlace,
   HdCoveragePlaceResult,
   ModelPartFinding,
+  OnScreenPlace,
   RacePlace,
 } from './hd-coverage.types.ts'
 import { takeCensus } from './hd-coverage-census.ts'
@@ -71,6 +72,8 @@ import { createRecordingExtension } from './hd-coverage-recorder.ts'
 import { checkModelParts } from './model-part-check.ts'
 import { measureDriverSeat } from './driver-seat-check.ts'
 import type { CoverageRecorder } from './hd-coverage-recorder.types.ts'
+import { createOnScreenCheck } from './on-screen-check.ts'
+import type { FrameDrawer, OnScreenFrame } from './on-screen-check.types.ts'
 
 const EXECUTABLE_NAME = 'LEGORacers.exe'
 const FRAME_MILLISECONDS = 33
@@ -217,6 +220,13 @@ export const installHdCoverageHarness = async (search: string) => {
   const { extension, recorder } = createRecordingExtension(await createRemasteredExtension(search))
   registerViewerExtension(extension)
   const census = createRenderCensus(recorder)
+  const onScreenCheck = createOnScreenCheck(recorder.getCalls, recorder.getCallId)
+  let onScreenFrames: OnScreenFrame[] = []
+  let isOnScreenMeasured = false
+  const measureOnScreen = (label: string, drawFrame: FrameDrawer) => {
+    if (isOnScreenMeasured)
+      onScreenFrames = [...onScreenFrames, onScreenCheck.measure(label, drawFrame)]
+  }
   const jam = await getDevelopmentJam()
   const executable = await getExecutable()
   const archive = openJamArchive(jam)
@@ -250,6 +260,10 @@ export const installHdCoverageHarness = async (search: string) => {
       census.setIsTaking(true)
       renderer.draw(commands, 0)
       census.setIsTaking(false)
+      measureOnScreen(`step ${String(step)}`, () => {
+        renderer.draw(commands, 0)
+        return canvas
+      })
     }
     renderer.dispose()
     canvas.remove()
@@ -292,6 +306,12 @@ export const installHdCoverageHarness = async (search: string) => {
       census.setIsTaking(true)
       viewport.render()
       census.setIsTaking(false)
+      measureOnScreen(`frame ${String(frame)}`, () => {
+        viewport.render()
+        const canvas = container.querySelector('canvas')
+        if (canvas === null) throw new Error('The race viewport has no canvas')
+        return canvas
+      })
     })
     viewport.dispose()
     container.remove()
@@ -409,14 +429,28 @@ export const installHdCoverageHarness = async (search: string) => {
     return measurements
   }
 
+  const runOnScreen = async (place: OnScreenPlace): Promise<readonly OnScreenFrame[]> => {
+    onScreenFrames = []
+    isOnScreenMeasured = true
+    try {
+      if (place.subject.kind === 'front_end') await runFrontEnd(place.subject)
+      else await runRace(place.subject)
+      return onScreenFrames
+    } finally {
+      isOnScreenMeasured = false
+    }
+  }
+
   const runHdCoveragePlace = async (place: HdCoveragePlace): Promise<HdCoveragePlaceResult> => {
     recorder.reset()
     census.reset()
     let partFindings: readonly ModelPartFinding[] = []
     let driverSeats: readonly DriverSeatMeasurement[] = []
+    let measuredFrames: readonly OnScreenFrame[] = []
     if (place.kind === 'front_end') await runFrontEnd(place)
     else if (place.kind === 'race') await runRace(place)
     else if (place.kind === 'driver_seats') driverSeats = await runDriverSeats()
+    else if (place.kind === 'on_screen') measuredFrames = await runOnScreen(place)
     else partFindings = await runModelParts()
     const index = getLDrawModelIndex()
     return {
@@ -429,6 +463,7 @@ export const installHdCoverageHarness = async (search: string) => {
       unsettledCallIds: recorder.getUnsettledCallIds(),
       partFindings,
       driverSeats,
+      onScreenFrames: measuredFrames,
     }
   }
   Object.assign(window, { runHdCoveragePlace })

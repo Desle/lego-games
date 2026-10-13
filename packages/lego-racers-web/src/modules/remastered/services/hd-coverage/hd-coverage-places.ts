@@ -1,5 +1,11 @@
 import type { FrontEndInput } from '@lego-games/lego-racers/front-end'
-import type { FrontEndPlace, HdCoveragePlace, RacePlace } from './hd-coverage.types.ts'
+import { HookKind } from './hd-coverage.types.ts'
+import type {
+  FrontEndPlace,
+  HdCoveragePlace,
+  OnScreenPlace,
+  RacePlace,
+} from './hd-coverage.types.ts'
 
 // The menus take keys once they have opened (the pixel trace's keys: frame 250 of the original, 96 steps after the menu opened),
 // one every 20 steps.
@@ -10,6 +16,7 @@ const LATER_STEPS = 200
 const TIME_TRIAL_FOLDER = 'RACEC0R0'
 const RACE_FRAME_COUNT = 300
 const RACE_RECORD_FRAMES: readonly number[] = [120, 290]
+const ON_SCREEN_RACE_FRAME = 120
 
 // The seven circuits' introduction cinemas (`CIRCUIT1` .. `CIRCUIT7`, screens 0x1f to 0x25).
 const CIRCUIT_INTRODUCTION_SCREEN_IDS: readonly number[] = [
@@ -56,6 +63,24 @@ const getRacePlace = (
   recordFrames: RACE_RECORD_FRAMES,
 })
 
+// A place's first recorded frame, drawn again without each of the layer's drawings.
+const getOnScreenPlace = (
+  subject: FrontEndPlace | RacePlace,
+  expectedHooks: readonly HookKind[]
+): OnScreenPlace => ({
+  kind: 'on_screen',
+  name: `On screen: ${subject.name}`,
+  subject:
+    subject.kind === 'front_end'
+      ? { ...subject, recordSteps: subject.recordSteps.slice(0, 1) }
+      : {
+          ...subject,
+          frameCount: ON_SCREEN_RACE_FRAME + 1,
+          recordFrames: [ON_SCREEN_RACE_FRAME],
+        },
+  expectedHooks,
+})
+
 // Every place the game draws a racer: the menus' figures and cars, the cinemas, and the races of every mode.
 export const HD_COVERAGE_PLACES: readonly HdCoveragePlace[] = [
   { kind: 'model_parts', name: 'Every model of the folder, part by part' },
@@ -86,4 +111,10 @@ export const HD_COVERAGE_PLACES: readonly HdCoveragePlace[] = [
   getRacePlace('Versus, two players', 'single_race', 2, 2, false),
   getRacePlace('Time trial, champion ghost', 'time_trial', 1, 1, false),
   getRacePlace('Time trial, champion and best run ghosts', 'time_trial', 1, 1, true),
+  getOnScreenPlace(getMenuPlace('Main menu figure', null, []), [HookKind.DRIVER]),
+  getOnScreenPlace(getMenuPlace('Car builder', 0x0e, []), [HookKind.CAR]),
+  getOnScreenPlace(getRacePlace('Race start', 'single_race', 6, 1, false), [
+    HookKind.CAR,
+    HookKind.DRIVER,
+  ]),
 ]

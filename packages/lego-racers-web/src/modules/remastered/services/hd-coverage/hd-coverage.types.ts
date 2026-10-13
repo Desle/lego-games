@@ -2,6 +2,7 @@ import type { FrontEndInput } from '@lego-games/lego-racers/front-end'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import { createEnum } from '../../../../shared/types/enum.types.ts'
 import type { EnumValues } from '../../../../shared/types/enum.types.ts'
+import type { OnScreenFrame } from './on-screen-check.types.ts'
 
 export const RacerPartKind = createEnum({
   BODY: 'body',
@@ -126,6 +127,8 @@ export type HdCoveragePlaceResult = {
   readonly partFindings: readonly ModelPartFinding[]
   // Where each driver of the place sits, the original's and the layer's.
   readonly driverSeats: readonly DriverSeatMeasurement[]
+  // The frames of an on-screen place, each drawn again without each of the layer's drawings.
+  readonly onScreenFrames: readonly OnScreenFrame[]
 }
 
 // A racer the original drew in a place, and why the layer did not.
@@ -176,7 +179,17 @@ export type DriverSeatsPlace = {
   readonly name: string
 }
 
-export type HdCoveragePlace = FrontEndPlace | RacePlace | ModelPartsPlace | DriverSeatsPlace
+// A menu or a race whose recorded frames are checked on screen: every drawing the layer returned that the place must show (the
+// hooks) changes the frame's pixels, its plastic too, and no draw raises a WebGL error.
+export type OnScreenPlace = {
+  readonly kind: 'on_screen'
+  readonly name: string
+  readonly subject: FrontEndPlace | RacePlace
+  readonly expectedHooks: readonly HookKind[]
+}
+
+export type HdCoveragePlace =
+  FrontEndPlace | RacePlace | ModelPartsPlace | DriverSeatsPlace | OnScreenPlace
 
 // The page of the coverage trace: the runner `installHdCoverageHarness` hangs on the window.
 export type HdCoverageWindow = {

@@ -18,6 +18,7 @@ import {
   getStaleGaps,
 } from './hd-coverage-judgement.ts'
 import { HD_COVERAGE_PLACES } from './hd-coverage-places.ts'
+import { formatOnScreenDrawing, getOnScreenFailures } from './on-screen-judgement.ts'
 import {
   formatDriverSeat,
   getDriverSeatFailures,
@@ -90,6 +91,10 @@ describe.skipIf(!isAvailable)('HD coverage', () => {
     )
     results.push(result)
     const findings: readonly HdCoverageFinding[] = getPlaceFindings(result, KNOWN_COVERAGE_GAPS)
+    const onScreenFailures = getOnScreenFailures(
+      result.onScreenFrames,
+      place.kind === 'on_screen' ? place.expectedHooks : []
+    )
 
     // Assert
     console.log(
@@ -104,6 +109,11 @@ describe.skipIf(!isAvailable)('HD coverage', () => {
         ...result.driverSeats.map((seat) => `  seat ${formatDriverSeat(seat)}`),
         ...getDriverSeatFailures(result.driverSeats).map((failure) => `  FAIL seat ${failure}`),
         ...getSteeringWheelNotes(result.driverSeats).map((note) => `  note ${note}`),
+        ...result.onScreenFrames.flatMap((frame) => [
+          `  on screen ${frame.label}: noise ${String(frame.unchangedDifference)} pixels, WebGL errors ${String(frame.webglErrors.length)}`,
+          ...frame.drawings.map((drawing) => `    ${formatOnScreenDrawing(frame, drawing)}`),
+        ]),
+        ...onScreenFailures.map((failure) => `  FAIL on screen ${failure}`),
         ...(result.unsettledCallIds.length === 0
           ? []
           : [`  unsettled drawings: calls ${result.unsettledCallIds.join(', ')}`]),
@@ -124,6 +134,10 @@ describe.skipIf(!isAvailable)('HD coverage', () => {
     expect(
       getDriverSeatFailures(result.driverSeats),
       'Fix: the LDraw driver must sit where the original seats its driver (the seat point of the racer appearance); find where its pose or figure frame moves it (ldraw-racer-driver, ldraw-driver-drawing, minifig-joints)'
+    ).toEqual([])
+    expect(
+      onScreenFailures,
+      "Fix: the layer's drawing is in the scene but not on the screen; find the draw WebGL refuses or the material that draws nothing (its uniforms, textures, shader)"
     ).toEqual([])
     expect(
       getStaleGaps(place.name, findings, KNOWN_COVERAGE_GAPS),

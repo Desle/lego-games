@@ -36,6 +36,7 @@ const getResult = (
   unsettledCallIds: [],
   partFindings: [],
   driverSeats: [],
+  onScreenFrames: [],
 })
 
 describe('getPlaceFindings', () => {
