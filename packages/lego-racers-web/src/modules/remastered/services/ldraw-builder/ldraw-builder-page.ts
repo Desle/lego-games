@@ -71,6 +71,7 @@ import { ReferenceMode } from './builder-panel.types.ts'
 import { createGhostInstance, createPartInstance, createPartTemplates } from './builder-parts.ts'
 import {
   findSideStud,
+  getGridPoint,
   getGroundPhase,
   getPartPhase,
   getPlacedBox,
@@ -403,14 +404,16 @@ const toEditFrame = (point: Vector3): Vector =>
   [...editFrame.worldToLocal(point.clone()).toArray()] as const
 
 // The side stud of a part (in the editing frame) under the cursor; its studs are read from the library the first time.
-const getSideStudUnder = (part: BuilderPart, point: Vector, normal: Vector): PartStud | null => {
-  const studs = studLists.getLoaded(part.partName)
-  if (studs === undefined) {
-    void studLists.load(part.partName).then(scheduleSync)
-    return null
-  }
-  return findSideStud(getPlacedStuds(studs, part), point, normal)
+// A part's studs, read from the library the first time (none until they arrive; the scene follows).
+const getStuds = (partName: string): readonly PartStud[] => {
+  const studs = studLists.getLoaded(partName)
+  if (studs !== undefined) return studs
+  void studLists.load(partName).then(scheduleSync)
+  return []
 }
+
+const getSideStudUnder = (part: BuilderPart, point: Vector, normal: Vector): PartStud | null =>
+  findSideStud(getPlacedStuds(getStuds(part.partName), part), point, normal)
 
 // The face under the cursor in the editing frame, with the grid of the part it belongs to; the ground when there is none.
 const getPointerHit = (position: PointerPosition): PointerHit | null => {
@@ -451,7 +454,11 @@ const getPointerHit = (position: PointerPosition): PointerHit | null => {
       const point = toEditFrame(hit.point)
       const hitNormal: Vector = [normal.x, normal.y, normal.z]
       return {
-        target: { point, normal: hitNormal, phase: getPartPhase(box, framePart) },
+        target: {
+          point,
+          normal: hitNormal,
+          phase: getPartPhase(getGridPoint(getStuds(part.partName), box, part.rotation), framePart),
+        },
         partIndex: typeof partIndex === 'number' ? partIndex : null,
         part,
         sideStud: getSideStudUnder(framePart, point, hitNormal),
@@ -493,10 +500,11 @@ const syncGhost = () => {
   const stud = hit.sideStud
   ghostRotation = stud === null ? tool.rotation : getFacingRotation(tool.rotation, stud.direction)
   const box = getRotatedBox(template.box, ghostRotation)
+  const gridPoint = getGridPoint(getStuds(tool.partName), template.box, ghostRotation)
   ghostPosition =
     stud === null
-      ? getPlacementPosition(hit.target, box)
-      : getSideStudPosition(hit.target.point, stud, box)
+      ? getPlacementPosition(hit.target, box, gridPoint)
+      : getSideStudPosition(hit.target.point, stud, box, gridPoint)
   const part = { ...tool, rotation: ghostRotation, position: ghostPosition }
   const key = `${tool.partName}|${String(tool.colorCode)}`
   if (ghost === null || key !== ghostKey) {

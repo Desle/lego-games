@@ -1,5 +1,5 @@
 import { rotateVector } from './builder-document.ts'
-import { getNearestAxis } from './builder-rotation.ts'
+import { getNearestAxis, PART_UP } from './builder-rotation.ts'
 import type { PartStud } from './builder-studs.types.ts'
 import type {
   BuilderBox,
@@ -51,15 +51,32 @@ export const getPlacedBox = (box: BuilderBox, part: BuilderPart): BuilderBox => 
   return Object.freeze({ minimum: move(turned.minimum), maximum: move(turned.maximum) })
 }
 
-// The grid a placed part sits on: its box's corner by a stud across, its origin (the top of a brick's body) by a plate upward.
-export const getPartPhase = (box: BuilderBox, part: BuilderPart): Vector => {
-  const placed = getPlacedBox(box, part)
-  return [
-    getRemainder(placed.minimum[0], STUD_WIDTH),
-    getRemainder(part.position[1], PLATE_HEIGHT),
-    getRemainder(placed.minimum[2], STUD_WIDTH),
-  ]
+const HALF_STUD = STUD_WIDTH / 2
+
+// The base centre of a part's stud, from its origin, turned as the part is: one of its upward studs, else (a tile, or studs not read
+// yet) half a stud in from its box's corner across and its origin along its studs' way. A box corner is off the grid for a part that
+// overhangs (handles, clips, wheel pins), and its box's bottom off the plate grid when they hang below it.
+export const getGridPoint = (
+  studs: readonly PartStud[],
+  box: BuilderBox,
+  rotation: readonly number[]
+): Vector => {
+  const upward = studs.find((stud) => stud.direction[1] < -FACING_STUD)
+  if (upward !== undefined) return rotateVector(rotation, upward.position)
+  const turned = getRotatedBox(box, rotation)
+  const studWay = getNearestAxis(rotateVector(rotation, PART_UP))
+  const getAxis = (axis: number) =>
+    studWay[axis] === 0 ? (turned.minimum[axis] ?? 0) + HALF_STUD : 0
+  return [getAxis(0), getAxis(1), getAxis(2)]
 }
+
+// The grid a placed part offers: its stud centres across (as the remainder of the corner half a stud before one, so the ground's 0
+// is a grid of whole studs), the top of its body (its studs' base) by a plate upward.
+export const getPartPhase = (gridPoint: Vector, part: BuilderPartLine): Vector => [
+  getRemainder(part.position[0] + gridPoint[0] - HALF_STUD, STUD_WIDTH),
+  getRemainder(part.position[1] + gridPoint[1], PLATE_HEIGHT),
+  getRemainder(part.position[2] + gridPoint[2] - HALF_STUD, STUD_WIDTH),
+]
 
 export const getGroundPhase = (groundHeight: number): Vector => [
   0,
@@ -67,16 +84,27 @@ export const getGroundPhase = (groundHeight: number): Vector => [
   0,
 ]
 
-const snapAcross = (centre: number, minimum: number, maximum: number, phase: number): number => {
-  const corner =
-    phase + STUD_WIDTH * Math.round((centre - (maximum - minimum) / 2 - phase) / STUD_WIDTH)
-  return corner - minimum
+// The position along an axis that puts the part's grid point on a stud centre of the phase, its box as near to centred on the cursor
+// as that allows.
+const snapAcross = (
+  centre: number,
+  minimum: number,
+  maximum: number,
+  phase: number,
+  gridPoint: number
+): number => {
+  const onGrid = phase + HALF_STUD - gridPoint
+  return onGrid + STUD_WIDTH * Math.round((centre - (minimum + maximum) / 2 - onGrid) / STUD_WIDTH)
 }
 
 // Where a part goes for the face the cursor is on (LDraw's y points down): on a top face its bottom stands on the body under the
 // cursor, under a bottom face its origin meets it, beside a side face it stands next to it, the bottom on the plate level below the
-// cursor. Across, its box's corner falls on the stud grid of the part under the cursor, as near to centred on the cursor as it gets.
-export const getPlacementPosition = (target: PlacementTarget, box: BuilderBox): Vector => {
+// cursor. Across, its studs fall on the stud grid of the part under the cursor, as near to centred on the cursor as it gets.
+export const getPlacementPosition = (
+  target: PlacementTarget,
+  box: BuilderBox,
+  gridPoint: Vector
+): Vector => {
   const [normalX, normalY, normalZ] = target.normal
   const isTop = normalY < -FACING
   const isBottom = normalY > FACING
@@ -93,10 +121,16 @@ export const getPlacementPosition = (target: PlacementTarget, box: BuilderBox): 
     : isBottom
       ? phaseY + PLATE_HEIGHT * Math.round((pointY - phaseY) / PLATE_HEIGHT)
       : phaseY + PLATE_HEIGHT * Math.ceil((pointY - phaseY) / PLATE_HEIGHT - CLEARANCE)
+  // The box's bottom is the part's bottom unless something hangs below it (handles): then the part rises to the next plate level.
+  const standing = phaseY - gridPoint[1]
+  const height = isBottom
+    ? level - gridPoint[1]
+    : standing +
+      PLATE_HEIGHT * Math.ceil((level - box.maximum[1] - standing) / PLATE_HEIGHT - CLEARANCE)
   return [
-    snapAcross(getPushed(0, normalX), box.minimum[0], box.maximum[0], phaseX),
-    isBottom ? level : level - box.maximum[1],
-    snapAcross(getPushed(2, normalZ), box.minimum[2], box.maximum[2], phaseZ),
+    snapAcross(getPushed(0, normalX), box.minimum[0], box.maximum[0], phaseX, gridPoint[0]),
+    height,
+    snapAcross(getPushed(2, normalZ), box.minimum[2], box.maximum[2], phaseZ, gridPoint[2]),
   ]
 }
 
@@ -161,9 +195,14 @@ export const findSideStud = (
   return onFace[0] ?? null
 }
 
-// Where a part whose studs already point the stud's way goes: its bottom on the stud's face, its anti-studs on that face's stud grid
-// (its box's corner half a stud from a stud centre), as near to centred on the cursor as it gets.
-export const getSideStudPosition = (point: Vector, stud: PartStud, box: BuilderBox): Vector => {
+// Where a part whose studs already point the stud's way goes: its bottom on the stud's face, its anti-studs (under its studs) on that
+// face's stud grid, as near to centred on the cursor as it gets.
+export const getSideStudPosition = (
+  point: Vector,
+  stud: PartStud,
+  box: BuilderBox,
+  gridPoint: Vector
+): Vector => {
   const outward = getNearestAxis(stud.direction)
   const getAxisPosition = (axis: number): number => {
     const direction = outward[axis] ?? 0
@@ -176,7 +215,8 @@ export const getSideStudPosition = (point: Vector, stud: PartStud, box: BuilderB
       point[axis] ?? 0,
       minimum,
       maximum,
-      getRemainder(studAt - STUD_WIDTH / 2, STUD_WIDTH)
+      getRemainder(studAt - HALF_STUD, STUD_WIDTH),
+      gridPoint[axis] ?? 0
     )
   }
   return [getAxisPosition(0), getAxisPosition(1), getAxisPosition(2)]
