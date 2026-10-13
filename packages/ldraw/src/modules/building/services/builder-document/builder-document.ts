@@ -8,6 +8,10 @@ import type {
 const PART_LINE = /^1\s+(\d+)((?:\s+-?[\d.eE+-]+){12})\s+(\S.*?)\s*$/
 const LINE_TYPE = /^(\d)\b/
 const COMMENT = /^0\s+\/\//
+// The metas of the official LDraw header; any other `0 !` meta (a game's own, such as `0 !RACERS ROLE`) belongs to the part after it.
+const HEADER_META =
+  /^0\s+!(?:LDRAW_ORG|LICENSE|HISTORY|CATEGORY|KEYWORDS|HELP|CMDLINE|THEME|PREVIEW)\b/
+const META = /^0\s+!/
 const INHERITED_COLOR = 16
 const POSITION_DECIMALS = 3
 const ROTATION_DECIMALS = 6
@@ -44,8 +48,12 @@ export const formatPartLine = (part: BuilderPartLine): string =>
     part.partName,
   ].join(' ')
 
+const getIsHeaderLine = (line: string, type: string | undefined): boolean =>
+  type === '0' && !COMMENT.test(line) && (!META.test(line) || HEADER_META.test(line))
+
 // A model file split into what the builder edits (the `.dat` parts) and what it keeps: the leading header lines, the lines that place
-// other models (`.ldr`, `.mpd`), comments (each kept with the part that follows it) and every other line.
+// other models (`.ldr`, `.mpd`), comments and metas (each kept with the part that follows it) and every other line. The header ends
+// at the first comment or the first meta that is not the official header's.
 export const parseBuilderDocument = (text: string): BuilderDocument => {
   const headerLines: string[] = []
   const referenceLines: string[] = []
@@ -57,7 +65,7 @@ export const parseBuilderDocument = (text: string): BuilderDocument => {
     const line = rawLine.trim()
     if (line === '') continue
     const type = LINE_TYPE.exec(line)?.[1]
-    if (isInHeader && type === '0' && !COMMENT.test(line)) {
+    if (isInHeader && getIsHeaderLine(line, type)) {
       headerLines.push(line)
       continue
     }

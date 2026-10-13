@@ -12,7 +12,7 @@ import {
   LDRAW_HATS,
   LDRAW_LEGS,
   LDRAW_TORSOS,
-} from '../ldraw-racer/ldraw-minifig-parts.ts'
+} from '../ldraw-racer/driver-catalogue-mappings.ts'
 import { FidelityItemKind, FidelityPose } from './ldraw-fidelity.types.ts'
 import type { FidelityItem } from './ldraw-fidelity.types.ts'
 

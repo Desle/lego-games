@@ -1,6 +1,6 @@
 # Remastered minifigure parts (review table)
 
-Every part of the game's figure builder (`BODYPART.PCB`: 36 hats, 30 faces, 29 torsos, 20 legs) and the LDraw part that stands for it in the remastered layer (`?hd`, Bricks = LDraw). The data is `ldraw-minifig-parts.ts` in `packages/lego-racers-web/src/modules/remastered/services/ldraw-racer/`: correct a row there (part number, colour code) and re-run the gallery. Classic is untouched.
+Every part of the game's figure builder (`BODYPART.PCB`: 36 hats, 30 faces, 29 torsos, 20 legs) and the LDraw part that stands for it in the remastered layer (`?hd`, Bricks = LDraw). The data is `driver-catalogue-mappings.ts` in `packages/lego-racers-web/src/modules/remastered/services/ldraw-racer/`: correct a row there (part number, colour code) and re-run the gallery. It draws every driver who has no file `drivers/<NAME>.ldr` in the models folder (a figure the player built in the figure builder); a champion with a file is drawn from his file. Classic is untouched.
 
 **Confidence.** `exact`: the official figure of that character carries this very part (the part lists are Rebrickable's public CSV downloads, `~/ldraw/rebrickable`; Rebrickable and LDraw numbers are joined through the `Rebrickable` keywords in the LDraw part headers). `close`: same theme and era, a print that reads like the game's picture. `guess`: nearest print by look only; please correct. Character names (`kk` King Kahuka ...) are **hypotheses** read off the part prefixes and the pictures, they are not in the game files. Colours are LDraw codes. A torso with no print keeps the game's picture, clipped to the front of the torso.
 
@@ -125,14 +125,14 @@ Every part of the game's figure builder (`BODYPART.PCB`: 36 hats, 30 faces, 29 t
 | 9   | rh_chst   | 973pf8 (brown (6) / yellow (14) / yellow (14))           | close      | brown vest with a strap, Castle                              |
 | 10  | bj_chst   | 973p39 (blue (1) / blue (1) / yellow (14))               | close      | blue jacket with a brown vest, Pirates                       |
 | 11  | cc_chst   | 973p62 (black (0) / white (15) / blue (1))               | guess      | white and black with a blue emblem                           |
-| 12  | ap_chst   | none: game picture, clipped to the torso front           | guess      | no print reads like it: the game picture stays               |
+| 12  | ap_chst   | plain `973`: game picture, clipped to the torso front    | guess      | no print reads like it: the game picture stays               |
 | 13  | tc_chst   | 973pac (yellow (14) / yellow (14) / red (4))             | close      | Islanders: feathers and a medallion on yellow                |
 | 14  | sb_chst   | 973p22 (black (0) / dark bluish gray (72) / yellow (14)) | close      | black jacket with a red cravat                               |
-| 15  | rr_chst   | none: game picture, clipped to the torso front           | guess      | the flaming RR is not in the library: the game picture stays |
-| 16  | gb_chst   | none: game picture, clipped to the torso front           | guess      | no print reads like it: the game picture stays               |
-| 17  | ad_chst   | none: game picture, clipped to the torso front           | guess      | no print reads like it: the game picture stays               |
+| 15  | rr_chst   | plain `973`: game picture, clipped to the torso front    | guess      | the flaming RR is not in the library: the game picture stays |
+| 16  | gb_chst   | plain `973`: game picture, clipped to the torso front    | guess      | no print reads like it: the game picture stays               |
+| 17  | ad_chst   | plain `973`: game picture, clipped to the torso front    | guess      | no print reads like it: the game picture stays               |
 | 18  | il_chst   | 973p3j (yellow (14) / yellow (14) / yellow (14))         | close      | Islanders: green and red leaf collar on yellow               |
-| 19  | gs_chst   | none: game picture, clipped to the torso front           | guess      | no print reads like it: the game picture stays               |
+| 19  | gs_chst   | plain `973`: game picture, clipped to the torso front    | guess      | no print reads like it: the game picture stays               |
 | 20  | ww_chst   | 973p4k (black (0) / dark bluish gray (72) / yellow (14)) | close      | black vest with a red collar and a gold medal                |
 | 21  | eo_chst   | 973p1h (red (4) / red (4) / yellow (14))                 | close      | red jacket with white stars                                  |
 | 22  | mm_chst   | 973p81 (blue (1) / blue (1) / yellow (14))               | close      | Racers: blue jacket with Octan and OIL                       |

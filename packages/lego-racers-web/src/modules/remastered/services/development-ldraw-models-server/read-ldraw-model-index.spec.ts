@@ -4,14 +4,16 @@ import { join } from 'node:path'
 import { readLDrawModelIndex } from './read-ldraw-model-index.ts'
 
 describe('readLDrawModelIndex', () => {
-  it('lists cars by upper-case code and chassis recipes by lower-case name, leaving out notes', () => {
+  it('lists cars by upper-case code and chassis recipes by lower-case name, drivers by upper-case name, leaving out notes', () => {
     // Arrange
     const root = mkdtempSync(join(tmpdir(), 'ldraw-models-'))
     mkdirSync(join(root, 'chassis'))
+    mkdirSync(join(root, 'drivers'))
     for (const file of ['rrcm.ldr', 'KKCM.mpd', 'KKCM.ldr', '_convention-test.ldr', 'README.md']) {
       writeFileSync(join(root, file), '')
     }
     writeFileSync(join(root, 'chassis', 'JTCHAS0.ldr'), '')
+    writeFileSync(join(root, 'drivers', 'bvb.ldr'), '')
 
     // Act
     const index = readLDrawModelIndex(root)
@@ -20,6 +22,7 @@ describe('readLDrawModelIndex', () => {
     expect(index).toEqual({
       cars: { RRCM: 'rrcm.ldr', KKCM: 'KKCM.ldr' },
       chassis: { jtchas0: 'chassis/JTCHAS0.ldr' },
+      drivers: { BVB: 'drivers/bvb.ldr' },
     })
   })
 
@@ -31,6 +34,6 @@ describe('readLDrawModelIndex', () => {
     const index = readLDrawModelIndex(root)
 
     // Assert
-    expect(index).toEqual({ cars: {}, chassis: {} })
+    expect(index).toEqual({ cars: {}, chassis: {}, drivers: {} })
   })
 })

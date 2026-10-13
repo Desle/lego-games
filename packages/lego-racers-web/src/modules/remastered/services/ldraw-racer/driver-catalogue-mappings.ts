@@ -1,11 +1,11 @@
-import { MinifigPartConfidence } from './ldraw-minifig-parts.types.ts'
+import { MinifigPartConfidence } from './driver-catalogue-mappings.types.ts'
 import type {
   LDrawFaceMatch,
   LDrawHat,
   LDrawHatMatch,
   LDrawLegsMatch,
   LDrawTorsoMatch,
-} from './ldraw-minifig-parts.types.ts'
+} from './driver-catalogue-mappings.types.ts'
 
 const BLACK = 0
 const BLUE = 1
@@ -24,6 +24,9 @@ const TRANSPARENT_BLACK = 40
 const { EXACT, CLOSE, GUESS } = MinifigPartConfidence
 const PLAIN_LEFT_LEG = '3817b'
 const PLAIN_RIGHT_LEG = '3816b'
+const PLAIN_TORSO = '973'
+// The torsos of the catalogue's type 1 (`BODYPART.PCB`), whose figure holds a hook in its left hand.
+const HOOK_TORSOS: readonly string[] = Object.freeze(['vb_chst', 'cr_chst'])
 
 const getHat = (part: string, colorCode: number): LDrawHat => Object.freeze({ part, colorCode })
 
@@ -53,21 +56,23 @@ const getTorsoMatch = (
   catalogName: string,
   confidence: LDrawTorsoMatch['confidence'],
   source: string,
-  print: readonly [string, number, number, number] | null
+  [part, torsoColorCode, leftArmColorCode, rightArmColorCode, handColorCode]: readonly [
+    string,
+    number,
+    number,
+    number,
+    number,
+  ]
 ): LDrawTorsoMatch =>
   Object.freeze({
     catalogName,
     confidence,
     source,
-    print:
-      print === null
-        ? null
-        : Object.freeze({
-            part: print[0],
-            torsoColorCode: print[1],
-            armColorCode: print[2],
-            handColorCode: print[3],
-          }),
+    part,
+    torsoColorCode,
+    armColorCodes: Object.freeze({ left: leftArmColorCode, right: rightArmColorCode }),
+    handColorCode,
+    isHookHand: HOOK_TORSOS.includes(catalogName),
   })
 
 const getLegsMatch = (
@@ -256,11 +261,13 @@ export const LDRAW_FACES: readonly LDrawFaceMatch[] = Object.freeze([
   getFaceMatch('vv_', '3626bp09', YELLOW, GUESS, 'female, brown eyebrows, pupils and eyelashes'),
 ])
 
-// The torsos of `BODYPART.PCB` by catalogue index: the library's printed torso (body, arm and hand colours as the official figure has
-// them), or none where no print reads like the game's picture (the picture stays, clipped to the front of the torso).
+// The torsos of `BODYPART.PCB` by catalogue index: the library's printed torso (body, left arm, right arm and hand colours as the
+// official figure has them), or the plain torso where no print reads like the game's picture (the picture is drawn on its front, clipped
+// to it). A torso of the catalogue's type 1 (`vb_chst`, `cr_chst`) has a hook for its left hand.
 export const LDRAW_TORSOS: readonly LDrawTorsoMatch[] = Object.freeze([
   getTorsoMatch('tu_chst', CLOSE, 'Racers: red jacket, Octan, TEAM 1 RACING', [
     '973p80',
+    RED,
     RED,
     RED,
     YELLOW,
@@ -270,15 +277,18 @@ export const LDRAW_TORSOS: readonly LDrawTorsoMatch[] = Object.freeze([
     YELLOW,
     YELLOW,
     YELLOW,
+    YELLOW,
   ]),
   getTorsoMatch('bb_chst', EXACT, 'fig-000648 Bat Lord, Fright Knights: bat lord tunic', [
     '973p4i',
     RED,
     BLACK,
+    BLACK,
     YELLOW,
   ]),
   getTorsoMatch('jt_chst', EXACT, 'fig-000359 Johnny Thunder (5938, 1998): red bandana, gun', [
     '973pa3',
+    TAN,
     TAN,
     TAN,
     YELLOW,
@@ -287,11 +297,13 @@ export const LDRAW_TORSOS: readonly LDrawTorsoMatch[] = Object.freeze([
     '973pa7',
     TAN,
     TAN,
+    TAN,
     BLACK,
   ]),
   getTorsoMatch('gm_chst', EXACT, 'fig-000451 Gypsy Moth (3073, 1999): insectoid female', [
     '973p58',
     BLACK,
+    DARK_GRAY,
     DARK_GRAY,
     BLUE,
   ]),
@@ -299,16 +311,19 @@ export const LDRAW_TORSOS: readonly LDrawTorsoMatch[] = Object.freeze([
     '973p4e',
     RED,
     WHITE,
+    WHITE,
     YELLOW,
   ]),
   getTorsoMatch('nh_chst', CLOSE, 'white with a black ring and a yellow arrowhead', [
     '973p55',
     WHITE,
     LIGHT_GRAY,
+    LIGHT_GRAY,
     BLACK,
   ]),
   getTorsoMatch('al_chst', GUESS, 'red jacket with blue stripes, Pirates', [
     '973p3f',
+    RED,
     RED,
     RED,
     YELLOW,
@@ -318,9 +333,11 @@ export const LDRAW_TORSOS: readonly LDrawTorsoMatch[] = Object.freeze([
     BROWN,
     YELLOW,
     YELLOW,
+    YELLOW,
   ]),
   getTorsoMatch('bj_chst', CLOSE, 'blue jacket with a brown vest, Pirates', [
     '973p39',
+    BLUE,
     BLUE,
     BLUE,
     YELLOW,
@@ -329,11 +346,18 @@ export const LDRAW_TORSOS: readonly LDrawTorsoMatch[] = Object.freeze([
     '973p62',
     BLACK,
     WHITE,
+    WHITE,
     BLUE,
   ]),
-  getTorsoMatch('ap_chst', GUESS, 'no print reads like it: the game picture stays', null),
+  getTorsoMatch(
+    'ap_chst',
+    GUESS,
+    'no print reads like it: the plain torso shows the game picture, in the nearest brick colours of the picture',
+    [PLAIN_TORSO, BLACK, BLACK, BLACK, DARK_GRAY]
+  ),
   getTorsoMatch('tc_chst', CLOSE, 'Islanders: feathers and a medallion on yellow', [
     '973pac',
+    YELLOW,
     YELLOW,
     YELLOW,
     RED,
@@ -342,32 +366,51 @@ export const LDRAW_TORSOS: readonly LDrawTorsoMatch[] = Object.freeze([
     '973p22',
     BLACK,
     DARK_BLUISH_GRAY,
+    DARK_BLUISH_GRAY,
     YELLOW,
   ]),
   getTorsoMatch(
     'rr_chst',
     GUESS,
-    'the flaming RR is not in the library: the game picture stays',
-    null
+    'the flaming RR is not in the library: the plain torso shows the game picture, in the nearest brick colours of the picture',
+    [PLAIN_TORSO, LIGHT_GRAY, RED, BLUE, BLACK]
   ),
-  getTorsoMatch('gb_chst', GUESS, 'no print reads like it: the game picture stays', null),
-  getTorsoMatch('ad_chst', GUESS, 'no print reads like it: the game picture stays', null),
+  getTorsoMatch(
+    'gb_chst',
+    GUESS,
+    'no print reads like it: the plain torso shows the game picture, in the nearest brick colours of the picture',
+    [PLAIN_TORSO, RED, RED, RED, LIGHT_GRAY]
+  ),
+  getTorsoMatch(
+    'ad_chst',
+    GUESS,
+    'no print reads like it: the plain torso shows the game picture, in the nearest brick colours of the picture',
+    [PLAIN_TORSO, BLACK, WHITE, WHITE, BLACK]
+  ),
   getTorsoMatch('il_chst', CLOSE, 'Islanders: green and red leaf collar on yellow', [
     '973p3j',
     YELLOW,
     YELLOW,
     YELLOW,
+    YELLOW,
   ]),
-  getTorsoMatch('gs_chst', GUESS, 'no print reads like it: the game picture stays', null),
+  getTorsoMatch(
+    'gs_chst',
+    GUESS,
+    'no print reads like it: the plain torso shows the game picture, in the nearest brick colours of the picture',
+    [PLAIN_TORSO, GREEN, GREEN, GREEN, YELLOW]
+  ),
   getTorsoMatch('ww_chst', CLOSE, 'black vest with a red collar and a gold medal', [
     '973p4k',
     BLACK,
     DARK_BLUISH_GRAY,
+    DARK_BLUISH_GRAY,
     YELLOW,
   ]),
-  getTorsoMatch('eo_chst', CLOSE, 'red jacket with white stars', ['973p1h', RED, RED, YELLOW]),
+  getTorsoMatch('eo_chst', CLOSE, 'red jacket with white stars', ['973p1h', RED, RED, RED, YELLOW]),
   getTorsoMatch('mm_chst', CLOSE, 'Racers: blue jacket with Octan and OIL', [
     '973p81',
+    BLUE,
     BLUE,
     BLUE,
     YELLOW,
@@ -376,10 +419,12 @@ export const LDRAW_TORSOS: readonly LDrawTorsoMatch[] = Object.freeze([
     '973pz4',
     WHITE,
     WHITE,
+    WHITE,
     YELLOW,
   ]),
   getTorsoMatch('cr_chst', CLOSE, 'Pirates: captain jacket with a green ascot and a strap, hook', [
     '973p36',
+    BLACK,
     BLACK,
     BLACK,
     YELLOW,
@@ -388,10 +433,12 @@ export const LDRAW_TORSOS: readonly LDrawTorsoMatch[] = Object.freeze([
     '973pfb',
     BLACK,
     DARK_BLUISH_GRAY,
+    DARK_BLUISH_GRAY,
     YELLOW,
   ]),
   getTorsoMatch('mj_chst', CLOSE, 'Forestmen: blue tunic with a tied lace and a purse', [
     '973p46',
+    BLUE,
     BLUE,
     BLUE,
     YELLOW,
@@ -400,11 +447,13 @@ export const LDRAW_TORSOS: readonly LDrawTorsoMatch[] = Object.freeze([
     '973pa2',
     BLACK,
     BLACK,
+    BLACK,
     RED,
   ]),
   getTorsoMatch('vv_chst', GUESS, 'grey vest with a gauge and a pocket', [
     '973p29',
     LIGHT_GRAY,
+    WHITE,
     WHITE,
     YELLOW,
   ]),
@@ -462,3 +511,7 @@ export const LDRAW_LEGS: readonly LDrawLegsMatch[] = Object.freeze([
   getPlainLegsMatch('rr_leg', 'light grey legs', LIGHT_BLUISH_GRAY, LIGHT_BLUISH_GRAY),
   getPlainLegsMatch('vv_leg', 'light grey legs', LIGHT_BLUISH_GRAY, LIGHT_BLUISH_GRAY),
 ])
+
+// Catalogue entries (by name) with no mapping yet: a driver who wears one is drawn by the original. Every other entry of the game's
+// catalogue has a row above (the spec checks it against `BODYPART.PCB`).
+export const DRIVER_CATALOGUE_GAPS: readonly string[] = Object.freeze([])

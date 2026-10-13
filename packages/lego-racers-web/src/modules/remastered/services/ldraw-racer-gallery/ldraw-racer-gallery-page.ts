@@ -45,6 +45,7 @@ import type {
   GalleryView,
 } from './ldraw-racer-gallery-page.types.ts'
 import { setUpLDrawModelParser } from '../ldraw-worker/ldraw-model-parser.ts'
+import { loadLDrawModelIndex } from '../ldraw-models/ldraw-model-client.ts'
 
 useLookFromAddress()
 setUpLDrawModelParser()
@@ -88,7 +89,10 @@ const loadArchive = async (): Promise<JamArchive> => {
   const response = await fetch(DEVELOPMENT_JAM_ROUTE)
   return openJamArchive(new Uint8Array(await response.arrayBuffer()))
 }
-const archivePromise = loadArchive()
+// The models folder's index names the driver files, so it is read before any driver is drawn.
+const archivePromise = Promise.all([loadArchive(), loadLDrawModelIndex()]).then(
+  ([archive]) => archive
+)
 const getArchive = () => archivePromise
 
 // A blank canvas of this size that drawing into parts of it keeps.
