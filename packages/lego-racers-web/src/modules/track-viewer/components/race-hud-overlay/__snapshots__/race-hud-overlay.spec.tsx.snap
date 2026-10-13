@@ -1,5 +1,27 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`RaceHudOverlay > draws the canvas with a device pixel per stage pixel times the ratio 1`] = `
+<div>
+  <div
+    class="pointer-events-none absolute inset-0"
+    data-testid="race-hud"
+  >
+    <canvas
+      aria-hidden="true"
+      class="absolute inset-0"
+      height="1200"
+      style="width: 800px; height: 600px;"
+      width="1600"
+    />
+    <span
+      class="absolute right-2 bottom-2 rounded bg-black/60 px-2 py-1 text-xs text-slate-200"
+    >
+      racing
+    </span>
+  </div>
+</div>
+`;
+
 exports[`RaceHudOverlay > renders default snapshot 1`] = `
 <div>
   <div

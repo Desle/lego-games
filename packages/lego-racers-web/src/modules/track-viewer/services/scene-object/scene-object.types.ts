@@ -31,7 +31,11 @@ export type SceneObject = {
   readonly setInstanceColourShift: (name: string, shift: ColourShiftLike | null) => void
   // Shows, for every instance with several levels, the level the squared distance to this camera position selects
   // (GolDP.dll 0x10027cc0), and none past the last.
-  readonly selectLevels: (camera: Vector3Like) => void
+  // An instance the race moves (hazards, clips) shows the level its own distances and sphere select, and none when its
+  // sphere is outside the frustum (GolDP.dll 0x100240b0).
+  readonly selectLevels: (camera: Vector3Like, view?: FrustumView) => void
+  // The distances and the sphere the simulation holds for the instances with this name (every world's, by name).
+  readonly setInstanceRuntime: (name: string, runtime: InstanceRuntime) => unknown
   // Shows, for every BSP tree instance, only the leaves the camera's visibility list names and the frustum does not
   // reject (GolDP.dll 0x100092a0).
   readonly selectVisibleLeaves: (view: FrustumView) => void
@@ -42,11 +46,28 @@ export type SceneObject = {
   // Advances every animated instance by this many whole milliseconds.
   readonly animate: (deltaMilliseconds: number) => void
   readonly animatedInstanceCount: number
+  // Puts the material the scene names into a slot of the material table of an instance's level (LEGORacers.exe
+  // 0x00410750, which the material animations of 0x004104c0 call); false when the instance, level or material is unknown.
+  readonly setMaterialSlot: (
+    instanceName: string,
+    levelIndex: number,
+    slot: number,
+    materialName: string
+  ) => boolean
   // Lights the skeleton models that have normals and no vertex colours with these lights again (null: none, as in a race).
   readonly setLights: (lights: SceneLights | null) => void
   // Poses every skeleton instance from this animation state (a racer's figure, whose clock the race keeps).
   readonly setAnimationState: (state: SkeletonAnimationState) => void
   readonly dispose: () => void
+}
+
+// What the race simulation holds of an instance that decides whether it is drawn: the squared distances of its levels
+// (a hazard sets them to hide it) and, for an animated skeleton instance, the sphere it is culled by (0x10023ef0).
+export type InstanceRuntime = {
+  // Where the simulation holds the instance (a mirrored race negates y, as the camera's world does).
+  readonly position: Vector3Like
+  readonly levelSquaredDistances: readonly number[]
+  readonly sphere: { readonly centre: Vector3Like; readonly radius: number } | null
 }
 
 export type SceneObjectOptions = {
@@ -65,8 +86,15 @@ export type SceneObjectContext = {
   readonly textureCache: TextureCache
   readonly materials: Map<string, Material>
   readonly geometries: Map<string, BufferGeometry>
+  // The batch meshes that read each slot of a material table, for the material animations that rewrite the slot.
+  readonly slotMeshes: Map<string, readonly SlotMesh[]>
   // Counts the meshes created so far, for the background's draw order.
   readonly nextDrawOrder: () => number
+}
+
+export type SlotMesh = {
+  readonly mesh: Mesh
+  readonly source: SceneMesh
 }
 
 // An instance as three.js objects, with the function that moves it if it is animated.

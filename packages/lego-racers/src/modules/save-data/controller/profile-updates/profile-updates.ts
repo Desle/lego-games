@@ -61,6 +61,15 @@ export const getUnlockedCircuitRunLength = (profile: SaveProfile): number => {
 export const getAreAllGhostsBeaten = (profile: SaveProfile): boolean =>
   profile.ghostBeatenFlags === ALL_GHOSTS_BEATEN_FLAGS
 
+const GHOST_FLAG_WORD_BITS = 16 // TEST AX,AX at 0x00488347
+
+// FUN_004881a0: the champion ghost of the race at `raceIndex` of LEGORACE.RCB is beaten when its bit is set in the profile's ghost
+// flags (`FUN_0042f240`, tested as a 16-bit word, so a race past 15 has none).
+export const getIsGhostBeaten = (profile: SaveProfile, raceIndex: number): boolean =>
+  raceIndex >= 0 &&
+  raceIndex < GHOST_FLAG_WORD_BITS &&
+  (profile.ghostBeatenFlags & (1 << raceIndex)) !== 0
+
 // FUN_00483c60 and its three twins: a driver part is free below 3, needs every ghost beaten at 0x80, and otherwise
 // needs the trophy of circuit `requirement - 3`.
 export const getIsPartUnlocked = (profile: SaveProfile, requirement: number): boolean => {

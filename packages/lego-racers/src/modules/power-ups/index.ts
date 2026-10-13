@@ -1,4 +1,7 @@
 export {
+  activateLauncherCannonball,
+  activateLauncherCurse,
+  activateLauncherWand,
   activateLauncherWarp,
   activatePowerUp,
   getStepWithRacerTurbosEnded,
@@ -10,9 +13,13 @@ export {
 } from './controller/computer-power-up-use/computer-power-up-use.ts'
 export {
   checkEffectEmitter,
+  placeEffectEmitter,
+  placeOrientedEffectEmitter,
+  placeTurboSmoke,
   releaseEffectEmitter,
   startEffectEmitter,
 } from './controller/effect-emitters/effect-emitters.ts'
+export type { EffectEmitterOwner } from './controller/effect-emitters/effect-emitters.types.ts'
 export {
   endProjectileFlight,
   hitRacerWithProjectile,
@@ -60,7 +67,7 @@ export type {
 } from './controller/power-up-world/power-up-world.types.ts'
 export { usePowerUp } from './controller/use-power-up/use-power-up.ts'
 export type { WandBeamStep } from './controller/power-up-effect-timeline/power-up-effect-timeline.types.ts'
-export type { PowerUpEvent } from './events/power-up.events.types.ts'
+export type { CurseFigureFrame, PowerUpEvent } from './events/power-up.events.types.ts'
 export {
   getFarthestInCone,
   getNearestInCone,
@@ -101,6 +108,8 @@ export type {
   PowerUpBrickPlacement,
   BrickBase,
   PowerUpEffect,
+  LauncherCannonball,
+  LauncherMuzzle,
   WarpDestination,
   PowerUpEffects,
   PowerUpWorld,

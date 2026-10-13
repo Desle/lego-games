@@ -23,6 +23,7 @@
     "./emitter": "./src/modules/emitter/index.ts",
     "./decal": "./src/modules/decal/index.ts",
     "./event": "./src/modules/event/index.ts",
+    "./figure-builder": "./src/modules/figure-builder/index.ts",
     "./font-database": "./src/modules/font-database/index.ts",
     "./font-rendering": "./src/modules/font-rendering/index.ts",
     "./front-end": "./src/modules/front-end/index.ts",
@@ -44,6 +45,7 @@
     "./power-ups": "./src/modules/power-ups/index.ts",
     "./projectiles": "./src/modules/projectiles/index.ts",
     "./race": "./src/modules/race/index.ts",
+    "./ribbon": "./src/modules/ribbon/index.ts",
     "./race-audio": "./src/modules/race-audio/index.ts",
     "./race-camera": "./src/modules/race-camera/index.ts",
     "./race-catalog": "./src/modules/race-catalog/index.ts",
@@ -64,6 +66,7 @@
     "./skeletal-animation": "./src/modules/skeletal-animation/index.ts",
     "./skeleton": "./src/modules/skeleton/index.ts",
     "./track-logic": "./src/modules/track-logic/index.ts",
+    "./projectile-trail": "./src/modules/projectile-trail/index.ts",
     "./skid-trail": "./src/modules/skid-trail/index.ts",
     "./session-recording": "./src/modules/session-recording/index.ts",
     "./session-replay": "./src/modules/session-replay/index.ts",
@@ -78,7 +81,8 @@
     "./track-material": "./src/modules/track-material/index.ts",
     "./trigger": "./src/modules/trigger/index.ts",
     "./world": "./src/modules/world/index.ts",
-    "./world-animation": "./src/modules/world-animation/index.ts"
+    "./world-animation": "./src/modules/world-animation/index.ts",
+    "./world-sprite": "./src/modules/world-sprite/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

@@ -1,11 +1,11 @@
 import type { BspPlane } from '@lego-games/lego-racers/bsp-tree'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
-import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
+import type { RaceWorlds } from '@lego-games/lego-racers/world-animation'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import type { ScreenFadeOverlay } from '../screen-fade-overlay/screen-fade-overlay.types.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
-import type { PerspectiveCamera, Scene as ThreeScene } from 'three'
+import type { Group, PerspectiveCamera, Scene as ThreeScene } from 'three'
 import type {
   EffectViews,
   GhostCar,
@@ -26,11 +26,13 @@ export type RaceViewport = {
     screenFades?: readonly ScreenFadeView[],
     fieldOfViewDegrees?: number
   ) => void
-  // Shows the simulation's hazards and emitters: the track world's skeleton instances take the clip states the
+  // Shows the simulation's hazards and emitters: the worlds' skeleton instances take the clip states the
   // simulation advanced, and the emitter pools' particles are drawn as points.
-  readonly showHazards: (trackWorld: WorldAnimation, pools: readonly (EmitterPool | null)[]) => void
+  readonly showHazards: (worlds: RaceWorlds, pools: readonly (EmitterPool | null)[]) => void
   // Advances the backdrop and the sky by whole milliseconds (the track's instances follow the simulation).
   readonly animate: (deltaMilliseconds: number) => void
+  // Draws the race at another size, keeping the camera's vertical field of view.
+  readonly resize: (size: RaceStageSize) => void
   readonly render: () => void
   readonly dispose: () => void
 }
@@ -66,6 +68,8 @@ export type RacerRig = {
   readonly wheels: ModelObject
   readonly body: ModelObject | null
   readonly driver: ModelObject | null
+  // Hands the drawings of a viewer extension, if there are any, where the parts above are now.
+  readonly sync: (opacity: number) => void
   readonly objects: readonly SceneObject[]
 }
 
@@ -73,7 +77,12 @@ export type RacerRig = {
 export type RaceStage = Pick<RaceViewport, 'update' | 'showHazards' | 'animate' | 'dispose'> & {
   readonly backgroundScene: ThreeScene
   readonly trackScene: ThreeScene
+  readonly trackGroup: Group
+  readonly trackKey: string
   readonly screenFadeOverlay: ScreenFadeOverlay
   readonly camera: PerspectiveCamera
   readonly racerRigs: readonly RacerRig[]
 }
+
+// The model objects a racer's rig is made of, before a drawing of a viewer extension takes any of them over.
+export type RacerModelObjects = Pick<RacerRig, 'wheels' | 'body' | 'driver'>

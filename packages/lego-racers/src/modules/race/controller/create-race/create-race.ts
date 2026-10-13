@@ -204,7 +204,8 @@ const getTrackGroundQuery = (definition: RaceDefinition): GroundQuery | null => 
   if (definition.getGroundPoint !== null) return definition.getGroundPoint
   const known = groundQueries.get(definition)
   if (known !== undefined) return known
-  const track = definition.collisionObjects[0]
+  // The track is the first object of the cars' list, not always the first instance (RACEC0R1 starts with startfin).
+  const track = definition.collisionObjects[definition.carCollisionObjectIndices[0] ?? 0]
   const query =
     track === undefined
       ? null
@@ -214,7 +215,11 @@ const getTrackGroundQuery = (definition: RaceDefinition): GroundQuery | null => 
             track.volume,
             () => NO_PROBE_SURFACE
           )
-          return (start, end) => probe(start, end)?.point ?? null
+          return (start, end, onNormal) => {
+            const hit = probe(start, end)
+            if (hit !== null) onNormal?.(hit.normal)
+            return hit?.point ?? null
+          }
         })()
   groundQueries.set(definition, query)
   return query
@@ -337,6 +342,9 @@ export const createRace = (definition: RaceDefinition): RaceState => {
       createdTrackLogic,
       definition.introductionCameraObject
     ),
+    introductionCameraPoint: definition.introductionCameraPoint,
+    introductionCameraVectors: definition.introductionCameraVectors,
+    isMirrored: definition.isMirrored,
     tuneIndex: definition.musicTuneCount > 0 ? INTRODUCTION_TUNE_INDEX : null,
     unidentifiedCountdownMilliseconds: 0,
     raceModeFlags: definition.raceModeFlags,

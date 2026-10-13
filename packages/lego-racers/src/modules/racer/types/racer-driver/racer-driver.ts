@@ -7,7 +7,7 @@ import {
   startRouteFollowerAtLoop,
 } from '../../../racer-ai/index.ts'
 import type { ComputerRacerRoute } from '../../../computer-racer-route/index.ts'
-import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
+import { getFloatFromBits, ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Quaternion } from '../../../simulation-math/index.ts'
 import {
   getCarBodyMaximumCurvature,
@@ -50,7 +50,7 @@ const FULL_THROTTLE = THROTTLE_FORCE * SLIDE_BOOST_MULTIPLIER
 const SLIDE_DAMPING = Math.fround(0.85) // 0x3f59999a
 const BRAKING_SLIDE_DAMPING = 0.25 // 0x3e800000
 const SLIDE_RATE = Math.fround(Math.PI) // 0x40490fdb
-const STEERING_SLIDE_RATE = Math.fround(Math.SQRT1_2) // 0x3f350481
+const STEERING_SLIDE_RATE = getFloatFromBits(0x3f350481) // 0x004200c0: not fround(sqrt(1/2)) = 0x3f3504f3
 const POWER_SLIDE_FACTOR = Math.fround(0.3) // 0x3e99999a
 const BRAKING_POWER_SLIDE_FACTOR = Math.fround(0.4) // 0x3ecccccd
 const SLIDE_BOOST_MILLISECONDS = 300 // 0x12c

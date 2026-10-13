@@ -1,13 +1,16 @@
-import { decodeMusic, decodeSoundBank, decodeSoundEffect } from '@lego-games/lego-racers/audio'
+import { decodeSoundBank, decodeSoundEffect } from '@lego-games/lego-racers/audio'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import {
   createAudioBuffer,
   createAudioContext,
+  createMusicBuffer,
   SILENT_PLAYER,
 } from '../audio-buffer/audio-buffer.ts'
+import { createSoundReplacements } from '../sound-replacements/sound-replacements.ts'
 import type { FrontEndAudioPlayer } from './front-end-audio-player.types.ts'
 
 const SOUND_DIRECTORY = 'MENUDATA\\SOUNDS'
+const MUSIC_DIRECTORY = 'MUSIC'
 const MUSIC_LIST_PATH = 'MENUDATA\\LEGOMSC'
 // The volume FrontEnd_SetMusic passes is DirectSound's; Web Audio gain above 1 would clip.
 const MUSIC_GAIN = 1
@@ -21,6 +24,11 @@ export const createFrontEndAudioPlayer = (
   const context = createAudioContext()
   if (context === null) return SILENT_PLAYER
   const buffers = new Map<string, AudioBuffer | null>()
+  const replacements = createSoundReplacements(context)
+  const getSoundPath = (name: string) => `${SOUND_DIRECTORY}\\${name.toUpperCase()}.PCM`
+  replacements.preload(
+    archive.getFilePaths().filter((path) => path.startsWith(`${SOUND_DIRECTORY}\\`))
+  )
   const tuneNames = decodeSoundBank(archive.readFile(MUSIC_LIST_PATH)).soundPaths
   let music: AudioBufferSourceNode | null = null
   // A tune that finishes loading after another was asked for must not start.
@@ -28,9 +36,7 @@ export const createFrontEndAudioPlayer = (
   const getBuffer = (name: string): AudioBuffer | null => {
     if (buffers.has(name)) return buffers.get(name) ?? null
     try {
-      const effect = decodeSoundEffect(
-        archive.readFile(`${SOUND_DIRECTORY}\\${name.toUpperCase()}.PCM`)
-      )
+      const effect = decodeSoundEffect(archive.readFile(getSoundPath(name)))
       const buffer =
         Math.floor(effect.samples.length / effect.channelCount) > 0
           ? createAudioBuffer(context, effect.samples, effect.channelCount, effect.sampleRate)
@@ -47,7 +53,7 @@ export const createFrontEndAudioPlayer = (
     resume: () => void context.resume(),
     playSound: (name: string) => {
       if (isDisposed) return
-      const buffer = getBuffer(name)
+      const buffer = replacements.getLoaded(getSoundPath(name)) ?? getBuffer(name)
       if (buffer === null) return
       const source = context.createBufferSource()
       source.buffer = buffer
@@ -62,18 +68,15 @@ export const createFrontEndAudioPlayer = (
       music = null
       const tuneName = listIndex === null ? undefined : tuneNames[listIndex]
       if (tuneName === undefined || readTune === null) return
-      readTune(tuneName.toLowerCase())
-        .then((bytes) => {
+      Promise.all([
+        readTune(tuneName.toLowerCase()),
+        replacements.load(`${MUSIC_DIRECTORY}\\${tuneName}.tun`),
+      ])
+        .then(([bytes, replacement]) => {
           if (bytes === null || request !== musicRequest) return
-          const decoded = decodeMusic(bytes)
           const source = context.createBufferSource()
           const gain = context.createGain()
-          source.buffer = createAudioBuffer(
-            context,
-            decoded.samples,
-            decoded.channelCount,
-            decoded.sampleRate
-          )
+          source.buffer = replacement ?? createMusicBuffer(context, bytes)
           source.loop = true
           gain.gain.value = MUSIC_GAIN
           source.connect(gain).connect(context.destination)

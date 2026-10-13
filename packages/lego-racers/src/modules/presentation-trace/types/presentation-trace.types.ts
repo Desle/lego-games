@@ -13,6 +13,8 @@ export type PresentationScenario = {
   readonly localPlayerCount: number
   readonly circuitName: string
   readonly isMirrored: boolean
+  // Game mode 2 (settings +0x24): the race has the champion's ghost.
+  readonly isTimeTrial?: boolean
   readonly frames: readonly PresentationFrameInput[]
   // The frames whose draws are recorded (draws are large); null records every frame.
   readonly recordFrames: readonly number[] | null

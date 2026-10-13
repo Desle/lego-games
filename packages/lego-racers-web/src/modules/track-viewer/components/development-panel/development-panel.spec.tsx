@@ -7,6 +7,10 @@ const getProps = (overrides: Partial<DevelopmentPanelProps> = {}): DevelopmentPa
   onTrackViewerOpened: vi.fn(),
   onRaceStopped: vi.fn(),
   onRecordingDownloaded: vi.fn(),
+  onEverythingUnlocked: vi.fn(),
+  selectors: [
+    { label: 'Textures (reloads)', options: ['ultrasharp'], selected: null, onSelected: vi.fn() },
+  ],
   onOverlayClosed: vi.fn(),
   ...overrides,
 })

@@ -32,7 +32,7 @@ Ported in `packages/lego-racers/src/modules/race` (and the modules it uses). Eve
 - States 3 to 5 (`0x00434c80`, `0x00434eb0`, `0x00435180`): results hold 5 s when a points record exists; then `exit` = FINISHED and `race.ended` carries it.
 - Points record (`race +0x18`): 30, 20, 10, 3, 2, 1 by place (`0x004b0b58`); `0x004402c0` record, `0x00440330` ticker (restarts at 400), `0x00440860` clear.
 - Pause menu (`+0x30c0`): `0x00436010` enter, `0x00436160` resume, blink timer wraps at 500 ms; restart and quit ask for a confirmation. A demonstration ends at any key. `RaceExit`: NONE, FINISHED, QUIT, RESTART, LEFT, DEMONSTRATION_INTERRUPTED.
-- **Hypotheses:** the in-place restart `0x004362e0` is exposed as `RaceExit.RESTART`; `+0x30a0 == 2` is set on confirm (its writer is unknown); `+0x7c4` is treated as 0.
+- **Hypotheses:** the in-place restart `0x004362e0` is exposed as `RaceExit.RESTART`; `+0x30a0 == 2` is set when the confirm key goes up after it went down (`0x004278c0`, see [pause-menu.md](pause-menu.md)); `+0x7c4` is treated as 0.
 
 ## Headless runs
 
@@ -40,7 +40,7 @@ Ported in `packages/lego-racers/src/modules/race` (and the modules it uses). Eve
 
 ## Timed effect (the curse)
 
-`0x00439900` (pass on: the receiver takes the giver's milliseconds left, charge 1000, racer flag `0x800`, driver flag `0x10`, vehicle reaction 2, car body held by `0x00429380`), `0x00439b00` (end: countdown 0, flags cleared, `0x004293c0`) and `0x004397b0` (car body slot `0x00429c30`) are ported with differential specs (figure, effect object and vehicle look stubbed out: presentation, not modelled). `0x00429330` (boost end, top speed = scale x 120) is ported with them; car body `+0x734` is not modelled. The boost start `0x004292e0` is not ported.
+`0x00439900` (pass on: the receiver takes the giver's milliseconds left, charge 1000, racer flag `0x800`, driver flag `0x10`, vehicle reaction 2, car body held by `0x00429380`), `0x00439b00` (end: countdown 0, flags cleared, `0x004293c0`) and `0x004397b0` (car body slot `0x00429c30`) are ported with differential specs (figure, effect object and vehicle look stubbed out there; the curse figure and the tint are ported and verified by the golden trace, see [power-up-visuals.md](power-up-visuals.md)). `0x00429330` (boost end, top speed = scale x 120) is ported with them; car body `+0x734` is not modelled. The boost start `0x004292e0` is not ported.
 
 ## Still open
 

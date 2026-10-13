@@ -22,11 +22,13 @@ import { formatDivergence, runGoldenTrace } from './run-golden-trace.ts'
 
 const TRACE_TIMEOUT_MILLISECONDS = 1_800_000
 const ROYAL_KNIGHTS_RACEWAY = 'RACEC0R0'
+const CURSE_GRANT_FRAME = 162
+const CURSE_ACCELERATE_FRAME = 175
 // The unported emitters of power-up objects and projectiles (oil slicks, cannon balls) draw from the random table in
 // the original; the race of each is named in golden-trace.md.
 const OTHER_TRACKS = [
-  { folder: 'RACEC0R1', expected: { frame: 436, field: 'powerUps.registry' } },
-  { folder: 'RACEC0R2', expected: { frame: 278, field: 'racer0.body.forwardSpeed' } },
+  { folder: 'RACEC0R1', expected: null },
+  { folder: 'RACEC0R2', expected: null },
   { folder: 'RACEC0R3', expected: null },
   { folder: 'RACEC1R0', expected: null },
   { folder: 'RACEC3R0', expected: null },
@@ -91,10 +93,27 @@ const getCases = (): readonly ScenarioCase[] => {
       expected: null,
     },
     {
+      // The computers use curses (power-up 4, level 3) from frame 164 and the player, accelerating from 175, drives into
+      // one at 191: the curse figure circles the cursed racers (0x0043f530) and is handed on or let go.
+      scenario: createTraceScenario({
+        name: 'royal-knights-curse',
+        raceFolder: ROYAL_KNIGHTS_RACEWAY,
+        racerCodes: getCodes(ROYAL_KNIGHTS_RACEWAY),
+        frames: [...getIdleFrames(CURSE_ACCELERATE_FRAME), ...holdBindings(405, ['accelerate'])],
+        powerUpGrants: [1, 2, 3, 4, 5].map((racer) => ({
+          frame: CURSE_GRANT_FRAME,
+          racer,
+          kind: 4,
+          level: 3,
+        })),
+      }),
+      expected: null,
+    },
+    {
       scenario: royalKnights('royal-knights-route-driving', [
         ...getRouteDrivingFrames(drivingDefinition, 3000),
       ]),
-      expected: { frame: 1882, field: 'powerUps.registry' },
+      expected: null,
     },
     {
       scenario: createTraceScenario({

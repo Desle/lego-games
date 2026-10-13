@@ -1,7 +1,7 @@
 import type { EmitterPool } from '../../emitter/index.ts'
 import type { LineProbe } from '../../projectiles/index.ts'
 import type { RandomTable, RandomTablePosition } from '../../random-table/index.ts'
-import type { FloatArithmetic } from '../../simulation-math/index.ts'
+import type { FloatArithmetic, Vector3 as FrameVector } from '../../simulation-math/index.ts'
 import type { WorldAnimation } from '../../world-animation/index.ts'
 import type { HazardData } from './hazard-data.types.ts'
 import type { Hazard, Vector3 } from './hazard.types.ts'
@@ -49,6 +49,8 @@ export type HazardEffect =
       readonly effectKind: number
       readonly racerIndex: number | null
       readonly launcher: HazardLauncher
+      // The hazard that asked, set by the update loop: a launched effect follows that hazard's muzzle.
+      readonly hazardIndex?: number
     }
   | {
       // 0x0045b470: an explosion starts at the point where a hazard's projectile landed.
@@ -79,9 +81,12 @@ export type HazardSphere = {
 // What the hazard hands the power-up system as its launcher: where the effect starts (or, for a warp, where it
 // lands) and, for classes that give one, its direction.
 export type HazardLauncher = {
-  // Null where the position comes from the pose of the hazard's skeleton, which the port does not compute.
   readonly position: Vector3 | null
   readonly direction: Vector3 | null
+  // The periodic launcher's cannonball: where it lands (launcher +0x18..+0x20) and its speed (+0x30); null for the
+  // other classes.
+  readonly target: Vector3 | null
+  readonly speed: number | null
 }
 
 // A racer as a hazard sees it (racer +0xd04 flags, +0x5c frame position, car body +0x6c0 bit 2 at +0xaa8, and the
@@ -92,6 +97,8 @@ export type HazardRacer = {
   readonly position: Vector3
   readonly isSpinning: boolean
   readonly forwardSpeed: number
+  // Vehicle +0x3c0 (racer +0x3d8): a 4D track event put its colour shift on the racer (0x004400a0), clear after 0x004400e0.
+  readonly isColourShifted: boolean
 }
 
 export type HazardRandom = {
@@ -110,6 +117,14 @@ export type HazardBus = {
     parameter: Vector3 | null
   ) => void
   readonly stopSignal: (identifier: number, parameter: Vector3 | null) => void
+}
+
+// A camera's frame as the hazards that follow it read it (0x0048eb70 calls the frame's vtable +0x40 for the position and
+// +0x1c for the rows at +0x30 and +0x20): the position, the forward row and the second row.
+export type HazardCameraFrame = {
+  readonly position: FrameVector
+  readonly forward: FrameVector
+  readonly second: FrameVector
 }
 
 export type HazardSession = HazardBus & {

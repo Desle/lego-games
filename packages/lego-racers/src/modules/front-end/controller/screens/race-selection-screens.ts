@@ -1,6 +1,6 @@
 import type { Circuit } from '../../../circuit-database/index.ts'
 import { formatHudTime } from '../../../race-hud/index.ts'
-import { BestTimeKind, getBestTime } from '../../../save-data/index.ts'
+import { BestTimeKind, getBestTime, getIsGhostBeaten } from '../../../save-data/index.ts'
 import type { RaceCatalogEntry } from '../../../race-catalog/index.ts'
 import type { RaceSelectionKind } from '../../types/front-end-screen.types.ts'
 import type {
@@ -254,17 +254,17 @@ const getCircuitRaceWidgets = (runtime: ScreenRuntime): readonly FrontEndWidget[
   ]
 }
 
-// FUN_004881a0 (0x00488150 every 2,500 ms): the lap time shows first, then the race time, from the profile's tables at the
-// race's position in the catalog (0x00436930, 0x0042f290); a time that was never set shows NONE as its holder and no time.
-// Not exact: the original restarts the 2,500 ms countdown when the race on show changes, the port counts from the screen's opening.
-const BEST_TIME_SWAP_MILLISECONDS = 2500
+// FUN_004881a0 (0x00488150 every 2,500 ms, the countdown in the preview clock): the lap time shows first, then the race time, from
+// the profile's tables at the race's position in the catalog (0x00436930, 0x0042f290); a time that was never set shows NONE as its
+// holder and no time. The widget `timestat` (item 0x6d of MENUNAME.SRF, the text 0x49 "TIME TRIAL WON") shows while the champion ghost
+// of the race is beaten (profile ghost flags, widget flag 0x02 of +0x2dac).
 
 const getBestTimeWidgets = (
   runtime: ScreenRuntime,
   raceEntry: RaceCatalogEntry | undefined
 ): readonly FrontEndWidget[] => {
-  const { resources, settings, screenMilliseconds } = runtime
-  const isLapShown = Math.floor(screenMilliseconds / BEST_TIME_SWAP_MILLISECONDS) % 2 === 0
+  const { resources, settings } = runtime
+  const { isBestLapShown: isLapShown } = runtime.racePreview
   const raceIndex =
     raceEntry === undefined
       ? -1
@@ -292,6 +292,9 @@ const getBestTimeWidgets = (
     ),
     text('bestname', isSet ? bestTime.holderName : resources.getMenuText(FrontEndText.NONE)),
     text('besttime', isSet ? formatHudTime(bestTime.milliseconds) : ''),
+    ...(settings.saveFile !== null && getIsGhostBeaten(settings.saveFile.profile, raceIndex)
+      ? [text('timestat', resources.getMenuText(FrontEndText.TIME_TRIAL_WON))]
+      : []),
   ]
 }
 

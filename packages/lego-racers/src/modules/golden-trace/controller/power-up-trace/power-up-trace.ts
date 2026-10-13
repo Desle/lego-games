@@ -116,6 +116,14 @@ const getRegistryWords = (raceState: RaceState): readonly number[] =>
     ]
   })
 
+// The barrels' spin angles (effect +0x178) in pool order.
+const getBarrelSpinWords = (raceState: RaceState): readonly number[] =>
+  raceState.powerUpStep.world.effects.effects.flatMap((effect, index) =>
+    effect.kind === PowerUpEffectKind.BARREL
+      ? getFloatWords([raceState.projectileWorld.barrelSpins[index]?.angle ?? 0])
+      : []
+  )
+
 const getHeldLevelWords = (racers: readonly RacerPowerUps[]): TraceFields =>
   Object.fromEntries(
     racers.map((racer, index) => [`racer${String(index)}.powerUps.level`, [racer.enhancementLevel]])
@@ -129,6 +137,7 @@ export const getPowerUpTraceFields = (raceState: RaceState): TraceFields => {
     'powerUps.enhancementBricks': world.enhancementBricks.flatMap(getEnhancementBrickWords),
     'powerUps.effects': getEffectWords(raceState.powerUpStep),
     'powerUps.registry': getRegistryWords(raceState),
+    'powerUps.barrelSpins': getBarrelSpinWords(raceState),
     'powerUps.explosions': [
       ...getExplosionPoolWords(raceState.projectileWorld.explosions),
       ...getExplosionPoolWords(raceState.projectileWorld.spikedExplosions),

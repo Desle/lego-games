@@ -20,6 +20,9 @@ const RaceView = () => {
   const race = useRaceController()
   const { frameReference, scale } = useLetterboxScale(RACE_STAGE_SIZE)
   const isGameShown = race.status === RaceStatus.MENU || race.status === RaceStatus.RUNNING
+  // The menus stay 4:3; a race laid out to fill the window is drawn unscaled.
+  const isWideRace = race.status === RaceStatus.RUNNING && race.display.isFullWindow
+  const stageSize = isWideRace ? race.display.stageSize : RACE_STAGE_SIZE
   const racePanel = (
     <RacePanel
       status={race.status}
@@ -47,12 +50,16 @@ const RaceView = () => {
       )}
       <main ref={frameReference} className="fixed inset-0 overflow-hidden bg-black">
         <div
-          className="absolute top-1/2 left-1/2 overflow-hidden"
-          style={{
-            width: RACE_STAGE_SIZE.width,
-            height: RACE_STAGE_SIZE.height,
-            transform: `translate(-50%, -50%) scale(${String(scale)})`,
-          }}
+          className={`absolute overflow-hidden ${isWideRace ? 'top-0 left-0' : 'top-1/2 left-1/2'}`}
+          style={
+            isWideRace
+              ? { width: stageSize.width, height: stageSize.height }
+              : {
+                  width: RACE_STAGE_SIZE.width,
+                  height: RACE_STAGE_SIZE.height,
+                  transform: `translate(-50%, -50%) scale(${String(scale)})`,
+                }
+          }
         >
           {race.status === RaceStatus.MENU && race.gameJam !== null && race.randomTable !== null ? (
             <FrontEndView
@@ -75,9 +82,11 @@ const RaceView = () => {
           <RaceHudOverlay
             commands={race.hudCommands}
             imageUrls={race.hudImageUrls}
+            imageScales={race.hudImageScales}
             fonts={race.hudFonts}
-            width={RACE_STAGE_SIZE.width}
-            height={RACE_STAGE_SIZE.height}
+            width={stageSize.width}
+            height={stageSize.height}
+            pixelRatio={isWideRace ? race.display.pixelRatio : 1}
             phase={race.phase}
           />
         </div>

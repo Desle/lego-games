@@ -31,6 +31,7 @@ export const TEST_ANIMATION: SkeletalAnimation = Object.freeze({
       name: 'a0',
       framesPerMillisecond: 0.5,
       velocity: [0, 0, 0],
+      boundingSphere: [0, 0, 0, 0],
       firstTrackIndex: 0,
       frameCount: 300,
       loopLength: 299,
@@ -88,6 +89,7 @@ export const createTestRacer = (
   flags,
   position: [10, 20, 30] as Vector3,
   isSpinning: false,
+  isColourShifted: false,
   forwardSpeed: 50,
   ...overrides,
 })
@@ -121,7 +123,7 @@ export const createTestSession = (options: TestSessionOptions = {}): TestSession
     setEmitters: (pool) => {
       emitters = pool
     },
-    getRacer: () => null,
+    getRacer: (index) => options.racers?.[index] ?? null,
     getTableCosine: () => 1,
     probe: options.probe ?? (() => null),
     emit: (effect) => void effects.push(effect),

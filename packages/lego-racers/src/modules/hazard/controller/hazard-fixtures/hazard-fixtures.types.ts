@@ -3,6 +3,7 @@ import type { LineProbe } from '../../../projectiles/index.ts'
 import type { WorldAnimation } from '../../../world-animation/index.ts'
 import type {
   HazardEffect,
+  HazardRacer,
   HazardSession,
   HazardWorldKey,
 } from '../../types/hazard-runtime.types.ts'
@@ -13,6 +14,7 @@ export type TestSessionOptions = {
   readonly emitters?: EmitterPool | null
   readonly draws?: readonly number[]
   readonly probe?: LineProbe
+  readonly racers?: readonly HazardRacer[]
 }
 
 export type TestSession = {

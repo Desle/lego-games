@@ -1,3 +1,4 @@
+import type { RaceDisplay } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import type { HudCommand } from '@lego-games/lego-racers/race-hud'
 import type {
   FrontEndMemory,
@@ -20,6 +21,7 @@ export type RaceScreen = {
   readonly phase: string | null
   readonly hudCommands: readonly HudCommand[]
   readonly hudImageUrls: ReadonlyMap<string, string>
+  readonly hudImageScales: ReadonlyMap<string, number>
   readonly hudFonts: HudFonts | null
   readonly lapCount: number
   // The screen the menus open on: the main menu, or the result screen a circuit ended on.
@@ -28,6 +30,8 @@ export type RaceScreen = {
 }
 
 export type RaceController = RaceScreen & {
+  // How the race is laid out on the page.
+  readonly display: RaceDisplay
   readonly containerReference: RefObject<HTMLDivElement | null>
   // LEGO.JAM of the opened game while the menus show; null otherwise.
   readonly gameJam: Uint8Array | null

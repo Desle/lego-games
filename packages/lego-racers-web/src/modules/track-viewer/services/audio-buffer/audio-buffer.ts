@@ -1,3 +1,5 @@
+import { decodeMusic } from '@lego-games/lego-racers/audio'
+
 const INT16_RANGE = 32768
 
 // Interleaved 16-bit samples → one Float32 array per channel.
@@ -18,6 +20,12 @@ export const createAudioBuffer = (
   return buffer
 }
 
+// The AudioBuffer of a tune file's bytes.
+export const createMusicBuffer = (context: AudioContext, tune: Uint8Array): AudioBuffer => {
+  const decoded = decodeMusic(tune)
+  return createAudioBuffer(context, decoded.samples, decoded.channelCount, decoded.sampleRate)
+}
+
 // A Web Audio context, or null where the platform has none (the specs run in node).
 export const createAudioContext = (): AudioContext | null =>
   typeof AudioContext === 'undefined' ? null : new AudioContext()
@@ -25,8 +33,11 @@ export const createAudioContext = (): AudioContext | null =>
 // What a player does where there is no Web Audio: nothing.
 export const SILENT_PLAYER = Object.freeze({
   resume: () => undefined,
+  setListener: () => undefined,
   playSound: () => undefined,
   playMusic: () => undefined,
+  setLoopedSounds: () => undefined,
   setEngineLoops: () => undefined,
+  setNearestRacerSound: () => undefined,
   dispose: () => undefined,
 })

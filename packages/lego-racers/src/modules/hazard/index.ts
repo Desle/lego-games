@@ -4,6 +4,7 @@ export {
   createHazardRuntime,
   EMPTY_HAZARD_RUNTIME,
   fireHazardTrigger,
+  followCamerasWithHazards,
   fireReleaseHazardTrigger,
   forceEndHazards,
   getHazardCollisionBody,
@@ -22,6 +23,7 @@ export { HazardLifecycle } from './types/hazard-lifecycle/hazard-lifecycle.ts'
 export type { CraneShadow } from './types/crane-shadow.types.ts'
 export type { HazardBehavior } from './types/hazard-behavior.types.ts'
 export type { HazardData } from './types/hazard-data.types.ts'
+export type { HazardCameraFrame } from './types/hazard-runtime.types.ts'
 export type {
   CannonBlock,
   Hazard,

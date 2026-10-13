@@ -171,6 +171,9 @@ export type PowerUpEffect = {
   readonly timerMilliseconds: number
   // +0x14.
   readonly level: number
+  // The milliseconds the effect's figures were stepped since it started (0x0045ce20 steps them every update, whatever the
+  // state), which is what their texture scroll has run.
+  readonly figureAgeMilliseconds: number
   // The racer who used it (racer index), or null.
   readonly ownerRacer: number | null
   // The racer it latched on to, homes in on or captured, or null.
@@ -182,6 +185,10 @@ export type PowerUpEffect = {
   readonly rocketIndex: number
   // Wand +0x224: milliseconds towards the next 50 ms jitter draw.
   readonly jitterMilliseconds: number
+  // Wand +0x1d0..+0x21c: the random table values behind the 20 jitter floats 0x00454b20 stores in a ring (empty for the
+  // other effects), and +0x220: the slot the next one goes in.
+  readonly jitterDraws: readonly number[]
+  readonly jitterIndex: number
   // Wand +0x22c: milliseconds to the next spark.
   readonly sparkMilliseconds: number
   // Wand +0x240: milliseconds the struck racer has been held.
@@ -191,6 +198,27 @@ export type PowerUpEffect = {
   readonly emitterHandleIndex: number | null
   // A warp a launcher gave a destination (0x0045d560's third argument, +0xc0..+0xd8): null for a racer's own warp.
   readonly warpDestination: WarpDestination | null
+  // A curse a hazard dropped (0x0048b3c0): where its shape sits (0x00411cc0 in 0x00452550); null for a racer's own.
+  readonly launcherPosition: Vector3 | null
+  // A wand a hazard fired (0x00454cb0 with the launcher's struct, +0x23c): where the beam leaves and which way it points.
+  readonly launcherMuzzle: LauncherMuzzle | null
+  // The hazard (index in the track logic) whose muzzle the beam follows each frame; null for a racer's wand.
+  readonly launcherHazardIndex: number | null
+  // A cannonball a hazard threw (0x0048c680 through 0x00451a50, +0xe0 = the launcher's struct): null for a racer's.
+  readonly launcherCannonball: LauncherCannonball | null
+}
+
+// The periodic launcher's struct as the cannonball reads it when it leaves state 2 (0x00451f50): where it starts
+// (launcher +0x14), where it lands (+0x8) and its speed (+0x20).
+export type LauncherCannonball = {
+  readonly position: Vector3
+  readonly target: Vector3
+  readonly speed: number
+}
+
+export type LauncherMuzzle = {
+  readonly position: Vector3
+  readonly direction: Vector3
 }
 
 // Where a launcher's warp puts the racer down (+0xc0, +0xc4, +0xc8) and which way it faces (+0xcc, +0xd0, +0xd4), and
@@ -217,6 +245,9 @@ export type PowerUpWorld = {
   readonly effects: PowerUpEffects
   // +0x199c, radians.
   readonly brickSpinAngle: number
+  // The milliseconds the world of the bricks' instances (gen, genblen, enh, enhblen; 0x00416090 at +0x60) has been
+  // advanced by 0x0045a490, which is the clock of their clips.
+  readonly brickClockMilliseconds: number
   readonly random: RandomState
   // The emitter pools the effects and explosions spawn into (the race's, shared with the racers; synced by the race).
   readonly emitters: EmitterPools

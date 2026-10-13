@@ -16,7 +16,6 @@ import {
   DataTexture,
   FrontSide,
   LinearFilter,
-  LinearMipmapLinearFilter,
   MeshBasicMaterial,
   NearestFilter,
   NoColorSpace,
@@ -39,10 +38,7 @@ import {
   ZeroFactor,
 } from 'three'
 import type { BlendingParameters, TextureCache } from './scene-object.types.ts'
-import {
-  getIsHighDefinitionEnabled,
-  loadHighDefinitionPixels,
-} from './high-definition-texture/high-definition-texture.ts'
+import { emitTextureCreated } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
 
 // D3DBLEND → WebGL; SRCALPHASAT is only valid as a source factor in both APIs.
 const BLEND_FACTORS: Readonly<Record<BlendFactorValue, BlendingSrcFactor>> = {
@@ -86,6 +82,10 @@ export const getRowsReversed = (colors: Uint8Array, width: number, height: numbe
   return reversed
 }
 
+// Texture flag 4 (TDB keyword 0x28): a texture with it holds the picture's last row first; one without it (the
+// sprites', particles', decals' and ribbons') holds the rows as the bitmap has them (world-sprite.md).
+const FIRST_ROW_ON_TOP_FLAG = 0x4
+
 const getTextureKey = (textureIndex: number, material: SceneMaterial) =>
   `${String(textureIndex)}/${material.renderState.filter}/${material.renderState.addressing}`
 
@@ -95,11 +95,11 @@ const getTexture = (
   textures: readonly SceneTexture[],
   textureIndex: number | null,
   material: SceneMaterial,
-  cache: TextureCache,
-  isRowOrderKept: boolean
+  cache: TextureCache
 ): DataTexture | null => {
   const bitmap = textureIndex === null ? null : (textures[textureIndex]?.bitmap ?? null)
   if (textureIndex === null || bitmap === null) return null
+  const isRowOrderKept = ((textures[textureIndex]?.flags ?? 0) & FIRST_ROW_ON_TOP_FLAG) === 0
   const key = getTextureKey(textureIndex, material)
   const cached = cache.get(key)
   if (cached !== undefined) return cached
@@ -123,24 +123,24 @@ const getTexture = (
   texture.colorSpace = NoColorSpace
   texture.needsUpdate = true
   const sceneTexture = textures[textureIndex]
-  if (sceneTexture !== undefined && getIsHighDefinitionEnabled(globalThis.location.search)) {
-    void loadHighDefinitionPixels(sceneTexture.bitmapPath, bitmap).then((pixels) => {
-      if (pixels === null) return
-      // The GPU copy was allocated at the original's size (immutable storage); release it so the larger picture
-      // is uploaded into a new one.
-      texture.dispose()
-      texture.image = {
-        data: isRowOrderKept
-          ? pixels.colors
-          : getRowsReversed(pixels.colors, pixels.width, pixels.height),
-        width: pixels.width,
-        height: pixels.height,
-      }
-      if (filter === LinearFilter) {
-        texture.minFilter = LinearMipmapLinearFilter
-        texture.generateMipmaps = true
-      }
-      texture.needsUpdate = true
+  if (sceneTexture !== undefined) {
+    emitTextureCreated({
+      texture,
+      bitmapPath: sceneTexture.bitmapPath,
+      originalPixels: bitmap,
+      replacePixels: (pixels) => {
+        // The GPU copy was allocated at the original's size (immutable storage); release it so the new picture
+        // is uploaded into a new one.
+        texture.dispose()
+        texture.image = {
+          data: isRowOrderKept
+            ? pixels.colors
+            : getRowsReversed(pixels.colors, pixels.width, pixels.height),
+          width: pixels.width,
+          height: pixels.height,
+        }
+        texture.needsUpdate = true
+      },
     })
   }
   cache.set(key, texture)
@@ -183,11 +183,10 @@ const getBlendingParameters = (sceneMaterial: SceneMaterial): BlendingParameters
 export const createSceneMaterial = (
   sceneMaterial: SceneMaterial,
   textures: readonly SceneTexture[],
-  cache: TextureCache,
-  isRowOrderKept = false
+  cache: TextureCache
 ): Material => {
   const parameters = {
-    map: getTexture(textures, sceneMaterial.textureIndex, sceneMaterial, cache, isRowOrderKept),
+    map: getTexture(textures, sceneMaterial.textureIndex, sceneMaterial, cache),
     vertexColors: true,
     // 0x1000ebd0 culls in screen space: it draws a face only when its corners turn counter-clockwise on
     // screen, which is three.js's front face for the same world, so only front faces are drawn.

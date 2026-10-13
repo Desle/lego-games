@@ -35,7 +35,13 @@ export type EffectFigureModel = {
   readonly scroll: readonly [number, number]
 }
 
+// The centre and the radius of the sphere a brick's instance is culled by (clip keyword 0x31 times the model's scale).
+export type BrickSphere = readonly [number, number, number, number]
+
 export type EffectModels = {
+  readonly brickSpheres: Readonly<
+    Record<'powerUpBrick' | 'powerUpTrail' | 'enhancementBrick' | 'enhancementTrail', BrickSphere>
+  >
   // The materials and textures of the power-up libraries (the cannon ball, the beams and the flames name them).
   readonly materials: Scene
   readonly rocket: ModelScene
@@ -54,9 +60,19 @@ export type EffectModels = {
   readonly warpPortal: ModelScene
   readonly warpPortalScroll: readonly [number, number]
   readonly turbos: readonly (readonly EffectFigureModel[])[]
+  // The three figures of a curse on the track: `curse` and the two scrolling rings `cgreen` and `cgreen2` (0x0045aeb0).
+  readonly curse: readonly EffectFigureModel[]
   // The power-up brick in the colour of each kind (projectile, shield, turbo, hazard).
   readonly powerUpBricks: Readonly<Record<string, ModelScene>>
   readonly enhancementBrick: ModelScene
+  // The clips of the bricks (gen: pubricky, enh: enhabrik), advanced with the power-up system's clock.
+  readonly powerUpBrickAnimations: readonly FigureAnimation[]
+  readonly enhancementBrickAnimations: readonly FigureAnimation[]
+  // The trail instances the bricks draw with them in the blended pass (genblen: putraily), with their clips.
+  readonly powerUpTrails: Readonly<Record<string, ModelScene>>
+  readonly powerUpTrailAnimations: readonly FigureAnimation[]
+  readonly enhancementTrail: ModelScene
+  readonly enhancementTrailAnimations: readonly FigureAnimation[]
   // The warp's tunnel (TURBO3.WDB lists `dbricks` and `dtube`; 0x0045d940 draws them).
   readonly warpTunnel: Scene
   // The texture scroll per second of the tube (the world's keyword 0x3f on `dtube`: u, v), which the original adds to the
@@ -84,6 +100,11 @@ export type RaceAssets = {
   readonly generalSounds: SoundBank
   readonly trackSounds: SoundBank
   readonly trackSoundDirectory: string
+  // Race_LoadVoicesAndSounds 0x004328f0: sound ids 1000 to 1099 (the first human racer's `voiceNN`) and 1100 to 2999 (the
+  // race description's voice folder, e.g. `voiceC1`), both banks of GAMEDATA\VOICES; empty when the JAM has none.
+  readonly voiceSounds: SoundBank
+  readonly voiceFolderSounds: SoundBank
+  readonly voiceDirectory: string
   readonly musicNames: readonly string[]
   readonly tunes: ReadonlyMap<string, Uint8Array>
 }

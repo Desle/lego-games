@@ -10,15 +10,24 @@ import {
 import { getCraneShadows } from '../../../hazard/index.ts'
 import { BrickState, EffectState, PowerUpEffectKind } from '../../../power-ups/index.ts'
 import type { PowerUpEffect } from '../../../power-ups/index.ts'
-import { BallisticFlightState, ExplosionState } from '../../../projectiles/index.ts'
+import {
+  BallisticFlightState,
+  ExplosionState,
+  getCurseTrackFrame,
+} from '../../../projectiles/index.ts'
 import type { EffectMotion, ExplosionPool } from '../../../projectiles/index.ts'
 import { getWarpFadeScale } from '../../../racer/index.ts'
 import type { RaceState } from '../../../race/index.ts'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
+import type { RibbonView } from '../../../ribbon/index.ts'
+import { getTetherRibbon } from '../get-tether-ribbon/get-tether-ribbon.ts'
+import { getWandRibbon } from '../get-wand-ribbon/get-wand-ribbon.ts'
+import { getTrailDrawings } from '../../../projectile-trail/index.ts'
 import type {
   AttachmentState,
   AttachmentView,
   BrickView,
+  CurseView,
   DecalView,
   DrawnBrick,
   EffectView,
@@ -93,7 +102,8 @@ const getMotionView = (effect: PowerUpEffect, motion: EffectMotion | null): Effe
   }
 }
 
-const { add, subtract, multiply, storeFloat } = createFloatArithmetic(RACE_FPU_PRECISION)
+const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
+const { add, subtract, multiply, storeFloat } = arithmetic
 
 const OIL_SLICK_IMAGE_NAME = 'oilslck'
 const EXPLOSION_SCAR_IMAGE_NAME = 'exscar'
@@ -174,6 +184,48 @@ const getScarDecalViews = (pool: ExplosionPool): readonly DecalView[] =>
     ]
   })
 
+// 0x00452ae0: the curse lies for 15,000 ms (state 3), then 1000 ms more while it ends (state 4). 0x00452a40 scales the
+// ending figures by timer * 0.001 (0x004af6fc).
+const CURSE_ACTIVE_MILLISECONDS = 15000
+// 0x00452b12: the ending state lasts 1000 ms.
+const CURSE_ENDING_MILLISECONDS = 1000
+// 0x004af6fc: milliseconds to the ending figures' scale.
+const CURSE_ENDING_SCALE = Math.fround(0.001)
+
+const getCurseViews = (raceState: RaceState): readonly CurseView[] => {
+  const { effects, activeEffectIds } = raceState.powerUpStep.world.effects
+  return activeEffectIds.flatMap((effectId): readonly CurseView[] => {
+    const effect = effects[effectId]
+    const motion = raceState.projectileWorld.motions[effectId]
+    if (
+      effect === undefined ||
+      effect.kind !== PowerUpEffectKind.CURSE ||
+      motion?.kind !== 'hazard'
+    ) {
+      return []
+    }
+    const state = getAttachmentState(effect.state)
+    const frame = getCurseTrackFrame(arithmetic, motion)
+    if ((state !== 'active' && state !== 'ending') || frame === null) return []
+    return [
+      {
+        ...frame,
+        state,
+        timerMilliseconds: effect.timerMilliseconds,
+        elapsedMilliseconds:
+          motion.landingMilliseconds +
+          (state === 'ending'
+            ? CURSE_ACTIVE_MILLISECONDS + CURSE_ENDING_MILLISECONDS - effect.timerMilliseconds
+            : CURSE_ACTIVE_MILLISECONDS - effect.timerMilliseconds),
+        scale:
+          state === 'ending'
+            ? storeFloat(multiply(effect.timerMilliseconds, CURSE_ENDING_SCALE))
+            : 1,
+      },
+    ]
+  })
+}
+
 // 0x0045bd30: a shield of level 0..3 lasts this many milliseconds; 0x0045c2a0 gives it 1000 more while it ends.
 const SHIELD_MILLISECONDS: readonly number[] = [4000, 6000, 8000, 10000]
 const SHIELD_ENDING_MILLISECONDS = 1000
@@ -224,6 +276,7 @@ const getAttachmentView = (raceState: RaceState, effect: PowerUpEffect): Attachm
       state,
       timerMilliseconds: effect.timerMilliseconds,
       elapsedMilliseconds: WARP_STARTING_MILLISECONDS - effect.timerMilliseconds,
+      scrollMilliseconds: effect.figureAgeMilliseconds,
       scale: getWarpFadeScale(
         raceState.context.arithmetic,
         raceState.context.tables,
@@ -240,6 +293,7 @@ const getAttachmentView = (raceState: RaceState, effect: PowerUpEffect): Attachm
     state,
     timerMilliseconds: effect.timerMilliseconds,
     elapsedMilliseconds: getAttachmentElapsed(effect, state),
+    scrollMilliseconds: effect.figureAgeMilliseconds,
   }
 }
 
@@ -265,6 +319,41 @@ const getSpriteViews = (
         },
       ]
     : []
+
+// 0x004542d0 draws the rope while the grapple flies, holds a racer and retracts (states 3 to 5); the wand draws its
+// beam as long as it lasts (0x00455020).
+const getRibbonViews = (raceState: RaceState): readonly RibbonView[] => {
+  const { effects, activeEffectIds } = raceState.powerUpStep.world.effects
+  return activeEffectIds.flatMap((effectId): readonly RibbonView[] => {
+    const effect = effects[effectId]
+    const motion = raceState.projectileWorld.motions[effectId]
+    if (effect === undefined || !DRAWN_STATES.includes(effect.state)) return []
+    if (effect.kind === PowerUpEffectKind.WAND && motion?.kind === 'wand') {
+      return [
+        getWandRibbon(
+          raceState.context.arithmetic,
+          motion.beam,
+          motion.jitter,
+          motion.initialJitter
+        ),
+      ]
+    }
+    if (
+      effect.kind !== PowerUpEffectKind.GRAPPLE ||
+      effect.state === EffectState.STARTING ||
+      effect.ownerRacer === null ||
+      motion?.kind !== 'grapple'
+    ) {
+      return []
+    }
+    const ribbon = getTetherRibbon(
+      raceState.context.arithmetic,
+      motion.hook.ropeOwnerPosition,
+      motion.hook
+    )
+    return ribbon === null ? [] : [ribbon]
+  })
+}
 
 const getExplosionViews = (pool: ExplosionPool, isSpiked: boolean): readonly ExplosionView[] =>
   pool.activeIndices.flatMap((index) => {
@@ -308,18 +397,22 @@ export const getEffectViews = (raceState: RaceState): EffectViews => {
       : getSpriteViews(effect, raceState.projectileWorld.motions[effectId] ?? null)
   })
   return Object.freeze({
+    curses: Object.freeze(getCurseViews(raceState)),
     sprites: Object.freeze(sprites),
+    ribbons: Object.freeze(getRibbonViews(raceState)),
     attachments: Object.freeze(attachments),
     bricks: Object.freeze([
       ...getBrickViews(world.bricks, false),
       ...getBrickViews(world.enhancementBricks, true),
     ]),
     spinAngle: world.brickSpinAngle,
+    brickClockMilliseconds: world.brickClockMilliseconds,
     effects: Object.freeze(views),
     explosions: Object.freeze([
       ...getExplosionViews(raceState.projectileWorld.explosions, false),
       ...getExplosionViews(raceState.projectileWorld.spikedExplosions, true),
     ]),
+    trails: getTrailDrawings(raceState.projectileWorld.trails),
     decals: Object.freeze([
       ...getOilSlickDecalViews(raceState),
       ...getCraneShadowDecalViews(raceState),

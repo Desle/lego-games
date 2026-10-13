@@ -32,24 +32,29 @@ export {
 } from './controller/step-racer-set/step-racer-set.ts'
 export {
   applyRacerControls,
+  releaseAllBindings,
   createPlayerController,
   updatePlayerController,
 } from './controller/update-player-controller/update-player-controller.ts'
 export {
+  DEFAULT_FIGURE_FRAME,
   endCarBodyEffect,
   endTimedEffect,
   getRacerWithoutTimedEffect,
   getRacerWithTimedEffect,
   transferTimedEffect,
 } from './controller/timed-effect/timed-effect.ts'
+export type {
+  CurseFigure,
+  CurseFigureFrame,
+  CurseOrbit,
+} from './types/curse-orbit/curse-orbit.types.ts'
 export {
   clearColourShiftOverride,
   getDisplayedColourShift,
   getRacerWithColourShiftOverride,
   stepColourShiftOverride,
   TIMED_EFFECT_COLOUR_SHIFT,
-  COPIED_FIGURE_DISTANCE,
-  POWER_UP_EFFECT_FIGURE_DISTANCE,
   WAND_COLOUR_SHIFT,
   WAND_COLOUR_SHIFT_MILLISECONDS,
 } from './types/colour-shift-override/colour-shift-override.ts'

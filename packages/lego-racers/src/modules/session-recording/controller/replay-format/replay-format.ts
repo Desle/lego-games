@@ -16,9 +16,18 @@ const getMenuLine = (menu: RaceMenuInput | null): FrameLine[3] =>
   (!menu.isPausePressed &&
     menu.selectionChange === 0 &&
     !menu.isConfirmPressed &&
+    !menu.isConfirmReleased &&
     !menu.isAnyInputPressed)
     ? null
-    : [menu.isPausePressed, menu.selectionChange, menu.isConfirmPressed, menu.isAnyInputPressed]
+    : menu.isConfirmReleased
+      ? [
+          menu.isPausePressed,
+          menu.selectionChange,
+          menu.isConfirmPressed,
+          menu.isAnyInputPressed,
+          true,
+        ]
+      : [menu.isPausePressed, menu.selectionChange, menu.isConfirmPressed, menu.isAnyInputPressed]
 
 const getFrameLine = (frame: ReplayFrame): FrameLine => [
   frame.milliseconds,
@@ -50,6 +59,7 @@ const getFrame = (line: FrameLine): ReplayFrame => {
             isPausePressed: menu[0],
             selectionChange: menu[1],
             isConfirmPressed: menu[2],
+            isConfirmReleased: menu[4] === true,
             isAnyInputPressed: menu[3],
           }),
     grant: grantValue,

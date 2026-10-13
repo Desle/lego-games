@@ -4,23 +4,31 @@ import {
   createReplayRecorder,
   serializeRecording,
 } from '@lego-games/lego-racers/session-recording'
-import { getIsHighDefinitionEnabled } from '../scene-object/high-definition-texture/high-definition-texture.ts'
+import {
+  getExtensionSelections,
+  getIsClassic,
+} from '../../../../shared/viewer-extensions/viewer-extensions.ts'
 import { sessionRecordingStore } from '../session-recording-store/session-recording-store.ts'
 import type { SessionRecordingStore } from '../session-recording-store/session-recording-store.types.ts'
-import type { RaceRecording } from './race-recording.types.ts'
+import { postRecordingToInbox } from '../replay-inbox-upload/replay-inbox-upload.ts'
+import type { InboxPoster, RaceRecording } from './race-recording.types.ts'
 
 const FILE_EXTENSION = '.replay.jsonl'
+const RECORD_PARAMETER = 'record'
+
+// Races are recorded only when the address asks for it (`?record`): the user is not comparing replays for now.
+export const getIsRaceRecordingRequested = (search: string): boolean =>
+  new URLSearchParams(search).has(RECORD_PARAMETER)
 
 // Records what feeds the deterministic simulation of the race that starts: the settings, the cars, the random cursor and
-// per frame the integer time and the input state. Never in the high-definition view (`?hd`): only the classic view is
-// the game the port reproduces.
+// per frame the integer time and the input state. With an extension registered the header says so: drawing and sound
+// change, the simulation does not.
 export const createRaceRecording = (
   start: RaceStart,
-  search: string,
-  store: SessionRecordingStore = sessionRecordingStore
+  store: SessionRecordingStore = sessionRecordingStore,
+  postToInbox: InboxPoster = postRecordingToInbox
 ): RaceRecording | null => {
-  if (getIsHighDefinitionEnabled(search)) return null
-  const header = createReplayHeader(start)
+  const header = createReplayHeader(start, getIsClassic() ? null : getExtensionSelections())
   if (header === null) return null
   const recorder = createReplayRecorder(header)
   let isFinished = false
@@ -31,10 +39,10 @@ export const createRaceRecording = (
       isFinished = true
       if (recorder.getFrameCount() === 0) return
       const stamp = new Date().toISOString().replaceAll(/[:.]/g, '-')
-      await store.save(
-        `${header.raceFolder}-${stamp}${FILE_EXTENSION}`,
-        serializeRecording(recorder.finish())
-      )
+      const fileName = `${header.raceFolder}-${stamp}${FILE_EXTENSION}`
+      const text = serializeRecording(recorder.finish())
+      await store.save(fileName, text)
+      await postToInbox(fileName, text)
     },
   })
 }

@@ -1,13 +1,19 @@
-import { createReadStream, existsSync, readdirSync, statSync } from 'node:fs'
+import { createReadStream, existsSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join, relative, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
+import { developmentLDrawModelsPlugin } from './src/modules/remastered/services/development-ldraw-models-server/development-ldraw-models-server.ts'
+import { developmentLDrawPlugin } from './src/modules/remastered/services/development-ldraw-server/development-ldraw-server.ts'
+import {
+  developmentHighDefinitionAudioPlugin,
+  developmentHighDefinitionPlugin,
+} from './src/modules/remastered/services/development-texture-server/development-texture-server.ts'
+import { developmentReplayInboxPlugin } from './src/modules/track-viewer/services/replay-inbox-server/replay-inbox-server.ts'
 import {
   DEVELOPMENT_GAME_FILE_ROUTE,
-  DEVELOPMENT_HIGH_DEFINITION_ROUTE,
   DEVELOPMENT_JAM_ROUTE,
 } from './src/shared/development-jam/development-jam-route.ts'
 
@@ -59,49 +65,25 @@ const developmentGameFilesPlugin = (): Plugin => ({
   },
 })
 
-const getPngPaths = (directory: string): readonly string[] =>
-  readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(directory, entry.name)
-    if (entry.isDirectory()) return getPngPaths(path)
-    return /\.png$/i.test(entry.name) ? [path] : []
-  })
-
-// Serves an upscaled texture pack to the dev server only, looked up case-insensitively by archive path.
-const developmentHighDefinitionPlugin = (): Plugin => ({
-  name: 'lego-racers-development-high-definition',
-  apply: 'serve',
-  configureServer: (server) => {
-    const directory =
-      process.env['LEGO_HD_TEXTURES_PATH'] ?? join(homedir(), 'lego-racers-textures-hd')
-    const pathsByKey = new Map(
-      (existsSync(directory) ? getPngPaths(directory) : []).map((path) => [
-        relative(directory, path).replaceAll('\\', '/').toLowerCase(),
-        path,
-      ])
-    )
-    server.middlewares.use(DEVELOPMENT_HIGH_DEFINITION_ROUTE, (request, response) => {
-      const key = decodeURIComponent(
-        (request.url ?? '').replace(/^\//, '').split('?')[0] ?? ''
-      ).toLowerCase()
-      const path = pathsByKey.get(key)
-      if (path === undefined) {
-        response.writeHead(404)
-        response.end()
-        return
-      }
-      response.setHeader('Content-Type', 'image/png')
-      response.setHeader('Content-Length', String(statSync(path).size))
-      createReadStream(path).pipe(response)
-    })
-  },
-})
-
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
     developmentJamPlugin(),
     developmentGameFilesPlugin(),
-    developmentHighDefinitionPlugin(),
+    developmentReplayInboxPlugin(
+      process.env['LEGO_REPLAY_INBOX'] ??
+        resolve(import.meta.dirname, '../../reverse-engineering/replays/inbox')
+    ),
+    developmentHighDefinitionPlugin(
+      process.env['LEGO_HD_TEXTURES_ROOT'] ?? join(homedir(), 'textures', 'lego-racers')
+    ),
+    developmentHighDefinitionAudioPlugin(
+      process.env['LEGO_HD_AUDIO_ROOT'] ?? join(homedir(), 'audio', 'lego-racers')
+    ),
+    developmentLDrawPlugin(process.env['LEGO_LDRAW_ROOT'] ?? join(homedir(), 'ldraw')),
+    developmentLDrawModelsPlugin(
+      process.env['LEGO_LDRAW_MODELS_ROOT'] ?? join(homedir(), 'ldraw-models')
+    ),
   ],
 })

@@ -1,0 +1,116 @@
+# LDraw cars (remastered layer)
+
+With `?hd` in development, cars built from bricks are drawn from the LDraw parts library instead of the mesh the original builds. Everything lives in `packages/lego-racers-web/src/modules/remastered/services/ldraw-car/` (plus `ldraw-library/`, `development-ldraw-server/`, `ldraw-gallery/`). Physics, weight and collision still use the original car: only the drawing changes. Read [remastered.md](remastered.md) first for the rule.
+
+## Setup
+
+Download the official library (CC BY 2.0, `complete.zip` from <https://library.ldraw.org/library/updates/complete.zip>) and unzip it so that `~/ldraw/parts`, `~/ldraw/p` and `~/ldraw/LDConfig.ldr` exist (`LEGO_LDRAW_ROOT` overrides the folder). The dev server serves it at `/__development/ldraw/` (`apply: 'serve'`, nothing reaches a build). `three`'s `LDrawLoader` fetches only the parts a car names, with the primitives they use. Without the library the car falls back to the game's own mesh.
+
+`?hd` draws LDraw cars; `?hd&bricks=classic` draws the original's. The developer panel has a **Bricks (reloads)** choice (Classic / LDraw) next to Textures.
+
+## How it works
+
+- Neutral extension point: `ViewerExtension.getCarDrawing` (optional). `race-viewport` asks it for each racer (a built design or a champion's body code); the answer follows the body and wheels groups through `applyPose` and the original meshes are hidden. With no extension registered nothing changes.
+- `getCarOrigin` (`car-builder`, previously the private `getOrigin`) is exported so the drawing uses the same origin offset as `buildCarGeometry` (`0x0049b340`, `0x0049b740`).
+- `createLDrawCarDocument` writes the design as an LDraw model: one type 1 line per brick, in LDraw axes. The game's frame is x, y, z up in studs (a stud is 1, a plate 0.4); LDraw is 20 units to a stud, 8 to a plate, y down. A brick's matrix is `LDraw<-game * place(x, y, base) * turn(orientation about the footprint corner) * part-in-brick-frame * game<-LDraw`, the orientation turns being those of `0x0049a450`. The root group applies `LDraw -> game` and 1/20.
+- Bricks with no LDraw part are drawn from the game's own faces (`getBrickFaces`), in the LDraw colour, so a car is always complete.
+- Colours (`L_COLORS.LEB` index to LDraw code): black 0, white 15, biege 19 (tan), ltgray 7, dkgray 8, red 4, brown 6, yellow 14, green 2, blue 1. The 1999 greys are the library's original grey codes, not the bluish ones.
+
+## The mapping table (`ldraw-brick-mappings.ts`)
+
+`LDRAW_BRICK_MAPPINGS`: game brick name to `{ partNumber, quarterTurns, isMirrored, offset, heightError }`, the part's frame into the brick's frame (see the type). `UNMAPPED_BRICK_REASONS` names every other brick of `LPIECELO.LEB`; a spec checks that all 161 are in one table or the other.
+
+It was generated, not typed: for each of the 161 bricks the game's mesh (from `getBrickFaces`, hidden undersides dropped) and each of about 5,000 LDraw parts (studs left out, subparts followed) were turned into top-surface height maps on a 5-unit grid; each part was tried in the four quarter turns and mirrored, aligned by its bounding box, and scored by the mean height difference in plates over the footprint. Parts with a different bounding box (more than 8 % in height, 6 % in the footprint) are not tried. Ties go to the part with the fewest triangles, or the one the brick's name points at (`L300200` is LEGO element 3002). Accepted when the error is at most 0.30 plates, plus hand-picked parts for names that point at a part whose shape is close (`l395700` the antenna 3957a, `l347500` the jet engine plate 3475a, `l474600` the rocket tail 4746, `L347800` the tail 2340, `L239901`/`L239902` the wedge 2399, `L241900` the slope 3939, `L304500` the slope 3688, `srrgril2` the plate 3022, `spizza` the round brick 3941, `s00021` the slope 3678a). Mirrored matches never won over a left or right part, which confirms the axis mapping (`6564` and `6565`, the right and left 3 x 2 wedges, map to `L656400` and `L656500` unmirrored).
+
+Verification: every saved design (`DEFAULT.LRS`, `QBUILD.LRS`: 28 cars) was drawn with the parts and, in wireframe, with the game's mesh over it; the studs, slopes and wedges line up (a gallery page does this, below), and a sheet of every mapped brick next to its part shows the same shapes in the same orientation.
+
+### What the brick names are (tested against Rebrickable's catalogue)
+
+**Hypothesis "a name is a LEGO element ID" is false.** Rebrickable's `elements.csv` has no element `243200`, `300200` and so on, and the piece ids in `LPIECELO.LEB` are just sequential (`5001`...`5219`, chassis `11`...`22`). The names follow three schemes:
+
+- `L<4-digit part number><2 digits>` (28 bricks: `L300200` is part 3002, `L329700` part 3297, `L656400` part 6564). For 20 of them the part of that number matches the game mesh exactly (top-surface error 0.00 to 0.02 plates; all are in the table already). Where the number's part differs from the game's shape (`L241900` is 2419, a plate; `L304500` is 3045; `l248900` is 2489), the game's brick is a variant and the shape-matched part stays. `L81423` ... `L82530` and `L347800` are Racers-only numbers with no catalogue entry.
+- `S00xxx` / `s000xx`: sequential special pieces, no number to look up.
+- `s`/`S` plus a theme word (`sLance`, `sTorch`, `sFlag`, `Spear`, `Sbat`, `sspider`...): composite models, a base brick with the accessory moulded on (the flag stands on a plate, the torch on a brick), not catalogued parts. The 12 chassis (10 x 6 footprint) have no Rebrickable or LDraw equivalent either (no 4 x 10/6 x 10 racer base has the arches and cut-outs).
+
+So the only source that can draw them is composition: the LDraw base brick plus the LDraw minifigure accessory (lance, sword, flag, ...) placed in the brick's frame; done for 24 pieces (next section). A candidate list (name rule, then shape rank) was rerun with a corrected quad triangulation of the game meshes (the quad's vertices are in strip order); it added `L304900` (the 2 x 2 double slope 3049, error 0.67 plates, mirrored).
+
+### Bricks with no good LDraw match (drawn from the game's own mesh)
+
+The fallback draws the game's faces double-sided in the plastic and also the decals: a face whose material has a picture and is no brick colour (`jt_carw`, `rr_car1`, `rr_logo`, `stw_wt`: headlights, windscreens, logos on the chassis) is drawn with that picture (the engine's own loader, colour-keyed pixels cut out); it was a flat colour before, which read as missing parts. No face is dropped beyond the original's hidden undersides (flags 1, as in `buildCarGeometry`). The gallery has `bottom` and `side` views to check a chassis alone.
+
+- **All 12 chassis** (`JTchas0`, `GM_CHAS0`, `BVBCHA0`, `BBCHAS0`, `CRchas0`, `KKCHAS0`, `DACHAS0`, `DBCHAS0`, `DCCHAS0`, `DDCHAS0`, `RRchas0`, `VVCHAS0`): the Racers chassis are special moulds the library does not have (its car bases are other shapes; the closest plates differ by several plates over the footprint).
+- LEGO Racers themed pieces the library lacks or that no part resembles: the lances, spears, swords, axes, bat, oars, guns, flags, shields, rocket noses, the torch, lamp, wand, idol, spider, jungle gem and the like (every `s...` brick below), the toolbox-shaped windscreen frame `s243200` (the most used unmapped brick: 1 or 2 on about half of the saved cars) and `S243201`, `l248900`, `sdrum`/`scylnder`, the sub-brick `Cylinder` (the stud, never in a design).
+- The exact list, with the closest part and its error, is `UNMAPPED_BRICK_REASONS`.
+- Approximate matches (`heightError` above 0.1 plates) are plain bricks standing in for a printed or decorated one (the game's brick carries a texture the library's part has no pattern for), or a part that is close but not the same (e.g. `S00016` the bracket 99207, `s00019` the Technic brick 80431).
+
+`s243200` (the windscreen frame, the most used unmapped brick, 19 uses on 13 of the 28 saved cars) is now the 1 x 2 x 2 brick `3245c`: the bounding box is exact, the handle and the leaning front are not (`heightError` 0.6, approximate). `S243201` is a thin angled pane; the windscreen 21 is a solid block, so it stays unmapped.
+
+Wheels: the game's own wheels keep their animation; LDraw wheels were not mapped (the chassis is the game's, and the wheels sit on its axles; the wheels are separate GDB models, not bricks). Done since: see [remastered-ldraw-racers.md](remastered-ldraw-racers.md) (wheels and drivers).
+
+Where the LDraw car is drawn: the race, the build-a-car screen (as bricks are placed; the placeholder is the game's mesh in the same plastic until the parts arrive), and the Racer Select showcase, all through `showCarDrawing` (`track-viewer/services/racer-drawing`), which asks `getCarDrawing` and does nothing without an extension. The builder shows the LDraw wheels too.
+
+## The look
+
+- Plastic (`ldraw-plastic.ts`, numbers in `ldraw-plastic.constants.ts`): `MeshPhysicalMaterial` with a clear coat, a small studio cube map (generated in code, no file) as environment, subtle edge lines (conditional lines too, dimmed and darkened). Smooth normals come from the loader. The lights (key, fill, rim, hemisphere) live in the car's frame and aim at its origin, so a car looks the same wherever it is. The track keeps its own lighting.
+- Studs carry the LEGO logo: `stud.dat` and `stud2.dat` are swapped for the library's `stud-logo<n>.dat` through the loader's file map (`setStudLogoLevel`: 0 plain, 1 thin lines, 2 outlined, 3 sharp 3D, 4 rounded 3D (default), 5 flattened 3D). The logo studs are most of a car's triangles and lines, so a car body is drawn with plain studs and the logo model is built, and shown, only when a stud is wide enough on screen to show the logo; see [Performance](remastered.md#performance). `studlogos=0` (developer panel **Stud logos (reloads)**, `ldraw-library/stud-logos.ts`) builds every model with plain studs and never the logo model.
+- Colours of the game's own faces (bricks with no part): a face is drawn with the brick colour only where the original paints it with the colour's material; the faces with a fixed material (`black` under a chassis, `ltgray`, ...) take that material's colour (`getGameBrickMaterials`; 0x0049a450). This fixed a blue underside on cars whose chassis the original draws black.
+- Colours of the bricks with an LDraw part: the part takes the colour the original shows most of the brick in (`getBrickBodyColorIndex`, by face area): the brick colour where the original paints the brick, a fixed material's colour where it does not, and for a brick drawn only with pictures (the printed tiles, grilles, windows, alien panels) the brick colour nearest the pictures' mean. Before, every part took the player's colour, and a white printed tile came out red (fidelity ΔE 60 to 130 on 25 printed bricks). The original's pictures of those bricks (and of the composites' flags and shields) are laid on the part's faces, 0.02 stud out (`createGameBrickMeshes` with `decalLift`). Measured: bricks passing 23 to 45 of 66. Eight mappings are hand overrides chosen by the harness's numbers (marked in `ldraw-brick-mappings.ts`): `L239901`/`L239902` are a 4 x 1 brick tapering to one stud (`60477`, not the 3 x 4 wedge `2399` four times their size), five sit or face where their silhouettes overlap the original's most. A part that only moves the centre of area while the overlap drops is not taken.
+- The renderer stays the original's (no colour management, linear output), so the lights were tuned by eye on the gallery for that. The look presets below change the plastic.
+
+## Look presets (`look=`)
+
+`?hd&look=manual|photo|instructions|toon|game|retro` (default `manual`; the developer panel's **Look (reloads)**) picks how the LDraw plastic is made, for cars, wheels, drivers and the pickup bricks alike. Code: `ldraw-car/ldraw-look.ts` (the numbers), `ldraw-look-shader.ts`, `ldraw-material-category.ts`, `ldraw-occlusion.ts`; Classic is untouched (no hook was needed: a look only changes materials, lights and the shader of objects the layer already makes). The stylised looks and why they were chosen: [remastered-ldraw-styles.md](remastered-ldraw-styles.md).
+
+- **Manual**: the look above, unchanged (black edge lines, plain linear output).
+- **Photo**: a clear coat over glossier plastic in a dimmer studio room with bright strip and ceiling lights, baked ambient occlusion, edge lines redrawn as pale additive catch-lights (the bevel highlight; not the conditional lines, which are curved silhouettes, and not on rubber), a slow roughness variation, and a grade: the colours are decoded from sRGB to linear, lit, then filmic tone mapping (Narkowicz's ACES fit) and sRGB encoding.
+- **Instructions**, **Toon**, **Game**, **Retro 1999**: stylised shading models; see [remastered-ldraw-styles.md](remastered-ldraw-styles.md).
+- **Material categories** (`ldraw-material-category.ts`), in every look: the library's finish decides. Rubber (`Rubber_Black` and the other `RUBBER` colours; the wheel sets draw their tyres in `Rubber_Black`, code 256) is matte: roughness 0.92, no clear coat, 30 % of the studio, no catch-lights, no stylised highlight. Chrome and metal keep the library's roughness and metalness, without a clear coat. Transparent and plain colours are the look's plastic. A wheel's rim is plastic, but its model takes 35 % of the studio: thin spokes face the studio's walls at every angle as the wheel turns and read as white in the glossy looks.
+- Studio and LEGO Movie were withdrawn (Studio was only a glossier Manual; the movie look's wear read badly).
+- **Ambient occlusion** is baked, not screen space: when a model is loaded its triangles are sampled into a 64-cell grid (a `Data3DTexture`, blurred once), each vertex gets its position and normal in the model's frame, and the fragment shader makes seven taps along and around the normal. It costs no render pass or target. The grid belongs to one model, so a car's wheels and a driver's parts occlude only within themselves (they move relative to the car); AO between a driver and his car is not drawn.
+- **Tone mapping and colour apply to the LDraw objects only, not the whole frame.** The track is prelit: its vertex colours are 1999 display values, and the original draws them through a linear output on purpose. Grading the frame would shift every track colour and need the track's materials touched; grading the plastic inside its own shader (the `colorspace_fragment` chunk) leaves the renderer's tone mapping and output space as they are, so the track, the HUD and Classic are bit for bit what they were. The exposure is set so that a car's brightness sits next to the track's. Cost: a car is a little more contrasty than its surroundings, which reads as a toy on a road.
+- **Depth of field is not done** (the optional macro blur of the Movie look): it needs the frame's depth and a full-resolution blur, which the mobile pixel budget does not leave room for, and the race has no post-process hook.
+- **Cost**: Manual adds nothing. Photo adds, per LDraw fragment, six 3D texture taps, a value noise and the grade. The stylised looks are cheaper than the physical plastic (a ramp over the studio's directional lights instead of the physical BRDF and the clear coat; Game adds the six occlusion taps). No extra pass, target or draw call, so the mobile pixel ratio cap is unaffected. Measured in a headless browser on a software renderer (dominated by rasterising, so only a relative figure): 47 to 48 ms for a car at 1100 x 700 in the earlier four looks, within the noise. Race frames on the development Mac's GPU (headless Chrome, 1280 x 720, Imperial Grand Prix start, median of 120 frames): 2 to 4 ms in every look, within the run-to-run noise. The bake runs once per loaded model.
+- **Gallery**: the gallery pages take `?look=` too; `measureCarFrame` on `ldraw-gallery.html` times a car's frames; the four earlier looks are in `~/ldraw-gallery/looks/`, the current ones side by side (main menu, builder, build-a-driver, racer select, race) in `~/ldraw-gallery/styles/`.
+
+## The gallery
+
+How well a brick, chassis or car matches the original is measured, not looked at: see [Judging LDraw work](remastered.md#judging-ldraw-work) (`pnpm run ldraw-fidelity`); the gallery is for people.
+
+`/ldraw-gallery.html` on the dev server is a page that exposes `renderCar(savePath, index, mode, view, width, height)`, `renderPieceSheet(names, columns, cellSize)` and `getDesignCount(savePath)` on `window` (modes `ldraw`, `game`, `overlay`; views `front`, `rear`, `top`), for a headless browser to call and save the canvas. The page is not part of the build (`vite build` only builds `index.html`).
+
+## Champion cars and chassis recipes
+
+The voxel-fitted opponent designs (PR #120: bricks covering 5 to 46 % of a champion's body, the original mesh left mixed in) were removed. A champion's car is the original's until a complete LDraw model exists for it: `~/ldraw-models/<CODE>.ldr` (see [remastered-ldraw-racers.md](remastered-ldraw-racers.md)). A garage car draws as LDraw only when its chassis has a recipe (`~/ldraw-models/chassis/<CHASSIS>.ldr`, the chassis brick becomes a reference to it) or when the developer panel's "Chassis without a recipe" fallback (`?hd&chassis=game`) converts the game's geometry to an unofficial part; otherwise it is the original's. The two hooks are `getCarDrawing` and `getDriverDrawing`; `getBuiltCarDrawing` and `getCarBodyDrawing` are gone.
+
+On a recipe's car base (`chassis-grid-offset`, `deck-rested-design`): the grid is aligned on the base's stud tops (its bounding box would count the wheel holders: `30277`'s put every brick 6 LDU off its studs), and the design is dropped again, brick by brick in placing order and with the game's resting height (`0x0049e2d0`), onto the chassis with every attachable top at the deck's height, because a real base is flat where a game chassis has cells at several heights (`bbchas0` 3 and 6 plates, `bvbcha0` 3 to 9). A built car's parts are all kept: the accessories of the composite bricks are filed under the library's `Minifig` category, which the figure removal of hand-built cars would take out.
+
+**Recipes measured** (`pnpm run ldraw-fidelity chassis:`, scored on holding the car: see [Judging LDraw work](remastered.md#judging-ldraw-work)). No recipe passes: every base is 4 studs wide on a 6-stud footprint, so 38 to 75 % of the building cells land on a stud, and the game's wheel hubs are 1 to 23 LDU from the base. Moving each base up or down (a copy of the folder, the user's files untouched) gives the best heights below; the recipes are the user's, so these are recommendations, not changes:
+
+| Recipe   | Base y now | Best y | Score now | At best y | Hubs (LDU) | Cells on studs |
+| -------- | ---------- | ------ | --------- | --------- | ---------- | -------------- |
+| BBCHAS0  | -31        | -27    | 27.6      | 39.4      | 1.3        | 58 %           |
+| BVBCHA0  | -26        | -34    | 23.5      | 35.5      | 23.4       | 69 %           |
+| CRCHAS0  | -10        | -26    | 11.3      | 35.3      | 23.9       | 69 %           |
+| DACHAS0  | -18        | -26    | 12.0      | 24.0      | 16.6       | 38 %           |
+| DBCHAS0  | -33        | -25    | 11.2      | 35.9      | 9.8        | 64 %           |
+| DCCHAS0  | -23        | -23    | 30.3      | 30.3      | 20.3       | 56 %           |
+| DDCHAS0  | -48        | -24    | 16.3      | 30.0      | 10.8       | 50 %           |
+| GM_CHAS0 | -31        | -23    | 28.4      | 52.6      | 3.6        | 46 %           |
+| JTchas0  | -16        | -24    | 17.5      | 41.5      | 16.8       | 69 %           |
+| KKCHAS0  | -21        | -17    | 43.5      | 46.4      | 2.4        | 62 %           |
+| RRchas0  | -48        | -56    | 20.0      | 44.0      | 15.8       | 73 %           |
+| VVCHAS0  | -30        | -26    | 50.6      | 73.7      | 1.3        | 75 %           |
+
+To pass, a recipe also needs a deck over the outer rows (a 1 x 10 plate along each side of a 4-wide base, or a 6-wide base) and, where the hubs are over 10 LDU off (`BVBCHA0`, `CRCHAS0`, `DACHAS0`, `DCCHAS0`, `JTchas0`, `RRchas0`), wheel holders under the base at the sheet's wheel mounts.
+
+## Composite S bricks (`ldraw-composite-mappings.ts`)
+
+`LDRAW_COMPOSITE_MAPPINGS`: game brick name to a list of LDraw parts, each with a 3 x 3 matrix and translation from the part (LDraw axes and units) into the brick frame, and an LDraw colour (null: the colour the player placed). The document writer emits one line per part. Generated like the single-part table: the game mesh's surface is sampled, the accessory part (a short list of candidates chosen by the piece's theme) is fitted over all 48 axis-aligned orientations and a translation search against a distance field of the mesh (precision of the part's surface on the mesh), the mesh points it explains are removed and the leftover is fitted with a plain brick, plate or tile (upright only, snapped to the stud grid). Every pair was then checked on a sheet of the game mesh beside the result (`~/ldraw-gallery/pickups/composites-*.png`).
+
+Mapped (25 names, 24 distinct pieces drawn): the lances `sLance`, `sLance01` (3849), swords `sSWORD`, `sSWORD01`, `sprtswd`, `sprtswd2`, rifles `sprtgun`, `sprtgun2`, `srifle1`, `srifle02` (30141), pickaxes `sdsrtax1`, `sdsrtax2` (3841), the wand `SWand`, shields `sa0010`, `sa0011`, `Sshield1`, `Sshield2` (3846), the barrel `l248900` (2489, open top as the part is), flags `s395700`, `sFlag`, `sadm_flg`, `sprt_flg`, `sVvflg` (antenna 3957a as the pole plus a flag part and a base) and the jungle gem `Sjungem`. The flags' printed pictures and the shields' crests are not drawn (plain colour). Tried and dropped as not matching: torch, lamp, spider, round shield, spears, oars, axes, bat, rocket noses, the chest (the part is larger), the crossbow.
+
+## Bricks on the track (`ldraw-pickup/`)
+
+`getEffectModelDrawing` is asked by `race-effects` for each pool of the power-up bricks (`PUBRICKY`, by kind) and the enhancement brick (`ENHABRIK`). The models are bricks: `PUBRICKY` a 1 x 3 brick (2.34 units a stud), `ENHABRIK` a 1 x 2, turned in the mesh (24 vertices; the studs lie on the face toward (0, -0.71, 0.71)). Their drawing is LDraw 3622 and 3004 under a matrix fitted to those vertices, so the pose, spin and scale come from the Classic group matrix unchanged. Colours: projectile red, shield blue, turbo green, hazard yellow, enhancement white. **No printed symbol**: the original's textures (`pupred2` ...) hold only shaded studs; the symbols are HUD pictures, so there is no decal to carry over. The part has no lights of its own (dozens on a track): it takes its look from the studio reflections with a small glow.
+
+Not replaced: the debris bricks (`brick1..4`, `2BRK02`) are not drawn by the port at all (power-up-visuals.md), the cannon ball is a sprite, the rocket `DMISSILE` is a skeletal figure, the grapple hook has no model here, and the barrel `BARREL` is an octagonal drum with a fuse that no LDraw barrel (round, no fuse) matches.

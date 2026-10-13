@@ -1,0 +1,4 @@
+{
+  "comparedFrameCount": 339,
+  "firstDivergence": { "frame": 259, "field": "player0.controller.bindings" }
+}

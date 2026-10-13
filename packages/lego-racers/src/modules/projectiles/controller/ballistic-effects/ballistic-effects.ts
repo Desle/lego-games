@@ -2,6 +2,7 @@ import {
   endProjectileFlight,
   getEffect,
   hitRacerWithProjectile,
+  type LauncherCannonball,
   type PowerUpEffect,
   type PowerUpStep,
 } from '../../../power-ups/index.ts'
@@ -14,6 +15,7 @@ import {
   getFlightVelocity,
   launchFlightAtPoint,
   launchFlightAtRacer,
+  launchFlightWithOffset,
   reflectBallisticFlight,
 } from '../../types/ballistic-flight/ballistic-flight.ts'
 import type {
@@ -163,15 +165,43 @@ export const getOwnerFlight = (
   })
 }
 
+// 0x004520b5: a launcher's cannonball falls three times as fast, flies at the launcher's speed for at most 5000 ms and
+// starts at the launcher's position itself (height offset 0).
+const LAUNCHER_GRAVITY_FACTOR = 3 // 0x004b13e8
+const LAUNCHER_MAXIMUM_FLIGHT_MILLISECONDS = 5000 // 0x1388 at 0x004520dd
+
+// 0x00451f50 with a launcher (+0xe0): the model is put at the launcher's position (model slot +0x8) and the flight
+// launched from there at the launcher's target (flight slot +0x4, 0x00431220).
+const getLauncherCannonballFlight = (
+  context: ProjectileContext,
+  cannonball: LauncherCannonball
+): BallisticFlight => {
+  const { multiply, storeFloat } = context.powerUps.arithmetic
+  return launchFlightWithOffset(
+    context.powerUps.arithmetic,
+    Object.freeze({ ...createBallisticFlight(), framePosition: cannonball.position }),
+    {
+      gravity: storeFloat(multiply(FLIGHT_GRAVITY, LAUNCHER_GRAVITY_FACTOR)),
+      speed: cannonball.speed,
+      targetOffset: ZERO_VECTOR3,
+      maximumDurationMilliseconds: LAUNCHER_MAXIMUM_FLIGHT_MILLISECONDS,
+      heightOffset: 0,
+    },
+    cannonball.target
+  )
+}
+
 export const getCannonFlight = (
   context: ProjectileContext,
   effect: PowerUpEffect
 ): BallisticFlight =>
-  getOwnerFlight(context, effect, {
-    parameters: CANNON_PARAMETERS,
-    ahead: CANNON_AHEAD,
-    isLeadLimited: false,
-  })
+  effect.launcherCannonball === null
+    ? getOwnerFlight(context, effect, {
+        parameters: CANNON_PARAMETERS,
+        ahead: CANNON_AHEAD,
+        isLeadLimited: false,
+      })
+    : getLauncherCannonballFlight(context, effect.launcherCannonball)
 
 export const getBarrelFlight = (
   context: ProjectileContext,

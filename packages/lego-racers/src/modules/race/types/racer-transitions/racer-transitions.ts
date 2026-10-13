@@ -27,7 +27,7 @@ import {
   getRacerWithColourShiftOverride,
   WAND_COLOUR_SHIFT,
   WAND_COLOUR_SHIFT_MILLISECONDS,
-  POWER_UP_EFFECT_FIGURE_DISTANCE,
+  DEFAULT_FIGURE_FRAME,
 } from '../../../racer/index.ts'
 import { getThrowImpulse } from '../../../projectiles/index.ts'
 import type { Racer } from '../../../racer/index.ts'
@@ -494,7 +494,7 @@ export const getRacerAfterPowerUpEvent = (
         arithmetic,
         racer,
         event.durationMilliseconds,
-        POWER_UP_EFFECT_FIGURE_DISTANCE
+        event.figureFrame ?? DEFAULT_FIGURE_FRAME
       )
     case 'power_ups.racer_warp_pending':
       return getRacerWithFlags(racer, racer.flags | 0x200000)
@@ -582,6 +582,23 @@ const getRacerSpunByHazard = (arithmetic: FloatArithmetic, racer: Racer): Racer 
 // What a track hazard's touch does to the racer it found (lava 0x0048dcd0, crane 0x00490490, ghost 0x0048ce90,
 // capture 0x0048e050 and its release 0x0048e230). The vector is the ghost's impulse or the capture's pull, whose push
 // is car body slot 0x48 (cleared by slot 0x4c).
+// 0x0048e050 and 0x0048e230 with a vehicle (racer +0xb2c, the computers): the capture sets the target speed factors
+// (car body +0x7e8, and +0x7ec unless the pushed flag 0x40000 is set) to -0.4 and the release back to 1.
+const CAPTURED_TARGET_SPEED_FACTOR = Math.fround(-0.4) // MOV ECX,0xbecccccd at 0x0048e0fc
+const PUSHED_FLAG = 0x40000 // TEST EDX,0x40000 at 0x0048e101
+
+const getRacerWithHazardTargetSpeed = (racer: Racer, factor: number): Racer => {
+  const isPushed = (racer.carBody.rigidBody.flags & PUSHED_FLAG) !== 0
+  return Object.freeze({
+    ...racer,
+    carBody: Object.freeze({
+      ...racer.carBody,
+      targetSpeedFactor: factor,
+      defaultTargetSpeedFactor: isPushed ? racer.carBody.defaultTargetSpeedFactor : factor,
+    }),
+  })
+}
+
 export const getRacerAfterHazardReaction = (
   arithmetic: FloatArithmetic,
   racer: Racer,
@@ -595,19 +612,33 @@ export const getRacerAfterHazardReaction = (
     case 'flung':
       return getRacerThrown(arithmetic, getRacerSpunByHazard(arithmetic, racer), { x, y, z })
     case 'captured':
-      return Object.freeze({
-        ...racer,
-        flags: (racer.flags | RACER_HELD_FLAG) >>> 0,
-        carBody:
-          vector === null
-            ? racer.carBody
-            : setCarBodyPush(arithmetic, racer.carBody, 'extraForceB', { x, y, z }),
-      })
+      return racer.controllerKind === COMPUTER_CONTROLLER
+        ? getRacerWithHazardTargetSpeed(
+            Object.freeze({ ...racer, flags: (racer.flags | RACER_HELD_FLAG) >>> 0 }),
+            CAPTURED_TARGET_SPEED_FACTOR
+          )
+        : Object.freeze({
+            ...racer,
+            flags: (racer.flags | RACER_HELD_FLAG) >>> 0,
+            carBody:
+              vector === null
+                ? racer.carBody
+                : setCarBodyPush(arithmetic, racer.carBody, 'extraForceB', { x, y, z }),
+          })
     case 'released':
-      return Object.freeze({
-        ...racer,
-        flags: (racer.flags & ~RACER_HELD_FLAG) >>> 0,
-        carBody: setCarBodyPush(arithmetic, racer.carBody, 'extraForceB', undefined),
-      })
+      return racer.controllerKind === COMPUTER_CONTROLLER
+        ? getRacerWithHazardTargetSpeed(
+            Object.freeze({
+              ...racer,
+              flags: (racer.flags & ~RACER_HELD_FLAG) >>> 0,
+              carBody: setCarBodyPush(arithmetic, racer.carBody, 'extraForceB', undefined),
+            }),
+            1
+          )
+        : Object.freeze({
+            ...racer,
+            flags: (racer.flags & ~RACER_HELD_FLAG) >>> 0,
+            carBody: setCarBodyPush(arithmetic, racer.carBody, 'extraForceB', undefined),
+          })
   }
 }

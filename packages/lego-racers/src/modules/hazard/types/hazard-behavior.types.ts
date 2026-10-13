@@ -1,6 +1,7 @@
 import type { CollisionBody } from '../../racer-collision/index.ts'
 import type { Hazard, Vector3 } from './hazard.types.ts'
 import type {
+  HazardCameraFrame,
   HazardInstance,
   HazardLoadContext,
   HazardRacer,
@@ -36,6 +37,13 @@ export type HazardBehavior = {
     instance: HazardInstance,
     session: HazardSession,
     cameraPositions: readonly Vector3[]
+  ) => HazardInstance
+  // The second half of the hook +0x18 for the hazards that place themselves at a camera (the snow): the port keeps its
+  // cameras in the presentation, so the placement runs once the frame's camera is known, before the next update.
+  readonly followCameras: (
+    instance: HazardInstance,
+    session: HazardSession,
+    cameras: readonly HazardCameraFrame[]
   ) => HazardInstance
   // Vtable +0x00 of the objects that sit in the collision registry: a racer touched the hazard.
   readonly touch: (

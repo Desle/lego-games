@@ -13,7 +13,9 @@ export type MenuViewport = {
   readonly draw: (
     context: CanvasRenderingContext2D,
     command: FrontEndViewportCommand,
-    deltaMilliseconds: number
+    deltaMilliseconds: number,
+    // Render pixels per design pixel (1 draws the 3D item at the design's own resolution).
+    resolutionScale: number
   ) => boolean
   readonly dispose: () => void
 }

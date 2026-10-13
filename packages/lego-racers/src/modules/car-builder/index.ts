@@ -31,6 +31,8 @@ export {
 export {
   buildCarGeometry,
   getBrickFaces,
+  getCarOrigin,
+  getTriangles,
 } from './controller/build-car-geometry/build-car-geometry.ts'
 export { getCarWeight } from './controller/get-car-weight/get-car-weight.ts'
 export { getDriverPartBytes } from './controller/get-driver-part-bytes/get-driver-part-bytes.ts'

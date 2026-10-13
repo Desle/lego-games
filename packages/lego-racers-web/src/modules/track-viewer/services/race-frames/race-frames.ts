@@ -1,4 +1,4 @@
-import { getRaceStateWithGrants } from '@lego-games/lego-racers/race'
+import { getRaceStateWithGrants, getRaceWithHazardsAtCamera } from '@lego-games/lego-racers/race'
 import {
   createRace,
   IDLE_RACER_CONTROLS,
@@ -8,6 +8,7 @@ import {
 import type { RaceState } from '@lego-games/lego-racers/race'
 import {
   createRacePresentation,
+  getGhostCars,
   stepRacePresentation,
 } from '@lego-games/lego-racers/race-presentation'
 import type { RacePresentation } from '@lego-games/lego-racers/race-presentation'
@@ -39,7 +40,9 @@ export const runRaceFrames = (
       { controls: [controls], contacts: NO_RACE_CONTACTS },
       milliseconds
     )
-    raceState = step.raceState
+    // The draw's update (0x00435a00) runs the ghost playback after the race's update; the rate it stores is the next step's.
+    const ghostStep = getGhostCars(step.raceState)
+    raceState = ghostStep.raceState
     const presentationFrame = stepRacePresentation(
       presentation,
       step,
@@ -48,12 +51,14 @@ export const runRaceFrames = (
       hudContext
     )
     presentation = presentationFrame.presentation
+    raceState = getRaceWithHazardsAtCamera(raceState, presentationFrame.cameraView)
     onFrame(
       Object.freeze({
         frame,
         milliseconds,
         raceState,
         presentation: presentationFrame,
+        ghostCars: ghostStep.cars,
       })
     )
   })

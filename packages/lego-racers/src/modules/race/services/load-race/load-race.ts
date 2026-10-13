@@ -24,8 +24,12 @@ import type { BuiltCar } from '../../../racer-setup/index.ts'
 import { DEFAULT_SAVE_PATH, getCarWeight, loadSavedCars } from '../../../car-builder/index.ts'
 import type { SavedCar } from '../../../car-builder/index.ts'
 import { parseRaceDescription } from '../../../race-description/index.ts'
-import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
-import type { FloatArithmetic } from '../../../simulation-math/index.ts'
+import {
+  createFloatArithmetic,
+  RACE_FPU_PRECISION,
+  ZERO_VECTOR3,
+} from '../../../simulation-math/index.ts'
+import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
 import { parseStartPositions } from '../../../start-position/index.ts'
 import { parseTaggedPositions } from '../../../tagged-position/index.ts'
 import { parseTimers } from '../../../timer/index.ts'
@@ -39,7 +43,7 @@ import type { RaceDefinition, RaceRacerDefinition } from '../../types/race.types
 import { getStartFrame } from '../../types/start-frame/start-frame.ts'
 import { loadCollisionWorld } from './load-collision-world.ts'
 import type { LoadRaceOptions, RouteDraws, RouteDrawer, RouteFiles } from './load-race.types.ts'
-import { loadRaceEmitters, loadRaceSky, loadRaceWorlds } from './load-race-worlds.ts'
+import { loadRaceEmitters, loadRaceGhost, loadRaceSky, loadRaceWorlds } from './load-race-worlds.ts'
 import {
   describeAppearances,
   describeRacers,
@@ -106,6 +110,9 @@ const loadRoutes = (
 // files: LEGO.JAM and LEGORacers.exe. The first race is Royal Knights Raceway, GAMEDATA\RACEC0R0. Racer 0 is
 // the player, drives a car built from bricks; the others are the computer racers of the race's circuit, each a
 // driver of the driver database with its champion's car on its chassis (RacerSet_Setup 0x0043b190, 0x0043b480).
+const getVectorFromTriple = (triple: readonly [number, number, number] | null): Vector3 =>
+  triple === null ? ZERO_VECTOR3 : Object.freeze({ x: triple[0], y: triple[1], z: triple[2] })
+
 export const loadRaceDefinition = (
   jam: Uint8Array,
   executable: Uint8Array,
@@ -218,7 +225,13 @@ export const loadRaceDefinition = (
         displayFrame: getStartFrame(
           arithmetic,
           startPositions,
-          getStartSlot(index, isMultiplayer),
+          getStartSlot(
+            index,
+            isMultiplayer,
+            options.ghost === undefined || options.ghost === null
+              ? null
+              : { isChampionLoaded: options.ghost.championRun !== null }
+          ),
           null
         ),
         displayBoundingRadius: getFigureBounds(arithmetic, racerFigures.wheels)?.radius ?? 0,
@@ -247,8 +260,13 @@ export const loadRaceDefinition = (
     isCountdownSkipped: false,
     isMirrored,
     isPointsRecordPresent: options.isPointsRecordPresent ?? false,
-    ghost: options.ghost ?? null,
+    ghost: loadRaceGhost(readArchiveFile, options.ghost),
     introductionCameraObject: description.trackWorldObject,
+    introductionCameraPoint: getVectorFromTriple(description.cameraPoint),
+    introductionCameraVectors: Object.freeze([
+      getVectorFromTriple(description.cameraVectors?.[0] ?? null),
+      getVectorFromTriple(description.cameraVectors?.[1] ?? null),
+    ] as const),
     musicTuneCount:
       options.musicTuneCount ??
       (description.musicList === null

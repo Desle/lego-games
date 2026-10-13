@@ -6,8 +6,8 @@ import {
   readOriginalExecutable,
   readOriginalJam,
 } from '../../../../shared/testing/original-files.ts'
-import { formatDivergence } from '../../../golden-trace/index.ts'
 import { parseRecording } from '../../../session-recording/index.ts'
+import { formatReplayReportLine, getRemasteredNote } from '../replay-report/replay-report.ts'
 import { getExpectationOfReport } from '../replay-folder/replay-folder.ts'
 import { runReplay } from '../run-replay/run-replay.ts'
 
@@ -42,16 +42,8 @@ const main = async (): Promise<number> => {
     process.stdout.write(`The original was not run: ${report.originalSkipReason ?? ''}\n`)
     return 0
   }
-  const { original } = report
   process.stdout.write(
-    `Original: ${String(original.comparedFrameCount)} frames fed` +
-      (original.stopReason === null ? '' : ` (then ${original.stopReason})`) +
-      '\n'
-  )
-  process.stdout.write(
-    original.firstDivergence === null
-      ? 'No divergence: the port matches the original bit for bit.\n'
-      : `First divergence: ${formatDivergence(original.firstDivergence)}\n`
+    `${formatReplayReportLine(basename(path), report, getRemasteredNote(recording.header))}\n`
   )
   if (commandArguments.includes(WRITE_EXPECTATION_FLAG)) {
     const expectationPath = path.replace(/\.replay\.jsonl$/, '.expected.json')

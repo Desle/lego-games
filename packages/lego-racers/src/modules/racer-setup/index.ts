@@ -17,6 +17,7 @@ export {
 } from './types/race-mode-racer/race-mode-racer.ts'
 export { UnknownRacerRecordError } from './types/racer-setup-errors/racer-setup-errors.ts'
 export { getStartSlot } from './types/start-slot/start-slot.ts'
+export type { GhostStartRule } from './types/start-slot/start-slot.types.ts'
 export type {
   BuiltCar,
   CarBodyOptions,

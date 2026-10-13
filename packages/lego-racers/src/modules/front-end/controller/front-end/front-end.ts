@@ -16,6 +16,7 @@ import { getSettingsWithMemory } from '../profile/profile.ts'
 import { getDriverForScreen } from '../driver-base/driver-base.ts'
 import { FrontEndScreen } from '../../types/front-end-screen/front-end-screen.ts'
 import type { ScreenNavigation, ScreenRuntime } from '../../types/front-end-screen.types.ts'
+import type { RacePreviewClock } from '../../types/race-preview.types.ts'
 import {
   getInitialSelection,
   getScreenDefinition,
@@ -39,7 +40,11 @@ import {
 } from '../front-end-showcase/front-end-showcase.ts'
 import { advanceRacePreviewEffects } from '../race-preview/race-preview-effects.ts'
 import { advanceRacePreviewEmitters } from '../race-preview/race-preview-emitters.ts'
-import { advanceRacePreviewClock, createRacePreviewClock } from '../race-preview/race-preview.ts'
+import {
+  advanceRacePreviewClock,
+  createRacePreviewClock,
+  restartBestTimeClock,
+} from '../race-preview/race-preview.ts'
 import { getCinemaScreenSource, getScreenCinema } from '../screens/cinema-screens.ts'
 import { getFrontEndMusicIndex } from '../front-end-music/front-end-music.ts'
 import { getWidgetCommands } from '../widget-commands/widget-commands.ts'
@@ -334,6 +339,11 @@ const getIsCinemaScreenEnded = (state: FrontEndState, resources: FrontEndResourc
   )
 }
 
+// A race changed on the screen that stays open: its handler (0x00488010) restarts the best time's countdown at 2,500 ms, and
+// the frame's update (0x00488150) has run already. A screen that opens runs its update in its first frame.
+const getRestartedClock = (clock: RacePreviewClock, isScreenChanged: boolean): RacePreviewClock =>
+  isScreenChanged ? clock : restartBestTimeClock(clock)
+
 // One pass of the loop of 0x0042d510: the time advances and the input, if any, reaches the current screen, which
 // answers with the next screen, the race or the exit (0x004812c0, 0x004850a0).
 export const stepFrontEnd = (
@@ -386,10 +396,13 @@ export const stepFrontEnd = (
       ...stepped.state,
       // The frame that opens a screen already runs its update (0x0047a3f0).
       racePreview: isPreviewRestarted
-        ? advanceRacePreviewClock(
-            createRacePreviewClock(),
-            frameMilliseconds,
-            getIsPreviewCycling(stepped.state, resources)
+        ? getRestartedClock(
+            advanceRacePreviewClock(
+              createRacePreviewClock(),
+              frameMilliseconds,
+              getIsPreviewCycling(stepped.state, resources)
+            ),
+            isScreenChanged
           )
         : stepped.state.racePreview,
       menuFigure:

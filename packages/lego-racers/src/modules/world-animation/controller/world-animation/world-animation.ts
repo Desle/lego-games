@@ -1,5 +1,12 @@
 import { createSkeletonAnimationState } from '../../../skeletal-animation/index.ts'
 import type { SkeletalAnimation } from '../../../skeletal-animation/index.ts'
+import {
+  createFloatArithmetic,
+  getFrameAxes,
+  getRotationFromFrameAxes,
+  RACE_FPU_PRECISION,
+} from '../../../simulation-math/index.ts'
+import type { Matrix3 } from '../../../simulation-math/index.ts'
 import { getInstanceRotation } from '../../../scene/index.ts'
 import type { Skeleton } from '../../../skeleton/index.ts'
 import type {
@@ -12,6 +19,8 @@ import type {
 import type {
   InstanceLevel,
   MaterialAnimationRuntime,
+  MaterialAnimationTarget,
+  MaterialSlotWrite,
   MeshInstanceRuntime,
   PositionedInstance,
   SkeletonInstanceRuntime,
@@ -152,8 +161,9 @@ const createMeshInstance = (instance: MeshInstance): MeshInstanceRuntime =>
     otherFlags: getFlags(instance),
   })
 
-// 0x1002e640 starts every material animation entry an instance refers to, looping (0x10025da0); so does 0x1002e250
-// for the entry a sprite names (keyword 0x3e).
+// 0x1002e640 starts every material animation entry an instance refers to, looping, and hands it the level's material
+// table and the slot (0x10025da0 overwrites both: the last reference to an entry wins); so does 0x1002e250 for the
+// entry a sprite names (keyword 0x3e), whose target is the sprite's own (not an instance: null here).
 const createMaterialAnimations = (
   names: readonly string[],
   definitions: WorldAnimationInput['materialAnimations'],
@@ -161,30 +171,66 @@ const createMaterialAnimations = (
   sprites: readonly Sprite[]
 ): readonly MaterialAnimationRuntime[] =>
   definitions.map((definition, animationIndex) => {
-    const started = new Set([
-      ...instances.flatMap((instance) =>
-        instance.materialAnimationReferences
-          .filter((reference) => reference.materialAnimationIndex === animationIndex)
-          .map((reference) => reference.entryIndex)
-      ),
-      ...sprites.flatMap((sprite) =>
-        sprite.materialAnimation?.materialAnimationIndex === animationIndex
-          ? [sprite.materialAnimation.entryIndex]
-          : []
-      ),
-    ])
+    const targets = new Map<number, MaterialAnimationTarget | null>()
+    for (const instance of instances) {
+      for (const reference of instance.materialAnimationReferences) {
+        if (reference.materialAnimationIndex !== animationIndex) continue
+        targets.set(
+          reference.entryIndex,
+          Object.freeze({
+            instanceName: instance.name,
+            levelIndex: reference.levelIndex,
+            slot: reference.value,
+          })
+        )
+      }
+    }
+    for (const sprite of sprites) {
+      if (sprite.materialAnimation?.materialAnimationIndex !== animationIndex) continue
+      targets.set(sprite.materialAnimation.entryIndex, null)
+    }
     return Object.freeze({
       name: names[animationIndex] ?? '',
       definition,
       entries: Object.freeze(
-        definition.entries.map((_, entryIndex) =>
-          started.has(entryIndex)
-            ? getStartedMaterialPlayback(IDLE_MATERIAL_PLAYBACK, true)
-            : IDLE_MATERIAL_PLAYBACK
-        )
+        definition.entries.map((_, entryIndex) => {
+          const target = targets.get(entryIndex)
+          return target === undefined
+            ? IDLE_MATERIAL_PLAYBACK
+            : Object.freeze({
+                ...getStartedMaterialPlayback(IDLE_MATERIAL_PLAYBACK, true),
+                target,
+              })
+        })
       ),
     })
   })
+
+// 0x00413310 (from World_Mirror 0x00416140): the rotation's first and third rows are read back, their y is negated
+// and the rotation is built again from them (0x00410900).
+const getMirroredRotation = (rotation: Matrix3): Matrix3 => {
+  const { first, third } = getFrameAxes(rotation)
+  return getRotationFromFrameAxes(createFloatArithmetic(RACE_FPU_PRECISION), {
+    first: Object.freeze({ ...first, y: -first.y }),
+    third: Object.freeze({ ...third, y: -third.y }),
+  })
+}
+
+// LEGORacers.exe 0x004104c0 writes the row a playing entry selects into its target's slot (0x00410750); the writes of a
+// frame in the order the world runs the entries (0x00410300 per animation, then each entry), so a later entry
+// overwrites an earlier one that shares a slot.
+export const getMaterialSlotWrites = (world: WorldAnimation): readonly MaterialSlotWrite[] =>
+  world.materialAnimations.flatMap((animation) =>
+    animation.entries.flatMap((playback) => {
+      const materialName =
+        playback.tableIndex === null
+          ? undefined
+          : animation.definition.materials[playback.tableIndex]?.materialName
+      return playback.target === null || materialName === undefined
+        ? []
+        : [Object.freeze({ ...playback.target, materialName })]
+    })
+  )
 
 // World_LinkInstances 0x1002e640 as far as the race moves things: the skeleton instances with their starting
 // clips, the mesh instances' positions and level distances, and the material animation entries instances play.
@@ -194,12 +240,19 @@ export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation
     input.isMirrored === true
       ? Object.freeze({
           ...instance,
+          isMirrored: true,
           position: Object.freeze([
             instance.position[0],
             -instance.position[1],
             instance.position[2],
           ] as const),
         })
+      : instance
+  const getMirroredSkeletonRotation = (
+    instance: SkeletonInstanceRuntime
+  ): SkeletonInstanceRuntime =>
+    input.isMirrored === true
+      ? Object.freeze({ ...instance, rotation: getMirroredRotation(instance.rotation) })
       : instance
   return Object.freeze({
     cameras: Object.freeze(
@@ -214,12 +267,14 @@ export const createWorldAnimation = (input: WorldAnimationInput): WorldAnimation
     skeletonInstances: Object.freeze(
       world.skeletonInstances.map((instance) =>
         getMirrored(
-          createSkeletonInstance(
-            instance,
-            input.animations,
-            input.skeletons ?? [],
-            input.meshScales ?? [],
-            input.meshRadii ?? []
+          getMirroredSkeletonRotation(
+            createSkeletonInstance(
+              instance,
+              input.animations,
+              input.skeletons ?? [],
+              input.meshScales ?? [],
+              input.meshRadii ?? []
+            )
           )
         )
       )

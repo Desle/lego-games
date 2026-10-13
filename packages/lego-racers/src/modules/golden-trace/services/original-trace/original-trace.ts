@@ -32,7 +32,17 @@ const getScenarioForEmulator = (scenario: GoldenTraceScenario) => ({
   isMirrored: scenario.isMirrored,
   fpu: scenario.precision,
   powerUpGrants: scenario.powerUpGrants,
-  frames: scenario.frames.map((frame) => ({ dt: frame.milliseconds, keys: frame.scanCodes })),
+  controller: scenario.controller ?? 'keyboard',
+  isCameraOnly: scenario.isCameraOnly ?? false,
+  frames: scenario.frames.map((frame) => ({
+    dt: frame.milliseconds,
+    keys: frame.scanCodes,
+    menuKeys: frame.tappedScanCodes ?? [],
+    joystick:
+      frame.joystick === undefined || frame.joystick === null
+        ? null
+        : { axes: frame.joystick.axes, buttons: frame.joystick.buttonIndices },
+  })),
 })
 
 // Runs the original race in the emulator (reverse-engineering/emulator/golden_trace.py) and collects every frame.

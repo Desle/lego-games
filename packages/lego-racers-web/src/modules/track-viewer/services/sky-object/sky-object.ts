@@ -33,6 +33,7 @@ const getDomeMesh = (dome: SkyDome, ringColors: SkyRingColors, materialIndex: nu
     colors: getSkyVertexColors(dome, ringColors),
     normals: null,
     materialIndices: [materialIndex],
+    boundingSphere: null,
     drawBatches: [
       Object.freeze({
         materialSlot: 0,

@@ -53,6 +53,7 @@ describe('getSkeletalAnimation', () => {
       name: 'walk',
       framesPerMillisecond: 0.5,
       velocity: [0, 1, 0],
+      boundingSphere: [0, 0, 0, 1],
       firstTrackIndex: 3,
       frameCount: 0xfffe,
       loopLength: 40000,

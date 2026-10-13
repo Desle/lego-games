@@ -185,7 +185,7 @@ export const getBrickFaces = (
 // first brick gives its origin vertex (the car's origin is that vertex: x and y negated, z times -0.4 so that after the
 // brick height scale it lies at 0). Any other first brick is centred on the middle of its extent in x and y and rests
 // on z = 0.
-const getOrigin = (database: BrickDatabase, design: CarDesign): Vector3 => {
+export const getCarOrigin = (database: BrickDatabase, design: CarDesign): Vector3 => {
   const first = design.bricks[0]
   if (first === undefined) return { x: 0, y: 0, z: 0 }
   const { piece } = first
@@ -226,7 +226,7 @@ const getVertexKey = (vertex: CarVertex): string =>
   ].join(',')
 
 // The triangles of a face (0x00497690): a quad (v0, v1, v2, v3) is the triangles (v0, v1, v2) and (v2, v1, v3).
-const getTriangles = (face: CarFace): readonly (readonly CarVertex[])[] => {
+export const getTriangles = (face: CarFace): readonly (readonly CarVertex[])[] => {
   const [first, second, third, fourth] = face.vertices
   if (first === undefined || second === undefined || third === undefined) return []
   return fourth === undefined
@@ -248,7 +248,7 @@ export const buildCarGeometry = (
   design: CarDesign,
   colorMaterialIndices: readonly number[]
 ): CarGeometry => {
-  const origin = getOrigin(database, design)
+  const origin = getCarOrigin(database, design)
   const faces = design.bricks.flatMap((brick: PlacedBrick) =>
     getBrickFaces(
       database,

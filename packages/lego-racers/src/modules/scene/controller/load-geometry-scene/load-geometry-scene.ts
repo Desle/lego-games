@@ -76,6 +76,7 @@ export const loadGeometryScene = (
         })
       )
     ),
+    boundingSphere: null,
   })
   const instance: SceneInstance = Object.freeze({
     name: MESH_NAME,
@@ -105,6 +106,7 @@ export const loadGeometryScene = (
     skeletons: Object.freeze(skeletons),
     animations: Object.freeze(animations),
     instances: Object.freeze([instance]),
+    sprites: Object.freeze([]),
     cameras: Object.freeze([]),
     ambientLights: files.ambientLights,
     directionalLights: files.directionalLights,

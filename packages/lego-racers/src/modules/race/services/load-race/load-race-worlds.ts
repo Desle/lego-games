@@ -12,7 +12,13 @@ import { getModelBounds, parseModel } from '../../../model/index.ts'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
 import { readWorld } from '../../../world/index.ts'
 import type { World } from '../../../world/index.ts'
-import { createWorldAnimation, EMPTY_WORLD_ANIMATION } from '../../../world-animation/index.ts'
+import {
+  createWorldAnimation,
+  EMPTY_WORLD_ANIMATION,
+  findSkeletonInstanceIndex,
+} from '../../../world-animation/index.ts'
+import { loadGhostCar } from '../../../ghost/index.ts'
+import type { GhostSession } from '../../../ghost/index.ts'
 import type { RaceSkyDefinition } from '../../types/race.types.ts'
 import type { MeshMeasures, ReadFile } from './load-race.types.ts'
 import type { RaceWorlds, WorldAnimation } from '../../../world-animation/index.ts'
@@ -76,6 +82,26 @@ const loadWorldAnimation = (
       parseMaterialAnimation(readFile(`${folder}${JAM_SEPARATOR}${animation.toUpperCase()}.MAB`))
     ),
   })
+}
+
+const GHOST_WORLD_NAME = 'ghost.wdf'
+const GHOST_WHEELS_NAME = 'ghost2'
+const GHOST_DRIVER_NAME = 'ghostdr'
+
+// Ghost_Initialize 0x00422420 loads the `ghost` world of GAMEDATA\COMMON once per session and keeps its wheels and driver
+// skeleton instances; a ghost that has them already (a later race of the session) keeps them, and so their clocks.
+export const loadRaceGhost = (
+  readFile: ReadFile,
+  ghost: GhostSession | null | undefined
+): GhostSession | null => {
+  if (ghost === null || ghost === undefined) return null
+  if (ghost.championCar !== null) return ghost
+  const world = loadWorldAnimation(readFile, COMMON_FOLDER, GHOST_WORLD_NAME)
+  const wheels = world.skeletonInstances[findSkeletonInstanceIndex(world, GHOST_WHEELS_NAME)]
+  const driver = world.skeletonInstances[findSkeletonInstanceIndex(world, GHOST_DRIVER_NAME)]
+  return wheels === undefined || driver === undefined
+    ? ghost
+    : loadGhostCar(ghost, { wheels, driver })
 }
 
 // The track, blended and local worlds of a race (race +0x390, +0x398, +0x3a4).

@@ -6,11 +6,12 @@ This repository is a workspace: several packages, one gate. Every rule is enforc
 
 ### Packages
 
-| Package                       | Folder                     | What it is                                                                                                      |
-| ----------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `@lego-games/lego-racers`     | `packages/lego-racers`     | LEGO Racers (1999), ported exactly from `LEGORacers.exe` and `GolDP.dll`.                                       |
-| `@lego-games/lego-racers-web` | `packages/lego-racers-web` | Browser track viewer (Vite, React, Three.js) rendering scenes from the player's own `LEGO.JAM`; `pnpm run dev`. |
-| `@lego-games/tooling`         | `packages/tooling/`        | The rules as code: lint, TypeScript and Prettier config, the architecture checks, the git and Claude hooks.     |
+| Package                          | Folder                        | What it is                                                                                                         |
+| -------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `@lego-games/lego-racers`        | `packages/lego-racers`        | LEGO Racers (1999), ported exactly from `LEGORacers.exe` and `GolDP.dll`.                                          |
+| `@lego-games/lego-racers-web`    | `packages/lego-racers-web`    | Browser track viewer (Vite, React, Three.js) rendering scenes from the player's own `LEGO.JAM`; `pnpm run dev`.    |
+| `@lego-games/lego-racers-export` | `packages/lego-racers-export` | Exports every asset of the player's own game files (PNG, WAV, mkv, glTF) for a remaster; `pnpm run export-assets`. |
+| `@lego-games/tooling`            | `packages/tooling/`           | The rules as code: lint, TypeScript and Prettier config, the architecture checks, the git and Claude hooks.        |
 
 Each package has its own `AGENTS.md` with its layout, commands and definition of done. Read it before changing code there, and run package commands inside its folder.
 
@@ -35,6 +36,7 @@ Each package has its own `AGENTS.md` with its layout, commands and definition of
 1. `pnpm run ci` is green at the repository root.
 2. Every changed package meets the definition of done in its own `AGENTS.md`.
 3. A change to what the viewer draws is done only when its `pnpm run pixel-trace` case passes (`.docs/reverse-engineering/pixel-trace.md`).
+4. A change to the viewer or the simulation (including mirrored races) runs `pnpm run traces` (golden, render and pixel trace; slow, needs `original-files/`, so not in CI) before the PR.
 
 ## Repository notes
 

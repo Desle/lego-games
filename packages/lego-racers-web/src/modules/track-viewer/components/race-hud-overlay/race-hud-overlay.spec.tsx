@@ -18,9 +18,11 @@ const text = (overrides: Partial<Extract<HudCommand, { kind: 'text' }>> = {}): H
 const getProps = (overrides: Partial<RaceHudOverlayProps> = {}): RaceHudOverlayProps => ({
   commands: [],
   imageUrls: new Map(),
+  imageScales: new Map(),
   fonts: null,
   width: 800,
   height: 600,
+  pixelRatio: 1,
   phase: 'racing',
   ...overrides,
 })
@@ -128,5 +130,13 @@ describe('RaceHudOverlay', () => {
     expect(container).toMatchSnapshot()
     expect(getByText('GAME PAUSED')).toBeInTheDocument()
     expect(container.querySelectorAll('img')).toHaveLength(0)
+  })
+
+  it('draws the canvas with a device pixel per stage pixel times the ratio', () => {
+    // Arrange / Act
+    const { container } = render(<RaceHudOverlay {...getProps({ pixelRatio: 2 })} />)
+
+    // Assert
+    expect(container).toMatchSnapshot()
   })
 })

@@ -19,16 +19,20 @@ import {
   touchHazard,
   updateHazards,
   updateHazardsAfterRacers,
+  followCamerasWithHazards,
 } from '../../../hazard/index.ts'
 import type { HazardSession, HazardStore } from '../../../hazard/index.ts'
 import { drawRandomScaledRange, drawRandomValue } from '../../../random-table/index.ts'
 import {
   advanceWorldAnimation,
   findSkeletonInstanceIndex,
+  getSkeletonInstanceBoneAxes,
+  getSkeletonInstanceBoneTranslation,
   getSkeletonInstanceChainPosition,
   getSkeletonInstanceClipIndex,
   getSkeletonInstanceFlags,
   getSkeletonInstanceWithFlags,
+  getWorldWithInstanceLevelDistances,
   getWorldWithSkeletonInstance,
 } from '../../../world-animation/index.ts'
 import type { SkeletonInstanceRuntime } from '../../../world-animation/index.ts'
@@ -39,6 +43,7 @@ import {
   TrackEventState,
 } from '../../types/track-event-state/track-event-state.ts'
 import type {
+  TrackBoneFrame,
   TrackEffect,
   TrackEvent,
   TrackLogicContext,
@@ -455,12 +460,41 @@ export const createTrackSession = (
         }
   }
 
+  const setObjectLevelDistances = (
+    reference: ObjectReference,
+    levelSquaredDistances: readonly number[]
+  ): void => {
+    const key = reference.isFromSecondWorld ? 'blended' : 'track'
+    worlds = {
+      ...worlds,
+      [key]: getWorldWithInstanceLevelDistances(worlds[key], reference.name, levelSquaredDistances),
+    }
+  }
+
   const getObjectBonePosition = (reference: ObjectReference, boneIndex: number): Vector3 | null => {
     const found = getObjectInstance(reference)
     const instance = found === null ? undefined : worlds[found.key].skeletonInstances[found.index]
     return instance === undefined
       ? null
       : getSkeletonInstanceChainPosition(context.arithmetic, instance, boneIndex, instance.scale)
+  }
+
+  const getObjectBoneFrame = (
+    reference: ObjectReference,
+    boneIndex: number
+  ): TrackBoneFrame | null => {
+    const found = getObjectInstance(reference)
+    const instance = found === null ? undefined : worlds[found.key].skeletonInstances[found.index]
+    if (instance === undefined) return null
+    const position = getSkeletonInstanceBoneTranslation(context.arithmetic, instance, boneIndex)
+    const axes = getSkeletonInstanceBoneAxes(context.arithmetic, instance, boneIndex)
+    if (position === null || axes === null) return null
+    const { first, third } = axes
+    return Object.freeze({
+      position,
+      forward: Object.freeze([first.x, first.y, first.z] as const),
+      up: Object.freeze([third.x, third.y, third.z] as const),
+    })
   }
 
   const setEventEmitterPosition = (handle: EmitterReference, position: Vector3): void => {
@@ -505,7 +539,9 @@ export const createTrackSession = (
   const session: TrackSession = {
     context,
     getObject,
+    setObjectLevelDistances,
     getObjectBonePosition,
+    getObjectBoneFrame,
     setEmitterPosition: setEventEmitterPosition,
     requestObjectAnimation,
     drawRandomValue: () => {
@@ -542,6 +578,7 @@ export const createTrackSession = (
     updateHazards: (milliseconds) => updateHazards(hazardStore, hazardSession, milliseconds),
     updateHazardsAfterRacers: (cameraPositions) =>
       updateHazardsAfterRacers(hazardStore, hazardSession, cameraPositions),
+    followCameras: (cameras) => followCamerasWithHazards(hazardStore, hazardSession, cameras),
     updateTimers: (milliseconds) => {
       timers = updateTimers(timers, session, milliseconds)
     },

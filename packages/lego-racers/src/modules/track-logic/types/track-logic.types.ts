@@ -1,4 +1,5 @@
 import type { EnumValues } from '../../../shared/types/enum.types.ts'
+import type { HazardCameraFrame } from '../../hazard/index.ts'
 import type {
   Event28,
   Event29,
@@ -61,6 +62,8 @@ export type TrackEventBase<Kind extends TrackEventKind, Record> = {
   readonly emitterHandle: EmitterReference | null
   // 4B byte +0x2c bit 0 and 59 byte +0x34 bit 0: set while the class's second signal is held
   readonly isSignalHeld: boolean
+  // 53 +0x24..+0x2c: the level distances the object had when the event was made (0x00463700), or null
+  readonly savedLevelSquaredDistances: readonly number[] | null
 }
 
 export type TrackEvent =
@@ -89,15 +92,40 @@ export type TrackEventSet = Readonly<Record<TrackEventKind, readonly TrackEvent[
 
 // What an event or hazard asks of the parts of the game the port does not simulate (rendering, sound, the world's
 // animations) or of the racers; each names the original call.
+export type TrackBoneFrame = {
+  readonly position: Vector3
+  readonly forward: Vector3
+  readonly up: Vector3
+}
+
+// What the 2A event hands the sound player with its position (event +0x44, +0x48, +0x4c, +0x50).
+export type TrackSoundParameters = {
+  readonly volume: number
+  readonly pitch: number
+  readonly minimumDistance: number
+  readonly maximumDistance: number
+}
+
 export type TrackEffect =
   | {
+      // 0x004639d0: the 52 event puts a collision world instance on a bone of the object it follows.
+      readonly type: 'track.collision_object_moved'
+      readonly name: string
+      readonly frame: TrackBoneFrame
+    }
+  | ({
       readonly type: 'track.sound_played'
       readonly identifier: number
       // The sound id the event plays (event +0x3c, a track bank id from 3000).
       readonly soundNumber: number
       readonly position: Vector3
-    }
-  | { readonly type: 'track.looped_sound_started'; readonly identifier: number }
+    } & TrackSoundParameters)
+  | ({
+      readonly type: 'track.looped_sound_started'
+      readonly identifier: number
+      readonly soundNumber: number
+      readonly position: Vector3
+    } & TrackSoundParameters)
   | { readonly type: 'track.looped_sound_stopped'; readonly identifier: number }
   | {
       readonly type: 'track.object_animation_requested'
@@ -296,9 +324,21 @@ export type TrackSession = HazardBus & {
   // The animation index (+0xbc) and flags (+0x5c) of the scene object (a skeleton instance of the track world, or of
   // the blended world) an event names, or null when the name is unknown.
   readonly getObject: (reference: ObjectReference) => TrackWorldObject | null
+  // 0x004637c0 and 0x00463800 write the level distances (+0x84, +0x88, +0x8c) of the mesh or skeleton instance an event
+  // names; a negative distance hides it.
+  readonly setObjectLevelDistances: (
+    reference: ObjectReference,
+    levelSquaredDistances: readonly number[]
+  ) => void
   // Where a bone of the scene object is in the world now (0x0045ebe0: the bone's chain of transforms, then the object's
   // frame), or null when the object or its skeleton is unknown.
   readonly getObjectBonePosition: (reference: ObjectReference, boneIndex: number) => Vector3 | null
+  // 0x004639d0: a bone's own translation (scaled, carried by the object's frame) with rows 0 and 2 of its rotation
+  // turned by the object's rotation, or null when the object or its skeleton is unknown.
+  readonly getObjectBoneFrame: (
+    reference: ObjectReference,
+    boneIndex: number
+  ) => TrackBoneFrame | null
   // 0x00489660 on the emitter a track event holds.
   readonly setEmitterPosition: (handle: EmitterReference, position: Vector3) => void
   // 0x00463570, 0x004635c0 and 0x004633f0 write the requested animation (+0xd8, the second clip) and the flag word
@@ -322,6 +362,7 @@ export type TrackSession = HazardBus & {
   // Hazards_Update 0x0048add0 and the hazards' camera update 0x0048ae00 after the racers.
   readonly updateHazards: (milliseconds: number) => void
   readonly updateHazardsAfterRacers: (cameraPositions: readonly Vector3[]) => void
+  readonly followCameras: (cameras: readonly HazardCameraFrame[]) => void
   // Timers_Update 0x00464dd0 and the registry's time list (0x0042fc10).
   readonly updateTimers: (milliseconds: number) => void
   // Triggers_Update: the environment triggers, then the main triggers, release what nobody touched.
@@ -377,6 +418,12 @@ export type SessionBuild = {
 export type SessionReference = { current: TrackSession | null }
 
 // The hazards a race loaded, the worlds their loaders changed and the random table position after their draws.
+// The 53 events once they have taken the level distances of the objects they name, and the worlds with those objects hidden.
+export type LoadedHiddenObjects = {
+  readonly events: readonly TrackEvent[]
+  readonly worlds: RaceWorlds
+}
+
 export type LoadedHazards = Pick<TrackLogicState, 'hazards' | 'worlds'> & {
   readonly position: RandomTablePosition
 }

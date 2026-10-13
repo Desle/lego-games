@@ -1,4 +1,9 @@
-import type { SceneDrawBatch, SceneInstance } from '@lego-games/lego-racers/scene'
+import type {
+  SceneDrawBatch,
+  SceneInstance,
+  SceneInstanceLevel,
+  SceneMesh,
+} from '@lego-games/lego-racers/scene'
 import { Group, Matrix4, Mesh } from 'three'
 import type { BufferGeometry, Material } from 'three'
 import { createBatchGeometry } from './batch-geometry.ts'
@@ -31,9 +36,37 @@ export const getInstanceMatrix = (instance: SceneInstance, isBackground: boolean
   )
 }
 
+// The three.js material of a scene material on a mesh, shared by every batch that draws it. The background is drawn
+// without the depth test or depth writes (the renderer slot +0xe8 turns the depth buffer off while the sky is drawn).
+const getSceneMaterialFor = (
+  context: SceneObjectContext,
+  mesh: SceneMesh,
+  materialIndex: number
+): BatchMaterial | null => {
+  const { scene } = context
+  const sceneMaterial = scene.materials[materialIndex]
+  if (sceneMaterial === undefined) return null
+  const materialKey = `${String(materialIndex)}/${String(mesh.colors === null)}`
+  const material =
+    context.materials.get(materialKey) ??
+    createSceneMaterial(sceneMaterial, scene.textures, context.textureCache)
+  if (context.isBackground) {
+    material.depthTest = false
+    material.depthWrite = false
+  }
+  context.materials.set(materialKey, material)
+  return { material, materialIndex, sceneMaterial }
+}
+
+// The table a level's batches read their materials from: its material assignment when it has one, else its model
+// (0x10006c50). 0x1002e640 hands a material animation entry the same table (0x10025da0).
+export const getMaterialTableKey = (level: SceneInstanceLevel): string =>
+  level.materialAssignmentIndex === null
+    ? `mesh/${String(level.meshIndex)}`
+    : `assignment/${String(level.materialAssignmentIndex)}`
+
 // The material of a batch: the instance level's material assignment replaces the model's materials when it
-// has one (0x10006c50). The background is drawn without the depth test or depth writes (the renderer slot
-// +0xe8 turns the depth buffer off while the sky is drawn).
+// has one (0x10006c50).
 export const getBatchMaterial = (
   context: SceneObjectContext,
   levelMesh: InstanceLevelMesh,
@@ -46,18 +79,38 @@ export const getBatchMaterial = (
       ? null
       : scene.materialAssignments[level.materialAssignmentIndex]
   const materialIndex = (assignment?.materialIndices ?? mesh.materialIndices)[batch.materialSlot]
-  const sceneMaterial = materialIndex === undefined ? undefined : scene.materials[materialIndex]
-  if (materialIndex === undefined || sceneMaterial === undefined) return null
-  const materialKey = `${String(materialIndex)}/${String(mesh.colors === null)}`
-  const material =
-    context.materials.get(materialKey) ??
-    createSceneMaterial(sceneMaterial, scene.textures, context.textureCache)
-  if (context.isBackground) {
-    material.depthTest = false
-    material.depthWrite = false
+  return materialIndex === undefined ? null : getSceneMaterialFor(context, mesh, materialIndex)
+}
+
+// Remembers a batch mesh under its material table and slot, so a material animation can swap its material.
+export const registerSlotMesh = (
+  context: SceneObjectContext,
+  levelMesh: InstanceLevelMesh,
+  batch: SceneDrawBatch,
+  mesh: Mesh
+): void => {
+  const key = `${getMaterialTableKey(levelMesh.level)}/${String(batch.materialSlot)}`
+  context.slotMeshes.set(key, [
+    ...(context.slotMeshes.get(key) ?? []),
+    { mesh, source: levelMesh.mesh },
+  ])
+}
+
+// LEGORacers.exe 0x00410750: the slot of a level's material table now holds this material, so every batch that reads
+// the slot draws it. The geometry stays: it depends on the material only through the diffuse flags and, for a model
+// without vertex colours, the ambient colour (every retail model with an animated slot has vertex colours and the
+// materials of a table share the flags).
+export const setSlotMaterial = (
+  context: SceneObjectContext,
+  level: SceneInstanceLevel,
+  slot: number,
+  materialIndex: number
+): void => {
+  const sites = context.slotMeshes.get(`${getMaterialTableKey(level)}/${String(slot)}`) ?? []
+  for (const { mesh, source } of sites) {
+    const batchMaterial = getSceneMaterialFor(context, source, materialIndex)
+    if (batchMaterial !== null) mesh.material = batchMaterial.material
   }
-  context.materials.set(materialKey, material)
-  return { material, materialIndex, sceneMaterial }
 }
 
 // One shared geometry per mesh batch and material, for instances that never change shape.
@@ -95,6 +148,7 @@ export const createBatchMesh = (
 export const createInstanceGroup = (instance: SceneInstance, isBackground: boolean): Group => {
   const group = new Group()
   group.name = instance.name
+  group.userData['instanceKind'] = instance.kind
   group.matrixAutoUpdate = false
   group.matrix.copy(getInstanceMatrix(instance, isBackground))
   return group

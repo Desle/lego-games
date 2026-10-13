@@ -1,9 +1,12 @@
 import type { BrickBase } from '../../power-ups/index.ts'
-import type { CameraState, CameraView } from '../../race-camera/index.ts'
+import type { CameraState, CameraUpdate, CameraView } from '../../race-camera/index.ts'
 import type {
   EngineLoop,
   EngineSoundState,
+  LoopedSoundRequest,
   MusicCue,
+  NearestRacerSound,
+  SoundListener,
   SoundRequest,
 } from '../../race-audio/index.ts'
 import type {
@@ -14,12 +17,15 @@ import type {
   HudState,
 } from '../../race-hud/index.ts'
 import type { SkeletonAnimationState } from '../../skeletal-animation/index.ts'
-import type { VehicleSkids } from '../../racer/index.ts'
+import type { CurseFigure, VehicleSkids } from '../../racer/index.ts'
+import type { CurseTrackFrame } from '../../projectiles/index.ts'
 import type { DecalLimits, DecalPlacement } from '../../decal/index.ts'
 import type { ColourShift } from '../../racer/index.ts'
 import type { Matrix3, Vector3 } from '../../simulation-math/index.ts'
 import type { RacePhaseValue, RaceState } from '../../race/index.ts'
 import type { GhostRunSelection } from '../../ghost/index.ts'
+import type { RibbonView } from '../../ribbon/index.ts'
+import type { TrailDrawing } from '../../projectile-trail/index.ts'
 
 // A ghost car of a time trial (FUN_00422960): the champion's, drawn from GHOST.WDB, or the session's best run, drawn with
 // the player's own car. All three parts take the run's one orientation; the driver sits at the seat point carried by it.
@@ -30,6 +36,10 @@ export type GhostCar = {
   readonly driverPosition: Vector3
   // The integer FUN_00422960 stores as the wheels' animation rate (+0xb8).
   readonly speed: number
+  // The animation state of the wheels and of the driver (Ghost_Initialize 0x00422420, 0x00422eb0), advanced with every
+  // sub-step by the recorder; null when the car's animation was not loaded.
+  readonly wheelAnimation: SkeletonAnimationState | null
+  readonly driverAnimation: SkeletonAnimationState | null
 }
 
 export type GhostCarsStep = {
@@ -45,6 +55,8 @@ export type RacePresentation = {
   // The entries of the race's music list (`LEGOMSC`, seven in Royal Knights Raceway).
   readonly musicListCount: number
   readonly camera: CameraState
+  // The node pose the introduction camera's clip last gave (0x004047b0) until the clip ends; null otherwise.
+  readonly introductionView: CameraView | null
   readonly hud: HudState
   // Racer +0xd68 of the player's racer, from the last turbo start.
   readonly turboLevel: number
@@ -83,6 +95,11 @@ export type RacerEngineLoops = {
   readonly loops: readonly EngineLoop[]
 }
 
+// The player camera after a frame's updates and the node pose of the introduction clip while it still holds the camera.
+export type CameraFrameUpdate = CameraUpdate & {
+  readonly introductionView: CameraView | null
+}
+
 export type RacePresentationFrame = {
   readonly presentation: RacePresentation
   readonly cameraView: CameraView
@@ -95,6 +112,12 @@ export type RacePresentationFrame = {
   // null in the introduction and the results, when the original draws no HUD.
   readonly hudFrame: HudFrame | null
   readonly sounds: readonly SoundRequest[]
+  // The looped sounds the frame's events start or stop (the shield's hum, the oil slick, track events, hazards).
+  readonly loopedSounds: readonly LoopedSoundRequest[]
+  // Who hears the sounds: the player's racer and the way it faces (0x00417de0 measures every sound from it).
+  readonly soundListener: SoundListener
+  // The racer the camera's racer hears the loop of (sound 0x4f), or null when none is within 200 units.
+  readonly nearestRacerSound: NearestRacerSound | null
   readonly engineLoops: readonly RacerEngineLoops[]
   // The music track to switch to this frame, if any.
   readonly music: MusicCue | null
@@ -158,6 +181,8 @@ export type RacerPose = {
   readonly skids: VehicleSkids
   // The racer is off the track (racer flag 0x10): its parts are not drawn there either.
   readonly isOffTrack: boolean
+  // The curse figure circling the racer (racer +0x29c, 0x0043f530), or null without the curse.
+  readonly curseFigure: CurseFigure | null
   // The scale of the three parts' frames (+0x58): 1, except in the last 250 ms of the warp's portal, which shrinks the car
   // with the portal's fade (0x0045dbe0 calls 0x00440160).
   readonly partScale: number
@@ -235,6 +260,8 @@ export type AttachmentView = {
   readonly state: AttachmentState
   readonly timerMilliseconds: number
   readonly elapsedMilliseconds: number
+  // The milliseconds the figures were stepped since the effect started: their texture scroll has run this long.
+  readonly scrollMilliseconds: number
   // The figure's scale (+0x58): 1, except the warp portal's, which follows the fade table (0x0045dbe0).
   readonly scale: number
 }
@@ -249,12 +276,31 @@ export type SpriteView = {
   readonly height: number
 }
 
+// A curse lying on the track (0x00452ae0): three figures share one frame orientation, `curse` floating 13 above the
+// ground point along its normal and the two scrolling `cgreen` rings on the ground point itself.
+export type CurseView = CurseTrackFrame & {
+  // Active (state 3) or ending (state 4, shrinking with the timer).
+  readonly state: AttachmentState
+  readonly timerMilliseconds: number
+  // The milliseconds the figures' animation and texture scroll have run.
+  readonly elapsedMilliseconds: number
+  // The frame scale (+0x58) of the figures: 1, then timer / 1000 while the curse ends (0x00452a40).
+  readonly scale: number
+}
+
 export type EffectViews = {
+  readonly curses: readonly CurseView[]
   readonly sprites: readonly SpriteView[]
+  // The strips the effects lay out in the world (the grapple's rope, the wand's beam).
+  readonly ribbons: readonly RibbonView[]
   readonly attachments: readonly AttachmentView[]
   readonly bricks: readonly BrickView[]
   readonly spinAngle: number
+  // The clock of the bricks' trail clips (the world of 0x00416090 at power-up system +0x60), in milliseconds.
+  readonly brickClockMilliseconds: number
   readonly effects: readonly EffectView[]
   readonly explosions: readonly ExplosionView[]
   readonly decals: readonly DecalView[]
+  // The streaks behind the cannonballs and rockets (the trail pool, 0x00493aa0).
+  readonly trails: readonly TrailDrawing[]
 }

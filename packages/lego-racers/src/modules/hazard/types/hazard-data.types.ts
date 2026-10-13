@@ -75,6 +75,12 @@ export type TurretData = {
   readonly periodMilliseconds: number
   readonly cycleMilliseconds: number
   readonly shotMilliseconds: number
+  // +0x3c, +0x40, +0x44: the file's second vector, the aim's phase scale, its height amplitude and offset (0x47).
+  readonly aim: Vector3
+  // +0x54: a mirrored race negates the aim's y.
+  readonly isMirrored: boolean
+  // +0x28..+0x30: where the muzzle points, turned through the cosine table over the period; it leaves with every shot.
+  readonly direction: Vector3
 }
 
 // 0x2e (0x0048e2a0): a rock that swaps between two meshes and a collision object.
@@ -101,6 +107,9 @@ export type SnowfallData = {
   readonly milliseconds: number
   // +0x1c
   readonly isEnabled: boolean
+  // The table value the last hook drew to place the flakes across the view (0x0048eb70): the placement uses it once the
+  // frame's camera is known.
+  readonly placementValue: number
 }
 
 // 0x30 (0x0048e680): a vent that smokes.
@@ -202,8 +211,13 @@ export type GhostData = {
 // 0x2c (0x0048d7f0): the lava monster.
 export type LavaData = {
   readonly keyword: 0x2c
-  // +0x48: the looped sound exists.
+  // +0x48: the sound 0xbba exists.
   readonly isSoundHeld: boolean
+  // +0x50: milliseconds before the next "lavasmk" may spill; +0x54: before the next signal 0x2b.
+  readonly smokeMilliseconds: number
+  readonly signalMilliseconds: number
+  // +0x58: set-up +0x40, the track is mirrored.
+  readonly isMirrored: boolean
   // +0x38: the "mmlavbl" skeleton instance.
   readonly instance: InstanceReference | null
   // +0x10..: the shape; its centre follows the instance's first bone.
@@ -227,6 +241,10 @@ export type CaptureData = {
   readonly holdMilliseconds: number
   readonly phase: number
   readonly phaseMilliseconds: number
+  // The bones hold the pose of the instance's last draw, the frame before (as the hammer's posedClip): the clip the
+  // reads of this frame see, and the clip this frame's update saw for the next one.
+  readonly posedClip: SkeletonInstanceRuntime['clip']
+  readonly nextPosedClip: SkeletonInstanceRuntime['clip']
 }
 
 // 0x32 (0x0048fe30): the crane.
@@ -238,6 +256,9 @@ export type CraneData = {
   readonly flags: number
   // +0x10..: the shape; its centre is the origin of the instance's fourth bone, radius 3.
   readonly sphere: HazardSphere
+  // The bones hold the pose of the instance's last draw (the frame before): see CaptureData.
+  readonly posedClip: SkeletonInstanceRuntime['clip']
+  readonly nextPosedClip: SkeletonInstanceRuntime['clip']
 }
 
 // A class that is registered but whose behaviour is not ported yet.

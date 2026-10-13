@@ -25,6 +25,7 @@ REGISTRY_ENTRY_NEXT_OFFSET = 0x28
 # grapple hook, rocket, explosion.
 REGISTRY_LISTENER_TAGS = {0x4B16E0: 1, 0x4B15FC: 2, 0x4B13FC: 3, 0x4B0778: 4, 0x4B0CA8: 5, 0x4B0248: 6, 0x4B0164: 7}
 END_OF_LIST = 0xFFFFFFFF
+BARREL_POOL = 2
 
 
 def classify_effect(machine, system: int, effect: int) -> int:
@@ -89,6 +90,12 @@ def snapshot_explosions(machine, system: int) -> list:
     return words
 
 
+def snapshot_barrel_spins(machine, system: int) -> list:
+    barrels = machine.read_u32(system + POOL_ARRAYS_OFFSET + 4 * BARREL_POOL)
+    count = machine.read_bytes(system + POOL_COUNTS_OFFSET + BARREL_POOL, 1)[0]
+    return [machine.read_u32(barrels + POOL_STRIDES[BARREL_POOL] * index + 0x178) for index in range(count)]
+
+
 def snapshot_power_up_fields(machine, fields: dict, race: int, racers: int, racer_count: int) -> None:
     system = race + POWER_UPS_OFFSET
     brick_words, enhancement_words = snapshot_bricks(machine, system)
@@ -97,6 +104,7 @@ def snapshot_power_up_fields(machine, fields: dict, race: int, racers: int, race
     fields["powerUps.effects"] = snapshot_effects(machine, system)
     fields["powerUps.explosions"] = snapshot_explosions(machine, system)
     fields["powerUps.registry"] = snapshot_registry(machine, race)
+    fields["powerUps.barrelSpins"] = snapshot_barrel_spins(machine, system)
     for index in range(racer_count):
         racer = racers + RACER_STRIDE * index
         fields[f"racer{index}.powerUps.level"] = [machine.read_u32(racer + 0xD58)]

@@ -1,4 +1,5 @@
 import { decodeSoundBank } from '@lego-games/lego-racers/audio'
+import type { SoundBank } from '@lego-games/lego-racers/audio'
 import { decodeBitmap, getBitmapColors } from '@lego-games/lego-racers/bitmap'
 import { parseFontDatabase } from '@lego-games/lego-racers/font-database'
 import { buildBitmapFont, getFontImagePixels } from '@lego-games/lego-racers/font-rendering'
@@ -32,6 +33,8 @@ import {
   loadSceneOnto,
 } from '@lego-games/lego-racers/scene'
 import { parseSky } from '@lego-games/lego-racers/sky'
+import { parseAnimation } from '@lego-games/lego-racers/animation'
+import { getSkeletalAnimation } from '@lego-games/lego-racers/skeletal-animation'
 import { parseModel } from '@lego-games/lego-racers/model'
 import { readWorld } from '@lego-games/lego-racers/world'
 import { getString, parseStringTable } from '@lego-games/lego-racers/string-table'
@@ -131,7 +134,7 @@ const EFFECT_MATERIAL_LIBRARIES = [
   'DTUBE',
 ]
 
-const loadEffectModel = (
+export const loadEffectModel = (
   archive: JamArchive,
   name: string,
   isSkeletal: boolean,
@@ -165,6 +168,14 @@ const TURBO_MODEL_NAMES = [
   ],
 ]
 
+// POWERUP.WDB lists a curse's instances curse, cgreen and cgreen2 (the files CURSE, CGREEN and GREEN); 0x0045aeb0 looks
+// them up by those names.
+const CURSE_MODEL_NAMES = [
+  ['CURSE', 'curse'],
+  ['CGREEN', 'cgreen'],
+  ['GREEN', 'cgreen2'],
+] as const
+
 // POWERUP.WDB lists the four shields (instances shield0..3) on one skeleton and animation, the one of SHEOUT0.
 const SHIELD_MODEL_NAMES = ['SHEOUT0', 'SHEOUT1', 'SHEOUT2', 'SHEOUT3']
 
@@ -176,6 +187,15 @@ const BRICK_MATERIALS: Readonly<Record<string, string>> = Object.freeze({
   shield: 'pbrickS',
   turbo: 'pbrickT',
   hazard: 'pbrickM',
+})
+
+// 0x00458a80 also looks up ptrailP, ptrailS, ptrailT and ptrailM for the trail instance (genblen, the mesh putraily) of each
+// brick kind (0x0045bae0); the model names ptrailM.
+const TRAIL_MATERIALS: Readonly<Record<string, string>> = Object.freeze({
+  projectile: 'ptrailP',
+  shield: 'ptrailS',
+  turbo: 'ptrailT',
+  hazard: 'ptrailM',
 })
 
 const getBrickInMaterial = (model: ModelScene, materialName: string): ModelScene => {
@@ -255,8 +275,31 @@ const getGhostModels = (
   return { ghostScene, ghostScales: Object.freeze(Object.fromEntries(scales)) }
 }
 
-const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
-  Object.freeze({
+// 0x10023ef0: the sphere the first clip of a model's animation gives, in the model's scale (before the brick's own scale).
+const getModelClipSphere = (
+  archive: JamArchive,
+  name: string,
+  model: ModelScene
+): readonly [number, number, number, number] => {
+  const clip = getSkeletalAnimation(parseAnimation(archive.readFile(getRacerFilePath(name, 'ADB'))))
+    .clips[0]
+  const scale = model.meshScales[0] ?? 1
+  const [x, y, z, radius] = clip?.boundingSphere ?? [0, 0, 0, 0]
+  return [x * scale, y * scale, z * scale, radius * scale]
+}
+
+const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels => {
+  const enhancementBrick = loadEffectModel(archive, 'ENHABRIK', true)
+  const enhancementTrail = loadEffectModel(archive, 'ENHANER', true)
+  const powerUpBrick = loadEffectModel(archive, 'PUBRICKY', true)
+  const powerUpTrail = loadEffectModel(archive, 'PUTRAILY', true)
+  return Object.freeze({
+    brickSpheres: Object.freeze({
+      powerUpBrick: getModelClipSphere(archive, 'PUBRICKY', powerUpBrick),
+      powerUpTrail: getModelClipSphere(archive, 'PUTRAILY', powerUpTrail),
+      enhancementBrick: getModelClipSphere(archive, 'ENHABRIK', enhancementBrick),
+      enhancementTrail: getModelClipSphere(archive, 'ENHANER', enhancementTrail),
+    }),
     materials: getEffectMaterials(archive),
     rocket: loadEffectModel(archive, 'DMISSILE', true),
     rocketAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('DMISSILE', 'ADB'))),
@@ -274,20 +317,47 @@ const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
         scroll: getInstanceTextureScroll(archive, instanceName ?? ''),
       }))
     ),
+    curse: CURSE_MODEL_NAMES.map(([name, instanceName]) => ({
+      model: loadEffectModel(archive, name, true),
+      animations: getFigureAnimations(archive.readFile(getRacerFilePath(name, 'ADB'))),
+      scroll: getInstanceTextureScroll(archive, instanceName),
+    })),
     shields: SHIELD_MODEL_NAMES.map((name) => loadEffectModel(archive, name, true, 'SHEOUT0')),
     shieldAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('SHEOUT0', 'ADB'))),
     powerUpBricks: Object.freeze(
       Object.fromEntries(
         Object.entries(BRICK_MATERIALS).map(([kind, materialName]) => [
           kind,
-          getBrickInMaterial(loadEffectModel(archive, 'PUBRICKY', true), materialName),
+          getBrickInMaterial(powerUpBrick, materialName),
         ])
       )
     ),
-    enhancementBrick: loadEffectModel(archive, 'ENHABRIK', true),
+    enhancementBrick,
+    powerUpBrickAnimations: getFigureAnimations(
+      archive.readFile(getRacerFilePath('PUBRICKY', 'ADB'))
+    ),
+    enhancementBrickAnimations: getFigureAnimations(
+      archive.readFile(getRacerFilePath('ENHABRIK', 'ADB'))
+    ),
+    powerUpTrails: Object.freeze(
+      Object.fromEntries(
+        Object.entries(TRAIL_MATERIALS).map(([kind, materialName]) => [
+          kind,
+          getBrickInMaterial(powerUpTrail, materialName),
+        ])
+      )
+    ),
+    enhancementTrail,
+    enhancementTrailAnimations: getFigureAnimations(
+      archive.readFile(getRacerFilePath('ENHANER', 'ADB'))
+    ),
+    powerUpTrailAnimations: getFigureAnimations(
+      archive.readFile(getRacerFilePath('PUTRAILY', 'ADB'))
+    ),
     warpTunnel: getWarpTunnel(archive, raceScene),
     warpTextureScroll: getWarpTextureScroll(archive),
   })
+}
 
 const getHudImage = (archive: JamArchive, definition: ImageDefinition): HudImage | null => {
   const path = `${COMMON_DIRECTORY}${SEPARATOR}${definition.name.toUpperCase()}.BMP`
@@ -303,10 +373,12 @@ const getHudImage = (archive: JamArchive, definition: ImageDefinition): HudImage
       }
     }
     return Object.freeze({
+      archivePath: path,
       name: definition.name,
       width: bitmap.width,
       height: bitmap.height,
       colors,
+      sourceScale: 1,
     })
   } catch {
     return null
@@ -315,23 +387,44 @@ const getHudImage = (archive: JamArchive, definition: ImageDefinition): HudImage
 
 const readBank = (archive: JamArchive, path: string) => decodeSoundBank(archive.readFile(path))
 
+const VOICE_DIRECTORY = 'GAMEDATA\\VOICES'
+// The voice number of the first human racer (settings entry +0x5d, read by 0x00432a50): 0 until the player chooses a
+// driver (hypothesis for other values).
+const DEFAULT_PLAYER_VOICE_NUMBER = 0
+const EMPTY_SOUND_BANK: SoundBank = Object.freeze({
+  directory: '',
+  declaredSoundCount: 0,
+  soundPaths: Object.freeze([]),
+})
+
+// A bank 0x0041ae60 fails to load leaves its ids silent.
+const readVoiceBank = (archive: JamArchive, name: string | null): SoundBank => {
+  if (name === null || name === '') return EMPTY_SOUND_BANK
+  try {
+    return readBank(archive, `${VOICE_DIRECTORY}\\${name.toUpperCase()}.SBK`)
+  } catch {
+    return EMPTY_SOUND_BANK
+  }
+}
+
 // Hud_Initialize 0x00425d80: the two fonts of LEGOFNTS.FDB, built from the font bitmaps of the language folder.
 const loadHudFonts = (archive: JamArchive): HudFonts => {
   const database = parseFontDatabase(archive.readFile(`${ENGLISH_DIRECTORY}\\LEGOFNTS.FDB`))
   const entries = Object.entries(HUD_FONT_NAMES).flatMap(([hudFont, fontName]) => {
     const definition = database.fonts.find((candidate) => candidate.name === fontName)
     if (definition === undefined) return []
-    const bitmap = decodeBitmap(
-      archive.readFile(`${ENGLISH_DIRECTORY}\\${fontName.toUpperCase()}.BMP`)
-    )
+    const fontPath = `${ENGLISH_DIRECTORY}\\${fontName.toUpperCase()}.BMP`
+    const bitmap = decodeBitmap(archive.readFile(fontPath))
     const font = buildBitmapFont(definition, bitmap)
     const hudBitmapFont: HudBitmapFont = Object.freeze({
       font,
       image: Object.freeze({
+        archivePath: fontPath,
         name: fontName,
         width: bitmap.width,
         height: bitmap.height,
         colors: getFontImagePixels(bitmap, font.colorKey),
+        sourceScale: 1,
       }),
     })
     return [[hudFont, hudBitmapFont] as const]
@@ -352,10 +445,12 @@ const getMapImage = (scene: Scene): readonly (readonly [string, HudImage])[] => 
         [
           MAP_IMAGE_NAME,
           {
+            archivePath: null,
             name: MAP_IMAGE_NAME,
             width: bitmap.width,
             height: bitmap.height,
             colors: bitmap.colors,
+            sourceScale: 1,
           },
         ] as const,
       ]
@@ -417,6 +512,12 @@ export const loadRaceAssets = (
     generalSounds: readBank(archive, `${COMMON_DIRECTORY}\\GENERAL.SBK`),
     trackSounds: readBank(archive, `${raceDirectory}\\${trackBankName.toUpperCase()}.SBK`),
     trackSoundDirectory: raceDirectory,
+    voiceSounds: readVoiceBank(
+      archive,
+      `voice${String(DEFAULT_PLAYER_VOICE_NUMBER).padStart(2, '0')}`
+    ),
+    voiceFolderSounds: readVoiceBank(archive, description.voiceFolder),
+    voiceDirectory: VOICE_DIRECTORY,
     musicNames: Object.freeze(musicList.soundPaths),
     tunes: files.tunes,
   })

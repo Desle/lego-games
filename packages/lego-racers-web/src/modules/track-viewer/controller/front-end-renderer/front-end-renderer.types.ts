@@ -6,3 +6,9 @@ export type FrontEndRenderer = {
   readonly draw: (commands: readonly FrontEndDrawCommand[], deltaMilliseconds?: number) => void
   readonly dispose: () => void
 }
+
+// A canvas of a picture and the picture pixels per original pixel it was made at.
+export type PictureCanvas = {
+  readonly canvas: HTMLCanvasElement
+  readonly sourceScale: number
+}

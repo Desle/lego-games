@@ -14,6 +14,7 @@ import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-race
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import type { PortTexture, QuadPlacement } from '@lego-games/lego-racers/presentation-trace'
 import type { Scene } from '@lego-games/lego-racers/scene'
+import { ORIGINAL_FAR_PLANE, ORIGINAL_NEAR_PLANE } from '../race-viewport/camera-frustum.ts'
 import { createRaceStage } from '../race-viewport/race-viewport.ts'
 import { readOriginalJam } from './original-game-files.ts'
 import { loadScenarioAssets } from './scenario-assets.ts'
@@ -23,22 +24,38 @@ import type {
   AggregatedGroup,
   FrameTotals,
   HudFrameResult,
+  WatchedCount,
   RenderScenarioResult,
+  WorldFrameComparison,
+  WorldFrameInput,
 } from './render-comparison.types.ts'
 import { createPresentationScenario } from './trace-scenarios.ts'
 import type { TraceScenarioRequest } from './trace-scenarios.types.ts'
 
 const getEffectScenes = (assets: RaceAssets): readonly Scene[] => {
-  const { powerUpBricks, rocket, barrel, magnet, spikedExplosion, enhancementBrick, warpTunnel } =
-    assets.effectModels
+  const {
+    powerUpBricks,
+    powerUpTrails,
+    rocket,
+    barrel,
+    magnet,
+    curse,
+    spikedExplosion,
+    enhancementBrick,
+    enhancementTrail,
+    warpTunnel,
+  } = assets.effectModels
   return [
     ...[
       rocket,
       barrel,
       magnet,
+      ...curse.map((figure) => figure.model),
       spikedExplosion,
       enhancementBrick,
+      enhancementTrail,
       ...Object.values(powerUpBricks),
+      ...Object.values(powerUpTrails),
     ].map((model) => model.scene),
     warpTunnel,
   ]
@@ -69,7 +86,56 @@ const CANDIDATE_COUNT = 24
 const HUD_TOLERANCE_PIXELS = 0.25
 // The HUD never wraps its text (the overlay's width, race-hud-overlay.tsx).
 const HUD_UNBOUNDED_WIDTH = 0x7fff
-const TOLERANCES = Object.freeze({ positionPixels: 0.25, textureCoordinate: 0.001, colorLevels: 2 })
+// The race camera's planes: the original's driver cuts at them (GolDP.dll 0x1000c630), the viewer's camera does too.
+export const RACE_DEPTH_RANGE = Object.freeze({
+  near: ORIGINAL_NEAR_PLANE,
+  far: ORIGINAL_FAR_PLANE,
+})
+export const TOLERANCES = Object.freeze({
+  positionPixels: 0.25,
+  textureCoordinate: 0.001,
+  colorLevels: 2,
+})
+
+// Draws one port frame on the stage and compares its world triangles with the original's recorded frame; null when the
+// original recorded none.
+export const compareWorldFrame = (input: WorldFrameInput): WorldFrameComparison | null => {
+  const { stage, portFrame, original, sceneTextures, candidateCount } = input
+  const { raceState, presentation, milliseconds, frame } = portFrame
+  stage.update(
+    getRacerPoses(raceState),
+    presentation.cameraView,
+    getEffectViews(raceState),
+    presentation.warpView
+  )
+  stage.showHazards(raceState.trackLogic.worlds, [
+    raceState.racerSet.emitters.common,
+    raceState.racerSet.emitters.track,
+  ])
+  stage.animate(milliseconds)
+  const originalFrame = original.renderFrames.find((candidate) => candidate.frame === frame)
+  if (originalFrame === undefined) return null
+  const portTriangles = getPortWorldTriangles([
+    ...(stage.backgroundScene.visible ? stage.backgroundScene.children : []),
+    ...stage.trackScene.children,
+  ])
+  const originalTriangles = getOriginalTriangles(originalFrame)
+  // Every texture the race has, used or not, so a surface the port draws with another texture still finds its own.
+  const textureMatches = matchTextures(
+    original.textures,
+    new Map([...sceneTextures, ...portTriangles.textures])
+  )
+  const comparison = compareRenderFrameByRoot({
+    original: originalTriangles,
+    port: portTriangles.triangles,
+    candidates: getCandidateMatrices(originalFrame, candidateCount, ORIGINAL_STAGE_SIZE),
+    depthRange: RACE_DEPTH_RANGE,
+    viewport: { width: ORIGINAL_STAGE_SIZE.width, height: ORIGINAL_STAGE_SIZE.height },
+    textureMatches,
+    tolerances: TOLERANCES,
+  })
+  return { originalFrame, originalTriangles, portTriangles, textureMatches, comparison }
+}
 
 // Runs the original and the port through a scenario and compares the recorded frames: the mismatches of every frame,
 // merged by kind and object.
@@ -83,8 +149,6 @@ export const runRenderComparison = async (
   const stage = createRaceStage(assets, ORIGINAL_STAGE_SIZE)
   // Every texture the race has, used or not, so a surface the port draws with another texture still finds its own.
   const sceneTextures = getSceneTextures(assets)
-  const allTextures = (used: ReadonlyMap<string, PortTexture>): ReadonlyMap<string, PortTexture> =>
-    new Map([...sceneTextures, ...used])
   const hudTextures = new Map(
     [
       ...assets.hudImages,
@@ -98,38 +162,44 @@ export const runRenderComparison = async (
   const hudResults: HudFrameResult[] = []
   const groups = new Map<string, AggregatedGroup>()
   const totals: FrameTotals[] = []
+  const watchedCounts: WatchedCount[] = []
   runPortRace(
     assets,
     scenario.frames,
     (portFrame) => {
-      const { raceState, presentation, milliseconds, frame } = portFrame
-      stage.update(
-        getRacerPoses(raceState),
-        presentation.cameraView,
-        getEffectViews(raceState),
-        presentation.warpView
-      )
-      stage.showHazards(raceState.trackLogic.worlds.track, [
-        raceState.racerSet.emitters.common,
-        raceState.racerSet.emitters.track,
-      ])
-      stage.animate(milliseconds)
-      const originalFrame = original.renderFrames.find((candidate) => candidate.frame === frame)
-      if (originalFrame === undefined) return
-      const portTriangles = getPortWorldTriangles([
-        ...(stage.backgroundScene.visible ? stage.backgroundScene.children : []),
-        ...stage.trackScene.children,
-      ])
-      const originalTriangles = getOriginalTriangles(originalFrame)
-      const textureMatches = matchTextures(original.textures, allTextures(portTriangles.textures))
-      const comparison = compareRenderFrameByRoot({
-        original: originalTriangles,
-        port: portTriangles.triangles,
-        candidates: getCandidateMatrices(originalFrame, CANDIDATE_COUNT, ORIGINAL_STAGE_SIZE),
-        viewport: { width: ORIGINAL_STAGE_SIZE.width, height: ORIGINAL_STAGE_SIZE.height },
-        textureMatches,
-        tolerances: TOLERANCES,
+      const { presentation, frame } = portFrame
+      const world = compareWorldFrame({
+        stage,
+        portFrame,
+        original,
+        sceneTextures,
+        candidateCount: CANDIDATE_COUNT,
       })
+      if (world === null) return
+      const { originalFrame, originalTriangles, portTriangles, textureMatches, comparison } = world
+      for (const watched of request.watched ?? []) {
+        const originalPattern = new RegExp(watched.originalTexture, 'i')
+        const portPattern = new RegExp(watched.portSource, 'i')
+        const portWatched = portTriangles.triangles.filter((triangle) =>
+          portPattern.test(triangle.source)
+        )
+        const corners = portWatched.flatMap((triangle) => triangle.vertices)
+        const getMean = (getValue: (corner: (typeof corners)[number]) => number) =>
+          corners.reduce((sum, corner) => sum + getValue(corner), 0) / (corners.length || 1)
+        watchedCounts.push({
+          label: watched.label,
+          frame,
+          originalCount: originalTriangles.filter((triangle) =>
+            originalPattern.test(textureMatches.get(triangle.textureKey ?? '')?.bestKey ?? '')
+          ).length,
+          portCount: portWatched.length,
+          portCentre: [
+            getMean((corner) => corner.x),
+            getMean((corner) => corner.y),
+            getMean((corner) => corner.z),
+          ],
+        })
+      }
       if (presentation.hudFrame !== null) {
         const hud = compareQuadPlacements({
           original: getOriginalQuads(originalFrame, true),
@@ -232,6 +302,7 @@ export const runRenderComparison = async (
   return Object.freeze({
     hudResults,
     totals,
+    watched: watchedCounts,
     groups: [...groups.values()].sort((left, right) => right.count - left.count),
   })
 }

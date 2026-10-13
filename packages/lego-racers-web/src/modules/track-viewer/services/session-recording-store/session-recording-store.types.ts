@@ -18,4 +18,6 @@ export type SessionRecordingStore = {
   readonly save: (fileName: string, text: string) => Promise<void>
   // The most recent recording, from the backend or (when the browser has none) from memory.
   readonly readLast: () => Promise<StoredRecording | null>
+  // Every stored recording, oldest first (empty when the browser has none).
+  readonly readAll: () => Promise<readonly StoredRecording[]>
 }

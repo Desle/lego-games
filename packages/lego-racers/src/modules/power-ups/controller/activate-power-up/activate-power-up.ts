@@ -1,3 +1,11 @@
+import {
+  MAGNET_HUM_ADDRESS,
+  MAGNET_HUM_SOUND_ID,
+  MAGNET_PLACE_SOUND,
+  ROCKET_LAUNCH_SOUND,
+  WAND_HUM_ADDRESS,
+  WAND_HUM_SOUND_ID,
+} from '../power-up-sounds/power-up-sounds.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
 import { getIsAttachmentRoomFor } from '../../types/attachment-slots/attachment-slots.ts'
 import { BrickKind } from '../../types/brick-kind/brick-kind.ts'
@@ -27,8 +35,17 @@ import {
   getStepWithRacerEffectsFinished,
   takePowerUpEffect,
 } from '../power-up-effects/power-up-effects.ts'
-import { getEffect, getStepWithEffect, getStepWithEvents } from '../power-up-step/power-up-step.ts'
-import type { WarpDestination } from '../../types/power-ups.types.ts'
+import {
+  getEffect,
+  getRacerStatusNow,
+  getStepWithEffect,
+  getStepWithEvents,
+} from '../power-up-step/power-up-step.ts'
+import type {
+  LauncherCannonball,
+  LauncherMuzzle,
+  WarpDestination,
+} from '../../types/power-ups.types.ts'
 import type { PowerUpContext, PowerUpStep } from '../power-up-step/power-up-step.types.ts'
 import type { ActivationTarget, EffectStart } from './activate-power-up.types.ts'
 
@@ -118,6 +135,7 @@ const startEffect = (
     state: start.state,
     timerMilliseconds: start.timerMilliseconds,
     level: start.level,
+    figureAgeMilliseconds: 0,
     ownerRacer: start.ownerRacer,
     targetRacer: start.targetRacer,
     targetTrackPoint: start.targetTrackPoint,
@@ -147,7 +165,8 @@ const startAttachedEffect = (
   step: PowerUpStep,
   kind: PowerUpEffectKindValue,
   start: EffectStart,
-  onStarted: (started: PowerUpStep, effectId: number) => PowerUpStep
+  onStarted: (started: PowerUpStep, effectId: number) => PowerUpStep,
+  launcherPosition: Vector3 | null = null
 ): PowerUpStep => {
   const taken = takePowerUpEffect(step, { kind, levels: getTakeLevels(kind, start.level) })
   const allocated = getStepWithAttachments(taken.step, taken.effectId)
@@ -161,8 +180,10 @@ const startAttachedEffect = (
       ...effect,
       timerMilliseconds: start.timerMilliseconds,
       level: start.level,
+      figureAgeMilliseconds: 0,
       ownerRacer: start.ownerRacer,
       targetRacer: start.targetRacer,
+      launcherPosition,
     }),
     taken.effectId
   )
@@ -178,7 +199,7 @@ const activateShield = (
 ): PowerUpStep => {
   if (!getIsAttachmentRoomFor(step.world.effects.attachmentSlots, SHIELD_REQUIRED_SLOTS))
     return step
-  const status = getStatus(context, racer)
+  const status = getRacerStatusNow(step, context, racer)
   const start = {
     ...getPlainStart(racer, level, SHIELD_MILLISECONDS[level] ?? 0, null),
     state: EffectState.ACTIVE,
@@ -221,7 +242,7 @@ const activateTurbo = (
   level: number
 ): PowerUpStep => {
   if (!getIsAttachmentRoomFor(step.world.effects.attachmentSlots, OTHER_REQUIRED_SLOTS)) return step
-  const status = getStatus(context, racer)
+  const status = getRacerStatusNow(step, context, racer)
   return startAttachedEffect(
     step,
     PowerUpEffectKind.TURBO,
@@ -249,7 +270,7 @@ const startWarp = (
   racer: number,
   warpDestination: WarpDestination | null
 ): PowerUpStep => {
-  const status = getStatus(context, racer)
+  const status = getRacerStatusNow(step, context, racer)
   const taken = takePowerUpEffect(step, { kind: PowerUpEffectKind.WARP, levels: [3, -1, -1, -1] })
   const effect = getEffect(taken.step, taken.effectId)
   if (status.isWarping || status.isWarpPending) {
@@ -284,14 +305,79 @@ export const activateLauncherWarp = (
 ): PowerUpStep =>
   startWarp(step, context, racer, Object.freeze({ destination, forward, start: null }))
 
+// 0x0045a9b0 case 3 with a hazard as the launcher (the dropper, 0x0048b3c0): a curse that belongs to no racer and sits at
+// the launcher's place.
+const CURSE_LEVEL = 3 // 0x0045a9b0 case 3 → 0x0045aeb0
+
+export const activateLauncherCurse = (step: PowerUpStep, position: Vector3): PowerUpStep => {
+  if (!getIsAttachmentRoomFor(step.world.effects.attachmentSlots, OTHER_REQUIRED_SLOTS)) return step
+  return startAttachedEffect(
+    step,
+    PowerUpEffectKind.CURSE,
+    { ...getPlainStart(0, CURSE_LEVEL, 0, null), ownerRacer: null },
+    (started) => started,
+    position
+  )
+}
+
+const LAUNCHER_WAND_MILLISECONDS = 500 // 0x00454cb0 `+0x8 = 500`
+
+// An effect a hazard starts as the launcher (power-up system +0x1998): it belongs to no racer and keeps what the
+// launcher hands it.
+const startLauncherEffect = (
+  step: PowerUpStep,
+  kind: PowerUpEffectKindValue,
+  start: EffectStart,
+  withLauncher: (effect: PowerUpEffect) => PowerUpEffect
+): PowerUpStep => {
+  const started = startEffect(step, kind, { ...start, ownerRacer: null })
+  const effectId = started.world.effects.activeEffectIds[0]
+  const effect = effectId === undefined ? undefined : started.world.effects.effects[effectId]
+  return effect === undefined ? started : getStepWithEffect(started, withLauncher(effect))
+}
+
+// 0x0045a950 case 2 with a hazard as the launcher (the turret, 0x0048b740): a wand that belongs to no racer, its beam
+// leaving the launcher's muzzle (0x00454cb0 stores the launcher's pointer at +0x23c).
+export const activateLauncherWand = (
+  step: PowerUpStep,
+  muzzle: LauncherMuzzle,
+  hazardIndex: number | null
+): PowerUpStep =>
+  // level 2 (0x0045a950 case 2)
+  startLauncherEffect(
+    step,
+    PowerUpEffectKind.WAND,
+    getPlainStart(0, 2, LAUNCHER_WAND_MILLISECONDS, null),
+    (effect) => ({
+      ...effect,
+      launcherMuzzle: muzzle,
+      launcherHazardIndex: hazardIndex,
+    })
+  )
+
+// 0x0045a950 case 0 with a hazard as the launcher (the periodic launcher, 0x0048c680): 0x0045aa30 looks for no target
+// and 0x00451a50 starts a cannonball of no racer at level 0 with the timer 0, holding the launcher's struct (+0xe0).
+export const activateLauncherCannonball = (
+  step: PowerUpStep,
+  cannonball: LauncherCannonball
+): PowerUpStep =>
+  startLauncherEffect(step, PowerUpEffectKind.CANNON, getPlainStart(0, 0, 0, null), (effect) => ({
+    ...effect,
+    launcherCannonball: cannonball,
+  }))
+
 // 0x0045af80: three rockets, each taken separately, numbered 0..2.
 const activateRockets = (step: PowerUpStep, racer: number): PowerUpStep =>
   Array.from({ length: ROCKETS_PER_USE }, (_, rocketIndex) => rocketIndex).reduce(
     (current, rocketIndex) =>
-      startEffect(current, PowerUpEffectKind.ROCKET, {
-        ...getPlainStart(racer, 3, 3000, null),
-        rocketIndex,
-      }),
+      // 0x00456560 (each rocket's set-up) ends with sound 0x33.
+      getStepWithEvents(
+        startEffect(current, PowerUpEffectKind.ROCKET, {
+          ...getPlainStart(racer, 3, 3000, null),
+          rocketIndex,
+        }),
+        [ROCKET_LAUNCH_SOUND]
+      ),
     step
   )
 
@@ -316,7 +402,19 @@ const activateProjectile = (
     })
   }
   if (level === 2) {
-    return startEffect(step, PowerUpEffectKind.WAND, getPlainStart(racer, 2, 500, null))
+    // 0x00454cb0 (Wand_Start) plays the wand's hum (sound 0x44, made with the effect) in a loop.
+    return getStepWithEvents(
+      startEffect(step, PowerUpEffectKind.WAND, getPlainStart(racer, 2, 500, null)),
+      [
+        {
+          type: 'power_ups.looped_sound_started',
+          key: `wand:${String(racer)}`,
+          soundId: WAND_HUM_SOUND_ID,
+          address: WAND_HUM_ADDRESS,
+          ownerRacer: racer,
+        },
+      ]
+    )
   }
   return level === 3 ? activateRockets(step, racer) : step
 }
@@ -331,7 +429,7 @@ const activateHazard = (
     return startEffect(step, PowerUpEffectKind.OIL_SLICK, getPlainStart(racer, 0, 0, null))
   if (level === 1) {
     // 0x0045ad30 looks behind the racer: the barrel is thrown backwards.
-    const status = getStatus(context, racer)
+    const status = getRacerStatusNow(step, context, racer)
     const { forward } = status
     const target = getNearestRacer(
       context,
@@ -349,7 +447,20 @@ const activateHazard = (
     step,
     kind,
     getPlainStart(racer, level, timerMilliseconds, null),
-    (started) => started
+    (started, effectId) =>
+      kind === PowerUpEffectKind.MAGNET
+        ? getStepWithEvents(started, [
+            // 0x004560b0 (the magnet's placing): sound 0x21, and sound 0x22 loops while it lasts.
+            MAGNET_PLACE_SOUND,
+            {
+              type: 'power_ups.looped_sound_started',
+              key: `magnet:${String(effectId)}`,
+              soundId: MAGNET_HUM_SOUND_ID,
+              address: MAGNET_HUM_ADDRESS,
+              ownerRacer: racer,
+            },
+          ])
+        : started
   )
 }
 

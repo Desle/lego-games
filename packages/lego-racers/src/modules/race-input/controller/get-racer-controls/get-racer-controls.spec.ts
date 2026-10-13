@@ -81,4 +81,27 @@ describe('getRacerControls', () => {
     expect(controls.isBrakePressed).toBe(false)
     expect(controls.steeringAxis).toBe(-0.5)
   })
+
+  it('presses a steering binding for any stick value, as the gamepad sub type does (0x0044bb60)', () => {
+    // Arrange
+    const left = {
+      pressedKeyCodes: new Set<string>(),
+      gamepad: { axes: [-0.001], pressedButtonIndices: [] },
+    }
+    const right = {
+      pressedKeyCodes: new Set<string>(),
+      gamepad: { axes: [0.5], pressedButtonIndices: [] },
+    }
+    const centred = {
+      pressedKeyCodes: new Set<string>(),
+      gamepad: { axes: [0.0004], pressedButtonIndices: [] },
+    }
+
+    // Act
+    const results = [left, right, centred].map(getRacerControls)
+
+    // Assert
+    expect(results.map((controls) => controls.isSteerPositivePressed)).toEqual([true, false, false])
+    expect(results.map((controls) => controls.isSteerNegativePressed)).toEqual([false, true, false])
+  })
 })

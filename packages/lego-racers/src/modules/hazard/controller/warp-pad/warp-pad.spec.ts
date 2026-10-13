@@ -32,6 +32,8 @@ describe('the warp pad', () => {
             getFloatFromBits(0x416b8d50),
           ],
           direction: [1, -0.5, 0],
+          target: null,
+          speed: null,
         },
       },
     ])

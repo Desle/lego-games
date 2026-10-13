@@ -12,9 +12,12 @@ export type PendingAction = EnumValues<typeof PendingActionValues>
 export type PauseMenu = {
   readonly mode: PauseMenuMode
   readonly selection: number
-  // Race +0x30a0 == 2: the player chose an item and 0x00436160 has to apply it. **Hypothesis** for the writer of the 2: the
-  // code that sets it was not found; the port sets it when a confirm key arrives (0x00427810 clears the waiting flag).
+  // Race +0x30a0 == 2: the player chose an item and 0x00436160 has to apply it (set by 0x004278c0 when the confirm key
+  // goes up after it went down).
   readonly isAnswered: boolean
+  // Widget +0x58: set when the menu opens, cleared by the confirm key going down (0x00427810, which then ignores the
+  // selection keys); the confirm key going up after that sets +0x48 to 2 (0x004278c0).
+  readonly isWaiting: boolean
   readonly pendingAction: PendingAction
   readonly blinkMilliseconds: number
 }
@@ -27,6 +30,8 @@ export type RaceMenuInput = {
   readonly selectionChange: number
   // Enter, space or a joystick button (0x1000001c, 0x10000039, 0x3000000c..0x3000000f).
   readonly isConfirmPressed: boolean
+  // The same keys going up (0x00435cc0 calls 0x004278c0): once the menu's waiting flag is clear, this answers it.
+  readonly isConfirmReleased: boolean
   // Any key, mouse or joystick button (code & 0x30000000): ends a demonstration.
   readonly isAnyInputPressed: boolean
 }

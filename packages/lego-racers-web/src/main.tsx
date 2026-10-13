@@ -3,9 +3,20 @@ import { createRoot } from 'react-dom/client'
 import {
   installFrontEndPixelHarness,
   installPixelTraceHarness,
+  getIsRaceRecordingRequested,
+  postUnsentRecordings,
   RaceView,
 } from './modules/track-viewer/index.ts'
 import './styles.css'
+
+// The remastered layer exists only in development and only when asked for (`?hd`): a production build has no import.
+const loadRemastered = async () => {
+  if (!import.meta.env.DEV) return
+  const remastered = await import('./modules/remastered/index.ts')
+  if (remastered.getIsRemasteredRequested(window.location.search)) {
+    await remastered.registerRemastered(window.location.search)
+  }
+}
 
 const rootElement = document.getElementById('root')
 if (rootElement === null) throw new Error('index.html has no #root element')
@@ -16,9 +27,12 @@ if (isPixelTracePage) {
   installPixelTraceHarness()
   installFrontEndPixelHarness()
 } else {
-  createRoot(rootElement).render(
-    <StrictMode>
-      <RaceView />
-    </StrictMode>
+  if (getIsRaceRecordingRequested(window.location.search)) void postUnsentRecordings()
+  void loadRemastered().then(() =>
+    createRoot(rootElement).render(
+      <StrictMode>
+        <RaceView />
+      </StrictMode>
+    )
   )
 }

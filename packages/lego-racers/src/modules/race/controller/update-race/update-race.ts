@@ -1,14 +1,23 @@
+import type { CameraView } from '../../../race-camera/index.ts'
 import { recordGhostSample } from '../../../ghost/index.ts'
 import { advanceSky, switchSkySetting } from '../../../sky/index.ts'
-import { updateTrackHazardsAfterRacers, updateTrackLogicFrame } from '../../../track-logic/index.ts'
+import {
+  followTrackCameras,
+  updateTrackHazardsAfterRacers,
+  updateTrackLogicFrame,
+} from '../../../track-logic/index.ts'
 import type { SurfaceSignal } from '../../../track-logic/index.ts'
 import { advanceWorldAnimation } from '../../../world-animation/index.ts'
-import { activateLauncherWarp } from '../../../power-ups/index.ts'
 import { updatePowerUpsWithProjectiles } from '../../../projectiles/index.ts'
 import type { ProjectileWorld } from '../../../projectiles/index.ts'
 import { getRacerSetWithProjectileRegistry } from '../projectile-registry/projectile-registry.ts'
 import { getRaceTimeStep, updateRacePhysics } from '../../../racer-physics/index.ts'
-import { applyRacerControls, stepRacerSet, updatePlayerController } from '../../../racer/index.ts'
+import {
+  applyRacerControls,
+  releaseAllBindings,
+  stepRacerSet,
+  updatePlayerController,
+} from '../../../racer/index.ts'
 import type { RaceInputs, RaceRacerSet, RaceState } from '../../types/race.types.ts'
 import {
   RACE_PLAYER_CONTROLLER_DEPENDENCIES,
@@ -17,6 +26,7 @@ import {
 import {
   changePowerUps,
   changeTrackLogic,
+  getContextWithMovedCollisionObjects,
   getProjectileContext,
   getRacerSetAfterProjectileEvents,
   getRaceRacerSet,
@@ -36,6 +46,21 @@ import type { PlayerControllerProgress, PlayerControllerRun } from './update-rac
 
 // Race settings +0x20 bit 0x100 scales the time by 1.75.
 const TIME_SCALE_FLAG = 0x100
+// The camera half of 0x0048ae00, once the frame's camera is known (the port keeps its cameras in the presentation): the
+// hazards that follow the camera, the snow, place themselves at it. The first local player's camera is the one given.
+export const getRaceWithHazardsAtCamera = (state: RaceState, camera: CameraView): RaceState =>
+  getStateWithProgress(state, {
+    controllers: state.playerControllers,
+    racerSet: changeTrackLogic(
+      state.context,
+      getRaceRacerSet(state, NO_RACE_CONTACTS),
+      (trackLogic, trackContext) =>
+        followTrackCameras(trackLogic, trackContext, [
+          { position: camera.position, forward: camera.forward, second: camera.up },
+        ])
+    ),
+  })
+
 // Race_Update 0x00435220: race +0x334c becomes 1,000 when the time step exceeds it.
 const COUNTDOWN_RESET_MILLISECONDS = 1000
 
@@ -116,34 +141,16 @@ export const applyPlayerControls = (state: RaceState, inputs: RaceInputs): RaceS
     )
   )
 
+// 0x00430c20 for every local player (the pause menu opens): each binding is released, held or not.
+export const releasePlayerControls = (state: RaceState): RaceState =>
+  getStateWithProgress(
+    state,
+    runPlayerControllers(state, getRaceRacerSet(state, NO_RACE_CONTACTS), releaseAllBindings)
+  )
+
 // The hazards that follow the cameras (0x0048ae00) are given the players' camera positions; the port keeps no camera
 // in the simulation, so none.
 const NO_CAMERA_POSITIONS: readonly (readonly [number, number, number])[] = Object.freeze([])
-
-// 0x0048af80 (the warp pad's begin): the pad asks the power-up system for a warp with itself as the launcher
-// (power-up system +0x1998), whose destination and facing the effect takes (0x0045d560's third argument).
-const getRacerSetWithLauncherWarps = (
-  context: RaceState['context'],
-  racerSet: RaceRacerSet,
-  effects: RaceState['trackEffects']
-): RaceRacerSet =>
-  effects.reduce((current, effect) => {
-    if (effect.type !== 'hazard.power_up_activated' || effect.activation !== 'warp') return current
-    const { racerIndex, launcher } = effect
-    const { position, direction } = launcher
-    if (racerIndex === null || position === null || direction === null) return current
-    const [x, y, z] = position
-    const [directionX, directionY, directionZ] = direction
-    return changePowerUps(context, current, (step, powerUpContext) =>
-      activateLauncherWarp(
-        step,
-        powerUpContext,
-        racerIndex,
-        { x, y, z },
-        { x: directionX, y: directionY, z: directionZ }
-      )
-    )
-  }, racerSet)
 
 // Race_Update 0x00435220: the frame's whole time step goes to the power-ups and the players' controllers, then
 // the racers run in sub-steps of at most 40 ms; the worlds, triggers, emitters, events, hazards and timers run
@@ -205,14 +212,17 @@ export const updateRace = (
       )
     )
   )
-  const launched = getRacerSetWithLauncherWarps(
-    counted.context,
-    powered,
-    powered.trackEffects.slice(tagged.trackEffects.length)
-  )
+  const framed: RaceState = Object.freeze({
+    ...counted,
+    context: getContextWithMovedCollisionObjects(
+      counted.context,
+      powered.collisionObjectNames,
+      powered.trackEffects.slice(tagged.trackEffects.length)
+    ),
+  })
   const controlled = counted.isDemonstration
-    ? { controllers: counted.playerControllers, racerSet: launched }
-    : runPlayerControllers(counted, launched, (input, playerIndex) =>
+    ? { controllers: counted.playerControllers, racerSet: powered }
+    : runPlayerControllers(counted, powered, (input, playerIndex) =>
         updatePlayerController(
           input,
           inputs.controls[playerIndex] ?? IDLE_RACER_CONTROLS,
@@ -229,7 +239,7 @@ export const updateRace = (
     (racerSet, subStepMilliseconds) => {
       const steppedSet = getRaceRacerSetOf(
         stepRacerSet({
-          context: counted.context,
+          context: framed.context,
           racerSet,
           stepMilliseconds: subStepMilliseconds,
           dependencies: RACE_STEP_DEPENDENCIES,
@@ -277,7 +287,7 @@ export const updateRace = (
     )
   )
   const progressed = Object.freeze({
-    ...getStateWithProgress(Object.freeze({ ...counted, projectileWorld }), {
+    ...getStateWithProgress(Object.freeze({ ...framed, projectileWorld }), {
       controllers: controlled.controllers,
       racerSet: hazardsFollowed,
     }),

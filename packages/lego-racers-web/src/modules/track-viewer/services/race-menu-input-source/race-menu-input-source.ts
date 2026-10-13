@@ -20,6 +20,10 @@ const GAMEPAD_MENU_BUTTONS: ReadonlyMap<number, RaceMenuInput> = new Map([
   [12, { ...NO_MENU_INPUT, selectionChange: -1, isAnyInputPressed: true }],
   [13, { ...NO_MENU_INPUT, selectionChange: 1, isAnyInputPressed: true }],
 ])
+const CONFIRM_RELEASE_INPUT: RaceMenuInput = Object.freeze({
+  ...NO_MENU_INPUT,
+  isConfirmReleased: true,
+})
 const WINDOW_BLUR_INPUT: RaceMenuInput = Object.freeze({ ...NO_MENU_INPUT, isPausePressed: true })
 
 // The keyboard and the first gamepad as menu keys. The original's key handler takes one key per call, so each key
@@ -31,8 +35,12 @@ export const createRaceMenuInputSource = (): RaceMenuInputSource => {
     const input = MENU_KEYS.get(event.code)
     pending.push(input ?? Object.freeze({ ...NO_MENU_INPUT, isAnyInputPressed: true }))
   }
+  const onKeyUp = (event: KeyboardEvent) => {
+    if (MENU_KEYS.get(event.code)?.isConfirmPressed === true) pending.push(CONFIRM_RELEASE_INPUT)
+  }
   const onBlur = () => pending.push(WINDOW_BLUR_INPUT)
   window.addEventListener('keydown', onKeyDown)
+  window.addEventListener('keyup', onKeyUp)
   window.addEventListener('blur', onBlur)
   const readGamepadButtons = (): ReadonlySet<number> => {
     const gamepad = navigator.getGamepads().find((candidate) => candidate !== null) ?? null
@@ -47,12 +55,16 @@ export const createRaceMenuInputSource = (): RaceMenuInputSource => {
       const buttons = readGamepadButtons()
       for (const [button, input] of GAMEPAD_MENU_BUTTONS) {
         if (buttons.has(button) && !previousButtons.has(button)) pending.push(input)
+        if (input.isConfirmPressed && !buttons.has(button) && previousButtons.has(button)) {
+          pending.push(CONFIRM_RELEASE_INPUT)
+        }
       }
       previousButtons = buttons
       return pending.shift() ?? NO_MENU_INPUT
     },
     dispose: () => {
       window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)
     },
   })

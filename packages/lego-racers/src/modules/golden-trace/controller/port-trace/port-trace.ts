@@ -12,8 +12,8 @@ import { DEFAULT_KEYBOARD_BINDINGS, getRacerControls } from '../../../race-input
 import { getRacerVolume, getRacerVolumeParts } from '../../../racer/index.ts'
 import type { BoundingSphere } from '../../../racer-collision/index.ts'
 import type { EmitterPool } from '../../../emitter/index.ts'
-import type { Racer, RacerSetContext } from '../../../racer/index.ts'
-import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
+import type { CurseFigure, Racer, RacerSetContext } from '../../../racer/index.ts'
+import { IDENTITY_MATRIX3, ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import type { Matrix3 } from '../../../simulation-math/index.ts'
 import { getFloatWords, getVectorWords } from '../trace-words/trace-words.ts'
 import { getPowerUpTraceFields } from '../power-up-trace/power-up-trace.ts'
@@ -30,6 +30,17 @@ import type {
 const SCAN_CODE_MASK = 0xff
 
 const getMatrixWords = (matrix: Matrix3): readonly number[] => getFloatWords(matrix)
+
+// The figure racer +0x29c holds, from +0x2c4: rotation, position and scale (+0x58). A figure that was never bound, or was let
+// go, has the origin, the identity and scale 1.
+const getCurseFigureWords = (figure: CurseFigure | null): readonly number[] =>
+  figure === null
+    ? [...getMatrixWords(IDENTITY_MATRIX3), ...getVectorWords(ZERO_VECTOR3), ...getFloatWords([1])]
+    : [
+        ...getMatrixWords(figure.rotation),
+        ...getVectorWords(figure.position),
+        ...getFloatWords([figure.scale]),
+      ]
 
 const getSphereWords = (sphere: BoundingSphere | null): readonly number[] =>
   sphere === null ? [] : [...getVectorWords(sphere.centre), ...getFloatWords([sphere.radius])]
@@ -112,6 +123,13 @@ const getRacerFields = (racer: Racer, index: number, context: RacerSetContext): 
     [`${prefix}.body.flags`]: getIntegerWords(rigidBody.flags),
     [`${prefix}.body.travelDirection`]: getVectorWords(rigidBody.velocityDirection),
     [`${prefix}.body.heading`]: getVectorWords(rigidBody.heading),
+    [`${prefix}.body.groundNormal`]: getVectorWords(rigidBody.groundNormal),
+    [`${prefix}.body.drift`]: getFloatWords([
+      rigidBody.driftYawFactor,
+      rigidBody.driftThreshold,
+      rigidBody.driftMaximumAngle,
+      rigidBody.driftBrake,
+    ]),
     [`${prefix}.body.gripScale`]: getFloatWords([rigidBody.gripScale]),
     [`${prefix}.body.steeringScale`]: getFloatWords([racer.carBody.steeringScale]),
     [`${prefix}.body.throttleScale`]: getFloatWords([racer.carBody.throttleScale]),
@@ -138,6 +156,15 @@ const getRacerFields = (racer: Racer, index: number, context: RacerSetContext): 
       racer.powerUpThinkIntervalMilliseconds >>> 0,
     ],
     [`${prefix}.racer.turboLevel`]: getIntegerWords(racer.turboLevel),
+    [`${prefix}.racer.override`]: [
+      racer.isColourShiftOverridden ? 1 : 0,
+      racer.colourShiftOverrideMilliseconds >>> 0,
+    ],
+    [`${prefix}.racer.curseOrbit`]: [
+      racer.vehicle.curseOrbit.clockMilliseconds >>> 0,
+      racer.vehicle.curseOrbit.blendMilliseconds >>> 0,
+    ],
+    [`${prefix}.racer.curseFigure`]: getCurseFigureWords(racer.vehicle.curseOrbit.figure),
     [`${prefix}.body.wheels`]: rigidBody.wheels.flatMap((wheel) => [
       (wheel.isOnGround ? 1 : 0) | (wheel.isProbed ? 2 : 0),
       getBitsFromFloat(wheel.depthSquared),
