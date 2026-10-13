@@ -2,9 +2,10 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { createEnum } from '../../../../shared/types/enum.types.ts'
 import type { EnumValues } from '../../../../shared/types/enum.types.ts'
 import type { LDrawModelFolders } from '../ldraw-model-files/ldraw-model-files.types.ts'
+import type { LDrawModelRemoveResult } from '../ldraw-model-remove/ldraw-model-remove.types.ts'
 import type { LDrawModelSaveResult } from '../ldraw-model-save/ldraw-model-save.types.ts'
 
-// The routes under the prefix: the parts library, the models folder, and the builder's part list and save.
+// The routes under the prefix: the parts library, the models folder, and the builder's part list, save and remove.
 export const LDrawFileRoute = createEnum({
   LIBRARY: 'ldraw',
   MODELS: 'ldraw-models',
@@ -17,11 +18,15 @@ export const LDrawFileName = createEnum({
   MODEL_FILES: 'files.json',
   LIBRARY_PARTS: 'parts.json',
   SAVE: 'save',
+  REMOVE: 'remove',
 })
 export type LDrawFileName = EnumValues<typeof LDrawFileName>
 
-// The JSON body of a save: `text` and whatever else the app's `getSavePath` reads (by default `path`).
-export type LDrawSaveRequest = Readonly<Record<string, unknown>> & { readonly text: string }
+// The JSON body of a save or a removal: what the app's `getSavePath` or `getRemovePath` reads (by default `path`).
+export type LDrawFileRequest = Readonly<Record<string, unknown>>
+
+// The JSON body of a save: the model as `text`, and what names its file.
+export type LDrawSaveRequest = LDrawFileRequest & { readonly text: string }
 
 export type LDrawFileRoutesOptions = {
   readonly libraryRoot: string
@@ -41,6 +46,17 @@ export type LDrawFileRoutesOptions = {
   readonly onModelSaved?: (
     saved: LDrawModelSaveResult,
     request: LDrawSaveRequest
+  ) => Readonly<Record<string, unknown>>
+  // The models folder's file a removal moves into the backup folder, given the files already there; null refuses it. By default the
+  // request's `path`.
+  readonly getRemovePath?: (
+    request: LDrawFileRequest,
+    existingFiles: readonly string[]
+  ) => string | null
+  // Called after a removal; what it returns is added to the removal's answer.
+  readonly onModelRemoved?: (
+    removed: LDrawModelRemoveResult,
+    request: LDrawFileRequest
   ) => Readonly<Record<string, unknown>>
   // More JSON documents the app serves on the builder route, by file name, read at every request.
   readonly builderJsonFiles?: Readonly<Record<string, () => unknown>>

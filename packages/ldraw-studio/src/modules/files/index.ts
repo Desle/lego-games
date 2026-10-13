@@ -8,6 +8,7 @@ export {
 } from './services/ldraw-file-routes/ldraw-file-routes.types.ts'
 export type {
   LDrawFileMiddleware,
+  LDrawFileRequest,
   LDrawFileRoutePaths,
   LDrawFileRoutesOptions,
   LDrawSaveRequest,
@@ -23,4 +24,5 @@ export type {
   LDrawModelFile,
   LDrawModelFolders,
 } from './services/ldraw-model-files/ldraw-model-files.types.ts'
+export type { LDrawModelRemoveResult } from './services/ldraw-model-remove/ldraw-model-remove.types.ts'
 export type { LDrawModelSaveResult } from './services/ldraw-model-save/ldraw-model-save.types.ts'

@@ -1,5 +1,6 @@
 import type { LDrawColorName } from '../reference-kit/reference-kit.types.ts'
 import { getPaletteGroups } from './builder-palette.ts'
+import { createBuilderRemoveControl } from './builder-remove-control.ts'
 import { BUILDER_SHORTCUT_GROUPS, BUILDER_SHORTCUT_HINTS } from './builder-shortcuts.ts'
 import { ReferenceMode } from './builder-panel.types.ts'
 import type {
@@ -109,6 +110,7 @@ export const createBuilderPanel = (
   scaleControl.hidden = true
   const shortcutsButton = createButton('?', 'shortcuts-button', handlers.onShortcutsToggle)
   shortcutsButton.title = 'Shortcuts (?)'
+  const removeControl = createBuilderRemoveControl(handlers.onRemove)
   elements.bar.append(
     title,
     startSelect,
@@ -119,6 +121,7 @@ export const createBuilderPanel = (
     createButton('Delete', '', handlers.onDeleteSelected),
     scaleControl,
     shortcutsButton,
+    removeControl.element,
     doneButton
   )
 
@@ -318,8 +321,10 @@ export const createBuilderPanel = (
       overlay.hidden = !isShown
     },
     getIsShortcutsShown: () => !overlay.hidden,
+    showRemove: removeControl.show,
     setIsBusy: (isBusy) => {
       doneButton.disabled = isBusy
+      removeControl.setIsBusy(isBusy)
     },
   }
 }

@@ -2,9 +2,10 @@ import { createLDrawFileRoutes } from '@lego-games/ldraw-studio/files'
 import type { LDrawFileMiddleware } from '@lego-games/ldraw-studio/files'
 import type { Plugin } from 'vite'
 import {
-  getBuilderSavePath,
+  getBuilderItemPath,
   markBuilderItemDone,
   readBuilderProgress,
+  unmarkBuilderItemDone,
 } from '../ldraw-builder/builder-files.ts'
 import {
   BUILDER_BACKUP_FOLDER,
@@ -15,7 +16,8 @@ import { createLDrawModelIndex } from './ldraw-model-index.ts'
 export const DEVELOPMENT_ROUTE_PREFIX = '/__development'
 
 // The shared LDraw file routes with what LEGO Racers adds: the index of cars, chassis and drivers, saves by builder item (the
-// file the game reads) that mark the item done, and the builder's progress.
+// file the game reads) that mark the item done, removals by builder item (into the backups) that unmark it, and the builder's
+// progress.
 export const createRacersLDrawFileRoutes = (
   libraryRoot: string,
   modelsRoot: string
@@ -26,8 +28,10 @@ export const createRacersLDrawFileRoutes = (
     routePrefix: DEVELOPMENT_ROUTE_PREFIX,
     backupFolder: BUILDER_BACKUP_FOLDER,
     getModelIndex: createLDrawModelIndex,
-    getSavePath: getBuilderSavePath,
+    getSavePath: getBuilderItemPath,
     onModelSaved: (_saved, request) => markBuilderItemDone(modelsRoot, request),
+    getRemovePath: getBuilderItemPath,
+    onModelRemoved: (_removed, request) => unmarkBuilderItemDone(modelsRoot, request),
     builderJsonFiles: { [BUILDER_PROGRESS_FILE]: () => readBuilderProgress(modelsRoot) },
   })
 

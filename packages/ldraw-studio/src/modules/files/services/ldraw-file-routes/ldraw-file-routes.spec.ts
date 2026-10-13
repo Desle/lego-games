@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -46,6 +46,12 @@ const fetchFrom = async (options: Options, path: string, request?: RequestInit) 
 
 const postSave = (options: Options, body: unknown) =>
   fetchFrom(options, `${PREFIX}/ldraw-builder/save`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+
+const postRemove = (options: Options, body: unknown) =>
+  fetchFrom(options, `${PREFIX}/ldraw-builder/remove`, {
     method: 'POST',
     body: JSON.stringify(body),
   })
@@ -170,6 +176,59 @@ describe('createLDrawFileRoutes', () => {
     expect(statuses.map((answer) => answer.status)).toEqual([400, 400, 400, 400])
     expect(readFileSync(join(folders.parent, 'secret.ldr'), 'utf8')).toBe('0 secret\n')
     expect(readFileSync(join(folders.modelsRoot, 'Ferry.ldr'), 'utf8')).toBe('0 ferry\n')
+  })
+
+  it('removes a model by moving it into the backup folder and adds what the app answers', async () => {
+    // Arrange
+    const folders = createFolders()
+    const options = { ...folders, onModelRemoved: () => ({ isUnmarked: true }) }
+
+    // Act
+    const removed = await postRemove(options, { path: 'Ferry.ldr' })
+    const index = await fetchFrom(options, `${PREFIX}/ldraw-models/index.json`)
+
+    // Assert
+    const answer = JSON.parse(removed.body) as { readonly backupPath: string }
+    expect(answer).toEqual({
+      path: 'Ferry.ldr',
+      backupPath: expect.stringMatching(/^drafts\/backups\/Ferry-.+\.ldr$/) as unknown,
+      isUnmarked: true,
+    })
+    expect(existsSync(join(folders.modelsRoot, 'Ferry.ldr'))).toBe(false)
+    expect(readFileSync(join(folders.modelsRoot, answer.backupPath), 'utf8')).toBe('0 ferry\n')
+    expect(JSON.parse(index.body)).toEqual({
+      boats: ['tug.mpd'],
+      'drafts/backups': [answer.backupPath.split('/').pop()],
+    })
+  })
+
+  it('removes the file the app names, and refuses unsafe, missing and non-ldr files', async () => {
+    // Arrange
+    const folders = createFolders()
+    const options = {
+      ...folders,
+      getRemovePath: (request: { readonly [key: string]: unknown }) =>
+        request['name'] === 'ferry' ? 'Ferry.ldr' : null,
+    }
+
+    // Act
+    const statuses = await Promise.all([
+      postRemove(folders, { path: '../secret.ldr' }),
+      postRemove(folders, { path: join(folders.parent, 'secret.ldr') }),
+      postRemove(folders, { path: 'boats/tug.mpd' }),
+      postRemove(folders, { path: 'notes.txt' }),
+      postRemove(folders, { path: 'missing.ldr' }),
+      postRemove(folders, 'not an object'),
+      postRemove(options, { name: 'unknown' }),
+    ])
+    const named = await postRemove(options, { name: 'ferry' })
+
+    // Assert
+    expect(statuses.map((answer) => answer.status)).toEqual([400, 400, 400, 400, 400, 400, 400])
+    expect(readFileSync(join(folders.parent, 'secret.ldr'), 'utf8')).toBe('0 secret\n')
+    expect(readFileSync(join(folders.modelsRoot, 'boats', 'tug.mpd'), 'utf8')).toBe('0 tug\n')
+    expect(named.status).toBe(200)
+    expect(existsSync(join(folders.modelsRoot, 'Ferry.ldr'))).toBe(false)
   })
 
   it('passes other requests on', async () => {

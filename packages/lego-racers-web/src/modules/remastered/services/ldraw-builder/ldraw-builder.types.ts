@@ -60,6 +60,17 @@ export type BuilderSaveResult = {
   readonly progress: BuilderProgress
 }
 
+export type BuilderRemoveRequest = {
+  readonly itemId: string
+}
+
+// The item's file moved into the backups, and the progress without its mark.
+export type BuilderRemoveResult = {
+  readonly path: string
+  readonly backupPath: string
+  readonly progress: BuilderProgress
+}
+
 export type PaletteGroup = {
   readonly label: string
   readonly parts: readonly LibraryPart[]

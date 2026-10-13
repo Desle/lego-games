@@ -14,6 +14,10 @@ export const getIsLDrawText = (text: string): boolean =>
 
 const getTimestamp = (now: Date): string => now.toISOString().replace(/[:.]/g, '-')
 
+// Where a model file's copy goes: `<backupFolder>/<name>-<time>.<extension>`, relative to the models folder.
+export const getBackupPath = (file: string, backupFolder: string, now: Date): string =>
+  `${backupFolder}/${basename(file, extname(file))}-${getTimestamp(now)}${extname(file)}`
+
 // Writes a model into the models folder after copying the file it replaces to `<backupFolder>/<name>-<time>.<extension>`. A string
 // says why nothing was written: a path that is not a model file inside the folder, or a text that is not LDraw.
 export const saveLDrawModel = (
@@ -28,9 +32,7 @@ export const saveLDrawModel = (
   }
   if (!getIsLDrawText(save.text)) return 'the text is not an LDraw model'
   const path = join(modelsRoot, file)
-  const backupPath = existsSync(path)
-    ? `${backupFolder}/${basename(file, extname(file))}-${getTimestamp(now)}${extname(file)}`
-    : null
+  const backupPath = existsSync(path) ? getBackupPath(file, backupFolder, now) : null
   if (backupPath !== null) {
     mkdirSync(join(modelsRoot, backupFolder), { recursive: true })
     copyFileSync(path, join(modelsRoot, backupPath))

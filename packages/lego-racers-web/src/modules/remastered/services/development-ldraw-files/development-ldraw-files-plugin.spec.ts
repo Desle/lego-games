@@ -1,4 +1,11 @@
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from 'node:fs'
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -54,5 +61,36 @@ describe('createRacersLDrawFileRoutes', () => {
     })
     expect(readFileSync(join(root, 'chassis', 'RRchas0.ldr'), 'utf8')).toBe(MODEL_TEXT)
     expect(readdirSync(join(root, 'drafts', 'backups'))).toHaveLength(1)
+  })
+
+  it('removes a builder item by moving its file into the backups, unmarks it and answers the progress', async () => {
+    // Arrange
+    const root = mkdtempSync(join(tmpdir(), 'ldraw-builder-'))
+    mkdirSync(join(root, 'powerups'))
+    writeFileSync(join(root, 'powerups', 'BARREL.ldr'), MODEL_TEXT)
+    writeFileSync(
+      join(root, 'builder-progress.json'),
+      JSON.stringify({ done: ['powerups/BARREL', 'RRCM'] })
+    )
+    const routes = createRacersLDrawFileRoutes(join(root, 'library'), root)
+    const server = createServer((request, response) => routes(request, response, () => undefined))
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    const { port } = server.address() as AddressInfo
+
+    // Act
+    const response = await fetch(
+      `http://127.0.0.1:${String(port)}${DEVELOPMENT_LDRAW_BUILDER_ROUTE}/remove`,
+      { method: 'POST', body: JSON.stringify({ itemId: 'powerups/BARREL' }) }
+    ).finally(() => server.close())
+
+    // Assert
+    const answer = (await response.json()) as { readonly backupPath: string }
+    expect(answer).toEqual({
+      path: 'powerups/BARREL.ldr',
+      backupPath: expect.stringMatching(/^drafts\/backups\/BARREL-.+\.ldr$/) as unknown,
+      progress: { done: ['RRCM'] },
+    })
+    expect(existsSync(join(root, 'powerups', 'BARREL.ldr'))).toBe(false)
+    expect(readFileSync(join(root, answer.backupPath), 'utf8')).toBe(MODEL_TEXT)
   })
 })

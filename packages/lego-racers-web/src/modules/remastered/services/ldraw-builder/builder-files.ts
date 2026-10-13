@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { LDrawSaveRequest } from '@lego-games/ldraw-studio/files'
+import type { LDrawFileRequest } from '@lego-games/ldraw-studio/files'
 import { getBuilderItemFile } from './builder-items.ts'
 import { BUILDER_PROGRESS_STORE } from './ldraw-builder-route.ts'
 import type { BuilderProgress, BuilderSaveProgress } from './ldraw-builder.types.ts'
@@ -31,31 +31,39 @@ export const writeBuilderProgress = (modelsRoot: string, progress: BuilderProgre
   )
 }
 
-const getItemId = (request: LDrawSaveRequest): string | null =>
+const getItemId = (request: LDrawFileRequest): string | null =>
   typeof request['itemId'] === 'string' ? request['itemId'] : null
 
-// The models folder's file a builder save (`{ itemId, text }`) writes: the item's file, the one the game reads. Null for an id
-// that is not a car, chassis or driver of the builder.
-export const getBuilderSavePath = (
-  request: LDrawSaveRequest,
+// The models folder's file a builder save (`{ itemId, text }`) writes or a removal (`{ itemId }`) moves to the backups: the item's
+// file, the one the game reads. Null for an id that is not an item of the builder.
+export const getBuilderItemPath = (
+  request: LDrawFileRequest,
   existingFiles: readonly string[]
 ): string | null => {
   const itemId = getItemId(request)
   return itemId === null ? null : getBuilderItemFile(itemId, existingFiles)
 }
 
-// Marks the saved item done, last in the list, and gives the progress for the save's answer.
-export const markBuilderItemDone = (
-  modelsRoot: string,
-  request: LDrawSaveRequest
-): BuilderSaveProgress => {
-  const itemId = getItemId(request) ?? ''
-  const progress = Object.freeze({
-    done: Object.freeze([
-      ...readBuilderProgress(modelsRoot).done.filter((id) => id !== itemId),
-      itemId,
-    ]),
-  })
+const writeDone = (modelsRoot: string, done: readonly string[]): BuilderSaveProgress => {
+  const progress = Object.freeze({ done: Object.freeze(done) })
   writeBuilderProgress(modelsRoot, progress)
   return Object.freeze({ progress })
 }
+
+const getOtherDone = (modelsRoot: string, itemId: string): readonly string[] =>
+  readBuilderProgress(modelsRoot).done.filter((id) => id !== itemId)
+
+// Marks the saved item done, last in the list, and gives the progress for the save's answer.
+export const markBuilderItemDone = (
+  modelsRoot: string,
+  request: LDrawFileRequest
+): BuilderSaveProgress => {
+  const itemId = getItemId(request) ?? ''
+  return writeDone(modelsRoot, [...getOtherDone(modelsRoot, itemId), itemId])
+}
+
+// Takes a removed item's done mark away and gives the progress for the removal's answer.
+export const unmarkBuilderItemDone = (
+  modelsRoot: string,
+  request: LDrawFileRequest
+): BuilderSaveProgress => writeDone(modelsRoot, getOtherDone(modelsRoot, getItemId(request) ?? ''))

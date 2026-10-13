@@ -1,6 +1,7 @@
 import { createEnum } from '../../../../shared/types/enum.types.ts'
 import type { EnumValues } from '../../../../shared/types/enum.types.ts'
 import type { LDrawColorName } from '../reference-kit/reference-kit.types.ts'
+import type { BuilderRemoveView } from './builder-remove-control.types.ts'
 import type { BuilderItem, LibraryPart, StartFileGroup } from './ldraw-builder.types.ts'
 
 // How the original is shown: in a second view with the same camera, see-through over the build, or not at all.
@@ -31,6 +32,8 @@ export type BuilderPanelHandlers = {
   readonly onRotate: () => void
   readonly onDeleteSelected: () => void
   readonly onDone: () => void
+  // Asked and confirmed in the bar.
+  readonly onRemove: () => void
   // A step up (1) or down (-1) of the scale, or back to the fitted scale.
   readonly onScaleStep: (direction: number) => void
   readonly onScaleFit: () => void
@@ -78,5 +81,7 @@ export type BuilderPanel = {
   readonly showHint: (text: string) => void
   readonly setIsShortcutsShown: (isShown: boolean) => void
   readonly getIsShortcutsShown: () => boolean
+  // The Remove model button, for an item whose file is in the models folder.
+  readonly showRemove: (view: BuilderRemoveView) => void
   readonly setIsBusy: (isBusy: boolean) => void
 }

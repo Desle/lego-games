@@ -25,6 +25,8 @@ export type OriginalReference = {
 export type BuilderItemStart = {
   // Where Done writes, relative to the models folder.
   readonly file: string
+  // Whether that file is in the models folder (the game draws it instead of the original), so it can be removed.
+  readonly isFilePresent: boolean
   // The file the model was read from, null when it starts empty.
   readonly sourceFile: string | null
   // The document without its scale line.
