@@ -38,6 +38,7 @@ import { createLDrawDriverDrawing } from '../ldraw-racer/ldraw-driver-drawing.ts
 import { createLDrawWheelsDrawing } from '../ldraw-racer/ldraw-wheels-drawing.ts'
 import { ensureStudioLights } from '../ldraw-racer/studio-scene-lights.ts'
 import type {
+  GalleryCatalogueSlot,
   GalleryFigure,
   GalleryDriver,
   GalleryFocus,
@@ -53,6 +54,19 @@ const BACKGROUND_COLOR = 0x2b3340
 const FIELD_OF_VIEW = 30
 const CHASSIS_DATABASE_PATH = 'GAMEDATA\\COMMON\\CHASSIS.CMB'
 const DRIVER_RAW_SCALE = 1 / 64
+const SLOT_POSITIONS: Readonly<Record<GalleryCatalogueSlot, number>> = {
+  hat: 0,
+  face: 1,
+  torso: 2,
+  legs: 3,
+}
+// Where each catalogue part is on a seated driver, raw model units.
+const SLOT_FOCUS: Readonly<Record<GalleryCatalogueSlot, GalleryFocus>> = {
+  hat: { target: [0, 0, 200], distance: 520 },
+  face: { target: [0, 0, 195], distance: 380 },
+  torso: { target: [0, 0, 100], distance: 700 },
+  legs: { target: [20, 0, 25], distance: 650 },
+}
 const VIEW_DIRECTIONS: Readonly<Record<GalleryView, readonly [number, number, number]>> = {
   front: [0.5, -1, 0.5],
   side: [0, -1, 0.15],
@@ -62,6 +76,7 @@ const VIEW_DIRECTIONS: Readonly<Record<GalleryView, readonly [number, number, nu
   figureFront: [1, 0, 0.08],
   figureRear: [-1, 0.2, 0.2],
 }
+const FIGURE_FRONT: readonly [number, number, number] = [1, 0, 0.05]
 
 const canvas = document.getElementById('stage')
 if (!(canvas instanceof HTMLCanvasElement)) throw new Error('The gallery page has no canvas')
@@ -247,6 +262,36 @@ const renderDriver = async (
   return true
 }
 
+// A contact sheet of catalogue parts: one seated driver for each index, the part in its slot and the base bytes elsewhere.
+const renderCatalogueSheet = async (
+  slot: GalleryCatalogueSlot,
+  indices: readonly number[],
+  base: readonly number[],
+  columns: number,
+  cell: number
+): Promise<number> => {
+  const rows = Math.ceil(indices.length / columns)
+  clearSheet(columns * cell, rows * cell)
+  for (const [position, index] of indices.entries()) {
+    const partBytes = base.map((value, byteIndex) =>
+      byteIndex === SLOT_POSITIONS[slot] ? index : value
+    )
+    const driver = await createDriver('race', partBytes, 9, 0)
+    if (driver === null) continue
+    const camera = getFramedCamera(driver.scene, FIGURE_FRONT, 1, SLOT_FOCUS[slot])
+    drawIn(
+      driver.scene,
+      camera,
+      (position % columns) * cell,
+      (rows - 1 - Math.floor(position / columns)) * cell,
+      cell,
+      cell
+    )
+    driver.drawing.dispose()
+  }
+  return indices.length
+}
+
 const DRIVER_DATABASE_PATH = 'GAMEDATA\\COMMON\\DRIVERS.DDB'
 const RACE_DRIVER_CLIP = 9
 
@@ -408,6 +453,7 @@ Object.assign(window, {
   renderWheelSheet,
   renderWheels,
   renderDriver,
+  renderCatalogueSheet,
   getDriverNames,
   renderDriverSheet,
   renderChampion,

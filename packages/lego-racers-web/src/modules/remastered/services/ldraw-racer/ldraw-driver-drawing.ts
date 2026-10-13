@@ -29,7 +29,7 @@ import {
 } from './driver-file.ts'
 import { DriverPartRole } from './driver-file.types.ts'
 import type { DriverFilePart } from './driver-file.types.ts'
-import { findDriverFile } from './driver-records.ts'
+import { findDriverSource } from './driver-records.ts'
 import { readMinifigPictures } from './minifig-pictures.ts'
 import type { MinifigPictures } from './minifig-pictures.types.ts'
 import { createPoseControls, createSkeletonPoseSampler } from './skeleton-pose.ts'
@@ -142,16 +142,17 @@ const getPicturesOnce = (archive: JamArchive, partBytes: readonly number[]) => {
   }
 }
 
-// A driver as the minifigure of his file in the models folder (`drivers/<NAME>.ldr`): each part, in the file's colours, put on the bone
-// its role names of the skeleton the original poses its own figure with (the race driver's seated one or the menus' standing one), so
-// its animations play on them; a head or torso with no print shows the original's picture. Null when the folder has no file for him.
+// A driver as the minifigure of his file in the models folder (`drivers/<NAME>.ldr`), or with no file the library parts of his catalogue
+// pieces: each part, in its LDraw colour, put on the bone its role names of the skeleton the original poses its own figure with (the
+// race driver's seated one or the menus' standing one), so its animations play on them; a head or torso with no print shows the
+// original's picture. Null when a piece of a driver with no file has no mapping.
 export const createLDrawDriverDrawing = (
   request: RacerPartDrawingRequest,
   search: string
 ): LDrawRacerPartDrawing | null => {
   const sampler = createSkeletonPoseSampler(request.model)
   const rig = sampler === null ? null : getMinifigRig(sampler.boneNames)
-  const source = findDriverFile(request.archive, request.modelName, request.partBytes)
+  const source = findDriverSource(request.archive, request.modelName, request.partBytes)
   if (sampler === null || rig === null || source === null) return null
   const figureFrame = getFigureFrame(rig)
   const object = new Group()
@@ -189,9 +190,9 @@ export const createLDrawDriverDrawing = (
         console.error(`The LDraw library has no part ${entry.part.partName}`, error)
     )
   const build = async () => {
-    const text = await loadLDrawModelText(source.file)
-    if (text === null || live.isDisposed) return
-    const parts = parseDriverFile(text)
+    const text = source.kind === 'file' ? await loadLDrawModelText(source.file) : null
+    if (live.isDisposed || (source.kind === 'file' && text === null)) return
+    const parts = source.kind === 'file' ? parseDriverFile(text ?? '') : source.parts
     const headColorCode =
       parts.find((entry) => entry.role === DriverPartRole.HEAD)?.part.colorCode ?? null
     const decals = getDecals(parts, getPictures, search)
@@ -218,7 +219,7 @@ export const createLDrawDriverDrawing = (
   const controls = createPoseControls(sampler, pose)
   return Object.freeze({
     settled: build().catch((error: unknown) =>
-      console.error(`The driver file ${source.file} could not be drawn`, error)
+      console.error('The LDraw driver could not be drawn', error)
     ),
     object,
     ...controls,

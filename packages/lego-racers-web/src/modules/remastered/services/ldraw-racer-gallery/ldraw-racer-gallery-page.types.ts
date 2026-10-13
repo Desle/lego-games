@@ -7,6 +7,9 @@ export type GalleryView =
 // Which skeleton and parts a driver is made for: the race's seated driver or the menus' standing figure.
 export type GalleryFigure = 'race' | 'menu'
 
+// A catalogue part of `BODYPART.PCB`, by the position of its byte among the five part bytes.
+export type GalleryCatalogueSlot = 'hat' | 'face' | 'torso' | 'legs'
+
 // A part of the figure a contact sheet looks at.
 export type GalleryFocus = {
   readonly target: readonly [number, number, number]

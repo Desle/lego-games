@@ -6,7 +6,7 @@ import type {
   ViewerExtension,
 } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import { getLDrawModelIndex } from '../ldraw-models/ldraw-model-client.ts'
-import { findDriverFile } from '../ldraw-racer/driver-records.ts'
+import { findDriverSource } from '../ldraw-racer/driver-records.ts'
 import { HookKind } from './hd-coverage.types.ts'
 import type { HookCall } from './hd-coverage.types.ts'
 import type { CoverageRecorder, RecordingExtension } from './hd-coverage-recorder.types.ts'
@@ -47,7 +47,8 @@ const getDriverCall = (id: number, request: DriverDrawingRequest): HookCall =>
         : `${PARTS_KEY_PREFIX}${request.driver.partBytes.join(' ')}`,
     wheelsKey: null,
     isModelPresent:
-      findDriverFile(request.archive, request.driver.modelName, request.driver.partBytes) !== null,
+      findDriverSource(request.archive, request.driver.modelName, request.driver.partBytes) !==
+      null,
     isDrawingReturned: false,
     isFailed: false,
   })
