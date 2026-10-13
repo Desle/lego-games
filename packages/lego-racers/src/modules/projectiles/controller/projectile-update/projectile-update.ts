@@ -41,6 +41,11 @@ import { updateRocket } from '../rocket-effect/rocket-effect.ts'
 import { updateWarp } from '../warp-effect/warp-effect.ts'
 import { updateWand } from '../wand-effect/wand-effect.ts'
 import { updateGrapple } from '../grapple-effect/grapple-effect.ts'
+import {
+  getWorldWithTrailFed,
+  getWorldWithTrailsReleased,
+  getWorldWithTrailsStepped,
+} from '../projectile-trail-feed/projectile-trail-feed.ts'
 import { getIsSpeedNearZero } from '../../types/turbo-early-end/turbo-early-end.ts'
 import {
   createMagnetMotion,
@@ -371,9 +376,10 @@ export const updateProjectileEffect = (
     step.events.length,
     context
   )
+  const moved = getWorldWithFinishedMotionCleared(updated.world, updated.step, effectId)
   return Object.freeze({
     step: updated.step,
-    world: getWorldWithFinishedMotionCleared(updated.world, updated.step, effectId),
+    world: getWorldWithTrailFed(moved, updated.step, context, before, stepMilliseconds),
   })
 }
 
@@ -411,5 +417,11 @@ export const updatePowerUpsWithProjectiles = (
       return settled.step
     }
   )
-  return Object.freeze({ step: updated, world: currentWorld })
+  return Object.freeze({
+    step: updated,
+    world: getWorldWithTrailsStepped(
+      getWorldWithTrailsReleased(currentWorld, updated),
+      stepMilliseconds
+    ),
+  })
 }

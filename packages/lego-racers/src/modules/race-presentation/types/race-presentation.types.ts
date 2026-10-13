@@ -25,6 +25,7 @@ import type { Matrix3, Vector3 } from '../../simulation-math/index.ts'
 import type { RacePhaseValue, RaceState } from '../../race/index.ts'
 import type { GhostRunSelection } from '../../ghost/index.ts'
 import type { RibbonView } from '../../ribbon/index.ts'
+import type { TrailDrawing } from '../../projectile-trail/index.ts'
 
 // A ghost car of a time trial (FUN_00422960): the champion's, drawn from GHOST.WDB, or the session's best run, drawn with
 // the player's own car. All three parts take the run's one orientation; the driver sits at the seat point carried by it.
@@ -300,4 +301,6 @@ export type EffectViews = {
   readonly effects: readonly EffectView[]
   readonly explosions: readonly ExplosionView[]
   readonly decals: readonly DecalView[]
+  // The streaks behind the cannonballs and rockets (the trail pool, 0x00493aa0).
+  readonly trails: readonly TrailDrawing[]
 }
