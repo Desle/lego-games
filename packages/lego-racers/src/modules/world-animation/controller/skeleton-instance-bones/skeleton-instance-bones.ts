@@ -70,6 +70,29 @@ export const getSkeletonInstanceBoneTranslation = (
     : getPointInInstance(arithmetic, instance, translation, instance.scale)
 }
 
+// A bone's own transform of a point (bone slot +0x4, GolDP.dll 0x10002c10): the point's coordinates times the rows of the
+// bone's rotation, plus its translation; every partial sum is stored as a float.
+export const getSkeletonInstanceBonePoint = (
+  arithmetic: FloatArithmetic,
+  instance: SkeletonInstanceRuntime,
+  boneIndex: number,
+  point: Vector3
+): Vector3 | null => {
+  const { add, multiply, storeFloat } = arithmetic
+  const bone = getInstancePose(instance)?.bones[boneIndex]
+  if (bone === undefined) return null
+  const { rotation, translation } = bone
+  const getComponent = (column: number): number => {
+    const first = storeFloat(multiply(rotation[column] ?? 0, point[0]))
+    // @check-allow traced-constants: 3 is the offset of the second row in a 3×3 rotation matrix
+    const second = storeFloat(add(multiply(rotation[column + 3] ?? 0, point[1]), first))
+    // @check-allow traced-constants: 6 is the offset of the third row in a 3×3 rotation matrix
+    const third = storeFloat(add(multiply(rotation[column + 6] ?? 0, point[2]), second))
+    return storeFloat(add(translation[column] ?? 0, third))
+  }
+  return [getComponent(0), getComponent(1), getComponent(2)]
+}
+
 // The bones from the given one up to the root, in the order the hazards' loop walks them (bone slot +0x4, the parent).
 const getBoneChain = (skeleton: Skeleton, boneIndex: number): readonly number[] => {
   const parentIndex = skeleton.bones[boneIndex]?.parentIndex ?? null

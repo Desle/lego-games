@@ -134,6 +134,19 @@ describe('updatePowerUpEffects', () => {
     expect(getHead(finished).state).toBe(EffectState.FINISHED)
   })
 
+  it('counts every millisecond its figures were stepped, across the states (0x0045ce20)', () => {
+    // Arrange
+    const context = createContext()
+    const step = createActivated({ category: BrickKind.TURBO, level: 0 }, context)
+
+    // Act
+    const stepped = runFor(step, context, [33, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33])
+
+    // Assert
+    expect(getHead(stepped).state).toBe(EffectState.ACTIVE)
+    expect(getHead(stepped).figureAgeMilliseconds).toBe(14 * 33)
+  })
+
   it('keeps a level-2 turbo going in the endless-turbo race mode', () => {
     // Arrange
     const context = createContext(RaceModeFlag.ENDLESS_TURBO)

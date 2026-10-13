@@ -10,6 +10,8 @@ export {
 } from './controller/computer-power-up-use/computer-power-up-use.ts'
 export {
   checkEffectEmitter,
+  placeEffectEmitter,
+  placeTurboSmoke,
   releaseEffectEmitter,
   startEffectEmitter,
 } from './controller/effect-emitters/effect-emitters.ts'

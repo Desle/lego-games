@@ -35,7 +35,7 @@ export const createDynamicGeometry = (cornerCount: number): BufferGeometry => {
 // key (render state 41, recorded on for the decals) stays: the keyed texels of a decal without a blend (the oil slick) are
 // not drawn, so the material's alpha test stands in for it as for every material.
 export const createDecalMaterial = (scene: Scene, material: SceneMaterial): Material => {
-  const three = createSceneMaterial(material, scene.textures, new Map(), true)
+  const three = createSceneMaterial(material, scene.textures, new Map())
   three.depthWrite = true
   three.depthFunc = LessEqualDepth
   return three

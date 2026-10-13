@@ -5,7 +5,13 @@ import { createFloatArithmetic, FpuPrecision } from '../../../simulation-math/in
 import { createPowerUpWorld } from '../power-up-world/power-up-world.ts'
 import { getEffect } from '../power-up-step/power-up-step.ts'
 import type { PowerUpStep } from '../power-up-step/power-up-step.types.ts'
-import { checkEffectEmitter, releaseEffectEmitter, startEffectEmitter } from './effect-emitters.ts'
+import {
+  checkEffectEmitter,
+  placeEffectEmitter,
+  placeTurboSmoke,
+  releaseEffectEmitter,
+  startEffectEmitter,
+} from './effect-emitters.ts'
 
 const SINGLE = createFloatArithmetic(FpuPrecision.SINGLE)
 
@@ -54,6 +60,43 @@ const createStep = (): PowerUpStep => {
     },
   }
 }
+
+describe('placeEffectEmitter', () => {
+  it("moves the effect's emitter to the point and leaves a step without one alone", () => {
+    // Arrange
+    const step = createStep()
+    const started = startEffectEmitter(step, SINGLE, 0, 'cannsmk')
+
+    // Act
+    const placed = placeEffectEmitter(started, 0, { x: 1, y: 2, z: 3 })
+    const unchanged = placeEffectEmitter(step, 0, { x: 1, y: 2, z: 3 })
+
+    // Assert
+    expect(placed.world.emitters.common?.instances[0]?.position).toEqual({ x: 1, y: 2, z: 3 })
+    expect(unchanged).toBe(step)
+  })
+})
+
+describe('placeTurboSmoke', () => {
+  it("puts the smoke at (-2, 0, 3) of the owner's frame with 0.7 of its velocity", () => {
+    // Arrange
+    const started = startEffectEmitter(createStep(), SINGLE, 0, 'cannsmk')
+    const owner = {
+      position: { x: 10, y: 20, z: 30 },
+      rotation: [0, 1, 0, -1, 0, 0, 0, 0, 1] as const,
+      velocity: { x: 10, y: 0, z: -10 },
+    }
+
+    // Act
+    const placed = placeTurboSmoke(started, 0, SINGLE, owner)
+
+    // Assert
+    const instance = placed.world.emitters.common?.instances[0]
+    expect(instance?.position).toEqual({ x: 10, y: 18, z: 33 })
+    expect(instance?.basis).toEqual(owner.rotation)
+    expect(instance?.velocityOffset.x).toBeCloseTo(7000, 1)
+  })
+})
 
 describe('startEffectEmitter', () => {
   it('keeps the handle of an emitter without a lifetime', () => {

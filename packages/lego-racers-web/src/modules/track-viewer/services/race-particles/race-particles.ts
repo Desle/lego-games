@@ -34,21 +34,14 @@ const WHITE_VERTEX_COLOR: readonly [number, number, number, number] = Object.fre
   BYTE_MAXIMUM,
 ])
 
-const createBatch = (
-  scenes: readonly Scene[],
-  materialName: string,
-  isRowOrderKept: boolean
-): MaterialBatch | null => {
+const createBatch = (scenes: readonly Scene[], materialName: string): MaterialBatch | null => {
   const scene = scenes.find((candidate) =>
     candidate.materials.some((material) => material.name === materialName)
   )
   const sceneMaterial = scene?.materials.findLast((candidate) => candidate.name === materialName)
   if (scene === undefined || sceneMaterial === undefined) return null
   const geometry = createDynamicGeometry(MAXIMUM_CORNERS)
-  const mesh = new Mesh(
-    geometry,
-    createSceneMaterial(sceneMaterial, scene.textures, new Map(), isRowOrderKept)
-  )
+  const mesh = new Mesh(geometry, createSceneMaterial(sceneMaterial, scene.textures, new Map()))
   mesh.frustumCulled = false
   mesh.visible = false
   const [red, green, blue, alpha] = sceneMaterial.diffuseColor
@@ -65,16 +58,13 @@ const createBatch = (
 export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => {
   const group = new Group()
   const batches = new Map<string, MaterialBatch | null>()
-  const getBatchKey = (materialName: string, isRowOrderKept: boolean): string =>
-    isRowOrderKept ? `${materialName}/rows-kept` : materialName
-  const getBatch = (materialName: string, isRowOrderKept = false): MaterialBatch | null => {
-    const key = getBatchKey(materialName, isRowOrderKept)
-    if (!batches.has(key)) {
-      const batch = createBatch(scenes, materialName, isRowOrderKept)
-      batches.set(key, batch)
+  const getBatch = (materialName: string): MaterialBatch | null => {
+    if (!batches.has(materialName)) {
+      const batch = createBatch(scenes, materialName)
+      batches.set(materialName, batch)
       if (batch !== null) group.add(batch.mesh)
     }
-    return batches.get(key) ?? null
+    return batches.get(materialName) ?? null
   }
   const update = (
     pools: readonly (EmitterPool | null)[],
@@ -85,7 +75,7 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
   ) => {
     const axes = getBillboardAxes(arithmetic, cameraView.forward, cameraView.up)
     // A world sprite draws with the engine's white vertex array (0x1005ca4c), whatever its material's colour, and its
-    // texture keeps the order of the file's rows (the sprites' textures lack texture flag 4, see world-sprite.md).
+    // texture keeps the order of the file's rows (its texture lacks flag 4, see scene-material.ts).
     const quads: ParticleQuad[] = [
       ...worldSpriteQuads.map((quad) => ({ quad, isWorldSprite: true })),
       ...[
@@ -121,10 +111,9 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
       )
     }
     for (const { quad, isWorldSprite } of quads) {
-      const batch = getBatch(quad.materialName, isWorldSprite)
-      const batchKey = getBatchKey(quad.materialName, isWorldSprite)
+      const batch = getBatch(quad.materialName)
       if (batch === null) continue
-      let corner = counts.get(batchKey) ?? 0
+      let corner = counts.get(quad.materialName) ?? 0
       for (const triangle of QUAD_TRIANGLE_CORNERS) {
         for (const index of triangle) {
           const source = quad.corners[index]
@@ -133,13 +122,12 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
           corner += 1
         }
       }
-      counts.set(batchKey, corner)
+      counts.set(quad.materialName, corner)
     }
     for (const ribbon of ribbons) {
-      const batch = getBatch(ribbon.materialName, true)
-      const batchKey = getBatchKey(ribbon.materialName, true)
+      const batch = getBatch(ribbon.materialName)
       if (batch === null) continue
-      let corner = counts.get(batchKey) ?? 0
+      let corner = counts.get(ribbon.materialName) ?? 0
       const corners = getRibbonCorners(
         arithmetic,
         ribbon.skin,
@@ -156,7 +144,7 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
         )
         corner += 1
       }
-      counts.set(batchKey, corner)
+      counts.set(ribbon.materialName, corner)
     }
     for (const [name, batch] of batches) {
       if (batch === null) continue

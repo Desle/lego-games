@@ -490,6 +490,18 @@ const updateWand = (
   )
 }
 
+const getStepWithFiguresStepped = (
+  step: PowerUpStep,
+  effectId: number,
+  stepMilliseconds: number
+): PowerUpStep => {
+  const effect = getEffect(step, effectId)
+  return getStepWithEffect(step, {
+    ...effect,
+    figureAgeMilliseconds: effect.figureAgeMilliseconds + stepMilliseconds,
+  })
+}
+
 // Vtable slot 2 for one active effect; the movement and collision parts are not ported (power-ups.md).
 export const updatePowerUpEffect = (
   step: PowerUpStep,
@@ -500,7 +512,11 @@ export const updatePowerUpEffect = (
 ): PowerUpStep => {
   const effect = getEffect(step, effectId)
   if (effect.state === EffectState.FINISHED || effect.kind === PowerUpEffectKind.ROCKET) return step
-  const counted = countDown(step, context, effectId, stepMilliseconds)
+  const counted = getStepWithFiguresStepped(
+    countDown(step, context, effectId, stepMilliseconds),
+    effectId,
+    stepMilliseconds
+  )
   if (effect.kind === PowerUpEffectKind.WAND) {
     // 0x00454d70: when the countdown ends the rest of the step goes on to the jitter, the hold and the sparks.
     const restMilliseconds =

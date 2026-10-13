@@ -1,5 +1,6 @@
 export { createTrackLogic } from './controller/create-track-logic/create-track-logic.ts'
 export {
+  followTrackCameras,
   runTrackLogic,
   STATIC_TRACK_WORLD,
   tickTrackTimeEntries,

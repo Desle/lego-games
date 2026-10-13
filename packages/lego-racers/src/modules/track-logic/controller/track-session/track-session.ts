@@ -19,6 +19,7 @@ import {
   touchHazard,
   updateHazards,
   updateHazardsAfterRacers,
+  followCamerasWithHazards,
 } from '../../../hazard/index.ts'
 import type { HazardSession, HazardStore } from '../../../hazard/index.ts'
 import { drawRandomScaledRange, drawRandomValue } from '../../../random-table/index.ts'
@@ -577,6 +578,7 @@ export const createTrackSession = (
     updateHazards: (milliseconds) => updateHazards(hazardStore, hazardSession, milliseconds),
     updateHazardsAfterRacers: (cameraPositions) =>
       updateHazardsAfterRacers(hazardStore, hazardSession, cameraPositions),
+    followCameras: (cameras) => followCamerasWithHazards(hazardStore, hazardSession, cameras),
     updateTimers: (milliseconds) => {
       timers = updateTimers(timers, session, milliseconds)
     },

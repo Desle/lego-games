@@ -2,6 +2,7 @@ import type { CollisionBody } from '../../../racer-collision/index.ts'
 import type { HazardBehavior } from '../../types/hazard-behavior.types.ts'
 import { HazardLifecycle } from '../../types/hazard-lifecycle/hazard-lifecycle.ts'
 import type {
+  HazardCameraFrame,
   HazardInstance,
   HazardLoadContext,
   HazardRacer,
@@ -161,6 +162,18 @@ export const updateHazardsAfterRacers = (
   forEach(store, (index) =>
     apply(store, index, (instance) =>
       getBehavior(instance).updateAfterRacers(instance, session, cameraPositions)
+    )
+  )
+
+// The camera half of 0x0048ae00: the hazards place themselves at the frame's camera.
+export const followCamerasWithHazards = (
+  store: HazardStore,
+  session: HazardSession,
+  cameras: readonly HazardCameraFrame[]
+): void =>
+  forEach(store, (index) =>
+    apply(store, index, (instance) =>
+      getBehavior(instance).followCameras(instance, session, cameras)
     )
   )
 
