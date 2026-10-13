@@ -22,6 +22,7 @@ import {
   LOOK_APPEARANCES,
   LOOK_PARAMETER,
   setActiveLookPreset,
+  setPlasticLightingExtension,
   setShaderPrecompiler,
 } from '@lego-games/ldraw/material'
 import {
@@ -48,6 +49,7 @@ import {
 } from '../real-shadows/shadow-mode.ts'
 import { ShadowMode } from '../real-shadows/shadow-mode.types.ts'
 import { createShadowPass } from '../real-shadows/shadow-pass.ts'
+import { createPlasticShadowExtension } from '../real-shadows/plastic-shadow.ts'
 import { getTrackSun } from '../real-shadows/sun-selection.ts'
 import { getAudioVariants, getTextureVariants } from '../texture-variants/texture-variants.ts'
 import { getNativeMenuSurfaceScale } from '../widescreen-display/menu-surface.ts'
@@ -77,6 +79,9 @@ export const createRemasteredExtension = async (search: string): Promise<ViewerE
   setUpLDrawModelParser()
   setActiveLookPreset(getLookPreset(search))
   setIsStudLogoShown(getIsStudLogoRequested(search))
+  setPlasticLightingExtension(
+    getShadowMode(search) === ShadowMode.CLASSIC ? null : createPlasticShadowExtension()
+  )
   const settings = {
     search,
     isChassisFallbackUsed: getIsChassisFallbackRequested(search),
