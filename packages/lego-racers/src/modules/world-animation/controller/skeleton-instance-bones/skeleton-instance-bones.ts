@@ -65,9 +65,10 @@ export const getSkeletonInstanceBoneTranslation = (
   boneIndex: number
 ): Vector3 | null => {
   const translation = getInstancePose(instance)?.bones[boneIndex]?.translation
-  return translation === undefined
-    ? null
-    : getPointInInstance(arithmetic, instance, translation, instance.scale)
+  if (translation === undefined) return null
+  const local: Vector3 =
+    instance.isMirrored === true ? [translation[0], -translation[1], translation[2]] : translation
+  return getPointInInstance(arithmetic, instance, local, instance.scale)
 }
 
 // The bones from the given one up to the root, in the order the hazards' loop walks them (bone slot +0x4, the parent).

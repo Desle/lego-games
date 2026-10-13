@@ -160,7 +160,15 @@ export const CAPTURE: HazardBehavior = Object.freeze({
   },
   update: (instance, session, milliseconds) => {
     const ended = getActiveAfterEndRequest(instance, (current) => end(current, session))
-    if (ended === null) return instance
+    if (ended === null) {
+      // The draw poses the bones whether or not the hazard is active, so the clip of this frame is remembered.
+      return getIsCaptureData(instance.data)
+        ? getWithData(instance, {
+            ...instance.data,
+            nextPosedClip: getSkeletonInstance(session, instance.data.instance)?.clip ?? null,
+          })
+        : instance
+    }
     const { data: endedData } = ended
     if (!getIsCaptureData(endedData)) return ended
     const latestClip = getSkeletonInstance(session, endedData.instance)?.clip ?? null
