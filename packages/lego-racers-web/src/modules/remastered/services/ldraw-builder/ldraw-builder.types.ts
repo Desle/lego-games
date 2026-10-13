@@ -91,3 +91,9 @@ export type CommonPartGroup = {
   readonly label: string
   readonly partNames: readonly string[]
 }
+
+// Unsaved work kept in the browser: the parts and when they were last changed.
+export type BuilderDraft = {
+  readonly savedAt: number
+  readonly parts: readonly BuilderPart[]
+}

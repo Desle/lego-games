@@ -32,7 +32,11 @@ export type BuilderPanelHandlers = {
   readonly onDeleteSelected: () => void
   readonly onDone: () => void
   readonly onShortcutsToggle: () => void
-  readonly getThumbnail: (partName: string, colorCode: number) => Promise<string | null>
+  readonly getThumbnail: (
+    partName: string,
+    colorCode: number,
+    getIsWanted: () => boolean
+  ) => Promise<string | null>
 }
 
 export type BuilderQueueView = {
