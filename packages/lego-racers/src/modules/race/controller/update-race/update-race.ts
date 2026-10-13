@@ -1,4 +1,4 @@
-import type { Vector3 } from '../../../simulation-math/index.ts'
+import type { CameraView } from '../../../race-camera/index.ts'
 import { recordGhostSample } from '../../../ghost/index.ts'
 import { advanceSky, switchSkySetting } from '../../../sky/index.ts'
 import {
@@ -48,10 +48,7 @@ import type { PlayerControllerProgress, PlayerControllerRun } from './update-rac
 const TIME_SCALE_FLAG = 0x100
 // The camera half of 0x0048ae00, once the frame's camera is known (the port keeps its cameras in the presentation): the
 // hazards that follow the camera, the snow, place themselves at it. The first local player's camera is the one given.
-export const getRaceWithHazardsAtCamera = (
-  state: RaceState,
-  camera: { readonly position: Vector3; readonly forward: Vector3; readonly up: Vector3 }
-): RaceState =>
+export const getRaceWithHazardsAtCamera = (state: RaceState, camera: CameraView): RaceState =>
   getStateWithProgress(state, {
     controllers: state.playerControllers,
     racerSet: changeTrackLogic(
