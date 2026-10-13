@@ -379,5 +379,39 @@ describe('createSceneObject', () => {
       // Assert
       expect(sceneObject.group.children[0]!.visible).toBe(false)
     })
+
+    it('draws an instance with the distances and the alpha override a hazard draws it with (0x0048f080)', () => {
+      // Arrange: the world's own distances are 0 (a gate's Begin), the gate lends the part distances and an alpha
+      const sceneObject = createSceneObject(getSceneWithRock(0), TRACK_OPTIONS)
+      const instanceGroup = sceneObject.group.children[0]!
+      const mesh = instanceGroup.children[0] as Mesh
+      const sharedMaterial = mesh.material
+      const runtime = {
+        position: { x: 10, y: 0, z: 0 },
+        levelSquaredDistances: [1e6, 1e6, 1e6],
+        sphere: null,
+      }
+
+      // Act
+      sceneObject.setInstanceRuntime('rock01', { ...runtime, alphaOverride: 100 })
+      sceneObject.selectLevels(EYE)
+      const isDrawnWhileFading = instanceGroup.visible
+      const fadingAlpha = mesh.geometry.getAttribute('color').array[3]
+      const fadingMaterial = mesh.material as MeshBasicMaterial
+      sceneObject.setInstanceRuntime('rock01', {
+        ...runtime,
+        levelSquaredDistances: [0, 0, 0],
+        alphaOverride: null,
+      })
+      sceneObject.selectLevels(EYE)
+
+      // Assert: the material is the mesh's own, so the other instances that share it are not blended
+      expect(isDrawnWhileFading).toBe(true)
+      expect(fadingAlpha).toBe(100)
+      expect(fadingMaterial).not.toBe(sharedMaterial)
+      expect(fadingMaterial.blending).toBe(CustomBlending)
+      expect(instanceGroup.visible).toBe(false)
+      expect(mesh.geometry.getAttribute('color').array[3]).toBe(255)
+    })
   })
 })

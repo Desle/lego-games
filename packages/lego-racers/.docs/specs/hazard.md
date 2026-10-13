@@ -16,6 +16,7 @@ Parses a race's `.HZB` hazard list exactly as `Hazards_Load` (`LEGORacers.exe` `
 - A hazard keyword without a class, a fifth name in a `0x34` hazard and a `0x3d` hazard that reaches the end of the file throw `UnportableFileError`, where the original calls through a null object, overruns its stack or loops forever.
 
 - **Run the hazards**: `createHazardRuntime` makes one object per definition (class loaders may draw and change the worlds); `updateHazards`, `updateHazardsAfterRacers`, the bus walks (`startHazardSignal`, `startStopHazardSignal`, `stopHazardSignal`, `forceEndHazards`, the racer-trigger walks) and `touchHazard` run them against a session that the track logic supplies.
+- **Draw a breaking gate**: `getGatePartDraws` answers the gate's draw slot (`0x0048f080`): while a `0x34` gate is not idle each part is drawn with the first part's distances as it loaded and the alpha `ftol((frames − time) / frames · 255)` of its clip; once idle nothing draws its parts (Begin zeroed their own distances). The breakable-gates spec checks every race's gates against the original files: drawn and fading while the clip plays, gone for good after.
 
 ## Out of scope
 

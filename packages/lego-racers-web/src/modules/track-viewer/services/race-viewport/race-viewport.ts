@@ -27,7 +27,7 @@ import {
   getSkeletonInstanceSphere,
   getTextureScrollOffsets,
 } from '@lego-games/lego-racers/world-animation'
-import type { RaceWorlds } from '@lego-games/lego-racers/world-animation'
+import { getGatePartDraws } from '@lego-games/lego-racers/hazard'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-racers/simulation-math'
 import { getWorldSpriteQuads } from '@lego-games/lego-racers/world-sprite'
 import {
@@ -59,6 +59,7 @@ import { showSceneObjects } from '../scene-viewport/scene-viewport.ts'
 import type { ShownScene } from '../scene-viewport/scene-viewport.types.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
 import type {
+  DrawnTrackLogic,
   RaceStage,
   RaceStageSize,
   RaceViewport,
@@ -436,14 +437,22 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     }
   }
 
-  const showHazards = (worlds: RaceWorlds, pools: readonly (EmitterPool | null)[]) => {
+  const showHazards = (trackLogic: DrawnTrackLogic, pools: readonly (EmitterPool | null)[]) => {
+    const { worlds } = trackLogic
+    const partDraws = new Map(
+      getGatePartDraws(arithmetic, trackLogic.hazards, worlds).map(
+        (draw) => [draw.instanceName, draw] as const
+      )
+    )
     for (const world of [worlds.track, worlds.blended, worlds.local]) {
       for (const instance of world.skeletonInstances) {
         if (instance.clip !== null) shown.track.setSkeletonState(instance.name, instance.clip)
         const sphere = getSkeletonInstanceSphere(arithmetic, instance)
+        const partDraw = partDraws.get(instance.name)
         shown.track.setInstanceRuntime(instance.name, {
           position: getPosition(instance.position),
-          levelSquaredDistances: instance.levelSquaredDistances,
+          levelSquaredDistances: partDraw?.levelSquaredDistances ?? instance.levelSquaredDistances,
+          alphaOverride: partDraw?.alpha ?? null,
           sphere:
             sphere === null
               ? null
@@ -457,6 +466,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
         shown.track.setInstanceRuntime(instance.name, {
           position: getPosition(instance.position),
           levelSquaredDistances: instance.levelSquaredDistances,
+          alphaOverride: null,
           sphere: null,
         })
       }

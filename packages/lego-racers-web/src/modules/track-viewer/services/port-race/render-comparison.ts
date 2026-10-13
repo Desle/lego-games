@@ -108,7 +108,7 @@ export const compareWorldFrame = (input: WorldFrameInput): WorldFrameComparison 
     getEffectViews(raceState),
     presentation.warpView
   )
-  stage.showHazards(raceState.trackLogic.worlds, [
+  stage.showHazards(raceState.trackLogic, [
     raceState.racerSet.emitters.common,
     raceState.racerSet.emitters.track,
   ])
