@@ -29,7 +29,8 @@
     "hd-coverage": "pnpm --filter @lego-games/lego-racers-web run hd-coverage",
     "audio-trace": "sh reverse-engineering/emulator/setup.sh && pnpm --filter @lego-games/lego-racers-web run audio-trace",
     "ldraw-fidelity": "pnpm --filter @lego-games/lego-racers-web run ldraw-fidelity",
-    "dev": "pnpm --filter @lego-games/lego-racers-web run dev"
+    "dev": "pnpm --filter @lego-games/lego-racers-web run dev",
+    "studio": "pnpm --filter @lego-games/ldraw-studio run dev"
   },
   "prettier": "@lego-games/tooling/prettier",
   "devDependencies": {

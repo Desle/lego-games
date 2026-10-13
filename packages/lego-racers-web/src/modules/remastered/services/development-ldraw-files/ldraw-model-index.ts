@@ -1,4 +1,4 @@
-import type { LDrawModelFolders } from '@lego-games/ldraw/files'
+import type { LDrawModelFolders } from '@lego-games/ldraw-studio/files'
 import { LDRAW_CHASSIS_FOLDER, LDRAW_DRIVERS_FOLDER } from '../ldraw-models/ldraw-models-route.ts'
 import type { LDrawModelIndex } from '../ldraw-models/ldraw-model-index.types.ts'
 

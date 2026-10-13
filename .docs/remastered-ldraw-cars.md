@@ -1,6 +1,6 @@
 # LDraw cars (remastered layer)
 
-With `?hd` in development, cars built from bricks are drawn from the LDraw parts library instead of the mesh the original builds. Everything lives in `packages/lego-racers-web/src/modules/remastered/services/ldraw-car/` (plus `ldraw-library/`, `development-ldraw-files/` over `@lego-games/ldraw/files`, `ldraw-gallery/`). Physics, weight and collision still use the original car: only the drawing changes. Read [remastered.md](remastered.md) first for the rule.
+With `?hd` in development, cars built from bricks are drawn from the LDraw parts library instead of the mesh the original builds. Everything lives in `packages/lego-racers-web/src/modules/remastered/services/ldraw-car/` (plus `ldraw-library/`, `development-ldraw-files/` over `@lego-games/ldraw-studio/files`, `ldraw-gallery/`). Physics, weight and collision still use the original car: only the drawing changes. Read [remastered.md](remastered.md) first for the rule.
 
 ## Setup
 
