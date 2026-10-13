@@ -110,6 +110,17 @@ const getSnappedPart = (part: BuilderPart, context: SnapContext): SnappedPart | 
   }
 }
 
+const getChosenParts = (
+  parts: readonly BuilderPart[],
+  indices: readonly number[],
+  context: SnapContext
+): readonly SnappedPart[] =>
+  indices
+    .map((index) => parts[index])
+    .filter((part): part is BuilderPart => part !== undefined)
+    .map((part) => getSnappedPart(part, context))
+    .filter((entry): entry is SnappedPart => entry !== null)
+
 const getIsOverlapping = (first: BuilderBox, second: BuilderBox) =>
   [0, 2].every(
     (axis) =>
@@ -135,11 +146,7 @@ const snapOnce = (
   context: SnapContext,
   isResting: boolean
 ): readonly BuilderPart[] => {
-  const chosen = indices
-    .map((index) => parts[index])
-    .filter((part): part is BuilderPart => part !== undefined)
-    .map((part) => getSnappedPart(part, context))
-    .filter((entry): entry is SnappedPart => entry !== null)
+  const chosen = getChosenParts(parts, indices, context)
   const anchor = chosen.reduce<SnappedPart | null>(
     (lowest, entry) => (lowest === null || entry.bottom > lowest.bottom ? entry : lowest),
     null
@@ -245,12 +252,7 @@ const liftSelection = (
   offset: Vector,
   context: SnapContext
 ): readonly BuilderPart[] => {
-  const bottoms = indices
-    .map((index) => parts[index])
-    .filter((part): part is BuilderPart => part !== undefined)
-    .map((part) => getSnappedPart(part, context))
-    .filter((entry): entry is SnappedPart => entry !== null)
-    .map((entry) => entry.bottom)
+  const bottoms = getChosenParts(parts, indices, context).map((entry) => entry.bottom)
   if (bottoms.length === 0) return moveParts(parts, indices, offset)
   const bottom = Math.max(...bottoms)
   const levels = Math.round(offset[1] / PLATE_HEIGHT)
