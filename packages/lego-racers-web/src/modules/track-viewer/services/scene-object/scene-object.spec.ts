@@ -60,6 +60,7 @@ const SCENE: Scene = {
       colors: new Uint8Array([255, 255, 255, 255, 255, 0, 0, 255, 255, 255, 255, 255]),
       normals: null,
       materialIndices: [0],
+      boundingSphere: null,
       drawBatches: [
         {
           materialSlot: 0,
@@ -78,6 +79,7 @@ const SCENE: Scene = {
       colors: new Uint8Array(12).fill(255),
       normals: null,
       materialIndices: [0],
+      boundingSphere: null,
       drawBatches: [
         {
           materialSlot: 0,
@@ -321,5 +323,58 @@ describe('createSceneObject', () => {
     expect(isUnknownInstanceSwapped).toBe(false)
     expect(mesh.material).not.toBe(first)
     sceneObject.dispose()
+  })
+
+  describe('the original draws an instance only inside its level distance and its sphere in the frustum', () => {
+    const getSceneWithRock = (squaredDistance: number): Scene => ({
+      ...SCENE,
+      meshes: SCENE.meshes.map((mesh, index) =>
+        index === 0
+          ? { ...mesh, boundingSphere: { centre: { x: 0.5, y: 0.5, z: 0 }, radius: 1 } }
+          : mesh
+      ),
+      instances: SCENE.instances.map((instance) =>
+        instance.name === 'rock01'
+          ? { ...instance, levels: instance.levels.map((level) => ({ ...level, squaredDistance })) }
+          : instance
+      ),
+    })
+    const EYE = { x: 0, y: 0, z: 0 }
+    // One plane with its normal along x, 12 units from the origin: the rock's sphere (centre about (9.5, 0.5, 0)) is
+    // behind it.
+    const FRUSTUM = { eye: EYE, planes: [[1, 0, 0, -12]] as const }
+
+    it('leaves out a mesh instance whose sphere lies behind a plane of the frustum', () => {
+      // Arrange
+      const sceneObject = createSceneObject(getSceneWithRock(1e6), TRACK_OPTIONS)
+
+      // Act
+      sceneObject.selectLevels(EYE, FRUSTUM)
+
+      // Assert
+      expect(sceneObject.group.children[0]!.visible).toBe(false)
+    })
+
+    it('keeps a mesh instance whose sphere is inside the frustum', () => {
+      // Arrange
+      const sceneObject = createSceneObject(getSceneWithRock(1e6), TRACK_OPTIONS)
+
+      // Act
+      sceneObject.selectLevels(EYE, { eye: EYE, planes: [[1, 0, 0, 0]] })
+
+      // Assert
+      expect(sceneObject.group.children[0]!.visible).toBe(true)
+    })
+
+    it('leaves out a mesh instance with one level beyond that level distance', () => {
+      // Arrange
+      const sceneObject = createSceneObject(getSceneWithRock(25), TRACK_OPTIONS)
+
+      // Act
+      sceneObject.selectLevels(EYE)
+
+      // Assert
+      expect(sceneObject.group.children[0]!.visible).toBe(false)
+    })
   })
 })
