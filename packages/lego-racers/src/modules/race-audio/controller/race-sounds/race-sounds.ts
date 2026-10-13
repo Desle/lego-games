@@ -1,10 +1,10 @@
 import type { PowerUpEvent } from '../../../power-ups/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
-import type { TrackSoundParameters } from '../../../track-logic/index.ts'
 import { RacePhase } from '../../../race/index.ts'
 import type { RaceEvent } from '../../../race/index.ts'
 import type { LoopedSoundRequest, SoundRequest, SoundSource } from '../../types/race-audio.types.ts'
 import { getSoundLocation } from '../get-sound-location/get-sound-location.ts'
+import type { PositionTriple, RaceSoundContext, TrackSoundPlacement } from './race-sounds.types.ts'
 
 const createRequest = (
   soundId: number,
@@ -58,14 +58,10 @@ const DEFAULT_MINIMUM_DISTANCE = 30
 // 0x004b095c
 const DEFAULT_MAXIMUM_DISTANCE = 300
 
-type PositionTriple = readonly [number, number, number]
-
 const toVector = (triple: PositionTriple): Vector3 =>
   Object.freeze({ x: triple[0], y: triple[1], z: triple[2] })
 
-const getTrackSoundSource = (
-  parameters: TrackSoundParameters & { readonly position: PositionTriple }
-): SoundSource =>
+const getTrackSoundSource = (parameters: TrackSoundPlacement): SoundSource =>
   Object.freeze({
     position: toVector(parameters.position),
     minimumDistance: parameters.minimumDistance,
@@ -84,14 +80,6 @@ const getHazardSource = (position: PositionTriple | null): SoundSource | null =>
         volume: 1,
         pitch: 1,
       })
-
-// Where the race's sounds take their positions from: the racers (the original passes the racer's position to
-// RaceSounds_PlayAt 0x00443b80).
-export type RaceSoundContext = {
-  readonly getRacerPosition: (racerIndex: number) => Vector3 | null
-  // The human racers have sound objects for the turbo's and the warp's hum (0x00437540); the computers have none.
-  readonly getHasSoundObjects: (racerIndex: number) => boolean
-}
 
 export const NO_RACE_SOUND_CONTEXT: RaceSoundContext = Object.freeze({
   getRacerPosition: () => null,

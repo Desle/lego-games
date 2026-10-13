@@ -24,7 +24,7 @@ export {
   INITIAL_ENGINE_SOUND_STATE,
   stepEngineSounds,
 } from './controller/engine-sounds/engine-sounds.ts'
-export type { RaceSoundContext } from './controller/race-sounds/race-sounds.ts'
+export type { RaceSoundContext } from './controller/race-sounds/race-sounds.types.ts'
 export type {
   EngineLoop,
   EngineLoopKind,
