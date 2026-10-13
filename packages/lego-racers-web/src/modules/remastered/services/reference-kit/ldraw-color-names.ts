@@ -6,6 +6,8 @@ const BRICK_COLOR_CODES: readonly number[] = [
   74, 77, 78, 85, 86, 92, 100, 110, 112, 115, 118, 120, 125, 191, 212, 216, 226, 232, 272, 288, 308,
   320, 321, 322, 323, 326, 330, 335, 366, 484,
 ]
+// The see-through colours of the same years, which the builder also offers (windscreens, lights).
+const TRANSPARENT_BRICK_COLOR_CODES: readonly number[] = [33, 34, 36, 40, 41, 42, 43, 46, 47, 57]
 const GREY_SATURATION = 0.22
 const BLACK_VALUE = 0.3
 const GREY_CODES: readonly number[] = [0, 8, 7, 15]
@@ -31,13 +33,15 @@ const getHsv = (red: number, green: number, blue: number): Hsv => {
   return { hue: sector / 6, saturation: maximum === 0 ? 0 : range / maximum, value: maximum }
 }
 
-// The colours of an `LDConfig.ldr` text that bricks come in.
-export const parseBrickColorNames = (configuration: string): readonly LDrawColorName[] =>
+const parseColorNames = (
+  configuration: string,
+  codes: readonly number[]
+): readonly LDrawColorName[] =>
   configuration.split('\n').flatMap((line): readonly LDrawColorName[] => {
     const match = COLOR_LINE.exec(line)
     if (match === null) return []
     const [, name = '', code = '0', hex = '000000'] = match
-    return BRICK_COLOR_CODES.includes(Number(code))
+    return codes.includes(Number(code))
       ? [
           {
             code: Number(code),
@@ -49,6 +53,14 @@ export const parseBrickColorNames = (configuration: string): readonly LDrawColor
         ]
       : []
   })
+
+// The solid colours of an `LDConfig.ldr` text that bricks come in.
+export const parseBrickColorNames = (configuration: string): readonly LDrawColorName[] =>
+  parseColorNames(configuration, BRICK_COLOR_CODES)
+
+// The solid and the see-through colours, for building by hand.
+export const parseBuildableColorNames = (configuration: string): readonly LDrawColorName[] =>
+  parseColorNames(configuration, [...BRICK_COLOR_CODES, ...TRANSPARENT_BRICK_COLOR_CODES])
 
 const getDistance = (first: Hsv, second: Hsv): number => {
   const hueGap = Math.abs(first.hue - second.hue)
