@@ -15,6 +15,7 @@ import type {
   OriginalPresentation,
   OriginalRenderFrame,
   OriginalRenderState,
+  OriginalScreenEvent,
   OriginalTexture,
   OriginalVertex,
   OriginalViewport,
@@ -159,6 +160,7 @@ const readTraceScript = async (
   const renderFrames: OriginalRenderFrame[] = []
   const audioFrames: OriginalAudioFrame[] = []
   const decalFrames: OriginalDecalFrame[] = []
+  const screenEvents: OriginalScreenEvent[] = []
   const progress = {
     isDone: false,
   }
@@ -174,6 +176,8 @@ const readTraceScript = async (
       audioFrames.push(getAudioFrame(line))
     } else if (line.type === 'decal_frame') {
       decalFrames.push(Object.freeze({ frame: line.frame, decals: line.decals }))
+    } else if (line.type === 'screen') {
+      screenEvents.push(Object.freeze({ frame: line.frame, kind: line.kind, screenId: line.id }))
     } else {
       progress.isDone = true
     }
@@ -190,5 +194,6 @@ const readTraceScript = async (
     renderFrames,
     audioFrames,
     decalFrames,
+    screenEvents,
   })
 }

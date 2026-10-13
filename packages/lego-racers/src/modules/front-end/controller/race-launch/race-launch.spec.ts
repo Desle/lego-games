@@ -95,7 +95,13 @@ describe('the session the menus start', () => {
 
       // Act
       const frame = getFrontEndFrame(state, files, environment)
-      const left = stepFrontEnd(state, files, environment, 'accept', 16).state
+      const early = stepFrontEnd(state, files, environment, 'accept', 16).state
+      // The award cinema takes a key from its thirtieth frame (0x00466ec0): a second at 30 frames per second.
+      const waited = Array.from({ length: 63 }).reduce<typeof state>(
+        (current) => stepFrontEnd(current, files, environment, null, 16).state,
+        state
+      )
+      const left = stepFrontEnd(waited, files, environment, 'accept', 16).state
 
       // Assert
       expect(rows.map((row) => row.points)).toEqual([30, 20, 0])
@@ -103,6 +109,9 @@ describe('the session the menus start', () => {
       expect(
         frame.commands.filter((command) => command.kind === 'text').length
       ).toBeGreaterThanOrEqual(3)
+      expect(early.screens.map((screen) => screen.screenId)).toEqual([
+        FrontEndScreen.CIRCUIT_AWARD_ONE,
+      ])
       expect(left.screens.map((screen) => screen.screenId)).toEqual([
         FrontEndScreen.CIRCUIT_AWARD_ONE,
         FrontEndScreen.MAIN_MENU,

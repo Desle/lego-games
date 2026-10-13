@@ -129,9 +129,18 @@ export type OriginalAudioFrame = {
   readonly events: readonly OriginalAudioEvent[]
 }
 
+// The front end's screen stack changed (front_end_trace.py hooks the push 0x0047fa70 and the pop 0x0047faa0): the frame,
+// and the screen id pushed (0 for a pop).
+export type OriginalScreenEvent = {
+  readonly frame: number
+  readonly kind: 'push' | 'pop'
+  readonly screenId: number
+}
+
 export type OriginalPresentation = {
   readonly textures: ReadonlyMap<string, OriginalTexture>
   readonly renderFrames: readonly OriginalRenderFrame[]
   readonly audioFrames: readonly OriginalAudioFrame[]
   readonly decalFrames: readonly OriginalDecalFrame[]
+  readonly screenEvents: readonly OriginalScreenEvent[]
 }

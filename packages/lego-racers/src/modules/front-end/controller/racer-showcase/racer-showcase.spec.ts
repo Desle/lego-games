@@ -118,7 +118,8 @@ describe('racer showcase', () => {
       SHOWCASE_ANIMATION,
       TABLE,
       first.randomPosition,
-      { kind: 'race' }
+      { kind: 'race' },
+      0
     )
     const blending = stepRacerShowcase(
       reacting.showcase,
