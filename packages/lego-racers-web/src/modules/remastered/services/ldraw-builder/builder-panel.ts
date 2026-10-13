@@ -211,11 +211,16 @@ export const createBuilderPanel = (
       )
       queueList.querySelector('.current')?.scrollIntoView({ block: 'nearest' })
     },
-    showStartFiles: (files, selected) => {
+    showStartFiles: (groups, selected) => {
       startSelect.replaceChildren(
         new Option(MODEL_FILE_LABEL, ''),
         new Option('Start empty', EMPTY_START_FILE),
-        ...files.map((file) => new Option(`Start from ${file}`, file))
+        ...groups.map((group) => {
+          const optionGroup = createElement('optgroup', 'start-group')
+          optionGroup.label = group.label
+          optionGroup.append(...group.files.map((file) => new Option(`Start from ${file}`, file)))
+          return optionGroup
+        })
       )
       startSelect.value = selected ?? ''
     },

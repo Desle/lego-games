@@ -27,11 +27,13 @@ export const moveParts = (
       : part
   )
 
-// A quarter turn (three of them the other way) of the chosen parts about the vertical through their middle, kept on the stud grid.
+// A quarter turn (three of them the other way) of the chosen parts about the vertical through a pivot, by default their origins'
+// middle on the half-stud grid.
 export const turnParts = (
   parts: readonly BuilderPart[],
   indices: readonly number[],
-  isBack: boolean
+  isBack: boolean,
+  turnPivot: Vector | null = null
 ): readonly BuilderPart[] => {
   const chosen = parts.filter((_part, index) => indices.includes(index))
   if (chosen.length === 0) return parts
@@ -40,7 +42,7 @@ export const turnParts = (
     Math.round(
       chosen.reduce((sum, part) => sum + (part.position[axis] ?? 0), 0) / chosen.length / HALF_STUD
     )
-  const pivot: Vector = [getMiddle(0), 0, getMiddle(2)]
+  const pivot: Vector = turnPivot ?? [getMiddle(0), 0, getMiddle(2)]
   const turnCount = isBack ? TURNS_BACK : 1
   const turnOnce = (part: BuilderPart): BuilderPart => {
     const fromPivot: Vector = [part.position[0] - pivot[0], 0, part.position[2] - pivot[2]]

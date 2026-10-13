@@ -1,8 +1,9 @@
 import { CHAMPION_CAR_CODES, CHASSIS_NAMES } from '../ldraw-racer-model/known-racer-models.ts'
 import { BuilderItemKind } from './ldraw-builder.types.ts'
-import type { BuilderItem } from './ldraw-builder.types.ts'
+import type { BuilderItem, StartFileGroup } from './ldraw-builder.types.ts'
 
 const CHASSIS_RECIPE_FILE = /^chassis\/[^/]+\.ldr$/i
+const CAR_FILE = /^([^/]+)\.(ldr|mpd)$/i
 
 export const getChassisItemId = (name: string): string => `chassis/${name.toLowerCase()}`
 
@@ -54,15 +55,37 @@ export const getNextBuilderItem = (
   return ordered.find((item) => !done.includes(item.id)) ?? null
 }
 
-// The models folder's files an item may start from: its own (by name, drafts and backups too) and, for a car, every chassis recipe,
-// whose parts it gets as a copy.
-export const getStartFiles = (item: BuilderItem, paths: readonly string[]): readonly string[] => {
+const getStem = (path: string): string =>
+  (path.split('/').pop() ?? '').replace(/\.[^.]+$/, '').toLowerCase()
+
+// The models folder's files an item may start from, grouped: for a car, every champion's car (its parts are copied in, a chassis
+// recipe it places made its own) and every chassis recipe; for a chassis, its own recipe; then the item's own drafts and backups.
+export const getStartFiles = (
+  item: BuilderItem,
+  paths: readonly string[]
+): readonly StartFileGroup[] => {
   const name = item.name.toLowerCase()
+  const isCar = item.kind === BuilderItemKind.CAR
+  const carCodes = new Set(CHAMPION_CAR_CODES.map((code) => code.toLowerCase()))
+  const cars = isCar
+    ? paths.filter((path) => {
+        const match = CAR_FILE.exec(path)
+        return match?.[1] !== undefined && carCodes.has(match[1].toLowerCase())
+      })
+    : []
+  const chassis = paths.filter(
+    (path) => CHASSIS_RECIPE_FILE.test(path) && (isCar || getStem(path) === name)
+  )
+  const drafts = paths.filter(
+    (path) => getStem(path).startsWith(name) && !cars.includes(path) && !chassis.includes(path)
+  )
   return Object.freeze(
-    paths.filter(
-      (path) =>
-        (path.split('/').pop() ?? '').toLowerCase().startsWith(name) ||
-        (item.kind === BuilderItemKind.CAR && CHASSIS_RECIPE_FILE.test(path))
-    )
+    [
+      { label: 'Cars', files: cars },
+      { label: 'Chassis', files: chassis },
+      { label: 'Backups/drafts', files: drafts },
+    ]
+      .filter((group) => group.files.length > 0)
+      .map((group) => Object.freeze({ label: group.label, files: Object.freeze(group.files) }))
   )
 }
