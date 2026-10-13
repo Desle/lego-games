@@ -100,6 +100,7 @@ export const createBuilderPanel = (
   const colorGrid = createElement('div', 'color-grid')
   elements.palette.append(tool, search, tabs, partList, colorGrid)
   let libraryParts: readonly LibraryPart[] = []
+  let usedPartNames: readonly string[] = []
   let activeLabel = ''
   let colorCode = 0
   let chosenPartName = ''
@@ -137,7 +138,7 @@ export const createBuilderPanel = (
   const showParts = () => {
     thumbnailObserver.disconnect()
     const isSearching = search.value.trim() !== ''
-    const groups = getPaletteGroups(libraryParts, search.value)
+    const groups = getPaletteGroups(libraryParts, search.value, usedPartNames)
     if (!groups.some((group) => group.label === activeLabel)) activeLabel = groups[0]?.label ?? ''
     tabs.replaceChildren(
       ...(isSearching
@@ -223,6 +224,11 @@ export const createBuilderPanel = (
     },
     showLibrary: (parts) => {
       libraryParts = parts
+      showParts()
+    },
+    showUsedParts: (partNames) => {
+      if (partNames.join('|') === usedPartNames.join('|')) return
+      usedPartNames = partNames
       showParts()
     },
     showColors: (colors) =>
