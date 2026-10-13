@@ -18,7 +18,7 @@ import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-an
 import { Group, Matrix4, Mesh, Scene } from 'three'
 import type { Object3D } from 'three'
 import { createModelObject, loadEffectModel } from '../../../track-viewer/index.ts'
-import { loadDesignGridOffset } from '../ldraw-car/chassis-grid-offset-loader.ts'
+import { loadChassisFit } from '../ldraw-car/chassis-grid-offset-loader.ts'
 import { createLDrawCarDrawing } from '../ldraw-car/ldraw-car-drawing.ts'
 import { loadLDrawModelText } from '../ldraw-models/ldraw-model-client.ts'
 import { createLDrawPickupDrawing } from '../ldraw-pickup/ldraw-pickup-drawing.ts'
@@ -26,7 +26,13 @@ import { createLDrawRacerCar } from '../ldraw-racer-model/ldraw-racer-car.ts'
 import { RacerPartKind } from '../ldraw-racer/ldraw-racer-drawing.types.ts'
 import { createLDrawWheelsDrawing } from '../ldraw-racer/ldraw-wheels-drawing.ts'
 import { createSkeletonPoseSampler } from '../ldraw-racer/skeleton-pose.ts'
-import { getHolderCentres, getOriginalWheelCentres, getWheelAnchors } from './fidelity-anchors.ts'
+import { getWheelMounts } from '../reference-kit/wheel-mounts.ts'
+import {
+  getHolderCentres,
+  getOriginalWheelCentres,
+  getWheelAnchors,
+  getWheelHubAnchors,
+} from './fidelity-anchors.ts'
 import type { FidelityContext, FidelityPairOutcome } from './fidelity-pairs.types.ts'
 import { FidelityItemKind } from './ldraw-fidelity.types.ts'
 import type { FidelityItem } from './ldraw-fidelity.types.ts'
@@ -103,8 +109,10 @@ export const createOriginalObject = (model: ModelScene) => {
 const getBrickPiece = (context: FidelityContext, name: string): BrickPiece | null =>
   findBrickPieceByName(parseBrickDatabase(context.archive.readFile(BRICK_DATABASE_PATH)), name)
 
-// A brick (or a chassis part) alone: the original's mesh builder against the LDraw car drawing of the same one-brick design; a chassis
-// is drawn from its recipe, and its attachment point is the built bricks' grid against the real base's studs.
+// A brick (or a chassis part) alone: the original's mesh builder against the LDraw car drawing of the same one-brick design. A chassis
+// is drawn from its recipe, a real car base the user chose that is not shaped like the game's chassis brick (which is the whole body),
+// so it is judged by how it holds the car: the game's wheel hubs against the base, the built bricks' grid against the base's studs, and
+// the building cells that land on a stud.
 const createBrickPair = async (
   context: FidelityContext,
   item: FidelityItem,
@@ -126,24 +134,38 @@ const createBrickPair = async (
   )
   await drawing.shown
   const isChassis = item.kind === FidelityItemKind.CHASSIS
-  const offset = isChassis ? await loadDesignGridOffset(design, chassisModels) : null
+  const fit = isChassis ? await loadChassisFit(design, chassisModels) : null
+  const replacement = createSceneWith(drawing.object)
+  const wheelHubs =
+    fit === null
+      ? []
+      : getWheelHubAnchors(getWheelMounts(context.archive, item.subject), replacement)
+  const gridDistance =
+    fit === null ? 0 : Math.hypot(fit.gridOffset.x, fit.gridOffset.y, fit.gridOffset.z)
   return {
-    pair: {
-      original: createSceneWith(original.group),
-      replacement: createSceneWith(drawing.object),
-    },
+    pair: { original: createSceneWith(original.group), replacement },
     anchors:
-      offset === null
+      fit === null
         ? []
-        : [
-            {
-              name: 'brick grid',
-              distance: Number(Math.hypot(offset.x, offset.y, offset.z).toFixed(2)),
-            },
-          ],
+        : [{ name: 'brick grid', distance: Number(gridDistance.toFixed(2)) }, ...wheelHubs],
     focus: null,
+    chassis:
+      fit === null
+        ? null
+        : {
+            meanWheelHubDistance:
+              wheelHubs.length === 0
+                ? null
+                : wheelHubs.reduce((sum, anchor) => sum + anchor.distance, 0) / wheelHubs.length,
+            gridDistance,
+            footprintCoverage: fit.footprintCoverage,
+          },
     note:
-      drawing.document.unmappedBricks.length > 0 ? 'drawn from the game mesh (no LDraw part)' : '',
+      fit === null
+        ? drawing.document.unmappedBricks.length > 0
+          ? 'drawn from the game mesh (no LDraw part)'
+          : ''
+        : `grid shift ${[fit.gridOffset.x, fit.gridOffset.y, fit.gridOffset.z].map((value) => value.toFixed(1)).join(' / ')} LDU (recipe axes)`,
     dispose: () => original.object.dispose(),
   }
 }
@@ -164,6 +186,7 @@ const createPickupPair = async (
     pair: { original: createSceneWith(original.group), replacement },
     anchors: [],
     focus: null,
+    chassis: null,
     note: 'default look',
     dispose: () => original.object.dispose(),
   }
@@ -209,6 +232,7 @@ const createWheelsPair = async (
       getHolderCentres(drawing.object.children)
     ),
     focus: null,
+    chassis: null,
     note: '',
     dispose: () => {
       original.object.dispose()
@@ -279,6 +303,7 @@ const createCarPair = async (
       getHolderCentres(wheelsObject?.children ?? [])
     ),
     focus: null,
+    chassis: null,
     note: item.file ?? '',
     dispose: () => {
       body.object.dispose()

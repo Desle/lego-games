@@ -74,7 +74,14 @@ const getResultRow = (result: FidelityResult): readonly string[] => [
   result.anchors.length === 0
     ? ''
     : result.anchors.map((anchor) => `${anchor.name} ${anchor.distance.toFixed(1)}`).join(', '),
-  result.note,
+  [
+    result.footprintCoverage === null
+      ? ''
+      : `cells on studs ${(result.footprintCoverage * 100).toFixed(0)} %`,
+    result.note,
+  ]
+    .filter((text) => text !== '')
+    .join('; '),
 ]
 
 // The page of the scores (`.docs/remastered-ldraw-fidelity.md`): how many of each kind pass, and the worst items.
@@ -108,5 +115,8 @@ export const getResultDetails = (result: FidelityResult): string =>
     `${result.id}: ${result.score.toFixed(1)} ${result.isPassed ? 'pass' : 'FAIL'}${result.note === '' ? '' : ` (${result.note})`}`,
     `  views: ${result.views.map((view) => `${view.view} IoU ${view.intersectionOverUnion.toFixed(3)} ΔE ${getText(view.colorDifference, 1)}`).join('; ')}`,
     `  centroid offset ${result.centroidOffset.join(' / ')} LDU, bounds centre offset ${result.boundsCentreOffset.join(' / ')} LDU, size ratio ${result.sizeRatio.join(' / ')}`,
+    ...(result.footprintCoverage === null
+      ? []
+      : [`  building cells on a stud: ${(result.footprintCoverage * 100).toFixed(0)} %`]),
     `  anchors: ${result.anchors.map((anchor) => `${anchor.name} ${anchor.distance.toFixed(2)}`).join(', ') || 'none'}`,
   ].join('\n')

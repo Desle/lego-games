@@ -1,4 +1,5 @@
 import type {
+  ChassisMeasurement,
   FidelityMeasurement,
   ScorePart,
   SilhouetteComparison,
@@ -34,6 +35,15 @@ const SCORE_PARTS = Object.freeze({
   scale: Object.freeze({ full: 0, empty: Math.log(1.3), weight: 10 }),
   color: Object.freeze({ full: 5, empty: 30, weight: 15 }),
   anchors: Object.freeze({ full: 0, empty: 10, weight: 10 }),
+})
+
+// A chassis recipe is a real car base, deliberately not shaped like the game's chassis brick (which is the whole body), so its silhouette
+// and colour say nothing; it is judged on holding the car: the wheels' hubs on the base (0 to 10 LDU), the built bricks on its studs
+// (0 to 10 LDU of shift) and the building cells over a stud (all of them full, half of them nothing).
+const CHASSIS_SCORE_PARTS = Object.freeze({
+  wheelHubs: Object.freeze({ full: 0, empty: 10, weight: 40 }),
+  grid: Object.freeze({ full: 0, empty: 10, weight: 30 }),
+  coverage: Object.freeze({ full: 1, empty: 0.5, weight: 30 }),
 })
 
 const getClamped = (value: number): number => Math.min(1, Math.max(0, value))
@@ -155,16 +165,7 @@ export const getMeanColorDifference = (
   return count === 0 ? null : sum / count
 }
 
-// One number from 0 to 100 for a replacement: half of it the silhouettes' overlap, the rest the placement, size, colour and attachment
-// points (see SCORE_PARTS), rounded to a tenth.
-export const getFidelityScore = (measurement: FidelityMeasurement): number => {
-  const parts = [
-    [measurement.meanIntersectionOverUnion, SCORE_PARTS.silhouette],
-    [measurement.centroidDistance, SCORE_PARTS.centroid],
-    [Math.abs(Math.log(measurement.scaleRatio)), SCORE_PARTS.scale],
-    [measurement.meanColorDifference, SCORE_PARTS.color],
-    [measurement.meanAnchorDistance, SCORE_PARTS.anchors],
-  ] as const
+const getWeightedScore = (parts: readonly (readonly [number | null, ScorePart])[]): number => {
   let weighted = 0
   let totalWeight = 0
   for (const [value, part] of parts) {
@@ -174,3 +175,22 @@ export const getFidelityScore = (measurement: FidelityMeasurement): number => {
   }
   return totalWeight === 0 ? 0 : Math.round((weighted / totalWeight) * 1000) / 10
 }
+
+// The score of a chassis recipe (see CHASSIS_SCORE_PARTS), rounded to a tenth.
+export const getChassisScore = (measurement: ChassisMeasurement): number =>
+  getWeightedScore([
+    [measurement.meanWheelHubDistance, CHASSIS_SCORE_PARTS.wheelHubs],
+    [measurement.gridDistance, CHASSIS_SCORE_PARTS.grid],
+    [measurement.footprintCoverage, CHASSIS_SCORE_PARTS.coverage],
+  ])
+
+// One number from 0 to 100 for a replacement: half of it the silhouettes' overlap, the rest the placement, size, colour and attachment
+// points (see SCORE_PARTS), rounded to a tenth.
+export const getFidelityScore = (measurement: FidelityMeasurement): number =>
+  getWeightedScore([
+    [measurement.meanIntersectionOverUnion, SCORE_PARTS.silhouette],
+    [measurement.centroidDistance, SCORE_PARTS.centroid],
+    [Math.abs(Math.log(measurement.scaleRatio)), SCORE_PARTS.scale],
+    [measurement.meanColorDifference, SCORE_PARTS.color],
+    [measurement.meanAnchorDistance, SCORE_PARTS.anchors],
+  ])

@@ -7,10 +7,10 @@ import type {
 } from './minifig-rig.types.ts'
 
 const SEATED_BONE_COUNT = 6
-const RAW_UNITS_PER_LDRAW_UNIT = 3.2
-// The race driver's seated pelvis block reaches down to z -0.9; a seated figure's legs lie 22 below the top of its hips (12 to the hip
-// axle and half a leg), so the hips' top is that much above the block's bottom: the legs sit where the original's do.
-const SEATED_HIPS_HEIGHT = -0.9 + 22 * RAW_UNITS_PER_LDRAW_UNIT
+// The race driver's torso block starts at z 45 (14.1 LDraw units) on a pelvis block only 14 high, where a seated minifigure's legs lie
+// 22 below the top of its hips: the hips' top goes under the torso, so what shows above the car (torso, arms, head) sits where the
+// original's does, and the legs reach 8 LDraw units further down into the seat.
+const SEATED_HIPS_HEIGHT = 45.1
 // The menu figure's hip block reaches up to z 32.8, its feet down to -95.2: 40 LDraw units (the hips' top to the soles) below.
 const STANDING_HIPS_HEIGHT = 32.8
 // The race driver's arms (`arm_l`, `arm_r`) reach forward and 14 degrees below the horizontal: the principal axis of their vertices.

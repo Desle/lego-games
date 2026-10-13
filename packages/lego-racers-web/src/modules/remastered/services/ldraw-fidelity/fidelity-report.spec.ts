@@ -18,6 +18,7 @@ const getResult = (id: string, score: number): FidelityResult => ({
   meanColorDifference: null,
   anchors: [],
   meanAnchorDistance: null,
+  footprintCoverage: null,
   note: '',
 })
 

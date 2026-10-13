@@ -117,6 +117,11 @@ export const getGameBrickMaterials = (archive: JamArchive): GameBrickMaterials =
   return materials
 }
 
+// A material with a picture that stands for no brick colour: a decal (a print, a grille, a chassis logo).
+export const getIsDecalMaterial = (materials: GameBrickMaterials, materialIndex: number): boolean =>
+  (materials.materialBitmaps[materialIndex] ?? null) !== null &&
+  (materials.fixedMaterialColors[materialIndex] ?? -1) < 0
+
 export const getFaceColorIndex = (
   materials: GameBrickMaterials,
   brickColorIndex: number,
@@ -130,12 +135,15 @@ export const getFaceColorIndex = (
 }
 
 // The game's own meshes for bricks that no LDraw part stands in for, in the car's frame (studs, z up): one mesh per colour with
-// the library's colour for the brick's colour, and one per decal (a material with a picture) with the picture.
+// the library's colour for the brick's colour, and one per decal (a material with a picture) with the picture. With `decalLift`
+// (studs) only the decals are made, each face moved that far out along its normal: the prints of bricks that an LDraw part stands
+// in for, laid on the part's faces.
 export const createGameBrickMeshes = (
   archive: JamArchive,
   database: BrickDatabase,
   bricks: readonly PlacedBrick[],
-  origin: CarOrigin
+  origin: CarOrigin,
+  decalLift: number | null = null
 ): Group => {
   const group = new Group()
   const materials = getGameBrickMaterials(archive)
@@ -152,9 +160,9 @@ export const createGameBrickMeshes = (
       if (face.flags === UNDERSIDE_FLAGS) continue
       const [first, second, third, fourth] = face.vertices
       if (first === undefined || second === undefined || third === undefined) continue
-      const isDecal =
-        (materials.materialBitmaps[face.materialIndex] ?? null) !== null &&
-        (materials.fixedMaterialColors[face.materialIndex] ?? -1) < 0
+      const isDecal = getIsDecalMaterial(materials, face.materialIndex)
+      if (decalLift !== null && !isDecal) continue
+      const lift = decalLift ?? 0
       const buckets = isDecal ? bucketsByDecal : bucketsByColor
       const key = isDecal
         ? face.materialIndex
@@ -171,9 +179,9 @@ export const createGameBrickMeshes = (
       for (const triangle of triangles) {
         for (const vertex of triangle) {
           bucket.positions.push(
-            vertex.x + origin.x,
-            vertex.y + origin.y,
-            vertex.z * PLATE_HEIGHT + origin.z
+            vertex.x + origin.x + vertex.normalX * lift,
+            vertex.y + origin.y + vertex.normalY * lift,
+            vertex.z * PLATE_HEIGHT + origin.z + vertex.normalZ * lift
           )
           bucket.normals.push(vertex.normalX, vertex.normalY, vertex.normalZ)
           bucket.textureCoordinates.push(vertex.u, vertex.v)

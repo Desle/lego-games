@@ -77,14 +77,30 @@ const getLimbDirection = (
 const getClamped = (angle: number, limits: MinifigJointLimit): number =>
   MathUtils.clamp(angle, limits.minimum, limits.maximum)
 
-// The turn about a hinge that brings a part hanging down (+y, square to the axis) nearest to a direction: the direction's angle about
-// the axis, whatever of it lies along the axis (a sideways reach a LEGO hinge cannot make) dropped.
-const getSwingAngle = (hinge: MinifigHinge, direction: Vector3): number => {
+const HANGING = new Vector3(0, 1, 0)
+
+const getAngleAbout = (hinge: MinifigHinge, direction: Vector3): number => {
   const axis = hinge.axis.clone().normalize()
-  const hanging = new Vector3(0, 1, 0).projectOnPlane(axis).normalize()
+  const hanging = HANGING.clone().projectOnPlane(axis).normalize()
   const forward = axis.clone().cross(hanging)
   return Math.atan2(direction.dot(forward), direction.dot(hanging))
 }
+
+// The turn about a hinge that brings a part's far end (`restDirection` from the pivot as assembled; a leg hangs straight down) nearest
+// to a direction: the direction's angle about the axis less the far end's, whatever of it lies along the axis (a sideways reach a LEGO
+// hinge cannot make) dropped.
+const getSwingAngle = (
+  hinge: MinifigHinge,
+  direction: Vector3,
+  restDirection: Vector3 = HANGING
+): number => getAngleAbout(hinge, direction) - getAngleAbout(hinge, restDirection)
+
+// Where an arm's hand is as assembled, from its shoulder: a minifigure's arm is bent at the elbow, so its hand lies forward of
+// straight down, and it is the hand that goes where the skeleton's arm reaches.
+const getHandReach = (side: MinifigSide): Vector3 =>
+  new Vector3()
+    .setFromMatrixPosition(MINIFIG_GEOMETRY.hands[side])
+    .sub(MINIFIG_GEOMETRY.shoulders[side].pivot)
 
 // The share of a turn about one axis (the twist of a swing and twist split), as an angle.
 const getTwistAngle = (turn: Matrix4, axis: Vector3): number => {
@@ -170,7 +186,7 @@ export const getJointMatrices = (
     )
     const shoulder = MINIFIG_GEOMETRY.shoulders[side]
     const armAngle = getClamped(
-      getSwingAngle(shoulder, getDirectionOnBody(rig.limbs.arms[side])),
+      getSwingAngle(shoulder, getDirectionOnBody(rig.limbs.arms[side]), getHandReach(side)),
       MINIFIG_JOINT_LIMITS.arm
     )
     const arm = body.clone().multiply(getTurnAbout(shoulder, armAngle))

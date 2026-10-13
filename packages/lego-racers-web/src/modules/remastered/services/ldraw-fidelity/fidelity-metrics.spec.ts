@@ -1,5 +1,6 @@
 import {
   compareSilhouettes,
+  getChassisScore,
   getCoverageMask,
   getFidelityScore,
   getLab,
@@ -146,5 +147,22 @@ describe('getFidelityScore', () => {
     const score = getFidelityScore(shapeWrong)
     // Assert
     expect(score).toBe(50)
+  })
+})
+
+describe('getChassisScore', () => {
+  it('judges a recipe by its wheel hubs, its grid shift and its building cells, not its shape', () => {
+    // Arrange
+    const holding = { meanWheelHubDistance: 0, gridDistance: 0, footprintCoverage: 1 }
+    const wheelsOff = { meanWheelHubDistance: 10, gridDistance: 0, footprintCoverage: 1 }
+    const noWheels = { meanWheelHubDistance: null, gridDistance: 5, footprintCoverage: 0.75 }
+    // Act
+    const holdingScore = getChassisScore(holding)
+    const wheelsOffScore = getChassisScore(wheelsOff)
+    const noWheelsScore = getChassisScore(noWheels)
+    // Assert
+    expect(holdingScore).toBe(100)
+    expect(wheelsOffScore).toBe(60)
+    expect(noWheelsScore).toBe(50)
   })
 })

@@ -1,5 +1,6 @@
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { BoundsPair } from './fidelity-anchors.types.ts'
+import type { ChassisMeasurement } from './fidelity-metrics.types.ts'
 import type { FidelityPair } from './fidelity-render.types.ts'
 import type { FidelityAnchorResult } from './ldraw-fidelity.types.ts'
 
@@ -9,6 +10,8 @@ export type FidelityPairBuild = {
   readonly anchors: readonly FidelityAnchorResult[]
   // The region the views are framed on and the bounds compared (a catalogue part's), null for the whole of both.
   readonly focus: BoundsPair | null
+  // A chassis recipe's own measures, which make its score; null for every other item.
+  readonly chassis: ChassisMeasurement | null
   readonly note: string
   readonly dispose: () => void
 }
