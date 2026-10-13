@@ -20,6 +20,15 @@ import { runRaceFrames } from '../race-frames/race-frames.ts'
 import { getScenarioRaceOptions } from '../scenario-race-options/scenario-race-options.ts'
 import { createRaceStage } from '../race-viewport/race-viewport.ts'
 import {
+  clearViewerExtensions,
+  NEUTRAL_EXTENSION,
+  registerViewerExtension,
+} from '../../../../shared/viewer-extensions/viewer-extensions.ts'
+import type {
+  CarDrawingRequest,
+  DriverDrawingRequest,
+} from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
+import {
   getIsOriginalGamePresent,
   readOriginalExecutable,
   readOriginalJam,
@@ -202,6 +211,43 @@ describe('the ghost cars of a time trial', () => {
         driver: 8.999983787536621,
         rate: 214.89491271972656,
       })
+    }
+  )
+
+  it.skipIf(!getIsOriginalGamePresent())(
+    "asks the viewer's extensions for the champion ghost as for a champion racer",
+    () => {
+      // Arrange
+      const assets = getAssets(true)
+      const carRequests: CarDrawingRequest[] = []
+      const driverRequests: DriverDrawingRequest[] = []
+      registerViewerExtension({
+        ...NEUTRAL_EXTENSION,
+        getCarDrawing: (request) => {
+          carRequests.push(request)
+          return null
+        },
+        getDriverDrawing: (request) => {
+          driverRequests.push(request)
+          return null
+        },
+      })
+
+      // Act
+      createRaceStage(assets, STAGE_SIZE)
+      clearViewerExtensions()
+
+      // Assert
+      const ghostCar = carRequests.find((request) => request.carCode === 'VVCM')
+      const ghostDriver = driverRequests.find((request) => request.driver.modelName === 'vvpelvis')
+      expect(ghostCar?.wheels.modelName).toBe('vvjmw')
+      expect(ghostCar?.wheels.model.scene.instances.map((instance) => instance.name)).toEqual([
+        'ghost2',
+      ])
+      expect(ghostCar?.wheels.model.meshScales).toEqual([MODEL_SCALE])
+      expect(ghostDriver?.driver.model.scene.instances.map((instance) => instance.name)).toEqual([
+        'ghostdr',
+      ])
     }
   )
 })

@@ -64,6 +64,7 @@ import type {
   RaceStageSize,
   RaceViewport,
   RacerModelObjects,
+  RacerRequests,
   RacerRig,
 } from './race-viewport.types.ts'
 
@@ -81,6 +82,10 @@ const getWrappedFraction = (value: number): number => value - Math.floor(value)
 // with 0x7f and 0, slot 0xbc afterwards): every vertex of both cars takes alpha 127 and blends over the picture.
 const GHOST_ALPHA = 0x7f
 const GHOST_OPACITY = GHOST_ALPHA / 0xff
+// The champion's car in GHOST.WDB (Ghost_Initialize 0x00422420): the wheels, the body and the driver.
+const GHOST_WHEELS_NAME = 'ghost2'
+const GHOST_BODY_NAME = 'ghostb2'
+const GHOST_DRIVER_NAME = 'ghostdr'
 
 // What a viewer extension is asked to draw for a racer's car: the champion's body model by its code, or the player's built design,
 // with the wheels the race made from the racer's appearance.
@@ -115,16 +120,63 @@ const getDriverRequest = (assets: RaceAssets, racerIndex: number): DriverDrawing
   }
 }
 
+// The requests that name a racer to a viewer extension: its car and its driver (null: the extensions are not asked).
+const getRacerRequests = (assets: RaceAssets, racerIndex: number): RacerRequests => ({
+  car: getCarRequest(assets, racerIndex),
+  driver: getDriverRequest(assets, racerIndex),
+})
+
+// A part of GHOST.WDB as a model of its own: the instance first, at the scale its model file gives.
+const getGhostPartModel = (assets: RaceAssets, ghostScene: Scene, instanceName: string) => {
+  const instance = ghostScene.instances.find(
+    (candidate) => candidate.worldPath === GHOST_WORLD_PATH && candidate.name === instanceName
+  )
+  const mesh = ghostScene.meshes[instance?.levels[0]?.meshIndex ?? -1]
+  if (instance === undefined || mesh === undefined) return null
+  return {
+    model: Object.freeze({
+      scene: Object.freeze({ ...ghostScene, instances: Object.freeze([instance]) }),
+      meshScales: Object.freeze([assets.ghostScales[instanceName] ?? 1]),
+    }),
+    modelName: mesh.name,
+  }
+}
+
+// The champion's ghost is a champion's car (GHOST.WDB holds Veronica Voltage's `vvcm`, `vvjmw` and `vvpelvis`): it is named to
+// the extensions as a champion racer is, by the body's code and the wheel and driver models.
+const getChampionGhostRequests = (assets: RaceAssets, ghostScene: Scene): RacerRequests => {
+  const body = getGhostPartModel(assets, ghostScene, GHOST_BODY_NAME)
+  const wheels = getGhostPartModel(assets, ghostScene, GHOST_WHEELS_NAME)
+  const driver = getGhostPartModel(assets, ghostScene, GHOST_DRIVER_NAME)
+  return {
+    car:
+      wheels === null
+        ? null
+        : {
+            archive: assets.archive,
+            carCode: body?.modelName.toUpperCase() ?? null,
+            design: null,
+            wheels: { model: wheels.model, modelName: wheels.modelName, partBytes: null },
+          },
+    driver:
+      driver === null
+        ? null
+        : {
+            archive: assets.archive,
+            driver: { model: driver.model, modelName: driver.modelName, partBytes: null },
+          },
+  }
+}
+
 // A racer's rig: the model objects, with the drawings a viewer extension has for the racer's car and driver (each complete or not
-// at all) following them. A racer index of null is a car the extensions know nothing about.
+// at all) following them.
 const createRacerRig = (
-  assets: RaceAssets,
-  racerIndex: number | null,
+  requests: RacerRequests,
   parts: RacerModelObjects,
   host: ThreeScene
 ): RacerRig => {
-  const carRequest = racerIndex === null ? null : getCarRequest(assets, racerIndex)
-  const driverRequest = racerIndex === null ? null : getDriverRequest(assets, racerIndex)
+  const carRequest = requests.car
+  const driverRequest = requests.driver
   const carLink = carRequest === null ? null : attachCarDrawing(parts, carRequest, host)
   const driverLink =
     driverRequest === null || parts.driver === null
@@ -148,8 +200,7 @@ const createRacerRig = (
 }
 
 const createGhostRig = (
-  assets: RaceAssets,
-  racerIndex: number | null,
+  requests: RacerRequests,
   parts: RacerModelObjects,
   host: ThreeScene
 ): RacerRig => {
@@ -160,7 +211,7 @@ const createGhostRig = (
     part.group.visible = false
     setAlphaOverride(part.group, GHOST_ALPHA)
   }
-  return createRacerRig(assets, racerIndex, parts, host)
+  return createRacerRig(requests, parts, host)
 }
 
 // The race's three.js scene graphs and camera, without a renderer: the sky and the backdrop first without the depth
@@ -189,8 +240,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   if (shown.sky !== null) backgroundScene.add(shown.sky.mesh)
   const racerRigs = assets.racerModels.map((models, racerIndex): RacerRig => {
     const rig = createRacerRig(
-      assets,
-      racerIndex,
+      getRacerRequests(assets, racerIndex),
       {
         wheels: createModelObject(models.wheels),
         body: models.body === null ? null : createModelObject(models.body),
@@ -225,12 +275,11 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
       assets.ghostScene === null
         ? null
         : createGhostRig(
-            assets,
-            null,
+            getChampionGhostRequests(assets, assets.ghostScene),
             {
-              wheels: getGhostPart(assets.ghostScene, 'ghost2'),
-              body: getGhostPart(assets.ghostScene, 'ghostb2'),
-              driver: getGhostPart(assets.ghostScene, 'ghostdr'),
+              wheels: getGhostPart(assets.ghostScene, GHOST_WHEELS_NAME),
+              body: getGhostPart(assets.ghostScene, GHOST_BODY_NAME),
+              driver: getGhostPart(assets.ghostScene, GHOST_DRIVER_NAME),
             },
             trackScene
           ),
@@ -238,8 +287,7 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
       assets.ghostScene === null || playerModels === undefined
         ? null
         : createGhostRig(
-            assets,
-            0,
+            getRacerRequests(assets, 0),
             {
               wheels: createModelObject(playerModels.wheels),
               body: playerModels.body === null ? null : createModelObject(playerModels.body),

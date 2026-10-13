@@ -1,0 +1,142 @@
+import type { FrontEndInput } from '@lego-games/lego-racers/front-end'
+import { createEnum } from '../../../../shared/types/enum.types.ts'
+import type { EnumValues } from '../../../../shared/types/enum.types.ts'
+
+export const RacerPartKind = createEnum({
+  BODY: 'body',
+  WHEELS: 'wheels',
+  DRIVER: 'driver',
+})
+
+export const CoverageOrigin = createEnum({
+  LAYER: 'layer',
+  ORIGINAL: 'original',
+})
+
+export const HookKind = createEnum({
+  CAR: 'car',
+  DRIVER: 'driver',
+})
+
+// Why a racer part was drawn by the original. Only `no_model_file` is allowed: the folder has nothing to draw it with.
+export const FallbackReason = createEnum({
+  NO_MODEL_FILE: 'no_model_file',
+  HOOK_NOT_CALLED: 'hook_not_called',
+  NO_DRAWING: 'hook_returned_no_drawing',
+  DRAWING_FAILED: 'drawing_failed',
+  DRAWING_NOT_SHOWN: 'drawing_not_shown',
+})
+
+export type RacerPartKind = EnumValues<typeof RacerPartKind>
+export type CoverageOrigin = EnumValues<typeof CoverageOrigin>
+export type HookKind = EnumValues<typeof HookKind>
+export type FallbackReason = EnumValues<typeof FallbackReason>
+
+// What an original racer mesh is: a car body (a champion's by its code, or a built car), a chassis's wheels, or a driver (a
+// champion's race model by its name, or a figure built from part bytes).
+export type RacerPartIdentity = {
+  readonly kind: RacerPartKind
+  readonly key: string
+}
+
+// What the instance group of an original mesh says about itself (`createInstanceGroup` tags it).
+export type InstanceSource = {
+  readonly instanceName: string
+  readonly meshPath: string
+  readonly worldPath: string
+}
+
+// One call of `getCarDrawing` or `getDriverDrawing` in a place, and what came of it.
+export type HookCall = {
+  readonly id: number
+  readonly hook: HookKind
+  // A car: its champion code or `design:<chassis>`; a driver: its model name or `parts:<bytes>`.
+  readonly key: string
+  // A car's wheel model name (lower case); null for a driver.
+  readonly wheelsKey: string | null
+  // Whether the models folder has what the layer needs to draw it.
+  readonly isModelPresent: boolean
+  readonly isDrawingReturned: boolean
+  readonly isFailed: boolean
+}
+
+// A racer part seen in a rendered frame: drawn by the layer (a drawing a call returned) or by the original.
+export type CensusSighting = {
+  readonly origin: CoverageOrigin
+  readonly kind: RacerPartKind
+  readonly key: string
+  readonly callId: number | null
+}
+
+// What a rendered scene draws: the racer parts, and the other original instances (`world|mesh file|instance`).
+export type Census = {
+  readonly sightings: readonly CensusSighting[]
+  readonly otherSources: readonly string[]
+}
+
+// The models the folder has, as the layer reads them (`index.json`).
+export type ModelFolderIndex = {
+  readonly cars: readonly string[]
+  readonly chassis: readonly string[]
+}
+
+export type HdCoveragePlaceResult = {
+  readonly name: string
+  readonly calls: readonly HookCall[]
+  readonly sightings: readonly CensusSighting[]
+  // The other original instances the censused frames drew, for a reader who looks for a racer the classification missed.
+  readonly otherSources: readonly string[]
+  readonly renderCount: number
+  readonly modelIndex: ModelFolderIndex
+  // Calls whose drawing had not finished building when the frames were drawn.
+  readonly unsettledCallIds: readonly number[]
+}
+
+// A racer the original drew in a place, and why the layer did not.
+export type HdCoverageFinding = {
+  readonly place: string
+  readonly kind: RacerPartKind
+  readonly key: string
+  readonly reason: FallbackReason
+  // The models folder has a model for it (every reason but `no_model_file`).
+  readonly isFallback: boolean
+  // A racer the layer has no path for yet (`KNOWN_COVERAGE_GAPS`).
+  readonly isKnownGap: boolean
+}
+
+// A racer of a place the layer is known not to draw yet.
+export type CoverageGap = {
+  readonly place: string
+  readonly kind: RacerPartKind
+  readonly key: string
+}
+
+// A menu screen: the front end opened on a screen (null: the main menu) and stepped with keys, censused at the record steps.
+export type FrontEndPlace = {
+  readonly kind: 'front_end'
+  readonly name: string
+  readonly firstScreenId: number | null
+  readonly inputs: readonly (FrontEndInput | null)[]
+  readonly recordSteps: readonly number[]
+}
+
+// A race of the game session the menus start: the player in a garage car, censused at the record frames.
+export type RacePlace = {
+  readonly kind: 'race'
+  readonly name: string
+  readonly mode: 'single_race' | 'circuit' | 'time_trial'
+  readonly raceFolder: string
+  readonly racerCount: number
+  readonly localPlayerCount: number
+  // A time trial whose session has a finished run: the best run's ghost drives beside the champion's.
+  readonly isBestRunShown: boolean
+  readonly frameCount: number
+  readonly recordFrames: readonly number[]
+}
+
+export type HdCoveragePlace = FrontEndPlace | RacePlace
+
+// The page of the coverage trace: the runner `installHdCoverageHarness` hangs on the window.
+export type HdCoverageWindow = {
+  readonly runHdCoveragePlace: (place: HdCoveragePlace) => Promise<HdCoveragePlaceResult>
+}

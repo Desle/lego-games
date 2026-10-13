@@ -16,7 +16,7 @@ export const createStaticInstanceObject = (
   instance: SceneInstance,
   levelMesh: InstanceLevelMesh
 ): InstanceObject => {
-  const group = createInstanceGroup(instance, context.isBackground)
+  const group = createInstanceGroup(instance, levelMesh.mesh.path, context.isBackground)
   for (const [batchIndex, batch] of levelMesh.mesh.drawBatches.entries()) {
     const batchMaterial = getBatchMaterial(context, levelMesh, batch)
     if (batchMaterial === null) continue

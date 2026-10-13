@@ -23,9 +23,16 @@ if (rootElement === null) throw new Error('index.html has no #root element')
 
 // The pixel trace's headless browser opens `/?pixel-trace`: the page only hosts the scripted race runner, not the game.
 const isPixelTracePage = import.meta.env.DEV && window.location.search === '?pixel-trace'
+// The HD coverage trace opens `/?hd&hd-coverage`: the page only hosts the remastered layer's coverage runner.
+const isHdCoveragePage =
+  import.meta.env.DEV && new URLSearchParams(window.location.search).has('hd-coverage')
 if (isPixelTracePage) {
   installPixelTraceHarness()
   installFrontEndPixelHarness()
+} else if (import.meta.env.DEV && isHdCoveragePage) {
+  void import('./modules/remastered/index.ts').then((remastered) =>
+    remastered.installHdCoverageHarness(window.location.search)
+  )
 } else {
   if (getIsRaceRecordingRequested(window.location.search)) void postUnsentRecordings()
   void loadRemastered().then(() =>
