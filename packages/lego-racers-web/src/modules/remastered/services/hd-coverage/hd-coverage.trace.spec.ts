@@ -92,6 +92,10 @@ describe.skipIf(!isAvailable)('HD coverage', () => {
         `${place.name}: ${String(result.renderCount)} renders censused, ${String(result.calls.length)} hook calls`,
         `  layer: ${getLayerDrawnKeys(result).join(', ') || 'nothing'}`,
         ...findings.map((finding) => `  ${formatFinding(finding)}`),
+        ...result.partFindings.map(
+          (finding) =>
+            `  FAIL ${finding.model} line ${String(finding.lineNumber)} (${finding.part}): ${finding.loss}`
+        ),
         ...(result.unsettledCallIds.length === 0
           ? []
           : [`  unsettled drawings: calls ${result.unsettledCallIds.join(', ')}`]),
@@ -104,6 +108,10 @@ describe.skipIf(!isAvailable)('HD coverage', () => {
     expect(
       findings.filter(getIsFailure).map(formatFinding),
       'Fix: ask the layer for this racer where the viewer draws it (racer-drawing, race-viewport), or fix the drawing'
+    ).toEqual([])
+    expect(
+      result.partFindings,
+      'Fix: every part line of a model file must be drawn where the file puts it; find where the drawing loses it (racer-model-parts, ldraw-model-merge, the detail switch)'
     ).toEqual([])
     expect(
       getStaleGaps(place.name, findings, KNOWN_COVERAGE_GAPS),

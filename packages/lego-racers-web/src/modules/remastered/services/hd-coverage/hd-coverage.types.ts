@@ -27,6 +27,14 @@ export const FallbackReason = createEnum({
   DRAWING_NOT_SHOWN: 'drawing_not_shown',
 })
 
+// How a part line of a model file failed to reach the screen.
+export const PartLoss = createEnum({
+  UNPARSED: 'unparsed',
+  INVISIBLE: 'invisible',
+  DROPPED: 'dropped',
+})
+
+export type PartLoss = EnumValues<typeof PartLoss>
 export type RacerPartKind = EnumValues<typeof RacerPartKind>
 export type CoverageOrigin = EnumValues<typeof CoverageOrigin>
 export type HookKind = EnumValues<typeof HookKind>
@@ -74,6 +82,29 @@ export type Census = {
   readonly otherSources: readonly string[]
 }
 
+// A part line of a model file (`1 <colour> <matrix> <part>.dat`).
+export type ModelPartLine = {
+  readonly lineNumber: number
+  readonly color: string
+  readonly part: string
+  readonly text: string
+}
+
+// A part line of a model file the layer's drawing of it does not show where the file puts it.
+export type ModelPartFinding = {
+  readonly model: string
+  readonly lineNumber: number
+  readonly part: string
+  readonly text: string
+  readonly loss: PartLoss
+}
+
+// The models folder's cars, each drawn alone by the layer and checked part by part.
+export type ModelPartsPlace = {
+  readonly kind: 'model_parts'
+  readonly name: string
+}
+
 // The models the folder has, as the layer reads them (`index.json`).
 export type ModelFolderIndex = {
   readonly cars: readonly string[]
@@ -90,6 +121,8 @@ export type HdCoveragePlaceResult = {
   readonly modelIndex: ModelFolderIndex
   // Calls whose drawing had not finished building when the frames were drawn.
   readonly unsettledCallIds: readonly number[]
+  // The part lines of the models drawn in the place that did not reach the screen.
+  readonly partFindings: readonly ModelPartFinding[]
 }
 
 // A racer the original drew in a place, and why the layer did not.
@@ -134,7 +167,7 @@ export type RacePlace = {
   readonly recordFrames: readonly number[]
 }
 
-export type HdCoveragePlace = FrontEndPlace | RacePlace
+export type HdCoveragePlace = FrontEndPlace | RacePlace | ModelPartsPlace
 
 // The page of the coverage trace: the runner `installHdCoverageHarness` hangs on the window.
 export type HdCoverageWindow = {

@@ -34,6 +34,7 @@ const getResult = (
   renderCount: 1,
   modelIndex: INDEX,
   unsettledCallIds: [],
+  partFindings: [],
 })
 
 describe('getPlaceFindings', () => {

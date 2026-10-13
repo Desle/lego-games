@@ -19,11 +19,18 @@ import {
 import type { GameResources, SessionSettings } from '@lego-games/lego-racers/game-session'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
-import { IDLE_RACER_CONTROLS } from '@lego-games/lego-racers/race'
+import { IDLE_RACER_CONTROLS, readRacerDatabases } from '@lego-games/lego-racers/race'
 import type { RaceDefinition } from '@lego-games/lego-racers/race'
 import { getEffectViews, getRacerPoses } from '@lego-games/lego-racers/race-presentation'
 import { loadRandomTable } from '@lego-games/lego-racers/random-table'
-import { Scene } from 'three'
+import {
+  getChampionRacerAppearance,
+  getRacerModelFiles,
+} from '@lego-games/lego-racers/racer-appearance'
+import type { RacerAppearance } from '@lego-games/lego-racers/racer-appearance'
+import type { RacerDatabases } from '@lego-games/lego-racers/racer-setup'
+import { loadModelScene } from '@lego-games/lego-racers/scene'
+import { Matrix4, PerspectiveCamera, Scene, WebGLRenderer } from 'three'
 import { DEVELOPMENT_GAME_FILE_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
 import { registerViewerExtension } from '../../../../shared/viewer-extensions/viewer-extensions.ts'
 import {
@@ -33,7 +40,7 @@ import {
   loadRaceAssets,
   runRaceFrames,
 } from '../../../track-viewer/index.ts'
-import { getLDrawModelIndex } from '../ldraw-models/ldraw-model-client.ts'
+import { getLDrawModelIndex, loadLDrawModelText } from '../ldraw-models/ldraw-model-client.ts'
 import { CHAMPION_CAR_CODES } from '../ldraw-racer-model/known-racer-models.ts'
 import { createRemasteredExtension } from '../remastered-registration/remastered-registration.ts'
 import type {
@@ -41,10 +48,12 @@ import type {
   FrontEndPlace,
   HdCoveragePlace,
   HdCoveragePlaceResult,
+  ModelPartFinding,
   RacePlace,
 } from './hd-coverage.types.ts'
 import { takeCensus } from './hd-coverage-census.ts'
 import { createRecordingExtension } from './hd-coverage-recorder.ts'
+import { checkModelParts } from './model-part-check.ts'
 import type { CoverageRecorder } from './hd-coverage-recorder.types.ts'
 
 const EXECUTABLE_NAME = 'LEGORacers.exe'
@@ -53,6 +62,7 @@ const STAGE_SIZE = Object.freeze({ width: 640, height: 480 })
 const SETTLE_POLL_MILLISECONDS = 250
 const SETTLE_TIMEOUT_MILLISECONDS = 240_000
 const EVERY_CIRCUIT_OPEN = 0x7f
+const MODEL_VIEW_SIZE = 64
 
 const getExecutable = async (): Promise<Uint8Array> => {
   const response = await fetch(`${DEVELOPMENT_GAME_FILE_ROUTE}/${EXECUTABLE_NAME}`)
@@ -153,6 +163,14 @@ const getDefinitionWithBestRun = (definition: RaceDefinition): RaceDefinition =>
         },
       }
 
+const getRestPose = () => ({ matrix: new Matrix4(), isVisible: true, animationState: null })
+
+// The appearance of the champion who drives the car of a body code.
+const getChampionAppearance = (databases: RacerDatabases, code: string): RacerAppearance | null =>
+  databases.drivers.drivers
+    .map((driver) => getChampionRacerAppearance(databases, driver.name, 0))
+    .find((appearance) => appearance.bodyModel?.modelName.toUpperCase() === code) ?? null
+
 export const installHdCoverageHarness = async (search: string) => {
   const { extension, recorder } = createRecordingExtension(await createRemasteredExtension(search))
   registerViewerExtension(extension)
@@ -237,11 +255,49 @@ export const installHdCoverageHarness = async (search: string) => {
     container.remove()
   }
 
+  // Every car of the models folder, drawn alone by the layer at rest and checked part line by part line against its file.
+  const runModelParts = async (): Promise<readonly ModelPartFinding[]> => {
+    const databases = readRacerDatabases((path) => archive.readFile(path))
+    const renderer = new WebGLRenderer()
+    renderer.setSize(MODEL_VIEW_SIZE, MODEL_VIEW_SIZE)
+    const camera = new PerspectiveCamera()
+    const findings: ModelPartFinding[] = []
+    for (const [code, file] of Object.entries(getLDrawModelIndex().cars).sort()) {
+      const appearance = getChampionAppearance(databases, code)
+      const text = await loadLDrawModelText(file)
+      if (appearance === null || text === null) continue
+      const drawing = extension.getCarDrawing({
+        archive,
+        carCode: code,
+        design: null,
+        wheels: {
+          model: loadModelScene(archive, getRacerModelFiles(appearance.wheelModel)),
+          modelName: appearance.wheelModel.modelName,
+          partBytes: null,
+        },
+      })
+      if (drawing === null) continue
+      const scene = new Scene()
+      scene.add(drawing.object)
+      drawing.applyPose({ body: getRestPose(), wheels: getRestPose(), opacity: 1 })
+      await waitForSettledDrawings(recorder)
+      census.setIsTaking(true)
+      renderer.render(scene, camera)
+      census.setIsTaking(false)
+      findings.push(...(await checkModelParts(file, text, drawing.object)))
+      drawing.dispose()
+    }
+    renderer.dispose()
+    return findings
+  }
+
   const runHdCoveragePlace = async (place: HdCoveragePlace): Promise<HdCoveragePlaceResult> => {
     recorder.reset()
     census.reset()
+    let partFindings: readonly ModelPartFinding[] = []
     if (place.kind === 'front_end') await runFrontEnd(place)
-    else await runRace(place)
+    else if (place.kind === 'race') await runRace(place)
+    else partFindings = await runModelParts()
     const index = getLDrawModelIndex()
     return {
       name: place.name,
@@ -251,6 +307,7 @@ export const installHdCoverageHarness = async (search: string) => {
       renderCount: census.getRenderCount(),
       modelIndex: { cars: Object.keys(index.cars), chassis: Object.keys(index.chassis) },
       unsettledCallIds: recorder.getUnsettledCallIds(),
+      partFindings,
     }
   }
   Object.assign(window, { runHdCoveragePlace })
