@@ -44,10 +44,20 @@ const POWER_UP_KINDS_AND_LEVELS: readonly (readonly [number, number])[] = [
   [1, 0],
 ]
 
-// The seven circuits' introduction cinemas (`CIRCUIT1` .. `CIRCUIT7`, screens 0x1f to 0x25).
-const CIRCUIT_INTRODUCTION_SCREEN_IDS: readonly number[] = [
-  0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25,
+// The seven circuits' introduction cinemas (`CIRCUIT1` .. `CIRCUIT7`, screens 0x1f to 0x25) and their lengths in frames (30 a
+// second, about a step each): the racers of a cinema come and go (Gypsy Moth beams in at frame 252, the Rocket Racer car rolls in
+// at 335), so a cinema is censused every 100 steps from step 60 to its end.
+const CIRCUIT_INTRODUCTIONS: readonly (readonly [number, number])[] = [
+  [0x1f, 490],
+  [0x20, 480],
+  [0x21, 410],
+  [0x22, 400],
+  [0x23, 380],
+  [0x24, 660],
+  [0x25, 1480],
 ]
+const FIRST_CINEMA_STEP = 60
+const CINEMA_STEP_SPACING = 100
 
 const getKeyInputs = (keys: readonly FrontEndInput[]): readonly (FrontEndInput | null)[] => {
   const steps = new Map(keys.map((key, index) => [FIRST_KEY_STEP + KEY_SPACING_STEPS * index, key]))
@@ -70,6 +80,18 @@ const getMenuPlace = (
     recordSteps: [lastKeyStep + SETTLED_STEPS, lastKeyStep + LATER_STEPS],
   }
 }
+
+// A full-screen cinema the front end opens on, censused every 100 steps while it plays.
+const getCinemaPlace = (name: string, screenId: number, lengthFrames: number): FrontEndPlace => ({
+  kind: 'front_end',
+  name,
+  firstScreenId: screenId,
+  inputs: [],
+  recordSteps: Array.from(
+    { length: Math.ceil((lengthFrames - FIRST_CINEMA_STEP) / CINEMA_STEP_SPACING) },
+    (_, index) => FIRST_CINEMA_STEP + CINEMA_STEP_SPACING * index
+  ),
+})
 
 const getRacePlace = (
   name: string,
@@ -152,6 +174,35 @@ const getPowerUpOnScreenPlace = (): OnScreenPlace => {
   }
 }
 
+// A cinema's frame where its racers face the camera, drawn again without each of the layer's drawings.
+const getCinemaOnScreenPlace = (
+  name: string,
+  screenId: number,
+  step: number,
+  expectedHooks: readonly HookKind[]
+): OnScreenPlace =>
+  getOnScreenPlace(
+    { kind: 'front_end', name, firstScreenId: screenId, inputs: [], recordSteps: [step] },
+    expectedHooks
+  )
+
+// Captain Redbeard beside his car, King Kahuka beside his, the second place's figure on the podium, Veronica Voltage at the door
+// of the Rocket Racer's base, the Rocket Racer and the player's stand-in beside his car, and Veronica Voltage's car.
+const CINEMA_ON_SCREEN_PLACES: readonly OnScreenPlace[] = [
+  getCinemaOnScreenPlace('Circuit 1 introduction cinema', 0x1f, 150, [
+    HookKind.CAR,
+    HookKind.DRIVER,
+  ]),
+  getCinemaOnScreenPlace('Circuit 2 introduction cinema', 0x20, 150, [
+    HookKind.CAR,
+    HookKind.DRIVER,
+  ]),
+  getCinemaOnScreenPlace('Second place award cinema', 0x17, 300, [HookKind.DRIVER]),
+  getCinemaOnScreenPlace('Circuit 7 introduction cinema', 0x25, 300, [HookKind.DRIVER]),
+  getCinemaOnScreenPlace('Rocket Racer car won cinema', 0x1b, 500, [HookKind.CAR, HookKind.DRIVER]),
+  getCinemaOnScreenPlace('Veronica Voltage car won cinema', 0x1c, 150, [HookKind.CAR]),
+]
+
 // Every place the game draws a racer: the menus' figures and cars, the cinemas, and the races of every mode; a race whose frame
 // has particles, which must reach the screen as the layer's parts; and the power-up objects.
 export const HD_COVERAGE_PLACES: readonly HdCoveragePlace[] = [
@@ -168,16 +219,16 @@ export const HD_COVERAGE_PLACES: readonly HdCoveragePlace[] = [
   getMenuPlace('Driver editor', 0x0f, []),
   getMenuPlace('Car builder', 0x0e, []),
   getMenuPlace('Versus racer select', 0x14, []),
-  ...CIRCUIT_INTRODUCTION_SCREEN_IDS.map((screenId, index) =>
-    getMenuPlace(`Circuit ${String(index + 1)} introduction cinema`, screenId, [])
+  ...CIRCUIT_INTRODUCTIONS.map(([screenId, lengthFrames], index) =>
+    getCinemaPlace(`Circuit ${String(index + 1)} introduction cinema`, screenId, lengthFrames)
   ),
-  getMenuPlace('First place award cinema', 0x16, []),
-  getMenuPlace('Second place award cinema', 0x17, []),
-  getMenuPlace('Third place award cinema', 0x18, []),
-  getMenuPlace('Lost circuit cinema', 0x19, []),
-  getMenuPlace('Winning car cinema', 0x1a, []),
-  getMenuPlace('Rocket Racer car won cinema', 0x1b, []),
-  getMenuPlace('Veronica Voltage car won cinema', 0x1c, []),
+  getCinemaPlace('First place award cinema', 0x16, 346),
+  getCinemaPlace('Second place award cinema', 0x17, 360),
+  getCinemaPlace('Third place award cinema', 0x18, 330),
+  getCinemaPlace('Lost circuit cinema', 0x19, 240),
+  getCinemaPlace('Winning car cinema', 0x1a, 440),
+  getCinemaPlace('Rocket Racer car won cinema', 0x1b, 1100),
+  getCinemaPlace('Veronica Voltage car won cinema', 0x1c, 440),
   getRacePlace('Single race, player and five computers', 'single_race', 6, 1, false),
   getRacePlace('Circuit, first race', 'circuit', 6, 1, false),
   getRacePlace('Versus, two players', 'single_race', 2, 2, false),
@@ -196,4 +247,5 @@ export const HD_COVERAGE_PLACES: readonly HdCoveragePlace[] = [
     ON_SCREEN_SLIDE_FRAME
   ),
   getPowerUpOnScreenPlace(),
+  ...CINEMA_ON_SCREEN_PLACES,
 ]

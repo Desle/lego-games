@@ -11,7 +11,14 @@ import type {
   RacerPartPose,
 } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
-import type { CarLink, CarParts, DriverLink, StateHolder } from './racer-drawing.types.ts'
+import type {
+  CarLink,
+  CarParts,
+  DriverLink,
+  FollowedDrawing,
+  OriginalVisibility,
+  StateHolder,
+} from './racer-drawing.types.ts'
 
 const SOLID_OPACITY = 1
 
@@ -139,6 +146,58 @@ export const showCarDrawing = (model: ModelObject, request: CarDrawingRequest): 
         group.remove(drawing.object)
         drawing.dispose()
       },
+    },
+  }
+}
+
+// A car's drawing in place of a model the viewer does not move itself (a cinema world's own copy of a champion's car), added to
+// `host`: the original's meshes are hidden while the drawing stands, and shown again when it fails or goes. Body and wheels share
+// the frame `sync` gives (the race car's, at rest); null keeps the original's.
+export const followCarDrawing = (
+  request: CarDrawingRequest,
+  host: Object3D,
+  setOriginalHidden: OriginalVisibility
+): FollowedDrawing | null => {
+  const drawing = getCarDrawing(request)
+  if (drawing === null) return null
+  host.add(drawing.object)
+  setOriginalHidden(true)
+  drawing.onFailed(() => {
+    host.remove(drawing.object)
+    setOriginalHidden(false)
+  })
+  return {
+    sync: (pose) =>
+      drawing.applyPose({
+        body: { ...pose, animationState: null },
+        wheels: { ...pose, animationState: null },
+        opacity: SOLID_OPACITY,
+      }),
+    dispose: () => {
+      host.remove(drawing.object)
+      drawing.dispose()
+      setOriginalHidden(false)
+    },
+  }
+}
+
+// A driver's drawing in place of a figure the viewer does not move itself (a cinema world's), as `followCarDrawing` does for a car:
+// the pose's state is the clip the figure's skeleton plays.
+export const followDriverDrawing = (
+  request: DriverDrawingRequest,
+  host: Object3D,
+  setOriginalHidden: OriginalVisibility
+): FollowedDrawing | null => {
+  const drawing = getDriverDrawing(request)
+  if (drawing === null) return null
+  host.add(drawing.object)
+  setOriginalHidden(true)
+  return {
+    sync: (pose) => drawing.applyPose({ ...pose, opacity: SOLID_OPACITY }),
+    dispose: () => {
+      host.remove(drawing.object)
+      drawing.dispose()
+      setOriginalHidden(false)
     },
   }
 }

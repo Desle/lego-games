@@ -28,4 +28,6 @@ Port: `pick-racer-screen` (the push), `save-all-screen`, `circuit-introduction-s
 
 The racer pick's reaction clip now plays for the frame of the key (`startRacerShowcaseReaction`): without it the port left the racer pick one frame after the original (409 against 408).
 
+**Model scale (open):** GolDP.dll carries a model's points through its bones, times the model's scale (GDB key `0x33`) and by the instance's frame ([hazards-and-emitters.md](hazards-and-emitters.md)); the port's world objects leave the scale out. The cinemas' figures are the only world models whose scale is not 1 (`GUY1` at 1/64 in the awards, the won cars and the seventh circuit, 0.01 in `CIRCUIT3` and `WINVVCAR`; `CB_SET`'s stand and the race preview's `GUY1` too), so the port draws them 64 and 100 times too big (the second place award shows a giant hand round the trophy). The LDraw layer places its figures with the scale ([remastered-ldraw-racers.md](../remastered-ldraw-racers.md#cinemas)).
+
 **Not ported:** what `saveall` saves and its two draws in its frame; the cinema events' sounds (`bird2.pcm`, `ocean2.pcm` ... loaded with the introduction), fades and captions (at frame 880 the original draws the closing picture at about a third of the port's brightness).

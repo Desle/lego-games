@@ -54,8 +54,12 @@ const getDriverCall = (id: number, request: DriverDrawingRequest): HookCall =>
         : `${PARTS_KEY_PREFIX}${request.driver.partBytes.join(' ')}`,
     wheelsKey: null,
     isModelPresent:
-      findDriverSource(request.archive, request.driver.modelName, request.driver.partBytes) !==
-      null,
+      findDriverSource(
+        request.archive,
+        request.driver.modelName,
+        request.driver.partBytes,
+        request.driver.model
+      ) !== null,
     isDrawingReturned: false,
     isFailed: false,
   })

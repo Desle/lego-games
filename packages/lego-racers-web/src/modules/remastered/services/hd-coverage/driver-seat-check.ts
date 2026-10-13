@@ -38,7 +38,7 @@ const getOriginalTorsoOffset = (
   state: SkeletonAnimationState | null,
   seat: Matrix4
 ): number | null => {
-  const minifigRig = getMinifigRig(sampler.boneNames)
+  const minifigRig = getMinifigRig(sampler.boneNames, sampler.parentIndices)
   if (minifigRig === null) return null
   const matrices = state === null ? sampler.restMatrices : sampler.getMatrices(state)
   const points = getPosedBonePoints(model, matrices)

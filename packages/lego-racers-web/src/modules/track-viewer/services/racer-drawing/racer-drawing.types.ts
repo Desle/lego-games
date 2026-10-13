@@ -1,4 +1,5 @@
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
+import type { RacerPartPose } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
 
 // A car's drawing from a viewer extension, following the car's parts as the viewer positions them.
@@ -21,6 +22,16 @@ export type CarParts = {
   readonly wheels: ModelObject
   readonly body: ModelObject | null
 }
+
+// A drawing that stands in for a model the viewer does not move itself (a cinema world's instance): `sync` hands it where the
+// model is now (its frame in the host's, whether it shows, its skeleton's state).
+export type FollowedDrawing = {
+  readonly sync: (pose: RacerPartPose) => void
+  readonly dispose: () => void
+}
+
+// Hides the original's meshes the drawing stands in for (true) or shows them again (false: the drawing failed or went).
+export type OriginalVisibility = (isHidden: boolean) => void
 
 // Where the animation state the viewer gave a part is kept for the drawing.
 export type StateHolder = {

@@ -42,3 +42,14 @@ export const loadChassisWheels = (archive: JamArchive, chassisName: string): Rac
   cached.set(key, wheels)
   return wheels
 }
+
+// The wheels of the chassis a champion's car (by its body code, such as `CRCM`) stands on; null for a code no champion has.
+export const loadChampionWheels = (
+  archive: JamArchive,
+  carCode: string
+): RacerDrawingPart | null => {
+  const champion = readRacerDatabases(archive.readFile).champions.champions.find(
+    (candidate) => candidate.modelName.toUpperCase() === carCode.toUpperCase()
+  )
+  return champion === undefined ? null : loadChassisWheels(archive, champion.chassisName)
+}

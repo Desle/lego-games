@@ -34,4 +34,6 @@ export type MenuWorld = {
   readonly carView: () => BuilderCarView
   // The driver the editor puts in this world.
   readonly driverView: () => DriverView
+  // Lets go of the world's objects and the drawings its stages asked for.
+  readonly dispose: () => void
 }

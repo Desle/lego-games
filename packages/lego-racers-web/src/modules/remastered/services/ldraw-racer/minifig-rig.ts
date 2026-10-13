@@ -58,7 +58,7 @@ const getWrist = (
 ): MinifigWristAttachment | null => {
   const forearmIndex = findSideBone(boneNames, side, 'el')
   const wristIndex = findSideBone(boneNames, side, 'wr')
-  const handIndex = findSideBone(boneNames, side, 'hand')
+  const handIndex = findSideBone(boneNames, side, 'ha')
   return forearmIndex < 0 || wristIndex < 0 || handIndex < 0
     ? null
     : Object.freeze({ forearmIndex, wristIndex, handIndex })
@@ -85,17 +85,37 @@ const getSeatedRig = (): MinifigRig =>
     wrists: null,
   })
 
+// The bone the waist hangs from carries the figure (the menus' root; a cinema's figure may hang below a dummy that walks it about).
+const getPelvisIndex = (boneNames: readonly string[], parentIndices: readonly (number | null)[]) =>
+  Math.max(parentIndices[findBone(boneNames, /^wais/)] ?? 0, 0)
+
+// The head's bone: the menus' `head-rr`; a cinema's figure names it after what it wears (`cr_hat`, `helmetvv`, `mh_hair1`), the
+// first bone below the dummy on the neck.
+const getHeadIndex = (boneNames: readonly string[], parentIndices: readonly (number | null)[]) => {
+  const named = findBone(boneNames, /^head/)
+  if (named >= 0) return named
+  const neckIndex = findBone(boneNames, /^neck/)
+  const dummyIndex = parentIndices.findIndex(
+    (parent, index) => parent === neckIndex && /^dumm/.test(boneNames[index] ?? '')
+  )
+  return dummyIndex < 0 ? -1 : parentIndices.indexOf(dummyIndex)
+}
+
 // The skeleton of the menus' figures (`rr`, `hr`, `rp`, `hp`: thigh, knee, ankle, foot and toe chains, waist, chest, neck, head, and a
-// shoulder, elbow, wrist and hand for each arm), whose bind pose has the arms out sideways.
-const getStandingRig = (boneNames: readonly string[]): MinifigRig => {
+// shoulder, elbow, wrist and hand for each arm), whose bind pose has the arms out sideways; the cinemas' figures have the same bones
+// under names of their own (`ches1360`, `l_thghbr`, `l_wrstvv`, `l_ha1358`).
+const getStandingRig = (
+  boneNames: readonly string[],
+  parentIndices: readonly (number | null)[]
+): MinifigRig => {
   const leftWrist = getWrist(boneNames, 'left')
   const rightWrist = getWrist(boneNames, 'right')
   return Object.freeze({
     posture: MinifigPosture.STANDING,
     hipsHeight: STANDING_HIPS_HEIGHT,
-    pelvisIndex: 0,
-    torsoIndex: Math.max(findBone(boneNames, /^chest/), 0),
-    headIndex: Math.max(findBone(boneNames, /^head/), 0),
+    pelvisIndex: getPelvisIndex(boneNames, parentIndices),
+    torsoIndex: Math.max(findBone(boneNames, /^ches/), 0),
+    headIndex: Math.max(getHeadIndex(boneNames, parentIndices), 0),
     limbs: Object.freeze({
       legs: Object.freeze({
         left: getChord(boneNames, 'left', 'th', 'an'),
@@ -113,12 +133,15 @@ const getStandingRig = (boneNames: readonly string[]): MinifigRig => {
   })
 }
 
-// How a minifigure's parts follow a driver's skeleton: the seated or the standing one, told apart by their bones; null for a skeleton
-// that is neither.
-export const getMinifigRig = (boneNames: readonly string[]): MinifigRig | null => {
+// How a minifigure's parts follow a driver's skeleton (its bones' names and parents): the seated or the standing one, told apart by
+// their bones; null for a skeleton that is neither.
+export const getMinifigRig = (
+  boneNames: readonly string[],
+  parentIndices: readonly (number | null)[]
+): MinifigRig | null => {
   if (boneNames.length === SEATED_BONE_COUNT && boneNames[1] === 'torso') return getSeatedRig()
-  if (findBone(boneNames, /^chest/) >= 0 && findBone(boneNames, /^head/) >= 0) {
-    return getStandingRig(boneNames)
+  if (findBone(boneNames, /^ches/) >= 0 && getHeadIndex(boneNames, parentIndices) >= 0) {
+    return getStandingRig(boneNames, parentIndices)
   }
   return null
 }

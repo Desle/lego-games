@@ -82,6 +82,10 @@ export const createMenuViewport = (archive: JamArchive): MenuViewport => {
           carView ??= createBuilderCarView(archive, three)
           return carView
         },
+        dispose: () => {
+          cinemaStage?.dispose()
+          object.dispose()
+        },
       }
     } catch {
       return null
@@ -147,7 +151,7 @@ export const createMenuViewport = (archive: JamArchive): MenuViewport => {
   return Object.freeze({
     draw,
     dispose: () => {
-      for (const world of worlds.values()) world?.object.dispose()
+      for (const world of worlds.values()) world?.dispose()
       worlds.clear()
       renderer.dispose()
       renderer.forceContextLoss()

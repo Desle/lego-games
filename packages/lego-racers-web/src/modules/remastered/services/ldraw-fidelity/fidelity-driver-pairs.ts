@@ -74,7 +74,7 @@ export const createDriverPair = async (
   const { model, modelName } = loadDriverModel(context, item, source)
   const sampler = createSkeletonPoseSampler(model)
   const start = sampler?.createState(source.clipIndex) ?? null
-  const rig = sampler === null ? null : getMinifigRig(sampler.boneNames)
+  const rig = sampler === null ? null : getMinifigRig(sampler.boneNames, sampler.parentIndices)
   if (sampler === null || start === null || rig === null) return 'the figure has no such clip'
   const state = sampler.advance(start, source.milliseconds)
   const drawing = createLDrawDriverDrawing(

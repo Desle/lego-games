@@ -11,7 +11,7 @@ const TORSO_BONE = 1
 const HEAD_BONE = 4
 
 const getSeatedRig = (): MinifigRig => {
-  const rig = getMinifigRig(SEATED_BONES)
+  const rig = getMinifigRig(SEATED_BONES, [])
   if (rig === null) throw new Error('The seated skeleton has no rig')
   return rig
 }
