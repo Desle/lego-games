@@ -58,6 +58,8 @@ export type BuilderPanel = {
   readonly showStartFiles: (files: readonly string[], selected: string | null) => void
   readonly showReferenceMode: (mode: ReferenceMode) => void
   readonly showLibrary: (parts: readonly LibraryPart[]) => void
+  // The parts of the model being built, in the order they were placed, for the Used tab.
+  readonly showUsedParts: (partNames: readonly string[]) => void
   readonly showColors: (colors: readonly LDrawColorName[]) => void
   readonly showTool: (tool: BuilderToolView) => void
   readonly showStatus: (text: string) => void
