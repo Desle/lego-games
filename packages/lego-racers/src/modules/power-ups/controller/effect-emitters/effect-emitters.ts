@@ -69,6 +69,25 @@ export const releaseEffectEmitter = (
   return getStepWithEffect(released, { ...getEffect(released, effectId), emitterHandleIndex: null })
 }
 
+// 0x00489540, 0x00489660 and 0x00489690 on the effect's emitter: its basis, where its particles are born and the velocity
+// they get on top.
+const getStepWithEmitterFollowing = (
+  step: PowerUpStep,
+  effectId: number,
+  arithmetic: FloatArithmetic,
+  placement: EffectEmitterOwner
+): PowerUpStep => {
+  const { emitterHandleIndex } = getEffect(step, effectId)
+  const { common } = step.world.emitters
+  if (emitterHandleIndex === null || common === null) return step
+  const based = setEmitterBasis(common, emitterHandleIndex, placement.rotation)
+  const placed = setEmitterPosition(based, emitterHandleIndex, placement.position)
+  return getStepWithPool(
+    step,
+    setEmitterVelocityOffset(arithmetic, placed, emitterHandleIndex, placement.velocity)
+  )
+}
+
 // 0x00489660 on the effect's emitter: where its particles are born (the oil slick's bubbles, at the ground point it
 // lands on, 0x004573a0).
 export const placeEffectEmitter = (
@@ -94,28 +113,21 @@ export const placeTurboSmoke = (
   arithmetic: FloatArithmetic,
   owner: EffectEmitterOwner | null
 ): PowerUpStep => {
-  const { emitterHandleIndex } = getEffect(step, effectId)
-  const { common } = step.world.emitters
-  if (emitterHandleIndex === null || common === null || owner === null) return step
+  if (owner === null) return step
   const { multiply, storeFloat } = arithmetic
-  const based = setEmitterBasis(common, emitterHandleIndex, owner.rotation)
-  const placed = setEmitterPosition(
-    based,
-    emitterHandleIndex,
-    getFrameTransformedPoint(
+  return getStepWithEmitterFollowing(step, effectId, arithmetic, {
+    rotation: owner.rotation,
+    position: getFrameTransformedPoint(
       arithmetic,
       { rotation: owner.rotation, position: owner.position },
       TURBO_SMOKE_LOCAL_POINT
-    )
-  )
-  return getStepWithPool(
-    step,
-    setEmitterVelocityOffset(arithmetic, placed, emitterHandleIndex, {
+    ),
+    velocity: {
       x: storeFloat(multiply(TURBO_SMOKE_VELOCITY_FACTOR, owner.velocity.x)),
       y: storeFloat(multiply(TURBO_SMOKE_VELOCITY_FACTOR, owner.velocity.y)),
       z: storeFloat(multiply(TURBO_SMOKE_VELOCITY_FACTOR, owner.velocity.z)),
-    })
-  )
+    },
+  })
 }
 
 // 0x004b13b0 and 0x004b1504: the smoke sits 4 above the owner's frame.
@@ -140,14 +152,13 @@ export const checkEffectEmitter = (
     (bornCount ?? 0) > EFFECT_EMITTER_MAXIMUM_BORN_COUNT
   if (isFinished) return releaseEffectEmitter(step, effectId, false)
   if (owner === null) return step
-  const based = setEmitterBasis(common, emitterHandleIndex, owner.rotation)
-  const placed = setEmitterPosition(based, emitterHandleIndex, {
-    x: owner.position.x,
-    y: owner.position.y,
-    z: arithmetic.storeFloat(arithmetic.add(EFFECT_EMITTER_HEIGHT, owner.position.z)),
+  return getStepWithEmitterFollowing(step, effectId, arithmetic, {
+    rotation: owner.rotation,
+    position: {
+      x: owner.position.x,
+      y: owner.position.y,
+      z: arithmetic.storeFloat(arithmetic.add(EFFECT_EMITTER_HEIGHT, owner.position.z)),
+    },
+    velocity: owner.velocity,
   })
-  return getStepWithPool(
-    step,
-    setEmitterVelocityOffset(arithmetic, placed, emitterHandleIndex, owner.velocity)
-  )
 }
