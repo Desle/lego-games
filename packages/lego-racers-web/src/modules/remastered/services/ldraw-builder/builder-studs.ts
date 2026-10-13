@@ -7,6 +7,7 @@ import type {
   PartShape,
   PartShapes,
   PartStud,
+  PartStudLists,
 } from './builder-studs.types.ts'
 import type { BuilderBox, BuilderPartLine, Vector } from './ldraw-builder.types.ts'
 
@@ -279,4 +280,15 @@ export const createPartShapes = (
     return promise
   }
   return { load, getLoaded: (partName) => loaded.get(partName.toLowerCase()) }
+}
+
+// Each part's studs alone, read from the library once (the chassis deck reads only these).
+export const createPartStudLists = (
+  readFile: LibraryFileReader = createCachedReader(readLibraryFile)
+): PartStudLists => {
+  const shapes = createPartShapes(readFile)
+  return {
+    load: async (partName) => (await shapes.load(partName)).studs,
+    getLoaded: (partName) => shapes.getLoaded(partName)?.studs,
+  }
 }

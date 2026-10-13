@@ -18,6 +18,12 @@ export type PartShape = {
 // Reads a library file by the name a part line gives it (`s\3001s01.dat`, `stud.dat`); null when there is none.
 export type LibraryFileReader = (name: string) => Promise<string | null>
 
+export type PartStudLists = {
+  readonly load: (partName: string) => Promise<readonly PartStud[]>
+  // Undefined while it has not arrived.
+  readonly getLoaded: (partName: string) => readonly PartStud[] | undefined
+}
+
 export type PartShapes = {
   readonly load: (partName: string) => Promise<PartShape>
   // Undefined while it has not arrived.
