@@ -38,7 +38,7 @@ src/
 
 The layer table is the one in the root `.docs/rules.md` and `packages/lego-racers/AGENTS.md`.
 
-LDraw code that knows nothing of LEGO Racers (the library loader, worker parsing and merging, plastic looks, stud-grid building maths) lives in `@lego-games/ldraw` (`packages/ldraw`), imported by module name (`@lego-games/ldraw/geometry`, …). The dev server's LDraw routes (library, models folder, part list, save with backup) come from `@lego-games/ldraw/files` (`development-ldraw-files/`); the remastered layer keeps what is Racers-specific: the models index of cars, chassis and drivers, the builder's items and progress, the parse worker's script (which takes a car's wheels and figures out of its body), the mappings from the game's bricks and figures, and the pages. A page that draws LDraw calls `setUpLDrawModelParser()` first.
+LDraw code that knows nothing of LEGO Racers (the library loader, worker parsing and merging, plastic looks, stud-grid building maths, the embeddable model viewer) lives in `@lego-games/ldraw` (`packages/ldraw`), imported by module name (`@lego-games/ldraw/geometry`, …). The dev server's LDraw routes (library, models folder, part list, save with backup) come from the LDraw studio, `@lego-games/ldraw-studio/files` (a devDependency; `development-ldraw-files/`); the remastered layer keeps what is Racers-specific: the models index of cars, chassis and drivers, the builder's items and progress, the parse worker's script (which takes a car's wheels and figures out of its body), the mappings from the game's bricks and figures, and the pages. A page that draws LDraw calls `setUpLDrawModelParser()` first.
 
 ### Conventions
 

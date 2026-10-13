@@ -2,11 +2,11 @@
   "name": "@lego-games/ldraw",
   "version": "0.1.0",
   "private": true,
-  "description": "Generic LDraw for the LEGO game ports: the parts library, parsing and merging in a worker, plastic looks, stud-grid building maths, and the dev server routes for the library and models.",
+  "description": "Generic LDraw for the LEGO game ports: the parts library, parsing and merging in a worker, plastic looks, stud-grid building maths, and the embeddable editor tools (the model viewer).",
   "type": "module",
   "exports": {
     "./building": "./src/modules/building/index.ts",
-    "./files": "./src/modules/files/index.ts",
+    "./editor": "./src/modules/editor/index.ts",
     "./geometry": "./src/modules/geometry/index.ts",
     "./library": "./src/modules/library/index.ts",
     "./material": "./src/modules/material/index.ts",
@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@lego-games/tooling": "workspace:*",
-    "@types/three": "0.186.0"
+    "@types/three": "0.186.0",
+    "jsdom": "30.1.1"
   }
 }

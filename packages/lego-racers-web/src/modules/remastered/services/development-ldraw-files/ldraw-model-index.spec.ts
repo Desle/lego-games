@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { readLDrawModelFolders } from '@lego-games/ldraw/files'
+import { readLDrawModelFolders } from '@lego-games/ldraw-studio/files'
 import { createLDrawModelIndex } from './ldraw-model-index.ts'
 
 describe('createLDrawModelIndex', () => {

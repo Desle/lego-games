@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { LDrawSaveRequest } from '@lego-games/ldraw/files'
+import type { LDrawSaveRequest } from '@lego-games/ldraw-studio/files'
 import { getBuilderItemFile } from './builder-items.ts'
 import { BUILDER_PROGRESS_STORE } from './ldraw-builder-route.ts'
 import type { BuilderProgress, BuilderSaveProgress } from './ldraw-builder.types.ts'
