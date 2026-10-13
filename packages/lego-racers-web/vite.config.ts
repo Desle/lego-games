@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
+import { developmentLDrawBuilderPlugin } from './src/modules/remastered/services/ldraw-builder/development-ldraw-builder-server.ts'
 import { developmentLDrawModelsPlugin } from './src/modules/remastered/services/development-ldraw-models-server/development-ldraw-models-server.ts'
 import { developmentLDrawPlugin } from './src/modules/remastered/services/development-ldraw-server/development-ldraw-server.ts'
 import {
@@ -21,6 +22,9 @@ const DEFAULT_JAM_PATH = resolve(
   import.meta.dirname,
   '../../original-files/Lego_Racers_Win_Files_EN/Game Files/LEGO.JAM'
 )
+
+const LDRAW_LIBRARY_ROOT = process.env['LEGO_LDRAW_ROOT'] ?? join(homedir(), 'ldraw')
+const LDRAW_MODELS_ROOT = process.env['LEGO_LDRAW_MODELS_ROOT'] ?? join(homedir(), 'ldraw-models')
 
 // Serves the local LEGO.JAM to the dev server only (`apply: 'serve'`): nothing of it reaches a build.
 const developmentJamPlugin = (): Plugin => ({
@@ -81,9 +85,8 @@ export default defineConfig({
     developmentHighDefinitionAudioPlugin(
       process.env['LEGO_HD_AUDIO_ROOT'] ?? join(homedir(), 'audio', 'lego-racers')
     ),
-    developmentLDrawPlugin(process.env['LEGO_LDRAW_ROOT'] ?? join(homedir(), 'ldraw')),
-    developmentLDrawModelsPlugin(
-      process.env['LEGO_LDRAW_MODELS_ROOT'] ?? join(homedir(), 'ldraw-models')
-    ),
+    developmentLDrawPlugin(LDRAW_LIBRARY_ROOT),
+    developmentLDrawModelsPlugin(LDRAW_MODELS_ROOT),
+    developmentLDrawBuilderPlugin(LDRAW_MODELS_ROOT, LDRAW_LIBRARY_ROOT),
   ],
 })

@@ -11,6 +11,8 @@ An optional layer above the original port, for development only: with `?hd[=<tex
 - **Play widescreen**: start a race; the canvas follows the window, including resizing. The menus stay 4:3.
 - **Judge LDraw work**: `pnpm run ldraw-fidelity [filter]` scores every LDraw replacement (bricks, chassis, track bricks, champion cars, wheels, drivers in four poses) against the original in the same scene; a replacement is done when its score passes (`.docs/remastered.md`, Judging LDraw work).
 
+- **Build the cars by hand**: open `/ldraw-builder.html` on the dev server. The queue lists the 12 chassis recipes and the 20 champions' car bodies with the progress (done of 32); each item shows the original's model (side by side, ghost or off, same camera) next to the LDraw build, which starts from the models folder's file (a car on its chassis recipe, shown but not editable). Parts come from the library (search or shortlist), click to place on the stud grid; **Done** writes the `.ldr` into the models folder (the old file to `drafts/backups/` first), marks it done in `builder-progress.json` and opens the next one.
+
 ## Invariants
 
 - With no extension registered the viewer draws exactly what the original draws; the pixel trace and render trace run without this module.
