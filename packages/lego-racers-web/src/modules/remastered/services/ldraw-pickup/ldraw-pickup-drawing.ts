@@ -1,6 +1,7 @@
 import { Group, Matrix4, Mesh, MeshPhysicalMaterial } from 'three'
 import type { Object3D } from 'three'
 import { createDetailedModel, createMaterialSet } from '@lego-games/ldraw/geometry'
+import { setIsPlasticLightingSkipped } from '@lego-games/ldraw/material'
 import { LDRAW_PICKUP_MAPPINGS } from './ldraw-pickup-mappings.ts'
 import type { LDrawPickupMapping } from './ldraw-pickup-mappings.types.ts'
 
@@ -20,8 +21,10 @@ const getPhysicalMaterials = (model: Object3D): MeshPhysicalMaterial[] => {
   return materials
 }
 
+// A spinning brick is a prize, not part of the scenery: the world's shadows never darken it.
 export const brightenPlastic = (model: Object3D) => {
   for (const material of getPhysicalMaterials(model)) {
+    setIsPlasticLightingSkipped(material, true)
     material.envMapIntensity = PICKUP_ENVIRONMENT_INTENSITY
     material.emissive.copy(material.color).multiplyScalar(PICKUP_GLOW)
   }
