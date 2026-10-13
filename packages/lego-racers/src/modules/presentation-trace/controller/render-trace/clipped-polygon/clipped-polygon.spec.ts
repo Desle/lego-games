@@ -11,6 +11,7 @@ import type { TextureMatch } from '../texture-matching.types.ts'
 import { getClippedPolygon, getIsCutPiece, getIsFragmentOfPolygon } from './clipped-polygon.ts'
 
 const VIEWPORT = { width: 640, height: 480 }
+const RACE_DEPTHS = { near: 5, far: 800 }
 // w is z: a point at depth 10 lands on the pixel of its x and y.
 const FLAT_MATRIX: ScreenMatrix = [10, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]
 const STATE = {} as DrawState
@@ -71,7 +72,7 @@ describe('clipped polygon', () => {
     ])
 
     // Act
-    const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT)
+    const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT, RACE_DEPTHS)
 
     // Assert
     expect(polygon).toBeNull()
@@ -86,7 +87,7 @@ describe('clipped polygon', () => {
     ])
 
     // Act
-    const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT)
+    const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT, RACE_DEPTHS)
 
     // Assert
     expect(polygon).toBeNull()
@@ -99,7 +100,7 @@ describe('clipped polygon', () => {
       [100, 200, 10],
       [700, 100, 10],
     ])
-    const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT)
+    const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT, RACE_DEPTHS)
     const piece = getFragment([
       [100, 100],
       [100, 190],
@@ -107,7 +108,11 @@ describe('clipped polygon', () => {
     ])
 
     // Act
-    const isPiece = getIsFragmentOfPolygon(piece, polygon === null ? [] : [polygon], TEXTURE_MATCHES)
+    const isPiece = getIsFragmentOfPolygon(
+      piece,
+      polygon === null ? [] : [polygon],
+      TEXTURE_MATCHES
+    )
 
     // Assert
     expect(isPiece).toBe(true)
@@ -120,7 +125,7 @@ describe('clipped polygon', () => {
       [100, 200, 10],
       [700, 100, 10],
     ])
-    const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT)
+    const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT, RACE_DEPTHS)
     const piece = getFragment([
       [100, 100],
       [100, 400],
@@ -128,7 +133,11 @@ describe('clipped polygon', () => {
     ])
 
     // Act
-    const isPiece = getIsFragmentOfPolygon(piece, polygon === null ? [] : [polygon], TEXTURE_MATCHES)
+    const isPiece = getIsFragmentOfPolygon(
+      piece,
+      polygon === null ? [] : [polygon],
+      TEXTURE_MATCHES
+    )
 
     // Assert
     expect(isPiece).toBe(false)
@@ -143,7 +152,7 @@ describe('clipped polygon', () => {
     ])
 
     // Act
-    const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT)
+    const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT, RACE_DEPTHS)
 
     // Assert
     expect(polygon?.corners.length).toBe(4)
@@ -156,7 +165,7 @@ describe('clipped polygon', () => {
       [100, 200, 10],
       [700, 100, 10],
     ])
-    const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT)
+    const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT, RACE_DEPTHS)
     const piece = getFragment([
       [100, 100],
       [100, 190],
@@ -184,7 +193,7 @@ describe('clipped polygon', () => {
       ]),
       textureKey: null,
     }
-    const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT)
+    const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT, RACE_DEPTHS)
     const piece = {
       ...getFragment([
         [100, 100],
@@ -195,7 +204,11 @@ describe('clipped polygon', () => {
     }
 
     // Act
-    const isPiece = getIsFragmentOfPolygon(piece, polygon === null ? [] : [polygon], TEXTURE_MATCHES)
+    const isPiece = getIsFragmentOfPolygon(
+      piece,
+      polygon === null ? [] : [polygon],
+      TEXTURE_MATCHES
+    )
 
     // Assert
     expect(isPiece).toBe(true)
@@ -210,7 +223,7 @@ describe('clipped polygon', () => {
     ])
 
     // Act
-    const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT)
+    const polygon = getClippedPolygon(triangle, FLAT_MATRIX, 'world', VIEWPORT, RACE_DEPTHS)
 
     // Assert
     expect(polygon).not.toBeNull()
@@ -240,8 +253,8 @@ describe('clipped polygon', () => {
 
     // Act
     const results = [
-      getIsCutPiece(farPiece.vertices, VIEWPORT),
-      getIsCutPiece(nearPiece.vertices, VIEWPORT),
+      getIsCutPiece(farPiece.vertices, VIEWPORT, RACE_DEPTHS),
+      getIsCutPiece(nearPiece.vertices, VIEWPORT, RACE_DEPTHS),
     ]
 
     // Assert

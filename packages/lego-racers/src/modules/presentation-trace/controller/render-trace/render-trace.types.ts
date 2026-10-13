@@ -130,6 +130,10 @@ export type RenderFrameInput = {
   readonly tolerances: RenderTolerances
 }
 
+// The depths between which the original's driver keeps what it draws (GolDP.dll 0x1000c630 clips z against 0..w of the
+// clip matrix): the race camera's near and far planes.
+export type DepthRange = { readonly near: number; readonly far: number }
+
 export type PixelPoint = { readonly x: number; readonly y: number }
 
 // What the port's triangle covers once the original's clipping has cut it: a convex polygon on the screen, wound as a

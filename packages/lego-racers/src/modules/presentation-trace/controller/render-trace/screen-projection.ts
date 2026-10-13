@@ -1,5 +1,6 @@
 import type { OriginalRenderFrame } from '../../types/presentation-trace.types.ts'
 import type {
+  DepthRange,
   DrawnTriangle,
   MatrixCount,
   ProjectedVertex,
@@ -82,12 +83,21 @@ export const projectVertex = (vertex: WorldVertex, matrix: ScreenMatrix): Projec
 export const projectWorldTriangle = (
   triangle: WorldTriangle,
   matrix: ScreenMatrix,
-  space: 'world' | 'local' = 'world'
+  space: 'world' | 'local' = 'world',
+  depthRange: DepthRange | null = null
 ): DrawnTriangle | null => {
   const corners = space === 'world' ? triangle.vertices : triangle.localVertices
   const [first, second, third] = corners.map((vertex) => projectVertex(vertex, matrix))
   if (first === undefined || second === undefined || third === undefined) return null
   if (first.clipW <= 0 || second.clipW <= 0 || third.clipW <= 0) return null
+  const depths = [first.clipW, second.clipW, third.clipW]
+  if (
+    depthRange !== null &&
+    (depths.every((depth) => depth > depthRange.far) ||
+      depths.every((depth) => depth < depthRange.near))
+  ) {
+    return null
+  }
   if (!getIsFrontFacing([first, second, third])) return null
   return Object.freeze({
     vertices: [third, second, first] as const,

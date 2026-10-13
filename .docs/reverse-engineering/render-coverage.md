@@ -1,6 +1,6 @@
 # Render coverage: is everything the original draws drawn by the port?
 
-[render-trace.md](render-trace.md) and [pixel-trace.md](pixel-trace.md) check a few scenarios in depth. This sweep checks **breadth**: every race of `LEGORACE.RCB` (26 entries: 12 forward, 12 mirrored second passes, the final race and its mirror; `test` has no circuit), a whole first lap each, and a list of what the original draws that the port has no partner for (and the reverse). It reports; it fixes nothing. Each item below is meant to become one small fix task.
+[render-trace.md](render-trace.md) and [pixel-trace.md](pixel-trace.md) check a few scenarios in depth. This sweep checks **breadth**: every race of `LEGORACE.RCB` (26 entries: 12 forward, 12 mirrored second passes, the final race and its mirror; `test` has no circuit), a whole first lap each, and a list of what the original draws that the port has no partner for (and the reverse). It reports; the fixes are separate tasks, one per item below. The draw-distance and level-of-detail items (2 and 9) are done: see "What is drawn when" below.
 
 ## Running it
 
@@ -16,55 +16,68 @@ Skips without the original files or the emulator's virtualenv; not part of `pnpm
 - **Scenario: the demonstration.** `localPlayerCount: 0` (`Race +0x3350`; the front end's idle demonstration): the computer drives racer 0 and the camera follows it round the track, so a lap shows every part of the track. The port runs the same scenario (`isDemonstration`, ported). The emulator and the port use the same frame clock (33 ms).
 - **Frames.** A port-only probe finds the frame racer 0 completes its first lap (`lapEndFrame`) and the frame the first racer finishes. Recorded: frames 5, 100, 170 (introduction, countdown, release), then every 90 frames (3 s) from 250 to the lap end, the lap end, and the finish +5 and +60. 17 to 51 frames per race, 718,421 original triangles in the 701 trusted frames.
 - **Comparison.** As the render trace: the original's triangles after its own culling against the port's three.js triangles under the original's model matrices (80 candidates, six cars of about ten parts), matched by corners, UVs, colour, state, texture. Per original texture (named by the port texture it looks like; failing that by a search of every bitmap in `LEGO.JAM`) the unmatched triangles are tallied with state (`opaque`, `alpha_test`, `blend`, `additive`, colour operation), screen pixels, frames, screen box and depth. Port triangles without partner are tallied by port object. Triangles both draw with another texture, UV, colour or state are tallied by port object.
+- **Cut pieces (since `fix/visibility-lod-sweep`).** The driver cuts every triangle against the viewport edges and the depth range 5 to 800 (GolDP.dll `0x1000c630` builds out-codes from the signs of x, y, z and w - x, w - y, w - z; the original's farthest corner is exactly 800.000 in 138 vertices of `tit` frame 880), so a triangle that reaches past them reaches Direct3D as a smaller polygon with new corners on the edge. `compareRenderFrame` leaves such triangles out of its count, and the first sweep tallied each of them as "no partner" (`rkroad4`: 556 of 1,869 in `rkr`). A cut piece now counts as matched when all its corners lie in the polygon the port's whole triangle leaves after the same cut (viewport, near 5, far 800; `clipped-polygon`) and the texture agrees (or the original's state uses none). The tables show them in a column of their own.
+- **Port triangles outside the depth range.** The race camera of the viewer has the original's planes (near 5, far 800, was 0.5 and 20000), so a port triangle wholly nearer than 5 or farther than 800 is not projected (`projectWorldTriangle` with the depth range), as the GPU would drop it.
 - **Untrusted frames.** A frame where less than 60 percent of the original's triangles match means the port's race has left the original's (simulation divergence of the computer racers, see [golden-trace-computers.md](golden-trace-computers.md)); it is listed but not tallied. `psp`/`psp2` lose 39 of 51 frames, `ipp` 19, `ipp2` 13, `aar` and `att2` 10 each; the rest at most 2.
-- **What the numbers are not.** `Pixels` is the sum of the unmatched triangles' areas over the sampled frames (overlaps counted twice), a ranking weight, not coverage. A texture the matcher cannot name is `unknown <hash>`. Texture names are the port's best look-alike: near duplicates (`rrlite2`/`rrlite4`) can swap.
+- **What the numbers are not.** Frames 5 and 100 (the introduction and the countdown camera) are camera mismatches: the comparison projects the port's world with the original's matrices, so a wrong camera is invisible to it, but the viewer's culling uses the port's own camera, and a prop the original's camera sees and the port's does not shows as missing (`titree8` in `tit` frame 100: the sphere is 13 units outside the right plane of the port's frustum). A camera difference is not fixed here. `Pixels` is the sum of the unmatched triangles' areas over the sampled frames (overlaps counted twice), a ranking weight, not coverage. A texture the matcher cannot name is `unknown <hash>`. Texture names are the port's best look-alike: near duplicates (`rrlite2`/`rrlite4`) can swap.
 
 ## Races
 
 | Race | Folder   | Mirrored | Lap end frame | Finish frame | Recorded | Untrusted | Mean share matched | Lowest |
 | ---- | -------- | -------- | ------------: | -----------: | -------: | --------: | -----------------: | -----: |
-| igp  | RACEC0R1 | false    |          1430 |         3827 |       20 |         0 |              0.959 |  0.921 |
-| dfd  | RACEC1R0 | false    |          1505 |         4217 |       20 |         0 |              0.967 |  0.874 |
-| mmm  | RACEC0R3 | false    |          1237 |         3413 |       17 |         0 |              0.953 |  0.745 |
-| dad  | RACEC0R2 | false    |          1404 |         3733 |       19 |         0 |              0.955 |  0.875 |
-| tit  | RACEC1R1 | false    |          2543 |         3919 |       32 |         0 |              0.960 |  0.904 |
-| rkr  | RACEC0R0 | false    |          2330 |         3476 |       30 |         0 |              0.950 |  0.861 |
-| ipp  | RACEC1R3 | false    |          2774 |         3938 |       35 |        19 |              0.920 |  0.672 |
-| ama  | RACEC1R2 | false    |          3035 |         4025 |       37 |         0 |              0.927 |  0.681 |
-| frk  | RACEC2R0 | false    |          3651 |         4030 |       44 |         0 |              0.929 |  0.829 |
-| psp  | RACEC2R1 | false    |          null |         4269 |       51 |        39 |              0.833 |  0.603 |
-| att  | RACEC2R2 | false    |          3682 |         5318 |       45 |         0 |              0.894 |  0.604 |
-| aar  | RACEC2R3 | false    |          3228 |         3613 |       40 |        10 |              0.898 |  0.624 |
-| igp2 | RACEC0R1 | true     |          1501 |         3806 |       20 |         0 |              0.924 |  0.686 |
-| dfd2 | RACEC1R0 | true     |          1679 |         4275 |       22 |         1 |              0.960 |  0.886 |
-| mmm2 | RACEC0R3 | true     |          1375 |         3436 |       19 |         1 |              0.971 |  0.882 |
-| dad2 | RACEC0R2 | true     |          1521 |         3772 |       21 |         0 |              0.913 |  0.673 |
-| tit2 | RACEC1R1 | true     |          2543 |         3919 |       32 |         0 |              0.951 |  0.869 |
-| rkr2 | RACEC0R0 | true     |          2337 |         3486 |       30 |         0 |              0.931 |  0.615 |
-| ipp2 | RACEC1R3 | true     |          2872 |         3905 |       36 |        13 |              0.784 |  0.601 |
-| ama2 | RACEC1R2 | true     |          3031 |         4023 |       37 |         0 |              0.946 |  0.752 |
-| frk2 | RACEC2R0 | true     |          null |         3987 |       48 |         1 |              0.908 |  0.673 |
-| psp2 | RACEC2R1 | true     |          null |         4278 |       51 |        39 |              0.853 |  0.623 |
-| att2 | RACEC2R2 | true     |          3916 |         4717 |       47 |        10 |              0.862 |  0.657 |
-| aar2 | RACEC2R3 | true     |          2645 |         3652 |       33 |         0 |              0.925 |  0.778 |
-| rr   | RACEC3R0 | false    |          1877 |         3424 |       25 |         0 |              0.908 |  0.708 |
-| rr2  | RACEC3R0 | true     |          1895 |         3496 |       25 |         2 |              0.916 |  0.737 |
+| igp  | RACEC0R1 | false    |          1430 |         3827 |       20 |         0 |              0.979 |  0.938 |
+| dfd  | RACEC1R0 | false    |          1505 |         4217 |       20 |         0 |              0.994 |  0.989 |
+| mmm  | RACEC0R3 | false    |          1237 |         3413 |       17 |         0 |              0.994 |  0.974 |
+| dad  | RACEC0R2 | false    |          1404 |         3733 |       19 |         0 |              0.987 |  0.896 |
+| tit  | RACEC1R1 | false    |          2543 |         3919 |       32 |         0 |              0.989 |  0.932 |
+| rkr  | RACEC0R0 | false    |          2330 |         3476 |       30 |         0 |              0.993 |  0.976 |
+| ipp  | RACEC1R3 | false    |          2774 |         3938 |       35 |        19 |              0.942 |  0.614 |
+| ama  | RACEC1R2 | false    |          3035 |         4025 |       37 |         0 |              0.967 |  0.786 |
+| frk  | RACEC2R0 | false    |          3651 |         4030 |       44 |         0 |              0.990 |  0.946 |
+| psp  | RACEC2R1 | false    |          null |         4269 |       51 |        41 |              0.902 |  0.603 |
+| att  | RACEC2R2 | false    |          3682 |         5318 |       45 |         1 |              0.947 |  0.677 |
+| aar  | RACEC2R3 | false    |          3228 |         3613 |       40 |         7 |              0.911 |  0.603 |
+| igp2 | RACEC0R1 | true     |          1501 |         3806 |       20 |         0 |              0.946 |  0.692 |
+| dfd2 | RACEC1R0 | true     |          1679 |         4275 |       22 |         1 |              0.974 |  0.888 |
+| mmm2 | RACEC0R3 | true     |          1375 |         3436 |       19 |         1 |              0.982 |  0.913 |
+| dad2 | RACEC0R2 | true     |          1521 |         3772 |       21 |         0 |              0.938 |  0.694 |
+| tit2 | RACEC1R1 | true     |          2543 |         3919 |       32 |         0 |              0.976 |  0.708 |
+| rkr2 | RACEC0R0 | true     |          2337 |         3486 |       30 |         0 |              0.974 |  0.615 |
+| ipp2 | RACEC1R3 | true     |          2872 |         3905 |       36 |        13 |              0.808 |  0.611 |
+| ama2 | RACEC1R2 | true     |          3031 |         4023 |       37 |         0 |              0.971 |  0.780 |
+| frk2 | RACEC2R0 | true     |          null |         3987 |       48 |         1 |              0.980 |  0.854 |
+| psp2 | RACEC2R1 | true     |          null |         4278 |       51 |        38 |              0.866 |  0.602 |
+| att2 | RACEC2R2 | true     |          3916 |         4717 |       47 |         9 |              0.895 |  0.602 |
+| aar2 | RACEC2R3 | true     |          2645 |         3652 |       33 |         0 |              0.969 |  0.833 |
+| rr   | RACEC3R0 | false    |          1877 |         3424 |       25 |         0 |              0.949 |  0.794 |
+| rr2  | RACEC3R0 | true     |          1895 |         3496 |       25 |         2 |              0.949 |  0.825 |
 
 `null` lap end: racer 0 does not count a lap before the first finish in the port's probe (hypothesis: the port's route follower and the start-line zone disagree on `psp`, `frk2`; the sweep then ends at the finish). The finish frames are the first racer of the field finishing (about 3,400 to 5,300 frames, 2 to 3 minutes of play).
 
-## Totals by cause (all 26 races, trusted frames)
+## Totals (all 26 races, trusted frames)
 
-| Cause                                                      | Unmatched triangles | Pixels (sum) | Frames x textures | Races |
-| ---------------------------------------------------------- | ------------------: | -----------: | ----------------: | ----: |
-| Triangles of textures the port draws elsewhere (item 2, 3) |             108,400 |      136.8 M |             8,347 |    26 |
-| Vertex-coloured geometry: sky dome and car bodies (item 1) |              16,217 |       85.6 M |             1,589 |    26 |
-| Screen overlays (race start fade, minimap, item 5)         |               1,290 |       16.4 M |               645 |    26 |
-| World sprites (item 4)                                     |               1,327 |       1.19 M |               222 |    18 |
-| Final race wall lights (item 6)                            |               1,031 |       0.79 M |                70 |     2 |
-| Other textures the port never draws                        |                 663 |       0.25 M |                55 |    23 |
-| Emitter particles and trails (item 8)                      |                 313 |       0.12 M |                18 |    11 |
+Before: the sweep as first written, on the viewer of `main` (`cov-visibility-v1`); after: the same 26 races with the cut-piece accounting and the fixes of "What is drawn when" below (`cov-visibility-v2`). The same 719,351 original triangles in the 701 trusted frames.
 
-Of the original's 718,421 triangles in the trusted frames, 129,241 (18 percent) have no partner; most are item 2 and the cars.
+| Original triangles with no partner                         |                          Before |                       After |
+| ---------------------------------------------------------- | ------------------------------: | --------------------------: |
+| Counting every cut piece as missing (the first reading)    |          111,277 (15.5 percent) |                     109,831 |
+| Cut pieces whose whole triangle the port has (not missing) | 69,632 (viewport and near only) | 72,234 (plus the far plane) |
+| **Really without a partner**                               |        **41,645 (5.8 percent)** |    **37,597 (5.2 percent)** |
+| Port triangles without a partner in the original           |                         282,517 |                     189,758 |
+
+By mechanism (really unmatched original triangles, port-only triangles):
+
+| Mechanism                                                                                                                                          | Original only, before |  after | Port only, before |   after |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------: | -----: | ----------------: | ------: |
+| Props and track objects drawn past the far plane or outside the frustum (item 9, fixed)                                                            |                     - |      - |           107,446 |  13,833 |
+| Racers: car and driver parts (poses of the computer cars, `candidateCount`; simulation, not this sweep)                                            |                14,177 | 14,709 |           169,510 | 170,347 |
+| Track surface and props: introduction camera (frames 5, 100), the last race's planet, moving track parts, `att`/`att2`/`psp` simulation divergence |                17,134 | 12,485 |                 - |       - |
+| Sky dome pieces (the dome's root has no whole triangle to choose its matrix by)                                                                    |                 5,840 |  5,916 |             3,767 |   3,818 |
+| Shadows (decals)                                                                                                                                   |                 2,162 |  2,162 |                 - |       - |
+| HUD: minimap, fades                                                                                                                                |                 1,441 |  1,441 |                 - |       - |
+| Effects, particles                                                                                                                                 |                   891 |    884 |             1,794 |   1,760 |
+
+The port-only rows of the props and track objects are the sum of the sources that are not racers, sky or particles; the plain props (`*/plainmat`, `*/nonemat`: ships, totems, towers) went from 31,806 to 430 triangles.
 
 ## Ranked list
 
@@ -83,10 +96,10 @@ Ranked by visibility (pixels x frames), in groups with one likely cause; "never 
 - Candidates: `0x004907f0` (dome builder, ring colours), `0x0041ccb0`, `0x0041c550` (Sky_Load assigns the material); port `sky` module and `services/sky-object`.
 - Part of this row is the computer cars' vertex-coloured bodies (`BKCM/all`, `KKCM/all`, `GMCM/black` ...: 16,854 + 7,286 + 6,949 + ... port triangles without partner, and the same models unmatched on the original side): both draw them, at poses that differ, so it is **measurement of computer-car divergence** (see Totals), not a missing draw. A fix task should first split sky from cars (draw order: the sky is drawn first, depth 100).
 
-### 2. Far track surface: triangles the original draws and the port has no partner for (draw distance and level of detail)
+### 2. Far track surface: **resolved, a measurement artifact plus the far plane**
 
-- Evidence: `titroad` 2,009 of 6,199, `titrock` 3,949 of 13,289, `rkroad4` 1,255 of 3,760, `atwall1` 2,514 of 8,037, `ip_ice` 1,823 of 7,259, `aaadrtrd` 1,018 of 2,760 ..., 30 to 40 percent of a textured surface's triangles, depth 8 to 800, every race. The textures are drawn by port objects (`rktk/rkroad` ...), so only some triangles lack partners.
-- Likely cause: known in render-trace.md ("draw distance of the track"). The original draws per instance level by distance (world instance levels, `0x10023940`, level distance fields) and clips by the frustum test `0x0040e270`; the port draws a different set in the far field. The port also draws far props the original does not (item 9). One fix task: compare the level choice of the instance draw (`Renderer_DrawInstance` `0x10008910`) against the viewer's level selection and draw distance.
+- The "30 to 40 percent of a textured surface" were triangles the original's driver had cut at the viewport edge (the comparison does not count them, the first sweep tallied them as missing) or at the far plane 800. Their screen boxes ran from 0 to 640 and their depths from 8 to 800 because they lay on the edges. With the cut pieces matched to their whole port triangles, `rkr` goes from 3,179 to 274 unmatched triangles, `tit` from 3,483 to 309 (see Totals).
+- The BSP leaf choice, the level distance and the sphere test were already the original's for the track tree (`getVisibleBspLeaves`, finding 6 of render-trace.md). What was not: the far plane itself (below, "What is drawn when").
 
 ### 3. Truncated walls: textured surfaces drawn with another texture, UV or colour
 
@@ -126,10 +139,10 @@ Ranked by visibility (pixels x frames), in groups with one likely cause; "never 
 
 - Never drawn by the port: `csmoke` (att, att2: 72 triangles), `watmist4` (ama: 12), `mslstrk` additive (aar2, rr, rr2: 180 triangles, additive missile streak), `canstrk` (frk, igp, rr: 39), `litflash` additive (att2: lightning flash), `welder`, `welder2` (mmm: 4). They appear in a handful of frames each, when a computer uses a power-up or an emitter fires. Overlaps the three bugs under repair (capture ship, debris, sparkles) for the power-up ones; `csmoke`, `watmist4` and the welder belong to the track's `EMIT*.EMB` pools (`hazards-and-emitters.md`) and are separate tasks.
 
-### 9. Port objects the original does not draw
+### 9. Port objects the original does not draw: props **fixed**
 
-- Props: `ship/plainmat` 5,212 triangles and `ship01` 4,762 (psp, ipp, igp), `longship`/`longsh01` 3,160 (ipp), `mosscot1`/`mosscout` 5,300 (aar), `prntdum` 2,450 (frk), `aa_plane` 1,681 (ama), `arktp` 1,492 (att), `palm00/26` (palm trees) 3,100 (dad, psp), `forbid/rr_caswl` 2,158 (psp), `mmlava` 2,173 (mmm), `pswater` 7,444 (psp). All vertex-coloured or texture-less props drawn in frames where the original does not: draw distance / instance level or an instance flag that hides them in the original (hypothesis; same family as item 2).
-- Cars: see item 1.
+- Props (`ship01`, `longship`, `mosscot1`, `prntdum`, `aa_plane`, `arktp`, `palm00`, `forbid`, `drop`, `kttowr`, `tithead`, `tittot3`, `tower`, `cbase` ...) were drawn when the original culled them: the viewer applied the level distance and the sphere test only to instances the race simulation tracks (hazards, animated skeletons), and let three.js cull the rest with a far plane of 20,000. Fixed, see "What is drawn when": the plain props went from 31,806 to 430 port-only triangles, all port-only track objects from 107,446 to 13,833 (the remainder are the track triangles that straddle the far plane, which the comparison reads uncut, and animated or moving parts).
+- Cars: see item 1 (the poses of the computer cars; `KKCM/all` and the like are 170,000 port-only triangles in the sweep and unchanged).
 - State: port enables the alpha test where the original does not (`isAlphaTestEnabled false -> true`): car parts (`KKJMW` 11,515 triangles ...), `rktk/rktowtop`, `rktk/rkfence`, `ENHABRIK/pubrickw`, `PUBRICKY/*`, shadows `/carshad0` (1,215). The viewer's alpha test stands in for the colour key ([render-trace.md](render-trace.md)); not a visible gap.
 
 ### 10. Measurement limits (do not become tasks)
@@ -155,9 +168,26 @@ Ranked by visibility (pixels x frames), in groups with one likely cause; "never 
 3. Apply instance UV scroll to the track materials and check the clock phase (item 3).
 4. Sky: material texture, depth, colour keyframes (item 1); first separate the sky from the cars in the sweep.
 5. Race start fade-in quad `0x00433525` (item 5), then the finish fades.
-6. Far track surface: level choice and draw distance (items 2, 9).
+6. ~~Far track surface: level choice and draw distance (items 2, 9)~~: done, see "What is drawn when".
 7. Planet of the last race (item 7).
 8. Particles: `csmoke`, `watmist4`, welders, power-up trails (item 8).
 9. Sweep: compare computer cars' poses (golden trace) so that cars stop dominating the unmatched list.
+
+## What is drawn when (draw distance, level of detail, culling, fog)
+
+The class sweep over all 26 races, by mechanism. Evidence is `cov-visibility-v1` and `v2` (the numbers under Totals); the cases that hold the fixes are in `visibility.trace.spec.ts`.
+
+| Mechanism       | Original (address)                                                                                                                                                                                                                                                               | Port before                                                                                    | Port now                                                          |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Clip volume     | Out-codes of the transform `0x1000c630`: x, y, w - x, w - y from the signs, z < 0 and z > w; the race camera has near 5, far 800 (render-trace.md finding 6); the farthest corner drawn is 800.000                                                                               | Camera near 0.5, far 20,000: triangles past 800 were drawn whole                               | `ORIGINAL_NEAR_PLANE` and `ORIGINAL_FAR_PLANE` in the race camera |
+| Instance level  | `0x10027d80` (mesh and BSP instances) and `0x100240b0` (skeleton instances): the first of three squared distances not below the squared distance from the instance position (mesh) or from the sphere centre (skeleton); none past the last, and none on a level without a model | Only instances the race tracked or with several levels; a single finite level was always drawn | Every non-background instance (`scene-object`)                    |
+| Instance sphere | The same functions then test the sphere against the six planes (`0x1002bc20`); the sphere is the level 0 mesh's bounding sphere (`0x100278c0`, `getModelBounds`) carried by the instance frame (`0x10027ea0`), or for a playing clip the clip's sphere (`0x10023ef0`)            | Only the clip spheres of animated skeleton instances                                           | Every instance; `SceneMesh.boundingSphere`                        |
+| BSP leaves      | `0x100092a0`, `0x1001b640`, `0x1002bc90` (bsp-tree.md)                                                                                                                                                                                                                           | Ported                                                                                         | Unchanged                                                         |
+| Racers' parts   | `0x0040e270`: level distance 500 and a sphere test                                                                                                                                                                                                                               | Ported (render-trace.md finding 6b)                                                            | Unchanged                                                         |
+| Sprites         | `0x10029fa0` distance limit                                                                                                                                                                                                                                                      | Ported                                                                                         | Unchanged                                                         |
+| Fog             | None: no frame of the sweep sets render state 28 (fog enable) or any fog state; the recorder logs every `SetRenderState`                                                                                                                                                         | None                                                                                           | None                                                              |
+| Cut pieces      | The driver emits the polygon left after the cut as new triangles                                                                                                                                                                                                                 | n/a (measurement)                                                                              | Sweep matches a piece to its whole triangle                       |
+
+Open, outside this task (noted, not fixed): the introduction and countdown camera (frames 5 and 100, a camera difference); the dome (its root has no whole triangle, so the comparison cannot pick its matrix and the 36 port triangles read as extras against 16 cut original ones, 5,916 of the unmatched); the last race's planet (`planet` 1,785 unmatched, placement of the backdrop and its scroll, item 7); the computer cars' poses (14,709 original-only and 170,347 port-only, simulation); moving track parts of `ama` and `att2` (the Amazon's `titrock`, `aaawatr`, `atwall1`: positions of animated instances); water and lava surfaces (`pswater`, `mmlava`, `iawater`: UV scroll, item 3).
 
 Everything above is from one run (26 races, 17 to 51 frames each); names of causes marked hypothesis are not traced to an address.

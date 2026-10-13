@@ -3,6 +3,7 @@ import { projectVertex } from '../screen-projection.ts'
 import type { TextureMatch } from '../texture-matching.types.ts'
 import type {
   ClippedPolygon,
+  DepthRange,
   DrawnTriangle,
   PixelPoint,
   RenderViewportSize,
@@ -14,9 +15,6 @@ import type {
 
 // Closer than this the clip is a numeric edge, not the near plane the original cuts at.
 const MINIMUM_CLIP_W = 0.001
-// The race camera's depth range (render-trace.md finding 6): GolDP.dll 0x1000c630 clips against z in 0..w of the clip matrix.
-const NEAR_PLANE_DEPTH = 5
-const FAR_PLANE_DEPTH = 800
 const PLANE_DEPTH_TOLERANCE = 0.05
 // Pixels a fragment's corner may lie outside the polygon of its whole triangle.
 const CONTAINMENT_TOLERANCE_PIXELS = 0.75
@@ -58,13 +56,16 @@ export const getClippedPolygon = (
   triangle: WorldTriangle,
   matrix: ScreenMatrix,
   space: 'world' | 'local',
-  viewport: RenderViewportSize
+  viewport: RenderViewportSize,
+  depthRange: DepthRange | null
 ): ClippedPolygon | null => {
   const corners = (space === 'world' ? triangle.vertices : triangle.localVertices).map((vertex) =>
     getClipCorner(vertex, matrix)
   )
   const isWhole = corners.every(
-    (corner) => corner.w >= NEAR_PLANE_DEPTH && corner.w <= FAR_PLANE_DEPTH
+    (corner) =>
+      corner.w > 0 &&
+      (depthRange === null || (corner.w >= depthRange.near && corner.w <= depthRange.far))
   )
   const kept = getCutAtNearPlane(corners)
   if (kept.length < 3) return null
@@ -86,16 +87,18 @@ export const getClippedPolygon = (
 // near or far plane.
 export const getIsCutPiece = (
   triangle: ScreenTriangle,
-  viewport: RenderViewportSize
+  viewport: RenderViewportSize,
+  depthRange: DepthRange | null
 ): boolean =>
   !getIsInside(triangle, viewport) ||
-  triangle.some((vertex) => {
-    const depth = 1 / vertex.reciprocalW
-    return (
-      Math.abs(depth - NEAR_PLANE_DEPTH) < PLANE_DEPTH_TOLERANCE ||
-      Math.abs(depth - FAR_PLANE_DEPTH) < PLANE_DEPTH_TOLERANCE
-    )
-  })
+  (depthRange !== null &&
+    triangle.some((vertex) => {
+      const depth = 1 / vertex.reciprocalW
+      return (
+        Math.abs(depth - depthRange.near) < PLANE_DEPTH_TOLERANCE ||
+        Math.abs(depth - depthRange.far) < PLANE_DEPTH_TOLERANCE
+      )
+    }))
 
 const getIsInsideConvexPolygon = (point: PixelPoint, polygon: ClippedPolygon): boolean =>
   polygon.corners.every((corner, index) => {

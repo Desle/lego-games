@@ -1,5 +1,6 @@
 import type {
   ClippedPolygon,
+  DepthRange,
   DrawnTriangle,
   RenderFrameComparison,
   RenderFrameInput,
@@ -10,6 +11,8 @@ import type {
 export type RootComparisonInput = Omit<RenderFrameInput, 'port'> & {
   readonly port: readonly WorldTriangle[]
   readonly candidates: readonly ScreenMatrix[]
+  // Set for the race camera: a port triangle wholly outside these depths is not drawn, and the original cuts at them.
+  readonly depthRange?: DepthRange
 }
 
 // The matrix and space an object tree of the port was projected with.

@@ -23,7 +23,7 @@ import { createRaceStage } from '../race-viewport/race-viewport.ts'
 import { readOriginalJam } from './original-game-files.ts'
 import { loadScenarioAssets } from './scenario-assets.ts'
 import { ORIGINAL_STAGE_SIZE, runPortRace } from './port-race.ts'
-import { compareWorldFrame, getSceneTextures } from './render-comparison.ts'
+import { compareWorldFrame, getSceneTextures, RACE_DEPTH_RANGE } from './render-comparison.ts'
 import type {
   CoverageExtraRow,
   CoverageBounds,
@@ -285,7 +285,7 @@ export const runRenderCoverage = async (
       row.originalTriangles += 1
       if (matched.has(triangle)) continue
       if (
-        getIsCutPiece(triangle.vertices, ORIGINAL_STAGE_SIZE) &&
+        getIsCutPiece(triangle.vertices, ORIGINAL_STAGE_SIZE, RACE_DEPTH_RANGE) &&
         getIsFragmentOfPolygon(triangle, comparison.clippedPolygons, textureMatches)
       ) {
         row.clippedTriangles += 1

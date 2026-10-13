@@ -3,6 +3,7 @@ import { getClippedPolygon } from './clipped-polygon/clipped-polygon.ts'
 import { projectWorldTriangle } from './screen-projection.ts'
 import type {
   ClippedPolygon,
+  DepthRange,
   DrawnTriangle,
   RenderFrameInput,
   ScreenMatrix,
@@ -15,10 +16,11 @@ const SPACES = ['world', 'local'] as const
 const getProjected = (
   triangles: readonly WorldTriangle[],
   matrix: ScreenMatrix,
-  space: 'world' | 'local'
+  space: 'world' | 'local',
+  depthRange: DepthRange | null
 ): readonly DrawnTriangle[] =>
   triangles.flatMap((triangle) => {
-    const drawn = projectWorldTriangle(triangle, matrix, space)
+    const drawn = projectWorldTriangle(triangle, matrix, space, depthRange)
     return drawn === null ? [] : [drawn]
   })
 
@@ -41,7 +43,13 @@ const getRootPolygons = (
   space: 'world' | 'local'
 ): readonly ClippedPolygon[] =>
   triangles.flatMap((triangle) => {
-    const polygon = getClippedPolygon(triangle, matrix, space, input.viewport)
+    const polygon = getClippedPolygon(
+      triangle,
+      matrix,
+      space,
+      input.viewport,
+      input.depthRange ?? null
+    )
     return polygon === null ? [] : [polygon]
   })
 
@@ -64,7 +72,7 @@ export const compareRenderFrameByRoot = (input: RootComparisonInput): RootCompar
     for (const [candidateIndex, matrix] of input.candidates.entries()) {
       for (const space of SPACES) {
         const comparison = compareRenderFrame(
-          getRootInput(input, remaining, getProjected(own, matrix, space))
+          getRootInput(input, remaining, getProjected(own, matrix, space, input.depthRange ?? null))
         )
         const isBetter = comparison.matchedCount > chosen.matchedCount
         if (isBetter) {
@@ -79,7 +87,9 @@ export const compareRenderFrameByRoot = (input: RootComparisonInput): RootCompar
   }
   const port = choices.flatMap((choice) => {
     const matrix = input.candidates[choice.candidateIndex]
-    return matrix === undefined ? [] : getProjected(getTriangles(choice.root), matrix, choice.space)
+    return matrix === undefined
+      ? []
+      : getProjected(getTriangles(choice.root), matrix, choice.space, input.depthRange ?? null)
   })
   const clippedPolygons = choices.flatMap((choice) => {
     const matrix = input.candidates[choice.candidateIndex]

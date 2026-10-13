@@ -14,6 +14,7 @@ import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-race
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
 import type { PortTexture, QuadPlacement } from '@lego-games/lego-racers/presentation-trace'
 import type { Scene } from '@lego-games/lego-racers/scene'
+import { ORIGINAL_FAR_PLANE, ORIGINAL_NEAR_PLANE } from '../race-viewport/camera-frustum.ts'
 import { createRaceStage } from '../race-viewport/race-viewport.ts'
 import { readOriginalJam } from './original-game-files.ts'
 import { loadScenarioAssets } from './scenario-assets.ts'
@@ -85,6 +86,8 @@ const CANDIDATE_COUNT = 24
 const HUD_TOLERANCE_PIXELS = 0.25
 // The HUD never wraps its text (the overlay's width, race-hud-overlay.tsx).
 const HUD_UNBOUNDED_WIDTH = 0x7fff
+// The race camera's planes: the original's driver cuts at them (GolDP.dll 0x1000c630), the viewer's camera does too.
+export const RACE_DEPTH_RANGE = Object.freeze({ near: ORIGINAL_NEAR_PLANE, far: ORIGINAL_FAR_PLANE })
 export const TOLERANCES = Object.freeze({
   positionPixels: 0.25,
   textureCoordinate: 0.001,
@@ -123,6 +126,7 @@ export const compareWorldFrame = (input: WorldFrameInput): WorldFrameComparison 
     original: originalTriangles,
     port: portTriangles.triangles,
     candidates: getCandidateMatrices(originalFrame, candidateCount, ORIGINAL_STAGE_SIZE),
+    depthRange: RACE_DEPTH_RANGE,
     viewport: { width: ORIGINAL_STAGE_SIZE.width, height: ORIGINAL_STAGE_SIZE.height },
     textureMatches,
     tolerances: TOLERANCES,
