@@ -96,10 +96,11 @@ const DEFAULT_MODES = ['demonstration', 'player']
 
 // Camera differences not traced to their cause yet, by scenario name.
 const KNOWN_CAMERA_DIVERGENCES: Readonly<Record<string, string>> = Object.freeze({
-  // The node orientation of the introduction clip is one unit in the last place off in places (position matches): the
-  // original mirrors the animation keys (0x004015e0, 0x0040ea20), the port flips y of the finished vectors.
-  'racec0r0-mirrored-demonstration': 'camera0.node.orientation',
-  'racec0r0-mirrored-player': 'camera0.node.orientation',
+  // The node orientation of the introduction clip is one unit in the last place off in places (position matches), and the
+  // basis eased from it after the release: the original mirrors the animation keys (0x004015e0, 0x0040ea20), the port flips y
+  // of the finished vectors.
+  'racec0r0-mirrored-demonstration': 'camera0.basis,camera0.node.orientation',
+  'racec0r0-mirrored-player': 'camera0.basis,camera0.node.orientation',
 })
 
 // What the camera reads from its racer: when the port's racer differs, the camera is judged only before that frame.
