@@ -51,6 +51,67 @@ describe('parseBuilderDocument', () => {
   })
 })
 
+const DRIVER_TEXT = [
+  '0 RR driver',
+  '0 Name: RR.ldr',
+  '0 !LDRAW_ORG Unofficial_Model',
+  '0 BFC CERTIFY CCW',
+  '',
+  '0 !RACERS ROLE hips',
+  '0 !RACERS GUESS close',
+  '1 71 0 0 0 1 0 0 0 1 0 0 0 1 3815b.dat',
+  '0 // head',
+  '0 !RACERS ROLE head',
+  '0 !RACERS GUESS exact',
+  '1 14 0 -56 0 1 0 0 0 1 0 0 0 1 3626cp40.dat',
+  '',
+].join('\n')
+
+describe('parseBuilderDocument with metas before parts', () => {
+  it('keeps the official header metas in the header and every other meta with the part after it', () => {
+    // Arrange
+    const text = DRIVER_TEXT
+
+    // Act
+    const document = parseBuilderDocument(text)
+
+    // Assert
+    expect(document.headerLines).toEqual([
+      '0 RR driver',
+      '0 Name: RR.ldr',
+      '0 !LDRAW_ORG Unofficial_Model',
+      '0 BFC CERTIFY CCW',
+    ])
+    expect(document.parts.map((part) => part.commentLines)).toEqual([
+      ['0 !RACERS ROLE hips', '0 !RACERS GUESS close'],
+      ['0 // head', '0 !RACERS ROLE head', '0 !RACERS GUESS exact'],
+    ])
+  })
+
+  it('writes every meta back before its own part, also after the parts are edited', () => {
+    // Arrange
+    const document = parseBuilderDocument(DRIVER_TEXT)
+    const [hips, head] = document.parts
+    const edited = { ...document, parts: [head, hips].filter((part) => part !== undefined) }
+
+    // Act
+    const lines = serializeBuilderDocument(edited).split('\n')
+
+    // Assert
+    expect(lines.slice(lines.indexOf('0 // head'))).toEqual([
+      '0 // head',
+      '0 !RACERS ROLE head',
+      '0 !RACERS GUESS exact',
+      '1 14 0 -56 0 1 0 0 0 1 0 0 0 1 3626cp40.dat',
+      '0 !RACERS ROLE hips',
+      '0 !RACERS GUESS close',
+      '1 71 0 0 0 1 0 0 0 1 0 0 0 1 3815b.dat',
+      '',
+    ])
+    expect(parseBuilderDocument(serializeBuilderDocument(document))).toEqual(document)
+  })
+})
+
 describe('turnQuarter', () => {
   it('comes back to where it started after four turns', () => {
     // Arrange

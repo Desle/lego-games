@@ -12,7 +12,7 @@ import {
 import { Buffer } from 'node:buffer'
 import { basename, dirname, extname, join } from 'node:path'
 import { readLDrawModelFiles } from '../development-ldraw-models-server/read-ldraw-model-files.ts'
-import { LDRAW_CHASSIS_FOLDER } from '../ldraw-models/ldraw-models-route.ts'
+import { LDRAW_CHASSIS_FOLDER, LDRAW_DRIVERS_FOLDER } from '../ldraw-models/ldraw-models-route.ts'
 import { getBuilderItemFile } from './builder-items.ts'
 import { BUILDER_BACKUP_FOLDER, BUILDER_PROGRESS_STORE } from './ldraw-builder-route.ts'
 import type {
@@ -111,9 +111,12 @@ export const saveBuilderModel = (
 ): BuilderSaveResult | string => {
   const existing = readLDrawModelFiles(modelsRoot)
     .map((file) => file.path)
-    .filter((path) => !path.includes('/') || dirname(path) === LDRAW_CHASSIS_FOLDER)
+    .filter(
+      (path) =>
+        !path.includes('/') || [LDRAW_CHASSIS_FOLDER, LDRAW_DRIVERS_FOLDER].includes(dirname(path))
+    )
   const file = getBuilderItemFile(request.itemId, existing)
-  if (file === null) return `${request.itemId} is not a car or chassis of the builder`
+  if (file === null) return `${request.itemId} is not a car, chassis or driver of the builder`
   if (!getIsLDrawText(request.text)) return 'the text is not an LDraw model'
   const path = join(modelsRoot, file)
   const backupPath = existsSync(path)

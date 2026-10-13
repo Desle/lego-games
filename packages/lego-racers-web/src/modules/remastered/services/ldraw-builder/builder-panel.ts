@@ -19,6 +19,16 @@ const REFERENCE_LABELS: Readonly<Record<ReferenceMode, string>> = {
   [ReferenceMode.OFF]: 'Original: off',
 }
 const MODEL_FILE_LABEL = '(models folder file)'
+const QUEUE_LABELS: Readonly<Record<BuilderItemKind, (name: string) => string>> = {
+  [BuilderItemKind.CHASSIS]: (name) => `Chassis ${name.toUpperCase()}`,
+  [BuilderItemKind.CAR]: (name) => `Car ${name}`,
+  [BuilderItemKind.DRIVER]: (name) => `Driver ${name}`,
+}
+const QUEUE_GROUPS: Readonly<Record<BuilderItemKind, string>> = {
+  [BuilderItemKind.CHASSIS]: 'Chassis',
+  [BuilderItemKind.CAR]: 'Cars',
+  [BuilderItemKind.DRIVER]: 'Drivers',
+}
 const BYTE = 255
 
 const createElement = <Name extends keyof HTMLElementTagNameMap>(
@@ -194,19 +204,19 @@ export const createBuilderPanel = (
       const doneCount = view.items.filter((item) => view.done.includes(item.id)).length
       progress.textContent = `${String(doneCount)}/${String(view.items.length)} done`
       queueList.replaceChildren(
-        ...view.items.map((item) => {
+        ...view.items.flatMap((item, index) => {
           const isDone = view.done.includes(item.id)
-          const label =
-            item.kind === BuilderItemKind.CHASSIS
-              ? `Chassis ${item.name.toUpperCase()}`
-              : `Car ${item.name}`
+          const label = QUEUE_LABELS[item.kind](item.name)
           const row = createElement('li', item.id === view.currentId ? 'current' : '')
           row.append(
             createButton(`${isDone ? '✓' : '·'} ${label}`, isDone ? 'item done' : 'item', () =>
               handlers.onItemSelect(item.id)
             )
           )
-          return row
+          const isGroupStart = view.items[index - 1]?.kind !== item.kind
+          return isGroupStart
+            ? [createElement('li', 'queue-group', QUEUE_GROUPS[item.kind]), row]
+            : [row]
         })
       )
       queueList.querySelector('.current')?.scrollIntoView({ block: 'nearest' })

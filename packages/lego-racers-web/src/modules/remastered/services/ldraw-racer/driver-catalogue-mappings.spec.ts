@@ -3,7 +3,13 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import { parseBodyPartCatalog } from '@lego-games/lego-racers/figure-builder'
-import { LDRAW_FACES, LDRAW_HATS, LDRAW_LEGS, LDRAW_TORSOS } from './ldraw-minifig-parts.ts'
+import {
+  DRIVER_CATALOGUE_GAPS,
+  LDRAW_FACES,
+  LDRAW_HATS,
+  LDRAW_LEGS,
+  LDRAW_TORSOS,
+} from './driver-catalogue-mappings.ts'
 
 const JAM_PATH = join(
   import.meta.dirname,
@@ -13,9 +19,15 @@ const LIBRARY_PARTS = join(homedir(), 'ldraw', 'parts')
 const isJamPresent = existsSync(JAM_PATH)
 const isLibraryPresent = existsSync(LIBRARY_PARTS)
 const CATALOG_PATH = 'MENUDATA\\PARTDB\\BODYPART.PCB'
+const HOOK_TORSO_TYPE = 1
 
-describe('the library parts of the catalogue', () => {
-  it('has a place for each hat, face, torso and pair of legs, the first hat being none', () => {
+const readCatalog = () =>
+  parseBodyPartCatalog(
+    openJamArchive(new Uint8Array(readFileSync(JAM_PATH))).readFile(CATALOG_PATH)
+  )
+
+describe('the driver catalogue mappings', () => {
+  it('has a row for each hat, face, torso and pair of legs, the first hat being none', () => {
     // Arrange / Act
     const sizes = [LDRAW_HATS.length, LDRAW_FACES.length, LDRAW_TORSOS.length, LDRAW_LEGS.length]
 
@@ -47,28 +59,60 @@ describe('the library parts of the catalogue', () => {
     expect(entries.filter((entry) => entry.source === '' || entry.catalogName === '')).toEqual([])
   })
 
-  it.skipIf(!isJamPresent)('is in the order of the game catalogue', () => {
-    // Arrange
-    const catalog = parseBodyPartCatalog(
-      openJamArchive(new Uint8Array(readFileSync(JAM_PATH))).readFile(CATALOG_PATH)
-    )
+  it.skipIf(!isJamPresent)(
+    'maps every piece of the game catalogue, in its order, or lists it as a gap',
+    () => {
+      // Arrange
+      const catalog = readCatalog()
+      const getMissing = (names: readonly string[], mapped: readonly { catalogName: string }[]) =>
+        names.filter(
+          (name, index) =>
+            mapped[index]?.catalogName !== name && !DRIVER_CATALOGUE_GAPS.includes(name)
+        )
 
-    // Act
-    const names = [
-      catalog.hats.map((hat) => hat.name.replace('.', '')),
-      catalog.heads.entries.map((head) => head.name),
-      catalog.torsos.entries.map((torso) => torso.name),
-      catalog.legs.entries.map((legs) => legs.name),
-    ]
+      // Act
+      const missing = [
+        ...getMissing(
+          catalog.hats.map((hat) => hat.name.replace('.', '')),
+          LDRAW_HATS
+        ),
+        ...getMissing(
+          catalog.heads.entries.map((head) => head.name),
+          LDRAW_FACES
+        ),
+        ...getMissing(
+          catalog.torsos.entries.map((torso) => torso.name),
+          LDRAW_TORSOS
+        ),
+        ...getMissing(
+          catalog.legs.entries.map((legs) => legs.name),
+          LDRAW_LEGS
+        ),
+      ]
 
-    // Assert
-    expect(names).toEqual([
-      LDRAW_HATS.map((entry) => entry.catalogName),
-      LDRAW_FACES.map((entry) => entry.catalogName),
-      LDRAW_TORSOS.map((entry) => entry.catalogName),
-      LDRAW_LEGS.map((entry) => entry.catalogName),
-    ])
-  })
+      // Assert
+      expect(missing).toEqual([])
+    }
+  )
+
+  it.skipIf(!isJamPresent)(
+    'gives a hook hand to exactly the torsos the catalogue types as hook torsos',
+    () => {
+      // Arrange
+      const catalog = readCatalog()
+
+      // Act
+      const hookTorsos = [
+        catalog.torsos.entries
+          .filter((torso) => torso.type === HOOK_TORSO_TYPE)
+          .map((torso) => torso.name),
+        LDRAW_TORSOS.filter((torso) => torso.isHookHand).map((torso) => torso.catalogName),
+      ]
+
+      // Assert
+      expect(hookTorsos[1]).toEqual(hookTorsos[0])
+    }
+  )
 
   it.skipIf(!isLibraryPresent)('names parts the LDraw library has', () => {
     // Arrange
@@ -76,7 +120,7 @@ describe('the library parts of the catalogue', () => {
     const parts = [
       ...LDRAW_HATS.flatMap((entry) => entry.hats.map((hat) => hat.part)),
       ...LDRAW_FACES.map((entry) => entry.part),
-      ...LDRAW_TORSOS.flatMap((entry) => (entry.print === null ? [] : [entry.print.part])),
+      ...LDRAW_TORSOS.map((entry) => entry.part),
       ...LDRAW_LEGS.flatMap((entry) => [entry.leftLeg.part, entry.rightLeg.part]),
     ]
 

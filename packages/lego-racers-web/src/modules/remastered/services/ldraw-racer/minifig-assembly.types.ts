@@ -1,4 +1,3 @@
-import type { Matrix4 } from 'three'
 import { createEnum } from '../../../../shared/types/enum.types.ts'
 import type { EnumValues } from '../../../../shared/types/enum.types.ts'
 
@@ -23,14 +22,3 @@ export const MinifigPosture = createEnum({
   SEATED: 'seated',
 })
 export type MinifigPosture = EnumValues<typeof MinifigPosture>
-
-// One library part of the figure: where it sits in the figure's own frame (LDraw axes and units) when the skeleton is in its bind pose.
-export type MinifigPartPlan = {
-  readonly key: MinifigPartKey
-  readonly part: string
-  // An LDraw colour code, or a direct colour (`0x2RRGGBB`).
-  readonly color: number | string
-  readonly matrix: Matrix4
-  // Flesh (a head, a hand): the part the menus' lighting must show as the yellow it is.
-  readonly isSkin: boolean
-}
