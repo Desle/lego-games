@@ -1,7 +1,7 @@
 import { createEmitterPool } from '../../../emitter/index.ts'
 import type { Emitter } from '../../../emitter/index.ts'
 import { HazardLifecycle } from '../../types/hazard-lifecycle/hazard-lifecycle.ts'
-import { createTestSession } from '../hazard-fixtures/hazard-fixtures.ts'
+import { createTestRacer, createTestSession } from '../hazard-fixtures/hazard-fixtures.ts'
 import { SNOWFALL } from './snowfall.ts'
 
 const snow: Emitter = {
@@ -22,8 +22,9 @@ const snow: Emitter = {
   linkedName: null,
 }
 
-const createLoaded = () => {
+const createLoaded = (isColourShifted = false) => {
   const test = createTestSession({
+    racers: [createTestRacer(0, 0, { isColourShifted })],
     emitters: createEmitterPool({
       list: { emitters: [snow], readByteCount: 0 },
       instanceCount: 2,
@@ -76,6 +77,43 @@ describe('the snowfall', () => {
 
     // Assert
     expect(test.getDrawCount()).toBe(1)
+  })
+
+  it('places the emitter 100 in front of the camera, spread across the view by the drawn value (0x0048eb70)', () => {
+    // Arrange
+    const { test, loaded } = createLoaded()
+    const made = SNOWFALL.update(loaded, test.session, 33)
+    const drawn = SNOWFALL.updateAfterRacers(made, test.session, [])
+    const camera = {
+      position: { x: 10, y: 20, z: 30 },
+      forward: { x: 0, y: 1, z: 0 },
+      second: { x: 0, y: 0, z: -1 },
+    }
+
+    // Act
+    SNOWFALL.followCameras(drawn, test.session, [camera])
+
+    // Assert
+    const across = ((drawn.data as { placementValue: number }).placementValue % 200) - 100
+    const emitter = test.getEmitters()?.instances[0]
+    expect(emitter?.position).toEqual({ x: 10 + across, y: 120, z: 70 })
+    expect(emitter?.basis).toEqual([0, 1, 0, -1, 0, 0, 0, 0, 1])
+  })
+
+  it('lets go of its emitter and stops snowing while a colour shift is on the racer (0x0048eb70)', () => {
+    // Arrange
+    const { test, loaded } = createLoaded(true)
+    const made = SNOWFALL.update(loaded, test.session, 33)
+
+    // Act
+    const shifted = SNOWFALL.updateAfterRacers(made, test.session, [])
+    const later = SNOWFALL.update(shifted, test.session, 33)
+
+    // Assert
+    expect(shifted.data).toMatchObject({ isEnabled: false, emitterHandle: null })
+    expect(later.data).toMatchObject({ emitterHandle: null })
+    expect(test.getDrawCount()).toBe(0)
+    expect(test.getEmitters()?.handles[0]?.isTaken).toBe(false)
   })
 
   it('lets go of its emitter when it ends', () => {

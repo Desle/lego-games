@@ -4,7 +4,7 @@ import type {
   OriginalRenderFrame,
   PortTexture,
   QuadComparison,
-  RenderFrameComparison,
+  RootComparison,
   RenderMismatchGroup,
   TextureMatch,
 } from '@lego-games/lego-racers/presentation-trace'
@@ -60,5 +60,5 @@ export type WorldFrameComparison = {
   readonly originalTriangles: readonly DrawnTriangle[]
   readonly portTriangles: PortTriangles
   readonly textureMatches: ReadonlyMap<string, TextureMatch>
-  readonly comparison: RenderFrameComparison
+  readonly comparison: RootComparison
 }

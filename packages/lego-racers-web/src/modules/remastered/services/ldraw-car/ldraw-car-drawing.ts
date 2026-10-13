@@ -7,8 +7,10 @@ import { Group, Mesh } from 'three'
 import type { Object3D } from 'three'
 import type { LDrawDetail } from '../ldraw-library/ldraw-library-loader.types.ts'
 import { createDetailedBody } from './detailed-body.ts'
-import { createGameBrickMeshes } from './game-brick-meshes.ts'
+import { getBodyColoredDesign, getIsLDrawBrick } from './brick-body-color.ts'
+import { createGameBrickMeshes, getGameBrickMaterials } from './game-brick-meshes.ts'
 import { loadDesignGridOffset } from './chassis-grid-offset-loader.ts'
+import { getDeckRestedDesign } from './deck-rested-design.ts'
 import {
   createLDrawCarDocument,
   getChassisFileName,
@@ -21,6 +23,8 @@ import type { BodyWheel } from './detailed-body.types.ts'
 import type { LDrawCarDrawing, LDrawCarRequest } from './ldraw-car-drawing.types.ts'
 
 const NO_CHASSIS_MODELS: ReadonlyMap<string, string> = new Map()
+// How far (studs) a print of the original is laid out from its brick's face, so it shows on the LDraw part's face.
+const DECAL_LIFT = 0.02
 
 const getIsPlasticMesh = (object: Object3D): object is PlasticMesh => object instanceof Mesh
 
@@ -62,12 +66,40 @@ export const createLDrawCarDrawing = (
   if (isLDrawUsed) object.add(placeholder)
   const draw = async () => {
     const gridOffset = await loadDesignGridOffset(design, chassisModels)
-    const shiftedDocument = createLDrawCarDocument(design, origin, chassisReferences, gridOffset)
-    gameMeshes.position.set(
-      gridOffset.x / LDRAW_UNITS_PER_STUD,
-      gridOffset.z / LDRAW_UNITS_PER_STUD,
-      -gridOffset.y / LDRAW_UNITS_PER_STUD
+    const builtDesign = getBodyColoredDesign(
+      database,
+      getGameBrickMaterials(archive),
+      chassisModels.size === 0 ? design : getDeckRestedDesign(design)
     )
+    const shiftedDocument = createLDrawCarDocument(
+      builtDesign,
+      origin,
+      chassisReferences,
+      gridOffset
+    )
+    const restedGameMeshes = createGameBrickMeshes(
+      archive,
+      database,
+      shiftedDocument.unmappedBricks,
+      origin
+    )
+    const prints = createGameBrickMeshes(
+      archive,
+      database,
+      builtDesign.bricks.filter(getIsLDrawBrick),
+      origin,
+      DECAL_LIFT
+    )
+    object.remove(gameMeshes)
+    disposeMeshes(gameMeshes)
+    for (const meshes of [restedGameMeshes, prints]) {
+      object.add(meshes)
+      meshes.position.set(
+        gridOffset.x / LDRAW_UNITS_PER_STUD,
+        gridOffset.z / LDRAW_UNITS_PER_STUD,
+        -gridOffset.y / LDRAW_UNITS_PER_STUD
+      )
+    }
     const body = createDetailedBody(
       [
         shiftedDocument.text,

@@ -6,6 +6,8 @@ export {
 export {
   attachCamera,
   createCamera,
+  placeCameraAtIntroductionPoint,
+  placeCameraAtView,
   requestCameraSnap,
   setCameraLookingBehind,
   setCameraPreset,
@@ -15,6 +17,7 @@ export { getCameraRacerView } from './controller/get-camera-racer-view/get-camer
 export { CameraMode } from './types/camera-mode/camera-mode.ts'
 export type {
   CameraFinishOffsets,
+  CameraNodeOrientation,
   CameraMode as CameraModeValue,
   CameraPreset,
   CameraRacerView,

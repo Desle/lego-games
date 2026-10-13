@@ -171,6 +171,9 @@ export type PowerUpEffect = {
   readonly timerMilliseconds: number
   // +0x14.
   readonly level: number
+  // The milliseconds the effect's figures were stepped since it started (0x0045ce20 steps them every update, whatever the
+  // state), which is what their texture scroll has run.
+  readonly figureAgeMilliseconds: number
   // The racer who used it (racer index), or null.
   readonly ownerRacer: number | null
   // The racer it latched on to, homes in on or captured, or null.

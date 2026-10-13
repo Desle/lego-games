@@ -6,3 +6,10 @@ export type EffectEmitterOwner = {
   readonly rotation: Matrix3
   readonly velocity: Vector3
 }
+
+// Where an effect's emitter sits and the facing and up direction its basis is made from.
+export type OrientedEmitterPlacement = {
+  readonly position: Vector3
+  readonly facing: Vector3
+  readonly up: Vector3
+}

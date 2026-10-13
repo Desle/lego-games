@@ -1,6 +1,6 @@
 # Audio trace: what the original plays, against the port
 
-The golden trace compares the simulation. The audio trace compares what the player **hears**: the sound effects the race asks for and the tunes its music stream plays. `pnpm run audio-trace` runs the original race in the emulator with a fake DirectSound device and the port beside it, over eight scenarios (about 80 s). It skips cleanly without the virtualenv or the original files and is not part of `pnpm run check` (the specs are named `*.trace.spec.ts`; `vitest.trace.config.ts` of the viewer package runs them).
+The golden trace compares the simulation. The audio trace compares what the player **hears**: the sound effects the race asks for and the tunes its music stream plays. `pnpm run audio-trace` runs the original race in the emulator with a fake DirectSound device and the port beside it, over eight scenarios (about 80 s) and the sweep below (66 more cases, about an hour on a quiet machine). It skips cleanly without the virtualenv or the original files and is not part of `pnpm run check` (the specs are named `*.trace.spec.ts`; `vitest.trace.config.ts` of the viewer package runs them).
 
 ## The fake sound device
 
@@ -10,13 +10,16 @@ It records, per frame:
 
 - the race's requests: `RaceSounds_PlayAt` `0x00443b80` and `RaceSounds_Play` `0x00443b50` (sound id, the six arguments, the caller's address);
 - the music list entry the streamer opens (`0x0041a8a0`) and the stream object's play (`0x00419f20`, loop flag), stop (`0x00419fa0`) and volume (`0x0041a520`) slots, with the file name (stream `+0x4c`);
+- `RacerPlayVoice` calls (`0x00439240`: the caller, the racer's voice base, its cooldown and the taunt argument), `RaceSounds_Get` (`0x00443bd0`, with the sound object it returns) and every play of a sound object (`0x0041ad80`, with the loop argument): a play with 1 of an object the race got is a **loop start**; bank loads (`0x0041ae60`); and, with `AUDIO_TRACE_MIX=1`, the mix `0x00417de0` computes for each object (the listener and the source);
 - every DirectSound buffer: creation (size, channels, rate, bits), duplicate, play (flags, volume, pan, frequency, a hash of the decoded samples), stop, `SetVolume`, `SetPan`, `SetFrequency`.
 
 The load is frame `-1` (the introduction tune `start.tun` starts in `Race_LoadTrackContent`). The timer callback that refills the stream (`timeSetEvent` 100 ms) never fires in the emulator, so the stream buffers are not filled; effects are (they are decoded whole when played).
 
 ## What is compared
 
-Per scenario: for every sound id the number of requests per frame (original against `RacePresentationFrame.sounds`), and the tune started in every frame (list index and loop flag, against `RacePresentationFrame.music` and the load's introduction music). Volume, pan and frequency are recorded, not compared.
+Per scenario: for every sound id the number of requests per frame (original against `RacePresentationFrame.sounds`), the loop starts under the id plus 100,000 (original against `RacePresentationFrame.loopedSounds`, the engine loops' rises and the nearest racer's loop), and the tune started in every frame (list index and loop flag, against `RacePresentationFrame.music` and the load's introduction music). Volume, pan and frequency are recorded, not compared; the mix is checked on its own (`sound-mix.spec.ts`, values recorded with `AUDIO_TRACE_MIX=1`).
+
+The emulator's sound pool is smaller than a PC's, so a loop whose check (slot `+0xc`, then `+4`) finds no free voice is started again on the next frame; a start on the frame after a start of the same engine or nearest-racer loop counts once. The engine loops (`0x20`, `10`, `0x3d`, `3`) also restart where the port's fades say they run on, so their counts are recorded and not compared.
 
 ## Findings
 
@@ -28,12 +31,48 @@ Per scenario: for every sound id the number of requests per frame (original agai
 | 4   | Sounds the original asks for and the port did not                                                                      | `0x00439420` enhancement collect (`0xb` + level), `0x00457710` brick appears (14) and `0x00457820` touch (`0x31`, or `0x48` when a brick is held), `0x0045d200` turbo end (`0x28`, `0x4b` for level 2), `0x00451f50` cannon launch (6), `0x00452370` and `0x00451b50` cannon hit (5), `0x004377f0` collision sound (`0x19` or `0x38` by the draw's low bit), `0x00439c90` taunt (racer `+0xd23`)                                                                                           | Raised as `power_ups.sound_played`, `race.racer_sound` (the racer set's `sounds`) and `power_ups.racer_taunted`; the lists match in all eight scenarios |
 | 5   | Engine and skid loops                                                                                                  | `0x00437d40`: three looped sounds (`0x20`, `10`, `0x3d`) crossfade by the racer's throttle and speed (fade step `dt * 0.03 * 0.06`, limit 0.7 or 0.5 with racer flag `0x1000`, volume `sin(fade * 2.2438) * limit`), pitch from `speed / 0.17 * racer +0xd54`; a braking racer that still moves plays sound 2 and loops sound 3. `stepEngineSounds` follows it (fades checked against the emulator's `+0xd28..+0xd30`); `RacePresentationFrame.engineLoops` feeds the viewer's loop player | Ported; loops are not compared by the trace                                                                                                             |
 
+## The sweep
+
+`audio-sweep-cases.ts` (run with `pnpm run audio-trace`; one case takes 30 to 90 s):
+
+- **Computers only** (`localPlayerCount: 0`, 1,500 frames, the demonstration of the original) on all 13 races, straight and mirrored: the computers drive, use their bricks, touch the hazards, cross the checkpoints and the surfaces' sound materials.
+- **Every power-up kind at every level**, handed to the player at frame 300 (used at 305) and to the five computers at frame 162 (they use them themselves), 700 frames on Royal Knights: projectile 0 to 3 (cannon, grapple, wand, rockets), shield 0 to 3, turbo 0 to 3 (3 is the warp), hazard 0 to 3 (oil, barrel, magnet, curse).
+
+The first full run measures the port **before** these fixes and **after** (mismatched events = the sum over cases and sound ids of the difference between the original's and the port's counts; the engine loops are left out):
+
+| Group of mechanisms                                                                                                  | Before                    | After    |
+| -------------------------------------------------------------------------------------------------------------------- | ------------------------- | -------- |
+| One-shot sounds (power-ups, landings, contacts, hazards, bricks)                                                     | 614                       | 37       |
+| Driver voices (`0x00439240`)                                                                                         | 230                       | 64       |
+| Loops (shield, turbo, warp, oil, magnet, barrel, curse, wand, track events, hazards, the surface, the nearest racer) | 216 (every start missing) | 170      |
+| **Total over 58 cases**                                                                                              | **1,060**                 | **271**  |
+| Cases without any mismatch                                                                                           | 0 of 58                   | 23 of 58 |
+
+## Findings of the sweep
+
+| #   | Mechanism                                                                                                                                                                                                                                                                                | Fix                                                                                                                                    |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 6   | **Every driver voice line was silent**: `Racer_PlayVoice` drew its numbers and played nothing (place changes, stopping, contacts); the viewer never loaded the voice banks, so even the power-up voices made no sound                                                                    | `playRacerVoice` plays `voice base + r % 6 (+6 when a place was gained)`; the viewer loads `VOICE<nn>.SBK` and the race's voice folder |
+| 7   | Sounds missing in the power-ups: shield end `0x3b`, oil slick `0x2e`, grapple launch `0x15` and let go (`0x14`, or `0x16` + `0x49`), wand spark `0x45` and end `0x42`, rocket launch `0x33` and ground hit `0x32`, warp `0x27`, `0x41`, `0x29`, magnet `0x21` and `0x4a`, barrel end `5` | each at the function of the original that plays it (race-audio.md)                                                                     |
+| 8   | **Hazard sounds**: the ghost's loop `0xbc4` was emitted by the hazard and played by nobody (nor the track events' loops); the ghost's touch `0xbc7` and the racer's voice after a touch of the ghost and the lava monster were missing                                                   | looped sounds are events (`RacePresentationFrame.loopedSounds`) the viewer plays and stops; the ghost's touch and the voice are ported |
+| 9   | Landing `0x3f`, `0x40`, `4` (`0x0043e29f`), contacts `0x18`, `0x37` (`0x00438b9f`)                                                                                                                                                                                                       | sounds of the racer set, with the racer they come from                                                                                 |
+| 10  | The surface a wheel runs on loops the material's sound (`0x0042af90`); the nearest racer's car is heard (`0x0043c1b0`, sound `0x4f`); the turbo, warp, shield, curse and wand hum                                                                                                        | loops as above                                                                                                                         |
+| 11  | The viewer played every sound at full volume in the middle, the computers' engines included                                                                                                                                                                                              | `getSoundMix` (`0x00417de0`) and the human racers' sound objects only; the computers are heard through the nearest racer's loop        |
+
+## What is left
+
+The cases keep a budget of mismatched events (`audio-sweep-budgets.ts`); a case must not exceed it. What the budgets stand for:
+
+- **Fly-by loops** of the flying projectiles (ids 7, `0x13`, `0x17`, `0x34`, `PowerUps_Update` `0x0045a72d`), the **tire squeal** (`0x3a`, `0x00447f30`), the car body's `0x3c` (`0x00448160`) and the capture hazard's loop (`0xbbb`, `0x00490070`): not ported (race-audio.md, Open).
+- **Differences that follow the simulation**: the collision sounds (`0x19`, `0x38`: the contact counts of long runs), the bricks (`0xe`, `0x31`, `0x48`), the cannon, the curse and oil counts, and the voice lines of `RACEC1R3` (both directions), `RACEC2R1` and `RACEC2R2`: from about frame 460 on the port's random table is a draw ahead or behind (the voice of a computer's hazard at frame 466 of `RACEC1R3` is `r % 6` = 2 in the original and 5 in the port), so every later voice differs. That is a draw the port skips or adds in the simulation of those races, not a sound.
+- The nearest racer's loop restarts in the original where the emulator's pool is full (`0x4f`), and the port's start count differs in five cases.
+
+## Adding a scenario
+
+Add an `AudioTraceCase` to `AUDIO_CASES` (or `audio-sweep-cases.ts`) in `audio-trace.trace.spec.ts`; every sound id must match, or the case gets an entry in `audio-sweep-budgets.ts` with its cause listed above. `AUDIO_TRACE_REPORT=<file>` appends the differing ids, frames and the original's voice calls of every case.
+
 ## The front end
 
 `reverse-engineering/emulator/front_end_trace.py` runs `GameApplication_RunFrontEnd` (`0x0042bdc0`) with the fake sound device and scripted keys (each key is tapped within one frame; `qsort` is stubbed in `front_end_stubs.py`). The original shows its logos (legal, `0x28`, and the splash) for 152 frames, then the main menu (screen 2) and starts **`theme.tun`** (entry 0 of `MENUDATA\LEGOMSC`, 18 entries) looped. Screen changes are recorded from the screen stack (`0x0047fa70` push, `0x0047faa0` pop).
 
 `FrontEnd_SetMusic` is called when a screen opens: the award and win-car screens (`0x16`..`0x1c`, `0x25`, class `0x00475d30`) take entries 2, 3, 4, 0xb, 0xd, 0xe, 0xf and 0xc by id, the circuit introductions (`0x1f`..`0x24`, `0x00479b10`) entries 5 to 10, the splash, credits and introduction screens (`0x00488410`) entries 0x12, 0x11, 0x14 and 0x15. Traced: the main menu starts the theme, **the garage (3) the builder tune (entry 1)**, going back the theme again; the circuit race (5), single race (6), time trial (0x1d) and options (8) screens leave the tune alone. The port's `getFrontEndMusicIndex` and `stepFrontEnd` (`musicListIndex`) follow those rules; the other screens are a hypothesis (keep the tune). `front-end-audio-trace.trace.spec.ts` compares the sequence of tunes of six visits.
-
-## Adding a scenario
-
-Add an `AudioTraceCase` to `AUDIO_CASES` in `audio-trace.trace.spec.ts` ; every sound id must match.

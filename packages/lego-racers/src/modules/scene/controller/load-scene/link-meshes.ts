@@ -1,5 +1,6 @@
-import { parseModel } from '../../../model/index.ts'
+import { getModelBounds, parseModel } from '../../../model/index.ts'
 import type { ModelVertexBuffer } from '../../../model/index.ts'
+import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
 import { getDrawBatches } from '../../types/draw-batches/draw-batches.ts'
 import { getArchivePath, getNameWithDefaultExtension } from '../../types/scene-path/scene-path.ts'
 import type { SceneMaterialAssignment, SceneMesh } from '../../types/scene.types.ts'
@@ -28,6 +29,8 @@ const getVertexColors = (buffer: ModelVertexBuffer): Uint8Array | null => {
   }
   return colors
 }
+
+const MODEL_ARITHMETIC = createFloatArithmetic(RACE_FPU_PRECISION)
 
 const EMPTY_BUFFER: ModelVertexBuffer = Object.freeze({
   format: 'position',
@@ -64,6 +67,7 @@ export const linkMeshes = (
         normals: buffer.normals.length === 0 ? null : Float32Array.from(buffer.normals),
         materialIndices: getMaterialIndices(linkedMaterials, model.materialNames),
         drawBatches: getDrawBatches(model.commands, model.faces),
+        boundingSphere: getModelBounds(MODEL_ARITHMETIC, model),
       })
     })
   )

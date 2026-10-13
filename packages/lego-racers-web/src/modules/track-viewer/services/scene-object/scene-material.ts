@@ -82,6 +82,10 @@ export const getRowsReversed = (colors: Uint8Array, width: number, height: numbe
   return reversed
 }
 
+// Texture flag 4 (TDB keyword 0x28): a texture with it holds the picture's last row first; one without it (the
+// sprites', particles', decals' and ribbons') holds the rows as the bitmap has them (world-sprite.md).
+const FIRST_ROW_ON_TOP_FLAG = 0x4
+
 const getTextureKey = (textureIndex: number, material: SceneMaterial) =>
   `${String(textureIndex)}/${material.renderState.filter}/${material.renderState.addressing}`
 
@@ -91,11 +95,11 @@ const getTexture = (
   textures: readonly SceneTexture[],
   textureIndex: number | null,
   material: SceneMaterial,
-  cache: TextureCache,
-  isRowOrderKept: boolean
+  cache: TextureCache
 ): DataTexture | null => {
   const bitmap = textureIndex === null ? null : (textures[textureIndex]?.bitmap ?? null)
   if (textureIndex === null || bitmap === null) return null
+  const isRowOrderKept = ((textures[textureIndex]?.flags ?? 0) & FIRST_ROW_ON_TOP_FLAG) === 0
   const key = getTextureKey(textureIndex, material)
   const cached = cache.get(key)
   if (cached !== undefined) return cached
@@ -179,11 +183,10 @@ const getBlendingParameters = (sceneMaterial: SceneMaterial): BlendingParameters
 export const createSceneMaterial = (
   sceneMaterial: SceneMaterial,
   textures: readonly SceneTexture[],
-  cache: TextureCache,
-  isRowOrderKept = false
+  cache: TextureCache
 ): Material => {
   const parameters = {
-    map: getTexture(textures, sceneMaterial.textureIndex, sceneMaterial, cache, isRowOrderKept),
+    map: getTexture(textures, sceneMaterial.textureIndex, sceneMaterial, cache),
     vertexColors: true,
     // 0x1000ebd0 culls in screen space: it draws a face only when its corners turn counter-clockwise on
     // screen, which is three.js's front face for the same world, so only front faces are drawn.

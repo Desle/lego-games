@@ -4,6 +4,8 @@ import type { CameraRacerView } from '../../types/race-camera.types.ts'
 import {
   attachCamera,
   createCamera,
+  placeCameraAtIntroductionPoint,
+  placeCameraAtView,
   setCameraLookingBehind,
   setCameraPreset,
 } from '../camera-setup/camera-setup.ts'
@@ -188,5 +190,71 @@ describe('getCameraView', () => {
     expect(view.position.y).toBeGreaterThan(50)
     expect(view.forward.y).toBeLessThan(-0.9)
     expect(view.forward.z).toBeCloseTo(snapped.view.forward.z, 6)
+  })
+})
+
+describe('the introduction mode', () => {
+  const point = { x: 10, y: 20, z: 30 }
+  const vectors = [
+    { x: 0, y: 1, z: 0 },
+    { x: 0, y: 0, z: -1 },
+  ] as const
+  const chased = updateCamera(attachCamera(createCamera(), racer), racer, 1).camera
+  const introduction = placeCameraAtIntroductionPoint(chased, point, vectors)
+
+  it('starts at the race description point looking along its vectors', () => {
+    // Arrange / Act
+    const view = getCameraView(introduction)
+
+    // Assert
+    expect(introduction.mode).toBe(CameraMode.INTRODUCTION)
+    expect(view.position).toEqual(point)
+    expect(view.forward).toEqual(vectors[0])
+  })
+
+  it('moves 1/2000 of the way to the chase target per millisecond (a step is at most 100)', () => {
+    // Arrange
+    const target = introduction.targetPosition
+
+    // Act
+    const { camera } = updateCamera(introduction, racer, 100)
+
+    // Assert
+    expect(camera.position.x).toBeCloseTo(point.x + (target.x - point.x) * 0.05, 3)
+    expect(camera.modeMilliseconds).toBe(100)
+  })
+
+  it('arrives at the chase target after 2,000 ms and stays', () => {
+    // Arrange
+    const steps = [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]
+    const arrived = [...steps, ...steps, ...steps].reduce(
+      (camera, step) => updateCamera(camera, racer, step).camera,
+      introduction
+    )
+
+    // Act
+    const position = getCameraView(arrived).position
+
+    // Assert
+    expect(arrived.modeMilliseconds).toBe(2000)
+    expect(position).toEqual(introduction.targetPosition)
+  })
+
+  it('takes the released node pose as the start of the ease', () => {
+    // Arrange
+    const view = {
+      position: { x: 1, y: 2, z: 3 },
+      forward: { x: 0, y: 2, z: 0 },
+      up: { x: 0, y: 1, z: -3 },
+    }
+
+    // Act
+    const placed = placeCameraAtView(introduction, view)
+
+    // Assert
+    expect(placed.position).toEqual(view.position)
+    expect(placed.previousPosition).toEqual(view.position)
+    expect(placed.basis.slice(6)).toEqual([0, 1, 0])
+    expect(placed.basis.slice(3, 6)).toEqual([0, 0, -1])
   })
 })

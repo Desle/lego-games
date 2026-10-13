@@ -12,3 +12,16 @@ export type BaseBounds = {
   readonly minimumZ: number
   readonly maximumZ: number
 }
+
+// The edges of a row of studs along one axis, in LDraw units.
+export type StudSpan = {
+  readonly minimum: number
+  readonly maximum: number
+}
+
+// How a chassis recipe's base holds the game's grid: the shift of every built brick (LDU) and the share of the chassis's building cells
+// that sit on a stud of the base's deck.
+export type ChassisFit = {
+  readonly gridOffset: GridOffset
+  readonly footprintCoverage: number
+}

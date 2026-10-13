@@ -1,4 +1,5 @@
 import type { SkeletonAnimationState } from '@lego-games/lego-racers/skeletal-animation'
+import type { ModelScene } from '@lego-games/lego-racers/scene'
 import { Group, Matrix4 } from 'three'
 import type { RacerPartDrawingRequest } from './ldraw-racer-drawing.types.ts'
 import {
@@ -49,6 +50,31 @@ const getFigureFrame = (rig: MinifigRig): Matrix4 =>
     1
   )
 
+const LEG_PART_KEYS: ReadonlySet<MinifigPartKey> = new Set([
+  MinifigPartKey.HIPS,
+  MinifigPartKey.LEFT_LEG,
+  MinifigPartKey.RIGHT_LEG,
+])
+
+// A bone whose drawn corners span less than this (raw units, up the model) carries only a lid, not a part of the figure.
+const DRAWN_BONE_HEIGHT = 8
+const AXIS_COUNT = 3
+
+// Whether the original's figure draws a body part on a bone: a champion's race model has only a flat lid on its pelvis (his legs are
+// left out, inside the car), the figure builder's and the menus' figures have legs there.
+const getIsBoneDrawn = (model: ModelScene, boneIndex: number): boolean => {
+  const mesh = model.scene.meshes[model.scene.instances[0]?.levels[0]?.meshIndex ?? -1]
+  if (mesh === undefined) return true
+  const heights = mesh.drawBatches.flatMap((batch) =>
+    [...batch.vertexIndices].flatMap((vertex, corner) =>
+      batch.transformIndices[corner] === boneIndex
+        ? [mesh.positions[vertex * AXIS_COUNT + 2] ?? 0]
+        : []
+    )
+  )
+  return heights.length > 0 && Math.max(...heights) - Math.min(...heights) >= DRAWN_BONE_HEIGHT
+}
+
 const getPartText = (plan: MinifigPartPlan): string =>
   `1 ${String(plan.color)} 0 0 0 ${IDENTITY_ROTATION} ${plan.part}.dat`
 
@@ -72,10 +98,12 @@ export const createLDrawDriverDrawing = (
   const plans = createMinifigPartPlans(spec)
   const figureFrame = getFigureFrame(rig)
   const object = new Group()
+  const isLegsDrawn = getIsBoneDrawn(request.model, rig.pelvisIndex)
   const holders = new Map<MinifigPartKey, Group>(
     Object.values(MinifigPartKey).map((key) => {
       const holder = new Group()
       holder.matrixAutoUpdate = false
+      holder.visible = isLegsDrawn || !LEG_PART_KEYS.has(key)
       object.add(holder)
       return [key, holder]
     })

@@ -34,6 +34,10 @@ export type CarBodyContact =
   // (0x0043dd50) or stops (0x0043de90).
   | { readonly type: 'wheel_emitter_started'; readonly wheelIndex: number; readonly name: string }
   | { readonly type: 'wheel_emitter_stopped'; readonly wheelIndex: number }
+  // 0x0042aad0 hands the sound of a material with flag 0x80 to 0x0042af90, and 0x0042aa70 stops it when the wheel that
+  // left that material was the last on it.
+  | { readonly type: 'wheel_surface_sound'; readonly soundId: number }
+  | { readonly type: 'wheel_surface_left'; readonly soundId: number }
 
 // Asks the car body's surface walk to record the vehicle's wheel emitters as well (a computer's never run).
 export type WheelEmitterOptions = {

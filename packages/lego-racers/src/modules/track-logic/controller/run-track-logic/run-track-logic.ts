@@ -1,4 +1,5 @@
 import type { Vector3 } from '../../../event/index.ts'
+import type { HazardCameraFrame } from '../../../hazard/index.ts'
 import type {
   SurfaceSignal,
   TrackLogicContext,
@@ -65,6 +66,13 @@ export const updateTrackHazardsAfterRacers = (
   cameraPositions: readonly Vector3[]
 ): TrackLogicStep =>
   runTrackLogic(state, context, (session) => session.updateHazardsAfterRacers(cameraPositions))
+
+// The camera half of 0x0048ae00 (the snow): the hazards place themselves at the cameras of the frame.
+export const followTrackCameras = (
+  state: TrackLogicState,
+  context: TrackLogicContext,
+  cameras: readonly HazardCameraFrame[]
+): TrackLogicStep => runTrackLogic(state, context, (session) => session.followCameras(cameras))
 
 // Pass 4 of every racer set sub-step: the registry's time list (0x0042fc10) runs the timers' callbacks.
 export const tickTrackTimeEntries = (

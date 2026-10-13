@@ -4,6 +4,7 @@ import {
   getEffect,
   getNextInCone,
   hitRacerWithProjectile,
+  placeOrientedEffectEmitter,
   updatePowerUpEffect,
 } from '../../../power-ups/index.ts'
 import type {
@@ -13,6 +14,8 @@ import type {
   PowerUpStep,
 } from '../../../power-ups/index.ts'
 import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
+import type { Vector3 } from '../../../simulation-math/index.ts'
+import type { FlightRacer } from '../../types/projectiles.types.ts'
 import { getWandJitter } from '../../types/wand-jitter/wand-jitter.ts'
 import { getMotion, getWorldWithMotion } from '../../types/projectile-world/projectile-world.ts'
 import type {
@@ -26,6 +29,8 @@ import type { WandBeam } from '../../types/wand-beam/wand-beam.types.ts'
 
 // 0x004b157c, 0x004c7604 (200 squared, set by 0x004547e0 from 50 * 4) and 0x004b1580: the racers a beam can hit are
 // 3 to 200 units away, within 60 degrees of the muzzle direction.
+const SPARKS_UP: Vector3 = Object.freeze({ x: 0, y: 0, z: 1 })
+
 const WAND_WINDOW: ConeQueryWindow = Object.freeze({
   minimumDistanceSquared: 9,
   maximumDistanceSquared: 40000,
@@ -71,6 +76,26 @@ const getStepWithBeamHits = (
   return current
 }
 
+// 0x00455660: while the wand holds a racer its sparks sit at the last point of the beam (effect +0x1c4), facing against
+// the muzzle's direction with z as up.
+const getStepWithSparksPlaced = (
+  step: PowerUpStep,
+  context: ProjectileContext,
+  effectId: number,
+  beam: WandBeam,
+  owner: FlightRacer
+): PowerUpStep => {
+  const end = beam.points.at(-1)
+  const { muzzleDirection } = owner
+  return end === undefined
+    ? step
+    : placeOrientedEffectEmitter(step, effectId, context.powerUps.arithmetic, {
+        position: end,
+        facing: { x: -muzzleDirection.x, y: -muzzleDirection.y, z: -muzzleDirection.z },
+        up: SPARKS_UP,
+      })
+}
+
 // 0x00454d70 (wand vtable slot 2) from 0x00455100 on: between the hold and the sparks the beam is drawn, and while
 // it holds no racer it is tested against the racers in front of the muzzle.
 const getStepWithBeam = (
@@ -97,7 +122,9 @@ const getStepWithBeam = (
     timerMilliseconds: effect.timerMilliseconds,
     struck: struck === undefined ? null : { center: struck.position, radius: struck.beamRadius },
   })
-  if (effect.targetRacer !== null) return { step, beam }
+  if (effect.targetRacer !== null) {
+    return { step: getStepWithSparksPlaced(step, context, effectId, beam, owner), beam }
+  }
   // 0x00455660: with no racer held the sparks of the last strike are let go.
   return {
     step: getStepWithBeamHits(releaseEffectEmitter(step, effectId, false), context, effect, beam, {

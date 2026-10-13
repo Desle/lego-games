@@ -140,7 +140,7 @@ describe('hitRacerWithProjectile', () => {
     const hit = hitRacerWithProjectile(step, createContext(), getHead(step).id, 1, DIRECTION)
 
     // Assert
-    expect(hit.events[0]).toEqual({
+    expect(hit.events).toContainEqual({
       type: 'power_ups.racer_spun_out',
       racer: 1,
       strength: 2,
@@ -248,7 +248,7 @@ describe('touchHazardEffect', () => {
       timerMilliseconds: 4000,
       targetRacer: 1,
     })
-    expect(captured.events[0]).toEqual({ type: 'power_ups.racer_magnetized', racer: 1 })
+    expect(captured.events).toContainEqual({ type: 'power_ups.racer_magnetized', racer: 1 })
   })
 })
 
@@ -262,6 +262,13 @@ describe('endProjectileFlight', () => {
 
     // Assert
     expect(getHead(landed)).toMatchObject({ state: EffectState.ENDING, timerMilliseconds: 500 })
-    expect(landed.events[0]).toMatchObject({ type: 'power_ups.explosion', isSpiked: true })
+    expect(landed.events).toContainEqual(
+      expect.objectContaining({ type: 'power_ups.explosion', isSpiked: true })
+    )
+    expect(landed.events).toContainEqual({
+      type: 'power_ups.sound_played',
+      soundId: 5,
+      address: '0x004530ad',
+    })
   })
 })

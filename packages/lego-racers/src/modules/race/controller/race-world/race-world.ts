@@ -42,6 +42,7 @@ import {
   getRacerSphere,
   getRacerReadVolumeParts,
   getTableCosine,
+  playRacerVoice,
   setCarBodyPush,
   setRacer,
   startCarBodyFlip,
@@ -140,6 +141,7 @@ export const getRacerSetOf = (racerSet: RaceRacerSet): RacerSet =>
     registryContacts: racerSet.registryContacts,
     emitters: racerSet.emitters,
     sounds: racerSet.sounds,
+    loopedSounds: racerSet.loopedSounds,
   })
 
 // What a racer tells the power-ups about itself (the flags at racer +0xd04, car body +0x6c0 and driver +0x14).
@@ -463,6 +465,7 @@ const getHazardRacer = (racer: Racer | undefined, racerIndex: number): HazardRac
     position: Object.freeze([position.x, position.y, position.z] as const),
     isSpinning: (flags & SPINNING_FLAG) !== 0,
     forwardSpeed,
+    isColourShifted: racer.colourShift !== null,
   })
 }
 
@@ -708,9 +711,16 @@ const getRacerSetAfterTrackEffect = (
   }
   if (effect.type === 'hazard.racer_affected') {
     if (racerSet.racers[effect.racerIndex] === undefined) return racerSet
-    return changeRacer(racerSet, effect.racerIndex, (racer) =>
+    const reacted = changeRacer(racerSet, effect.racerIndex, (racer) =>
       getRacerAfterHazardReaction(context.arithmetic, racer, effect.reaction, effect.vector)
     )
+    // The ghost (0x0048ce90) and the lava monster (0x0048dcd0) end their touch with the racer's voice line.
+    return effect.keyword === HazardKeyword.HAZARD_2B || effect.keyword === HazardKeyword.HAZARD_2C
+      ? Object.freeze({
+          ...reacted,
+          ...playRacerVoice(context, reacted, effect.racerIndex, false),
+        })
+      : reacted
   }
   if (effect.type === 'hazard.collision_object_changed') {
     // 0x0048f030 and the other barrier hazards set or clear flags 0x10000 and 0x20000 of the named track material.
