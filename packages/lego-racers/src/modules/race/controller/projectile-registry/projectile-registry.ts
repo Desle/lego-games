@@ -171,10 +171,10 @@ const getIsHazardRegistered = (source: RegistrySource, effect: PowerUpEffect): b
   const motion = source.projectileWorld.motions[effect.id]
   if (motion === undefined || motion === null) return false
   if (effect.kind === PowerUpEffectKind.MAGNET) {
-    return motion.kind === 'magnet' && effect.state !== EffectState.FINISHED
+    return motion.kind === 'magnet'
   }
   if (motion.kind !== 'hazard') return false
-  // 0x004573a0 only sets state 6; the entry ends when 0x0045a490 returns the slick to its pool, a frame later.
+  // 0x004573a0 and the magnet only set state 6; the entry ends when 0x0045a490 returns the effect to its pool, a frame later.
   if (effect.kind === PowerUpEffectKind.OIL_SLICK)
     return getIsLive(effect) || effect.state === EffectState.FINISHED
   return effect.kind === PowerUpEffectKind.CURSE && getIsLive(effect)

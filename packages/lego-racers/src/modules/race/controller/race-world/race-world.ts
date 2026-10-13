@@ -1,5 +1,6 @@
 import type { HazardRacer } from '../../../hazard/index.ts'
 import {
+  activateLauncherCurse,
   activateLauncherWarp,
   getBrickKindCode,
   getBrickKindFromCode,
@@ -627,6 +628,14 @@ const getRacerSetAfterTrackEffect = (
         { x: position[0], y: position[1], z: position[2] },
         { x: direction[0], y: direction[1], z: direction[2] }
       )
+    )
+  }
+  if (effect.type === 'hazard.power_up_activated' && effect.activation === 'hazard') {
+    // 0x0048b3c0: the dropper asks for a curse at its place (power-up system +0x1998), owned by no racer.
+    const { position } = effect.launcher
+    if (position === null) return racerSet
+    return changePowerUps(context, racerSet, (step) =>
+      activateLauncherCurse(step, { x: position[0], y: position[1], z: position[2] })
     )
   }
   if (effect.type === 'track.racer_target_set') {

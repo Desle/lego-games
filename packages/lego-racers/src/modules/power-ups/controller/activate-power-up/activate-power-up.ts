@@ -147,7 +147,8 @@ const startAttachedEffect = (
   step: PowerUpStep,
   kind: PowerUpEffectKindValue,
   start: EffectStart,
-  onStarted: (started: PowerUpStep, effectId: number) => PowerUpStep
+  onStarted: (started: PowerUpStep, effectId: number) => PowerUpStep,
+  launcherPosition: Vector3 | null = null
 ): PowerUpStep => {
   const taken = takePowerUpEffect(step, { kind, levels: getTakeLevels(kind, start.level) })
   const allocated = getStepWithAttachments(taken.step, taken.effectId)
@@ -163,6 +164,7 @@ const startAttachedEffect = (
       level: start.level,
       ownerRacer: start.ownerRacer,
       targetRacer: start.targetRacer,
+      launcherPosition,
     }),
     taken.effectId
   )
@@ -283,6 +285,19 @@ export const activateLauncherWarp = (
   forward: Vector3
 ): PowerUpStep =>
   startWarp(step, context, racer, Object.freeze({ destination, forward, start: null }))
+
+// 0x0045a9b0 case 3 with a hazard as the launcher (the dropper, 0x0048b3c0): a curse that belongs to no racer and sits at
+// the launcher's place.
+export const activateLauncherCurse = (step: PowerUpStep, position: Vector3): PowerUpStep => {
+  if (!getIsAttachmentRoomFor(step.world.effects.attachmentSlots, OTHER_REQUIRED_SLOTS)) return step
+  return startAttachedEffect(
+    step,
+    PowerUpEffectKind.CURSE,
+    { ...getPlainStart(0, 3, 0, null), ownerRacer: null },
+    (started) => started,
+    position
+  )
+}
 
 // 0x0045af80: three rockets, each taken separately, numbered 0..2.
 const activateRockets = (step: PowerUpStep, racer: number): PowerUpStep =>

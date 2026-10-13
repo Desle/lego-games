@@ -195,6 +195,8 @@ export type PowerUpEffect = {
   readonly emitterHandleIndex: number | null
   // A warp a launcher gave a destination (0x0045d560's third argument, +0xc0..+0xd8): null for a racer's own warp.
   readonly warpDestination: WarpDestination | null
+  // A curse a hazard dropped (0x0048b3c0): where its shape sits (0x00411cc0 in 0x00452550); null for a racer's own.
+  readonly launcherPosition: Vector3 | null
 }
 
 // Where a launcher's warp puts the racer down (+0xc0, +0xc4, +0xc8) and which way it faces (+0xcc, +0xd0, +0xd4), and
