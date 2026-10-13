@@ -2113,12 +2113,6 @@
       "count": 1
     },
     {
-      "path": "packages/lego-racers/src/modules/front-end/controller/front-end/front-end.ts",
-      "scope": "getIsCinemaScreenEnded",
-      "literal": "1000",
-      "count": 1
-    },
-    {
       "path": "packages/lego-racers/src/modules/front-end/controller/menu-camera/menu-camera.ts",
       "scope": "getMenuCamera.camera.farPlane",
       "literal": "1000",

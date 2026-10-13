@@ -16,6 +16,11 @@ import {
 } from '../screens/race-selection-screens.ts'
 import { createCinemaScreen, getCinemaScreenSource } from '../screens/cinema-screens.ts'
 import { createCircuitResultScreen } from '../screens/circuit-result-screen.ts'
+import {
+  createCircuitIntroductionScreen,
+  getIsCircuitIntroductionScreen,
+} from '../screens/circuit-introduction-screen.ts'
+import { SAVE_ALL_SCREEN } from '../screens/save-all-screen.ts'
 import { createStaticScreen } from '../screens/static-screen.ts'
 
 const IMPLEMENTED_SCREENS: readonly ScreenDefinition[] = Object.freeze([
@@ -29,10 +34,11 @@ const IMPLEMENTED_SCREENS: readonly ScreenDefinition[] = Object.freeze([
   TIME_TRIAL_SCREEN,
   OPTIONS_SCREEN,
   PICK_RACER_SCREEN,
+  SAVE_ALL_SCREEN,
 ])
 
 // The three racer pick ids share one class in the factory 0x0047f4e0 (cases 0x13, 0x14, 0x15).
-const PICK_RACER_IDS: readonly number[] = [
+export const PICK_RACER_IDS: readonly number[] = [
   FrontEndScreen.PICK_RACER,
   FrontEndScreen.PICK_RACER_PLAYER_ONE,
   FrontEndScreen.PICK_RACER_PLAYER_TWO,
@@ -46,6 +52,7 @@ export const getScreenDefinition = (screenId: number): ScreenDefinition => {
   ) {
     return createCircuitResultScreen(screenId)
   }
+  if (getIsCircuitIntroductionScreen(screenId)) return createCircuitIntroductionScreen(screenId)
   if (getCinemaScreenSource(screenId) !== null) return createCinemaScreen(screenId)
   return (
     IMPLEMENTED_SCREENS.find((screen) => screen.screenId === screenId) ??

@@ -95,7 +95,8 @@ export const getStateWithShowcaseReaction = (
   state: FrontEndState,
   navigation: ScreenNavigation,
   resources: FrontEndResources,
-  environment: FrontEndEnvironment
+  environment: FrontEndEnvironment,
+  elapsedMilliseconds: number
 ): FrontEndState | null => {
   if (!getIsShowcaseScreen(state) || state.showcase === null) return null
   if (navigation.kind !== 'push' && navigation.kind !== 'race') return null
@@ -104,7 +105,8 @@ export const getStateWithShowcaseReaction = (
     resources.getRacerShowcaseAnimation(),
     environment.randomTable,
     state.settings.randomPosition,
-    navigation
+    navigation,
+    elapsedMilliseconds
   )
   return {
     ...state,

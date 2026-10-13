@@ -57,6 +57,12 @@ export type DecalFrameLine = {
   }[]
 }
 
+export type ScreenLine = {
+  readonly frame: number
+  readonly kind: 'push' | 'pop'
+  readonly id: number
+}
+
 export type DoneLine = {
   readonly frames: number
 }
@@ -67,4 +73,5 @@ export type PresentationTraceLine =
   | ({ readonly type: 'render_frame' } & RenderFrameLine)
   | ({ readonly type: 'audio_frame' } & AudioFrameLine)
   | ({ readonly type: 'decal_frame' } & DecalFrameLine)
+  | ({ readonly type: 'screen' } & ScreenLine)
   | ({ readonly type: 'done' } & DoneLine)

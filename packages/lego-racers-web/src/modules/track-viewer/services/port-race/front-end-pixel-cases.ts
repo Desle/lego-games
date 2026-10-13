@@ -92,6 +92,16 @@ export const FRONT_END_PIXEL_CASES: readonly FrontEndPixelCase[] = [
     maximumDifferingShare: 0.12,
   },
   {
+    // Reached as the player does: the racer pick of a circuit race opens the circuit's introduction (0x004850a0). Its end
+    // is left out: at frame 880 the original draws the closing full-screen picture at about a third of the port's
+    // brightness (64.7 % differ; hypothesis: a fade of the cinema's events, which the port does not read).
+    name: 'Circuit start introduction',
+    keys: [...CIRCUIT_KEYS, accept(2), accept(3)],
+    pushedScreenId: null,
+    recordFrames: [420, 520, 700],
+    maximumDifferingShare: 0.12,
+  },
+  {
     name: 'First place award cinema',
     keys: [],
     pushedScreenId: 0x16,
