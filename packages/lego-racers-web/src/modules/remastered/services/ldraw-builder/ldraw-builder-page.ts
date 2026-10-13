@@ -58,6 +58,7 @@ import {
   moveParts,
   pickParts,
   removeParts,
+  tiltParts,
   toggleIndex,
   turnParts,
 } from './builder-editing.ts'
@@ -69,14 +70,19 @@ import { createBuilderThumbnails } from './builder-thumbnails.ts'
 import { ReferenceMode } from './builder-panel.types.ts'
 import { createGhostInstance, createPartInstance, createPartTemplates } from './builder-parts.ts'
 import {
+  findSideStud,
   getGroundPhase,
   getPartPhase,
   getPlacedBox,
+  getPlacedStuds,
   getPlacementPosition,
   getRotatedBox,
+  getSideStudPosition,
   PLATE_HEIGHT,
   STUD_WIDTH,
 } from './builder-placement.ts'
+import { getFacingRotation, turnAbout } from './builder-rotation.ts'
+import { createPartStudLists } from './builder-studs.ts'
 import {
   createOriginalReference,
   createWheelGuides,
@@ -84,6 +90,7 @@ import {
   loadBuilderItemStart,
 } from './builder-reference.ts'
 import type { BuilderItemStart, OriginalReference } from './builder-reference.types.ts'
+import type { PartStud } from './builder-studs.types.ts'
 import {
   BUILDER_PARTS_FILE,
   BUILDER_PROGRESS_FILE,
@@ -116,6 +123,8 @@ const GRID_STUDS = 40
 const FRAME_MARGIN = 1.4
 const VIEW_DIRECTION: Vector = [0.7, -1, 0.6]
 const BRICK_HEIGHT = 3 * PLATE_HEIGHT
+const NUDGE_ACROSS = STUD_WIDTH / 4
+const NUDGE_HEIGHT = PLATE_HEIGHT / 2
 const LINE_PIXELS = 16
 const IDENTITY_ROTATION: readonly number[] = [1, 0, 0, 0, 1, 0, 0, 0, 1]
 const DEFAULT_TOOL: BuilderTool = {
@@ -204,6 +213,7 @@ const panel = createBuilderPanel(
 )
 
 const templates = createPartTemplates()
+const studLists = createPartStudLists()
 const thumbnails = createBuilderThumbnails()
 let archive: JamArchive | null = null
 let items: readonly BuilderItem[] = []
@@ -225,6 +235,8 @@ let reference: OriginalReference | null = null
 let ghost: Group | null = null
 let ghostKey = ''
 let ghostPosition: Vector | null = null
+// The part in hand's turn where the ghost is: its own, or turned so its bottom faces a side stud.
+let ghostRotation: readonly number[] = IDENTITY_ROTATION
 let pointer: PointerPosition | null = null
 let isSyncScheduled = false
 let isSaving = false
@@ -278,10 +290,10 @@ const getHint = (): string =>
 
 const getActionHint = (): string => {
   if (isHolding) {
-    return `Click to place ${getPartName(tool.partName)} ${getDescription(tool.partName)} · R rotate · ⎋ put down`
+    return `Click to place ${getPartName(tool.partName)} ${getDescription(tool.partName)} · R rotate · T tilt · side studs snap · ⎋ put down`
   }
   if (selectedIndices.length > 0) {
-    return 'Drag to move · arrows a stud · ⌘↑↓ a plate · R rotate · ⌫ delete · ⎋ deselect'
+    return 'Drag to move · arrows a stud · ⌘↑↓ a plate · ⌥ arrows nudge · R rotate · T tilt · ⌫ delete · ⎋ deselect'
   }
   return 'Pick a part on the right to build · click a part to select it · ⇧ click adds'
 }
@@ -390,6 +402,16 @@ const getRay = (position: PointerPosition): Raycaster | null => {
 const toEditFrame = (point: Vector3): Vector =>
   [...editFrame.worldToLocal(point.clone()).toArray()] as const
 
+// The side stud of a part (in the editing frame) under the cursor; its studs are read from the library the first time.
+const getSideStudUnder = (part: BuilderPart, point: Vector, normal: Vector): PartStud | null => {
+  const studs = studLists.getLoaded(part.partName)
+  if (studs === undefined) {
+    void studLists.load(part.partName).then(scheduleSync)
+    return null
+  }
+  return findSideStud(getPlacedStuds(studs, part), point, normal)
+}
+
 // The face under the cursor in the editing frame, with the grid of the part it belongs to; the ground when there is none.
 const getPointerHit = (position: PointerPosition): PointerHit | null => {
   const raycaster = getRay(position)
@@ -426,14 +448,13 @@ const getPointerHit = (position: PointerPosition): PointerHit | null => {
                 part.position[2] - lockedOffset[2],
               ] as const,
             }
+      const point = toEditFrame(hit.point)
+      const hitNormal: Vector = [normal.x, normal.y, normal.z]
       return {
-        target: {
-          point: toEditFrame(hit.point),
-          normal: [normal.x, normal.y, normal.z],
-          phase: getPartPhase(box, framePart),
-        },
+        target: { point, normal: hitNormal, phase: getPartPhase(box, framePart) },
         partIndex: typeof partIndex === 'number' ? partIndex : null,
         part,
+        sideStud: getSideStudUnder(framePart, point, hitNormal),
       }
     }
   }
@@ -450,6 +471,7 @@ const getPointerHit = (position: PointerPosition): PointerHit | null => {
         },
         partIndex: null,
         part: null,
+        sideStud: null,
       }
 }
 
@@ -468,8 +490,14 @@ const syncGhost = () => {
     ghostPosition = null
     return
   }
-  ghostPosition = getPlacementPosition(hit.target, getRotatedBox(template.box, tool.rotation))
-  const part = { ...tool, position: ghostPosition }
+  const stud = hit.sideStud
+  ghostRotation = stud === null ? tool.rotation : getFacingRotation(tool.rotation, stud.direction)
+  const box = getRotatedBox(template.box, ghostRotation)
+  ghostPosition =
+    stud === null
+      ? getPlacementPosition(hit.target, box)
+      : getSideStudPosition(hit.target.point, stud, box)
+  const part = { ...tool, rotation: ghostRotation, position: ghostPosition }
   const key = `${tool.partName}|${String(tool.colorCode)}`
   if (ghost === null || key !== ghostKey) {
     removeGhost()
@@ -488,7 +516,10 @@ const commit = (parts: readonly BuilderPart[]) => {
 const placePart = () => {
   if (ghostPosition === null) return
   const position = ghostPosition
-  commit([...history.present, Object.freeze({ ...tool, position, commentLines: [] })])
+  commit([
+    ...history.present,
+    Object.freeze({ ...tool, rotation: ghostRotation, position, commentLines: [] }),
+  ])
 }
 
 const setTool = (next: BuilderTool, isNextHolding: boolean) => {
@@ -539,6 +570,20 @@ const rotate = (isBack: boolean) =>
         isHolding
       )
     : commit(turnParts(history.present, selectedIndices, isBack))
+
+// T tilts about the level axis across the view (the camera's right, on the nearest LDraw axis).
+const tilt = (isBack: boolean) => {
+  const step = getCameraStudStep(false, isBack ? -1 : 1)
+  const axis: Vector = [Math.sign(step[0]), 0, Math.sign(step[2])]
+  if (isHolding || selectedIndices.length === 0) {
+    setTool({ ...tool, rotation: turnAbout(tool.rotation, axis) }, isHolding)
+  } else commit(tiltParts(history.present, selectedIndices, axis))
+}
+
+const getNudge = (isForward: boolean, sign: number): Vector => {
+  const step = getCameraStudStep(isForward, sign)
+  return [Math.sign(step[0]) * NUDGE_ACROSS, 0, Math.sign(step[2]) * NUDGE_ACROSS]
+}
 
 const deleteSelected = () => {
   if (selectedIndices.length === 0) return
@@ -756,6 +801,8 @@ const getIsTyping = (target: EventTarget | null) =>
 const getKeyActions = (quickColorIndex: number): Readonly<Record<BuilderAction, () => void>> => ({
   [BuilderAction.ROTATE]: () => rotate(false),
   [BuilderAction.ROTATE_BACK]: () => rotate(true),
+  [BuilderAction.TILT]: () => tilt(false),
+  [BuilderAction.TILT_BACK]: () => tilt(true),
   [BuilderAction.MOVE_LEFT]: () => moveSelected(getCameraStudStep(false, -1)),
   [BuilderAction.MOVE_RIGHT]: () => moveSelected(getCameraStudStep(false, 1)),
   [BuilderAction.MOVE_AWAY]: () => moveSelected(getCameraStudStep(true, 1)),
@@ -764,6 +811,12 @@ const getKeyActions = (quickColorIndex: number): Readonly<Record<BuilderAction, 
   [BuilderAction.LOWER_PLATE]: () => moveSelected([0, PLATE_HEIGHT, 0]),
   [BuilderAction.RAISE_BRICK]: () => moveSelected([0, -BRICK_HEIGHT, 0]),
   [BuilderAction.LOWER_BRICK]: () => moveSelected([0, BRICK_HEIGHT, 0]),
+  [BuilderAction.NUDGE_LEFT]: () => moveSelected(getNudge(false, -1)),
+  [BuilderAction.NUDGE_RIGHT]: () => moveSelected(getNudge(false, 1)),
+  [BuilderAction.NUDGE_AWAY]: () => moveSelected(getNudge(true, 1)),
+  [BuilderAction.NUDGE_TOWARD]: () => moveSelected(getNudge(true, -1)),
+  [BuilderAction.NUDGE_UP]: () => moveSelected([0, -NUDGE_HEIGHT, 0]),
+  [BuilderAction.NUDGE_DOWN]: () => moveSelected([0, NUDGE_HEIGHT, 0]),
   [BuilderAction.DELETE]: deleteSelected,
   [BuilderAction.COPY]: copySelected,
   [BuilderAction.PASTE]: () => addCopies(clipboard),

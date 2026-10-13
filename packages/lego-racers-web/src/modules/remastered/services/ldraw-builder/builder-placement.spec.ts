@@ -1,4 +1,12 @@
-import { getPartPhase, getPlacementPosition, getRotatedBox } from './builder-placement.ts'
+import {
+  findSideStud,
+  getPartPhase,
+  getPlacedStuds,
+  getPlacementPosition,
+  getRotatedBox,
+  getSideStudPosition,
+} from './builder-placement.ts'
+import { getFacingRotation } from './builder-rotation.ts'
 
 // A 2 x 4 brick (3001) in its own frame: 80 wide in x, 40 deep in z, body 24 down from its origin, studs 4 up.
 const BRICK_BOX = { minimum: [-40, -4, -20], maximum: [40, 24, 20] } as const
@@ -61,5 +69,56 @@ describe('getRotatedBox', () => {
     // Assert
     expect(box.minimum.map((value) => value + 0)).toEqual([-20, -4, -40])
     expect(box.maximum.map((value) => value + 0)).toEqual([20, 24, 40])
+  })
+})
+
+// A 87087 (Brick 1 x 1 with Stud on 1 Side) standing on the ground: its top stud and its side stud facing -z.
+const SIDE_STUD_BRICK = {
+  colorCode: 4,
+  position: [0, -24, 0],
+  rotation: IDENTITY,
+  partName: '87087.dat',
+} as const
+const SIDE_STUD_BRICK_STUDS = [
+  { position: [0, 0, 0], direction: [0, -1, 0] },
+  { position: [0, 10, -10], direction: [0, 0, -1] },
+] as const
+
+describe('findSideStud', () => {
+  it('finds the side stud from its face, its top or its base, but leaves the top stud alone', () => {
+    // Arrange
+    const studs = getPlacedStuds(SIDE_STUD_BRICK_STUDS, SIDE_STUD_BRICK)
+
+    // Act
+    const onFace = findSideStud(studs, [3, -20, -10], [0, 0, -1])
+    const onStudTop = findSideStud(studs, [1, -14, -14], [0, 0, -1])
+    const onStudSide = findSideStud(studs, [6, -14, -12], [1, 0, 0])
+    const inStudHole = findSideStud(studs, [-3, -12, -8.5], [0.8, -0.6, 0])
+    const onTop = findSideStud(studs, [2, -24, 2], [0, -1, 0])
+    const onOtherFace = findSideStud(studs, [10, -12, 0], [1, 0, 0])
+
+    // Assert
+    expect(onFace?.position).toEqual([0, -14, -10])
+    expect(onStudTop?.direction).toEqual([0, 0, -1])
+    expect(onStudSide?.direction).toEqual([0, 0, -1])
+    expect(inStudHole?.direction).toEqual([0, 0, -1])
+    expect(onTop).toBeNull()
+    expect(onOtherFace).toBeNull()
+  })
+})
+
+describe('getSideStudPosition', () => {
+  it('puts a 2 x 4 brick on a side stud, bottom flush with the face and its anti-studs on the stud', () => {
+    // Arrange
+    const [stud] = getPlacedStuds([SIDE_STUD_BRICK_STUDS[1]], SIDE_STUD_BRICK)
+    const rotation = getFacingRotation(IDENTITY, [0, 0, -1])
+    const box = getRotatedBox(BRICK_BOX, rotation)
+
+    // Act
+    const position = stud === undefined ? null : getSideStudPosition([3, -12, -10], stud, box)
+
+    // Assert
+    expect(position).toEqual([10, -4, -34])
+    expect((position?.[2] ?? 0) + box.maximum[2]).toBe(-10)
   })
 })

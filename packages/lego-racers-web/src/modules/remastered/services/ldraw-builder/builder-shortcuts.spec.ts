@@ -68,4 +68,35 @@ describe('getBuilderKeyCommand', () => {
     ])
     expect(QUICK_COLOR_CODES[2]).toBe(4)
   })
+
+  it('tilts with T and nudges with Option and the arrows', () => {
+    // Arrange
+    const presses = [
+      press('t'),
+      press('T', false, true),
+      press('ArrowLeft', false, false, true),
+      press('ArrowRight', false, false, true),
+      press('ArrowUp', false, false, true),
+      press('ArrowDown', false, false, true),
+      press('ArrowUp', true, false, true),
+      press('ArrowDown', true, false, true),
+      press('ArrowUp', false, true, true),
+    ]
+
+    // Act
+    const actions = presses.map((keyPress) => getBuilderKeyCommand(keyPress)?.action ?? null)
+
+    // Assert
+    expect(actions).toEqual([
+      BuilderAction.TILT,
+      BuilderAction.TILT_BACK,
+      BuilderAction.NUDGE_LEFT,
+      BuilderAction.NUDGE_RIGHT,
+      BuilderAction.NUDGE_AWAY,
+      BuilderAction.NUDGE_TOWARD,
+      BuilderAction.NUDGE_UP,
+      BuilderAction.NUDGE_DOWN,
+      null,
+    ])
+  })
 })

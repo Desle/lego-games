@@ -4,6 +4,7 @@ import {
   getStudStep,
   moveParts,
   removeParts,
+  tiltParts,
   toggleIndex,
   turnParts,
 } from './builder-editing.ts'
@@ -81,5 +82,23 @@ describe('builder editing', () => {
     expect(toggled).toEqual([[1], [1, 2, 5]])
     expect(round(step)).toEqual([0, 0, -20])
     expect(round(offset)).toEqual([20, 0, 0])
+  })
+
+  it('tilts one part in place and several about their middle', () => {
+    // Arrange
+    const parts = [createPart(0, 0), createPart(40, 0)]
+
+    // Act
+    const one = tiltParts(parts, [0], [1, 0, 0])
+    const both = tiltParts(parts, [0, 1], [0, 0, 1])
+
+    // Assert
+    expect(one[0]?.position).toEqual([0, -24, 0])
+    expect(round(one[0]?.rotation ?? [])).toEqual([1, 0, 0, 0, 0, -1, 0, 1, 0])
+    expect(one[1]).toBe(parts[1])
+    expect(both.map((part) => part.position)).toEqual([
+      [20, -44, 0],
+      [20, -4, 0],
+    ])
   })
 })
