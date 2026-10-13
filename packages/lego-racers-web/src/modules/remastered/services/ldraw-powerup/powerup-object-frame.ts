@@ -183,5 +183,13 @@ export const getBuildFrameMatrix = (scale: number): Matrix4 =>
 export const getParticleUnitsPerLDrawUnit = (scale: number): number =>
   (scale * CAR_STUD_UNITS) / STUD_WIDTH
 
+// The scale that fits a file (LDraw units and axes) to a sprite `spriteSize` across (race units): its largest extent the sprite's.
+export const getFittedSpriteScale = (spriteSize: number, fileBounds: Box3): number => {
+  const fileExtent = getLargestExtent(fileBounds)
+  return fileExtent > 0 && spriteSize > 0
+    ? spriteSize / fileExtent / getParticleUnitsPerLDrawUnit(1)
+    : 1
+}
+
 // A size of the race's world (a particle's quad) in the builder's studs.
 export const getParticleSizeInStuds = (size: number): number => size / CAR_STUD_UNITS

@@ -1,4 +1,5 @@
-// What each power-up object of POWERUP.WDB is in the race (race-effects), for the builder's list.
+// What each power-up object of POWERUP.WDB (race-effects) and each power-up sprite (powerup-sprites.ts) is in the race, for the
+// builder's list.
 export const POWER_UP_OBJECT_DESCRIPTIONS: Readonly<Record<string, string>> = Object.freeze({
   DMISSILE: 'rocket',
   BARREL: 'barrel',
@@ -24,4 +25,5 @@ export const POWER_UP_OBJECT_DESCRIPTIONS: Readonly<Record<string, string>> = Ob
   WARPHOLE: 'warp portal',
   PUTRAILY: 'power-up brick trail',
   ENHANER: 'enhancement brick trail',
+  CANNONBALL: 'cannon ball, a sprite',
 })

@@ -10,6 +10,7 @@ import type {
 import { getHasPlacedParts, loadLDrawModelText } from '../ldraw-models/ldraw-model-client.ts'
 import type { LDrawModelIndex } from '../ldraw-models/ldraw-model-index.types.ts'
 import { getParticleUnitsPerLDrawUnit } from '../ldraw-powerup/powerup-object-frame.ts'
+import { findPowerUpSpriteName, POWER_UP_SPRITE_NAMES } from '../ldraw-powerup/powerup-sprites.ts'
 import { getModelFileScale } from '../ldraw-scale-meta/ldraw-scale-meta.ts'
 import { LDRAW_PARTICLE_MATERIALS, LDRAW_PARTICLE_PARTS } from './ldraw-particle-mappings.ts'
 import { LDrawParticleKind } from './ldraw-particle-mappings.types.ts'
@@ -58,7 +59,8 @@ export const setParticlePieceMatrix = (
   )
 }
 
-// The original fades a particle through its material rows' opacity: the part is solid at the material's solid alpha.
+// The original fades a particle through its material rows' opacity: the part is solid at the material's solid alpha. A sprite
+// (no particle material) is solid.
 export const getParticleOpacity = (view: ParticleView): number => {
   const solidAlpha = LDRAW_PARTICLE_MATERIALS[view.materialName]?.solidAlpha
   return solidAlpha === undefined ? 1 : Math.min(1, view.color[3] / solidAlpha)
@@ -70,7 +72,7 @@ export const getPieceWidth = (bounds: Box3, unitsPerLDrawUnit: number): number =
   return Math.max(size.x, size.z) * unitsPerLDrawUnit
 }
 
-// The files read for the race, by kind of particle.
+// The files read for the race, by kind of particle or power-up sprite name.
 const loadedFiles = new Map<string, ParticleKindModel>()
 
 // The model a kind is drawn with: its file in the models folder (`particles/<KIND>.ldr`, at its scale line's factor, 1 without),
@@ -83,10 +85,19 @@ export const getParticleKindModel = (kind: LDrawParticleKind): ParticleKindModel
     modelText: getParticlePartText(part.partName, part.colorCode),
     scale: DEFAULT_SCALE,
     file: null,
+    isSizeCapped: true,
   })
 }
 
-const loadFile = async (key: string, file: string | undefined): Promise<void> => {
+// A power-up sprite's file (`powerups/<NAME>.ldr`), null when the folder has none and the original's sprite is drawn.
+export const getPowerUpSpriteModel = (name: string): ParticleKindModel | null =>
+  loadedFiles.get(name) ?? null
+
+const loadFile = async (
+  key: string,
+  file: string | undefined,
+  isSizeCapped: boolean
+): Promise<void> => {
   const text = file === undefined ? null : await loadLDrawModelText(file)
   if (file === undefined || text === null || !getHasPlacedParts(text)) return
   loadedFiles.set(
@@ -95,21 +106,24 @@ const loadFile = async (key: string, file: string | undefined): Promise<void> =>
       modelText: text,
       scale: getModelFileScale(text) ?? DEFAULT_SCALE,
       file,
+      isSizeCapped,
     })
   )
 }
 
-// The file of each kind the models folder has, read before a race asks for its drawings (they are made when the race loads).
+// The file of each kind and power-up sprite the models folder has, read before a race asks for its drawings (they are made when the
+// race loads).
 export const prepareParticleFiles = async (index: LDrawModelIndex): Promise<void> => {
   loadedFiles.clear()
-  await Promise.all(
-    Object.values(LDrawParticleKind).map((kind) =>
-      loadFile(kind, index.particles[kind.toUpperCase()])
-    )
-  )
+  await Promise.all([
+    ...Object.values(LDrawParticleKind).map((kind) =>
+      loadFile(kind, index.particles[kind.toUpperCase()], true)
+    ),
+    ...POWER_UP_SPRITE_NAMES.map((name) => loadFile(name, index.powerUps[name], false)),
+  ])
 }
 
-// One piece per original quad, never stretched over it (ldraw-particle-size.ts).
+// One piece per original quad: a particle's capped to its own size (ldraw-particle-size.ts), a power-up sprite's file at its scale.
 const createModelDrawing = (
   label: string,
   model: ParticleKindModel,
@@ -133,11 +147,9 @@ const createModelDrawing = (
       particles.setParticles(views.length, (index, slot) => {
         const view = views[index]
         if (view === undefined) return
-        const pieceScale = getParticlePieceScale(
-          getLength(view.right),
-          getLength(view.down),
-          pieceWidth
-        )
+        const pieceScale = model.isSizeCapped
+          ? getParticlePieceScale(getLength(view.right), getLength(view.down), pieceWidth)
+          : 1
         slot.setMatrix(setParticlePieceMatrix(matrix, view, pieceScale, unitsPerLDrawUnit))
         slot.setOpacity(getParticleOpacity(view))
       })
@@ -151,17 +163,21 @@ const createModelDrawing = (
 
 const liveDrawings = new Map<string, ParticleDrawing>()
 
-// What draws a material's quads: its kind of particle's model; null for a material the layer leaves to the original.
+// What draws a material's quads: a power-up sprite's file, else the kind of particle's model; null for a material the layer leaves
+// to the original.
 const getMaterialModel = (materialName: string): readonly [string, ParticleKindModel] | null => {
+  const spriteName = findPowerUpSpriteName(materialName)
+  const sprite = spriteName === undefined ? null : getPowerUpSpriteModel(spriteName)
+  if (spriteName !== undefined && sprite !== null) return [spriteName, sprite]
   const material = LDRAW_PARTICLE_MATERIALS[materialName]
   return material === undefined ? null : [material.kind, getParticleKindModel(material.kind)]
 }
 
-// Whether the layer draws a material's quads (a mapped particle material).
+// Whether the layer draws a material's quads (a mapped particle material, or a power-up sprite's whose file the folder has).
 export const getIsParticleMaterialDrawn = (materialName: string): boolean =>
   getMaterialModel(materialName) !== null
 
-// The drawing for a particle material, shared by every material of the kind while the race that asked
+// The drawing for a particle material (or a power-up sprite's), shared by every material of the kind while the race that asked
 // for it lives; null for a material the layer leaves to the original.
 export const createLDrawParticleDrawing = (
   request: ParticleDrawingRequest

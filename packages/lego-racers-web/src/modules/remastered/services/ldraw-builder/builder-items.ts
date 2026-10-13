@@ -1,4 +1,5 @@
 import { POWER_UP_OBJECT_MODEL_NAMES } from '../../../../shared/viewer-extensions/effect-model-names.ts'
+import { POWER_UP_SPRITE_NAMES } from '../ldraw-powerup/powerup-sprites.ts'
 import {
   CHAMPION_CAR_CODES,
   CHASSIS_NAMES,
@@ -32,7 +33,7 @@ const getParticleItemId = (name: string): string =>
   `${LDRAW_PARTICLES_FOLDER}/${name.toUpperCase()}`
 
 // The queue: the 12 chassis first (the cars stand on them), then the 20 champions' cars, each on the chassis its champion drives, then
-// the 24 drivers, then the 24 power-up objects, then the 11 kinds of particle.
+// the 24 drivers, then the 24 power-up objects and the power-up sprites (the cannon ball), then the 11 kinds of particle.
 export const getBuilderItems = (
   championChassis: ReadonlyMap<string, string>
 ): readonly BuilderItem[] =>
@@ -61,7 +62,7 @@ export const getBuilderItems = (
         chassisName: '',
       })
     ),
-    ...POWER_UP_OBJECT_MODEL_NAMES.map((name) =>
+    ...[...POWER_UP_OBJECT_MODEL_NAMES, ...POWER_UP_SPRITE_NAMES].map((name) =>
       Object.freeze({
         id: getPowerUpItemId(name),
         kind: BuilderItemKind.POWER_UP,
@@ -84,7 +85,9 @@ const getWantedFile = (itemId: string): string | null => {
   if (chassisName !== undefined) return `chassis/${chassisName.toUpperCase()}.ldr`
   if (CHAMPION_CAR_CODES.includes(itemId)) return `${itemId}.ldr`
   const isDriver = DRIVER_NAMES.some((name) => getDriverItemId(name) === itemId)
-  const isPowerUp = POWER_UP_OBJECT_MODEL_NAMES.some((name) => getPowerUpItemId(name) === itemId)
+  const isPowerUp = [...POWER_UP_OBJECT_MODEL_NAMES, ...POWER_UP_SPRITE_NAMES].some(
+    (name) => getPowerUpItemId(name) === itemId
+  )
   const isParticle = PARTICLE_NAMES.some((name) => getParticleItemId(name) === itemId)
   return isDriver || isPowerUp || isParticle ? `${itemId}.ldr` : null
 }

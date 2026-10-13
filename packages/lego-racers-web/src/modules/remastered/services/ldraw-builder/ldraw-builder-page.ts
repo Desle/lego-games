@@ -25,6 +25,7 @@ import type { Camera, Object3D } from 'three'
 import { DEVELOPMENT_JAM_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
 import { getBuildFrameMatrix } from '../ldraw-powerup/powerup-object-frame.ts'
 import { setScaleMeta } from '../ldraw-scale-meta/ldraw-scale-meta.ts'
+import { POWER_UP_SPRITES } from '../ldraw-powerup/powerup-sprites.ts'
 import { createStudioLights, useLookFromAddress } from '@lego-games/ldraw/material'
 import { DEVELOPMENT_LDRAW_ROUTE } from '../ldraw-library/ldraw-library-route.ts'
 import {
@@ -329,8 +330,12 @@ const EFFECT_NOTE =
 const NO_REFERENCE_NOTE =
   'the original draws no mesh for this effect (a flat/animated sprite); build freely on the grid'
 
+const SPRITE_NOTE =
+  "the original draws a camera-facing sprite (the card, in car studs): the race draws the file at the sprite's centre, studs to the camera"
+
 const getReferenceNote = (): string => {
   if (currentItem?.kind !== BuilderItemKind.POWER_UP) return ''
+  if (POWER_UP_SPRITES[currentItem.name] !== undefined) return SPRITE_NOTE
   if (reference === null || reference.shape === ReferenceShape.NONE) return NO_REFERENCE_NOTE
   return reference.shape === ReferenceShape.EFFECT ? EFFECT_NOTE : ''
 }

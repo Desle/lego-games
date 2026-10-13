@@ -34,13 +34,3 @@ export type BuilderItemStart = {
   // Where the editing frame sits in the car's frame (LDraw units and axes): a chassis recipe's offset, nothing for a car.
   readonly editOffset: Vector
 }
-
-// A flat card of an original's material (from the material library and texture database `library` in `directory`), `width` by
-// `height` race units.
-export type CardReference = {
-  readonly materialName: string
-  readonly directory: string
-  readonly library: string
-  readonly width: number
-  readonly height: number
-}
