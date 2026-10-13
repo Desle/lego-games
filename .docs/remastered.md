@@ -67,6 +67,10 @@ An optional layer above the exact port: things the original never did (upscaled 
 - **Done** posts the model to `/__development/ldraw-builder/save` (dev server only): the file it replaces is copied to `drafts/backups/<name>-<time>.ldr`, the model is written, the item is marked done and the next unfinished one opens. The game reads the file at its next load.
 - **Limits**: one model file per item (`.ldr`; sub-models other than a chassis recipe and type 2 to 5 lines are kept as they are, not shown); parts rotate about the vertical axis only; nothing is kept in the browser, so leaving an item asks before dropping unsaved work.
 
+### Drivers as files
+
+`pnpm --filter @lego-games/lego-racers-web run export-drivers` writes every driver of `DRIVERS.DDB` as `drivers/<NAME>.ldr` in the models folder (`LEGO_LDRAW_MODELS_ROOT`, default `~/ldraw-models`), from the guess the layer draws today (`ldraw-minifig-parts.ts`, `minifig-assembly.ts`). A file already there is skipped, never overwritten. Each part line follows `0 !RACERS ROLE <head|hat|torso|left-arm|right-arm|left-hand|right-hand|hips|left-leg|right-leg|accessory>` (accessory: a visor or plume on the hat) and `0 !RACERS GUESS <exact|close|guess>`; the figure stands in the rest pose of `minifig-geometry.ts` (arms down), its origin the top of the hips, LDraw axes. A part with no library print takes the nearest of the game's brick colours to the game's picture colour (noted in a comment); its face or torso front is the game's picture at draw time. The layer does not read these files yet. Code: `modules/remastered/services/driver-export/`.
+
 ## Adding a remastered feature
 
 1. If Classic needs a way to ask, add a neutral extension point to `ViewerExtension` (name it for what happens, not for the feature), call it from Classic where it happens, and make it a no-op with no extension registered.

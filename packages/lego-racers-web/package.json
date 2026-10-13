@@ -11,6 +11,7 @@
     "verify": "tooling verify",
     "test": "vitest run",
     "reference-kit": "node src/modules/remastered/services/reference-kit/generate-reference-kit-command.ts",
+    "export-drivers": "node src/modules/remastered/services/driver-export/export-drivers-command.ts",
     "ldraw-fidelity": "node src/modules/remastered/services/ldraw-fidelity/ldraw-fidelity-command.ts",
     "render-trace": "vitest run --config vitest.trace.config.ts render-trace play-test-visuals",
     "audio-trace": "vitest run --config vitest.trace.config.ts audio-trace",
