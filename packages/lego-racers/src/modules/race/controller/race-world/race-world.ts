@@ -340,7 +340,8 @@ export const getFlightRacer = (context: RacerSetContext, racer: Racer): FlightRa
     heading: rigidBody.velocityDirection,
     headingSpeed: rigidBody.speed,
     sideAxis: rigidBody.heading,
-    isVehiclePresent: false,
+    // Racer +0xb2c reads 1 for every computer and 0 for the player in the emulator (hypothesis: set for computers).
+    isVehiclePresent: racer.controllerKind === COMPUTER_CONTROLLER,
     speed: rigidBody.speed,
     muzzlePosition: displayFrame.position,
     muzzleDirection: row,
