@@ -1,22 +1,15 @@
-import {
-  CHAMPION_CAR_CODES,
-  CHAMPION_CHASSIS_NAMES,
-  CHASSIS_NAMES,
-} from '../ldraw-racer-model/known-racer-models.ts'
-
-const BUILDABLE_CHASSIS_NAMES: readonly string[] = [...CHASSIS_NAMES, ...CHAMPION_CHASSIS_NAMES]
+import { CHAMPION_CAR_CODES, CHASSIS_NAMES } from '../ldraw-racer-model/known-racer-models.ts'
 import { BuilderItemKind } from './ldraw-builder.types.ts'
 import type { BuilderItem } from './ldraw-builder.types.ts'
 
 export const getChassisItemId = (name: string): string => `chassis/${name.toLowerCase()}`
 
-// The queue: the 12 garage chassis and the 12 champions' own chassis first (the cars stand on them), then the 20 champions' cars, each
-// on the chassis its champion drives.
+// The queue: the 12 chassis first (the cars stand on them), then the 20 champions' cars, each on the chassis its champion drives.
 export const getBuilderItems = (
   championChassis: ReadonlyMap<string, string>
 ): readonly BuilderItem[] =>
   Object.freeze([
-    ...BUILDABLE_CHASSIS_NAMES.map((name) =>
+    ...CHASSIS_NAMES.map((name) =>
       Object.freeze({
         id: getChassisItemId(name),
         kind: BuilderItemKind.CHASSIS,
@@ -35,12 +28,12 @@ export const getBuilderItems = (
   ])
 
 // The models folder's file an item is saved to: the file already there (whatever its case), else `chassis/<NAME>.ldr` or `<CODE>.ldr`.
-// Null for an id that is not one of the 44 items.
+// Null for an id that is not one of the 32 items.
 export const getBuilderItemFile = (
   itemId: string,
   existingFiles: readonly string[]
 ): string | null => {
-  const chassisName = BUILDABLE_CHASSIS_NAMES.find((name) => getChassisItemId(name) === itemId)
+  const chassisName = CHASSIS_NAMES.find((name) => getChassisItemId(name) === itemId)
   const isCar = CHAMPION_CAR_CODES.includes(itemId)
   if (chassisName === undefined && !isCar) return null
   const wanted =
