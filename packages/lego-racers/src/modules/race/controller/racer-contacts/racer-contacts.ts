@@ -47,7 +47,9 @@ const runSurfaceSignals = (
 // Car body 0x0042af90, 0x0042b060 and the end of 0x004293f0: the loop of the surface sound (key and the return
 // address of its RaceSounds_Get), kept while the car runs on the ground faster than 0.009 and is not tumbling.
 const SURFACE_SOUND_ADDRESS = '0x0042b007'
+// 0x004293f0
 const TUMBLING_BODY_FLAG = 0x8
+// 0x004b0474
 const SURFACE_SOUND_MINIMUM_SPEED = getFloatFromBits(0x3c1374bc)
 
 const getSurfaceSoundKey = (racerIndex: number) => `surface:${String(racerIndex)}`

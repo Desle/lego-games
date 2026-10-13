@@ -1,3 +1,11 @@
+import {
+  MAGNET_HUM_ADDRESS,
+  MAGNET_HUM_SOUND_ID,
+  MAGNET_PLACE_SOUND,
+  ROCKET_LAUNCH_SOUND,
+  WAND_HUM_ADDRESS,
+  WAND_HUM_SOUND_ID,
+} from '../power-up-sounds/power-up-sounds.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
 import { getIsAttachmentRoomFor } from '../../types/attachment-slots/attachment-slots.ts'
 import { BrickKind } from '../../types/brick-kind/brick-kind.ts'
@@ -294,7 +302,7 @@ const activateRockets = (step: PowerUpStep, racer: number): PowerUpStep =>
           ...getPlainStart(racer, 3, 3000, null),
           rocketIndex,
         }),
-        [{ type: 'power_ups.sound_played', soundId: 0x33, address: '0x00456668' }]
+        [ROCKET_LAUNCH_SOUND]
       ),
     step
   )
@@ -327,8 +335,8 @@ const activateProjectile = (
         {
           type: 'power_ups.looped_sound_started',
           key: `wand:${String(racer)}`,
-          soundId: 0x44,
-          address: '0x00454d03',
+          soundId: WAND_HUM_SOUND_ID,
+          address: WAND_HUM_ADDRESS,
           ownerRacer: racer,
         },
       ]
@@ -369,12 +377,12 @@ const activateHazard = (
       kind === PowerUpEffectKind.MAGNET
         ? getStepWithEvents(started, [
             // 0x004560b0 (the magnet's placing): sound 0x21, and sound 0x22 loops while it lasts.
-            { type: 'power_ups.sound_played', soundId: 0x21, address: '0x0045622a' },
+            MAGNET_PLACE_SOUND,
             {
               type: 'power_ups.looped_sound_started',
               key: `magnet:${String(effectId)}`,
-              soundId: 0x22,
-              address: '0x0045623d',
+              soundId: MAGNET_HUM_SOUND_ID,
+              address: MAGNET_HUM_ADDRESS,
               ownerRacer: racer,
             },
           ])

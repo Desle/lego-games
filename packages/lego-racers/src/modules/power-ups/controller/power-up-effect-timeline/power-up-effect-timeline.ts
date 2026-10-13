@@ -1,3 +1,21 @@
+import {
+  BARREL_HUM_ADDRESS,
+  BARREL_HUM_SOUND_ID,
+  CURSE_HUM_ADDRESS,
+  CURSE_HUM_SOUND_ID,
+  GRAPPLE_LATCHED_RELEASE_SOUND,
+  GRAPPLE_LAUNCH_SOUND,
+  GRAPPLE_RELEASE_SOUND,
+  GRAPPLE_SNAP_SOUND,
+  MAGNET_LAST_SECOND_SOUND,
+  OIL_LANDING_SOUND,
+  SHIELD_END_SOUND,
+  WAND_END_SOUND,
+  WAND_SPARK_SOUND,
+  WARP_END_SOUND,
+  WARP_SOUND,
+  WARP_START_SOUND,
+} from '../power-up-sounds/power-up-sounds.ts'
 import type { PowerUpEvent } from '../../events/power-up.events.types.ts'
 import { RaceModeFlag } from '../../types/brick-kind/brick-kind.ts'
 import {
@@ -73,8 +91,8 @@ const advanceBarrel = (
         {
           type: 'power_ups.looped_sound_started',
           key: `barrel:${String(effect.id)}`,
-          soundId: 0x11,
-          address: '0x004533a1',
+          soundId: BARREL_HUM_SOUND_ID,
+          address: BARREL_HUM_ADDRESS,
           ownerRacer: effect.ownerRacer,
         },
       ]
@@ -145,7 +163,7 @@ const OIL_LOOP_SOUND = 0x30
 const getOilLoopKey = (effect: PowerUpEffect) => `oil:${String(effect.id)}`
 
 const getOilLandingEvents = (effect: PowerUpEffect): readonly PowerUpEvent[] => [
-  { type: 'power_ups.sound_played', soundId: 0x2e, address: '0x00457431' },
+  OIL_LANDING_SOUND,
   {
     type: 'power_ups.looped_sound_started',
     key: getOilLoopKey(effect),
@@ -180,10 +198,7 @@ const advanceShieldOrWarp = (
     // 0x0045c2a0 state 4: sound 0x3b, then 0x00439790 lowers the shield.
     return getStepWithEvents(
       getWithState(step, effect, EffectState.FINISHED, effect.timerMilliseconds),
-      [
-        { type: 'power_ups.sound_played', soundId: 0x3b, address: '0x0045c2fc' },
-        ...getOwnerEvent(effect, 'power_ups.racer_shield_lowered'),
-      ]
+      [SHIELD_END_SOUND, ...getOwnerEvent(effect, 'power_ups.racer_shield_lowered')]
     )
   }
   // 0x0045dc90: a human racer's warp (+0xe0 is set for a computer, 0x0045d560) starts with sound 0x27 and ends with
@@ -193,21 +208,14 @@ const advanceShieldOrWarp = (
   if (effect.state === EffectState.STARTING) {
     return getStepWithEvents(getWithState(step, effect, EffectState.ACTIVE, 1500), [
       ...getOwnerEvent(effect, 'power_ups.racer_warp_started'),
-      ...(isOwnWarp
-        ? [{ type: 'power_ups.sound_played' as const, soundId: 0x27, address: '0x0045dfa8' }]
-        : []),
-      { type: 'power_ups.sound_played', soundId: 0x41, address: '0x0045dfca' },
+      ...(isOwnWarp ? [WARP_START_SOUND] : []),
+      WARP_SOUND,
     ])
   }
   if (effect.state !== EffectState.ACTIVE) return step
   return getStepWithEvents(
     getWithState(step, effect, EffectState.FINISHED, effect.timerMilliseconds),
-    [
-      ...getOwnerEvent(effect, 'power_ups.racer_warp_ended'),
-      ...(isOwnWarp
-        ? [{ type: 'power_ups.sound_played' as const, soundId: 0x29, address: '0x0045dec3' }]
-        : []),
-    ]
+    [...getOwnerEvent(effect, 'power_ups.racer_warp_ended'), ...(isOwnWarp ? [WARP_END_SOUND] : [])]
   )
 }
 
@@ -243,7 +251,7 @@ const advanceProjectile = (
           'cannsmk'
         ),
         // 0x00454360 state 2 ends with the launch sound.
-        [{ type: 'power_ups.sound_played', soundId: 0x15, address: '0x004545c0' }]
+        [GRAPPLE_LAUNCH_SOUND]
       )
     if (effect.state === EffectState.ACTIVE || effect.state === EffectState.ENDING) {
       return retractGrapple(step, effect)
@@ -256,7 +264,7 @@ const advanceProjectile = (
     return effect.state === EffectState.STARTING || effect.state === EffectState.ACTIVE
       ? advanced
       : getStepWithEvents(releaseEffectEmitter(advanced, effect.id, false), [
-          { type: 'power_ups.sound_played', soundId: 0x42, address: '0x004550c3' },
+          WAND_END_SOUND,
           ...(effect.ownerRacer === null
             ? []
             : [
@@ -298,12 +306,9 @@ export const retractGrapple = (step: PowerUpStep, effect: PowerUpEffect): PowerU
             victim: effect.targetRacer,
             owner: effect.ownerRacer,
           },
-          { type: 'power_ups.sound_played' as const, soundId: 0x14, address: '0x00454724' },
+          GRAPPLE_LATCHED_RELEASE_SOUND,
         ]
-      : [
-          { type: 'power_ups.sound_played' as const, soundId: 0x16, address: '0x00454701' },
-          { type: 'power_ups.sound_played' as const, soundId: 0x49, address: '0x00454724' },
-        ]),
+      : [GRAPPLE_SNAP_SOUND, GRAPPLE_RELEASE_SOUND]),
   ])
 
 // Vtable slot 5, called when an effect's timer runs out (0x004513a0) or its projectile ends.
@@ -354,7 +359,7 @@ export const advancePowerUpEffect = (
             ]
           )
         : getStepWithEvents(getWithState(step, effect, EffectState.ENDING, 1000), [
-            { type: 'power_ups.sound_played', soundId: 0x4a, address: '0x00455fa9' },
+            MAGNET_LAST_SECOND_SOUND,
           ])
     case PowerUpEffectKind.CURSE: {
       // 0x00452ae0: the curse figure loops sound 9 while it stands.
@@ -364,8 +369,8 @@ export const advancePowerUpEffect = (
           {
             type: 'power_ups.looped_sound_started',
             key: `curse:${String(effect.id)}`,
-            soundId: 9,
-            address: '0x00452d13',
+            soundId: CURSE_HUM_SOUND_ID,
+            address: CURSE_HUM_ADDRESS,
             ownerRacer: null,
           },
         ])
@@ -481,7 +486,7 @@ const updateWand = (
       ...current,
       sparkMilliseconds: ((sparkDraws.values[1] ?? 0) % 300) + 200,
     }),
-    [{ type: 'power_ups.sound_played', soundId: 0x45, address: '0x00454fd0' }]
+    [WAND_SPARK_SOUND]
   )
 }
 

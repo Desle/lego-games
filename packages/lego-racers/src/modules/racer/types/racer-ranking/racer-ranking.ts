@@ -12,6 +12,7 @@ const FLOAT32_MAXIMUM = 3.4028234663852886e38 // 0x7f7fffff
 const FINISHED_FLAG = 0x2
 const UNRANKED_FLAG = 0x1000
 const VOICE_MINIMUM_MILLISECONDS = 5000
+// 6 voices, DIV at 0x004392a5
 const VOICE_VARIANTS = 6
 
 const swapEntries = (

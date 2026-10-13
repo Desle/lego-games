@@ -74,6 +74,7 @@ const getWheelOnSurface = (
 const WHEEL_EMITTER_MINIMUM_SPEED = getFloatFromBits(0x3c03126f)
 const WHEEL_EMITTER_BLOCKING_BODY_FLAGS = 0x88
 const EMITTER_NAME_FLAG = 0x400
+// 0x0042aad0
 const SURFACE_SOUND_FLAG = 0x80
 
 // What a wheel asks of its vehicle's surface emitter: 0x0042aad0 starts the emitter the material names while the

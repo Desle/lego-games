@@ -4,7 +4,9 @@ import type { SoundListener, SoundMix, SoundSource } from '../../types/race-audi
 const PAN_STRENGTH = 0.7
 // 0x004afb28 and 0x004afb2c: the volume curve (-3000 hundredths of a decibel at the quietest) and its cut-off.
 const QUIETEST_VOLUME = 3000
+// 0x004afb2c
 const SILENT_VOLUME = 0.005
+// 0x00419650
 const SILENT_DIRECT_SOUND_VOLUME = -10000
 // 0x004afb30: DirectSound's pan units per unit of pan.
 const PAN_UNITS = 2500

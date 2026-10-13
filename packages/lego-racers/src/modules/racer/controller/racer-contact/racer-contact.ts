@@ -39,6 +39,9 @@ const SMALL_SPIN_FACTOR = getFloatFromBits(0x3f800000)
 const LARGE_SPIN_FACTOR = getFloatFromBits(0x40000000)
 const HIT_STRENGTH = 150 // 0x004220e0
 const CONTACT_TIMER_MILLISECONDS = 750 // 0x2ee
+// 0x00438ba1 and 0x00438ba5: the contact's sound 0x37 or 0x18, PlayAt at 0x00438bb3.
+const CONTACT_SOUND_HIGH = 0x37 // 0x00438ba1
+const CONTACT_SOUND_LOW = 0x18 // 0x00438ba5
 const CONTACT_SOUND_MILLISECONDS = 250
 const COMPUTER_CONTROLLER = 2
 const RACER_DISABLED_FLAG = 0x10
@@ -393,7 +396,7 @@ export const respondToRacerContact = (
           sounds: Object.freeze([
             ...waited.sounds,
             {
-              soundId: (draw.value & 1) === 0 ? 0x18 : 0x37,
+              soundId: (draw.value & 1) === 0 ? CONTACT_SOUND_LOW : CONTACT_SOUND_HIGH,
               address: '0x00438bb3',
               racerIndex: firstIndex,
             },

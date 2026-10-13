@@ -55,6 +55,7 @@ export const POWER_UP_SOUND_SITES = Object.freeze({
 
 // The distances 0x004b0958 and 0x004b095c (30 and 300) most call sites pass; a track event brings its own.
 const DEFAULT_MINIMUM_DISTANCE = 30
+// 0x004b095c
 const DEFAULT_MAXIMUM_DISTANCE = 300
 
 type PositionTriple = readonly [number, number, number]
@@ -99,7 +100,9 @@ export const NO_RACE_SOUND_CONTEXT: RaceSoundContext = Object.freeze({
 
 // The distances of the call sites that do not pass 30 and 300: the voices (100, 400) and the warp (200, 600).
 const SITE_DISTANCES: Readonly<Record<string, readonly [number, number]>> = Object.freeze({
+  // the voices pass 100 and 400 at 0x00439280 and 0x00439296
   '0x004392ff': [100, 400],
+  // the warp's 0x41 passes 0x004b1a60 and 0x004b1a64
   '0x0045dfca': [200, 600],
 })
 
@@ -231,11 +234,15 @@ export const getPowerSlideSound = (isStarting: boolean): SoundRequest =>
     ? createRequest(POWER_SLIDE_START_SOUND, '0x0043985b')
     : createRequest(POWER_SLIDE_STOP_SOUND, '0x004398d5')
 
+// sounds of the shield levels, 0x0045bd30
 const SHIELD_LOOP_SOUNDS = Object.freeze([0x4c, 0x35, 0x4d, 0x4e])
 // Racer_UpdateLoopedSounds 0x00437be0: the turbo hum of its level (0 to 2) and the warp's.
 const TURBO_LOOP_SOUND_BASE = 0x2a
+// warp hum made at 0x00437540
 const WARP_LOOP_SOUND = 0x2d
+// curse hum, Get at 0x00439900
 const CURSE_RACER_LOOP_SOUND = 8
+// three turbo hums, 0x00437be0
 const TURBO_LOOP_LEVEL_COUNT = 3
 
 const getRacerSource = (

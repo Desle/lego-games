@@ -19,6 +19,7 @@ import { getFloatFromBits } from '../../../simulation-math/index.ts'
 export const GHOST_IDENTIFIER = 10
 // The sound the ghost loops while it is active (0x0048cac0) and the one it makes at a racer (0x0048cbb0).
 const LOOPED_SOUND = 0xbc4
+// sound 0xbc7 of the ghost's touch, PlayAt at 0x0048cf75
 const TOUCH_SOUND = 0xbc7
 // Racer flag 0x1 (+0xd04): shielded.
 const SHIELDED_FLAG = 1

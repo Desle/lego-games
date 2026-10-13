@@ -10,8 +10,10 @@ import type {
 
 const MAXIMUM_DIFFERING_FRAMES = 10
 // Looped sounds are counted under their sound id plus this, apart from the one-shots with the same id.
+// @check-allow traced-constants: a key of the trace, not a value of the original
 export const LOOPED_SOUND_ID_OFFSET = 100_000
 // The engine's idle, middle, high and skid loops, and the nearest racer's.
+// the engine loops 0x20, 10, 0x3d, 3 of 0x00437540 and the nearest racer's 0x4f of 0x0043ccb0
 const CHECKED_LOOP_SOUND_IDS: readonly number[] = [0x20, 10, 0x3d, 3, 0x4f]
 
 // The sound and music requests of the original's DirectSound trace: sound ids from the race's sound player, and a tune

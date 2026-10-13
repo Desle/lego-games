@@ -1,3 +1,8 @@
+import {
+  BARREL_END_SOUND,
+  CANNON_END_SOUND,
+  ROCKET_GROUND_HIT_SOUND,
+} from '../power-up-sounds/power-up-sounds.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
 import type { CurseFigureFrame, PowerUpEvent } from '../../events/power-up.events.types.ts'
 import {
@@ -316,10 +321,10 @@ const getProjectileEndSounds = (
 ): readonly PowerUpEvent[] => {
   switch (effect.kind) {
     case PowerUpEffectKind.CANNON:
-      return [{ type: 'power_ups.sound_played', soundId: 5, address: '0x00451c55' }]
+      return [CANNON_END_SOUND]
     case PowerUpEffectKind.BARREL:
       return [
-        { type: 'power_ups.sound_played', soundId: 5, address: '0x004530ad' },
+        BARREL_END_SOUND,
         {
           type: 'power_ups.looped_sound_stopped',
           key: `barrel:${String(effectId)}`,
@@ -327,7 +332,7 @@ const getProjectileEndSounds = (
         },
       ]
     case PowerUpEffectKind.ROCKET:
-      return [{ type: 'power_ups.sound_played', soundId: 0x32, address: '0x00456a6e' }]
+      return [ROCKET_GROUND_HIT_SOUND]
     default:
       return []
   }

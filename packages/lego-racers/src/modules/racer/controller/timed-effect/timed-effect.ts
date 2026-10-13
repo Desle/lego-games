@@ -98,6 +98,9 @@ export const getRacerWithoutTimedEffect = (racer: Racer): Racer =>
     }),
   })
 
+// The curse's hum, Get at 0x00439a54 in 0x00439900.
+const CURSE_HUM_SOUND = 8 // 0x00439a54
+
 // 0x00439b00: the effect ends and the racer's curse loop (sound 8, 0x00439900) is stopped.
 export const endTimedEffect: RacerBoundary = (_context, racerSet, racerIndex) => {
   const ended = setRacer(
@@ -112,7 +115,7 @@ export const endTimedEffect: RacerBoundary = (_context, racerSet, racerIndex) =>
       {
         isStart: false,
         key: `racer-curse:${String(racerIndex)}`,
-        soundId: 8,
+        soundId: CURSE_HUM_SOUND,
         address: '0x00439b00',
         racerIndex,
       },
