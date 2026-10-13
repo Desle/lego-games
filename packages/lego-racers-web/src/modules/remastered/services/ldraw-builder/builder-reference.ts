@@ -4,6 +4,7 @@ import {
   findBrickPieceByName,
   parseBrickDatabase,
 } from '@lego-games/lego-racers/car-builder'
+import type { BrickDatabase, BrickPiece } from '@lego-games/lego-racers/car-builder'
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import { readRacerDatabases } from '@lego-games/lego-racers/race'
 import {
@@ -30,8 +31,8 @@ import { getWheelMounts } from '../reference-kit/wheel-mounts.ts'
 import {
   getDefaultHeaderLines,
   getReferencedModelName,
+  inlineReferencedModels,
   parseBuilderDocument,
-  placeReferencedParts,
 } from './builder-document.ts'
 import { getBuilderItemFile } from './builder-items.ts'
 import type { BuilderItemStart, OriginalReference } from './builder-reference.types.ts'
@@ -42,6 +43,7 @@ const WHEEL_GUIDE_COLOR = 0x37c6ff
 const WHEEL_GUIDE_OPACITY = 0.18
 const WHEEL_GUIDE_SEGMENTS = 24
 const NO_OFFSET = [0, 0, 0] as const
+const CHASSIS_RECIPE_FILE = /^chassis\/([^/]+)\.ldr$/i
 
 // A model file's text as it is on disk now (never a cached copy: the builder writes these files).
 export const fetchModelText = async (file: string): Promise<string | null> => {
@@ -136,24 +138,33 @@ const getTitle = (item: BuilderItem): string =>
     ? `Racers chassis ${item.name.toUpperCase()} (recipe frame: footprint corner, x width, y depth, z up from the brick bottom)`
     : `Racers champion car ${item.name}`
 
-// The chassis recipes a car's reference lines place, as parts in the car's frame (shown and stacked on, never edited).
-const loadReferencedParts = async (
+// The parts of the chassis recipes a car's reference lines place, by recipe name, in the recipe's own frame.
+const loadReferencedRecipes = async (
   referenceLines: readonly string[]
-): Promise<readonly BuilderPart[]> => {
+): Promise<ReadonlyMap<string, readonly BuilderPart[]>> => {
   const index = await loadLDrawModelIndex()
-  const placed = await Promise.all(
-    referenceLines.map(async (line) => {
+  const recipes = await Promise.all(
+    referenceLines.map(async (line): Promise<readonly [string, readonly BuilderPart[]] | null> => {
       const name = getReferencedModelName(line)
       const file = name === null ? undefined : index.chassis[name]
       const text = file === undefined ? null : await fetchModelText(file)
-      return text === null ? [] : placeReferencedParts(line, parseBuilderDocument(text).parts)
+      return name === null || text === null ? null : [name, parseBuilderDocument(text).parts]
     })
   )
-  return placed.flat()
+  return new Map(recipes.filter((recipe) => recipe !== null))
 }
 
-// What an item starts from: the file in the models folder (or the one given), else (or for EMPTY_START_FILE) an empty model (a car with its chassis recipe
-// placed by the reference sheet's line). A chassis is edited in its recipe frame, which sits at its offset in the car's frame.
+// The chassis brick a `chassis/<NAME>.ldr` start file is the recipe of, null for any other file.
+const findChassisRecipePiece = (database: BrickDatabase, file: string): BrickPiece | null => {
+  const match = CHASSIS_RECIPE_FILE.exec(file)
+  return match?.[1] === undefined ? null : findBrickPieceByName(database, match[1].toLowerCase())
+}
+
+// What an item starts from: the file in the models folder (or the one given), else (or for EMPTY_START_FILE) an empty model. A
+// champion's car is one whole model (chassis and body, everything but the wheels): an older car file that places a chassis recipe
+// gets the recipe's parts as its own, so Done writes it flat, and a car started from a chassis recipe gets a copy of its parts where
+// the game puts that chassis (no link to the recipe). A chassis is edited in its recipe frame, which sits at its offset in the car's
+// frame.
 export const loadBuilderItemStart = async (
   archive: JamArchive,
   item: BuilderItem,
@@ -164,28 +175,31 @@ export const loadBuilderItemStart = async (
   const file = getBuilderItemFile(item.id, existing) ?? `${item.name}.ldr`
   const sourceFile =
     startFile ?? (existing.some((path) => path.toLowerCase() === file.toLowerCase()) ? file : null)
-  const text =
-    sourceFile === null || sourceFile === EMPTY_START_FILE ? null : await fetchModelText(sourceFile)
   const database = parseBrickDatabase(archive.readFile(BRICK_DATABASE_PATH))
   const piece = findBrickPieceByName(database, item.chassisName)
   const isChassis = item.kind === BuilderItemKind.CHASSIS
+  const recipePiece =
+    isChassis || sourceFile === null ? null : findChassisRecipePiece(database, sourceFile)
+  const text =
+    recipePiece !== null
+      ? getChassisReferenceLine(database, recipePiece)
+      : sourceFile === null || sourceFile === EMPTY_START_FILE
+        ? null
+        : await fetchModelText(sourceFile)
   const parsed = parseBuilderDocument(text ?? '')
-  const document = Object.freeze({
-    ...parsed,
-    headerLines:
-      parsed.headerLines.length > 0
-        ? parsed.headerLines
-        : getDefaultHeaderLines(getTitle(item), file.split('/').pop() ?? file),
-    referenceLines:
-      text === null && !isChassis && piece !== null
-        ? [getChassisReferenceLine(database, piece)]
-        : parsed.referenceLines,
-  })
+  const document = isChassis
+    ? parsed
+    : inlineReferencedModels(parsed, await loadReferencedRecipes(parsed.referenceLines))
   return {
     file,
     sourceFile,
-    document,
-    lockedParts: isChassis ? [] : await loadReferencedParts(document.referenceLines),
+    document: Object.freeze({
+      ...document,
+      headerLines:
+        document.headerLines.length > 0
+          ? document.headerLines
+          : getDefaultHeaderLines(getTitle(item), file.split('/').pop() ?? file),
+    }),
     editOffset: isChassis && piece !== null ? getChassisRecipeOffset(database, piece) : NO_OFFSET,
   }
 }

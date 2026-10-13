@@ -1,4 +1,9 @@
-import { getBuilderItemFile, getBuilderItems, getNextBuilderItem } from './builder-items.ts'
+import {
+  getBuilderItemFile,
+  getBuilderItems,
+  getNextBuilderItem,
+  getStartFiles,
+} from './builder-items.ts'
 
 describe('getBuilderItems', () => {
   it('queues the 12 chassis, then the 20 cars on their chassis', () => {
@@ -42,5 +47,27 @@ describe('getNextBuilderItem', () => {
     // Assert
     expect(next?.id).toBe('chassis/jtchas0')
     expect(getNextBuilderItem(items, 'x', [...done, 'chassis/jtchas0'])).toBeNull()
+  })
+})
+
+describe('getStartFiles', () => {
+  it('offers a car its own files and every chassis recipe, a chassis only its own', () => {
+    // Arrange
+    const [chassis, car] = [getBuilderItems(new Map())[0], getBuilderItems(new Map()).at(-1)]
+    const paths = [
+      'GMCM.ldr',
+      'drafts/GMCM-old.ldr',
+      'chassis/JTchas0.ldr',
+      'chassis/_fallback/x.ldr',
+      'RRCM.ldr',
+    ]
+
+    // Act
+    const carFiles = car === undefined ? [] : getStartFiles(car, paths)
+    const chassisFiles = chassis === undefined ? [] : getStartFiles(chassis, paths)
+
+    // Assert
+    expect(carFiles).toEqual(['GMCM.ldr', 'drafts/GMCM-old.ldr', 'chassis/JTchas0.ldr'])
+    expect(chassisFiles).toEqual(['chassis/JTchas0.ldr'])
   })
 })

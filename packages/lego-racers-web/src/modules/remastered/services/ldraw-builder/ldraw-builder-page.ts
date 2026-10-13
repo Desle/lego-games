@@ -41,7 +41,7 @@ import {
   redoBuilderHistory,
   undoBuilderHistory,
 } from './builder-history.ts'
-import { getBuilderItems, getNextBuilderItem } from './builder-items.ts'
+import { getBuilderItems, getNextBuilderItem, getStartFiles } from './builder-items.ts'
 import {
   createBuilderView,
   getBuilderGroundAxes,
@@ -53,10 +53,12 @@ import {
 } from './builder-camera.ts'
 import {
   addParts,
+  getSameColorIndices,
   getStudOffset,
   getStudStep,
   moveParts,
   pickParts,
+  recolorParts,
   removeParts,
   tiltParts,
   toggleIndex,
@@ -74,7 +76,6 @@ import {
   getGridPoint,
   getGroundPhase,
   getPartPhase,
-  getPlacedBox,
   getPlacedStuds,
   getPlacementPosition,
   getRotatedBox,
@@ -121,6 +122,8 @@ const FIELD_OF_VIEW = 32
 const GHOST_REFERENCE_OPACITY = 0.45
 const CLICK_DISTANCE = 5
 const GRID_STUDS = 40
+// The empty ground a model starts on: the editing frame's floor (a chassis's brick bottom, a car's origin).
+const GROUND_HEIGHT = 0
 const FRAME_MARGIN = 1.4
 const VIEW_DIRECTION: Vector = [0.7, -1, 0.6]
 const BRICK_HEIGHT = 3 * PLATE_HEIGHT
@@ -159,13 +162,12 @@ const buildScene = new Scene()
 const ldrawFrame = new Group()
 ldrawFrame.matrixAutoUpdate = false
 ldrawFrame.matrix.copy(LDRAW_TO_STUDS)
-const lockedGroup = new Group()
 const editFrame = new Group()
 const partsGroup = new Group()
 const grid = new GridHelper(GRID_STUDS * STUD_WIDTH, GRID_STUDS, GRID_COLOR, GRID_COLOR)
 grid.raycast = () => undefined
 editFrame.add(partsGroup, grid)
-ldrawFrame.add(lockedGroup, editFrame)
+ldrawFrame.add(editFrame)
 const guidesHolder = new Group()
 const selectionHolder = new Group()
 buildScene.add(createStudioLights(), ldrawFrame, guidesHolder, selectionHolder)
@@ -284,7 +286,9 @@ const showStatus = () => {
 const getHint = (): string =>
   [
     getActionHint(),
-    currentItem?.kind === BuilderItemKind.CHASSIS ? 'wheels go on the guides (W)' : '',
+    currentItem?.kind === BuilderItemKind.CHASSIS
+      ? 'wheels go on the guides (W)'
+      : 'the whole car (chassis and body) but the wheels: the game draws those, spinning and steering, on the guides (W)',
   ]
     .filter((text) => text !== '')
     .join(' · ')
@@ -320,7 +324,7 @@ const scheduleSync = () => {
 }
 
 // Puts a copy of each part's template where the part is; a template that has not arrived yet is asked for and the scene follows.
-const fillGroup = (group: Group, parts: readonly BuilderPart[], isEditable: boolean) => {
+const fillGroup = (group: Group, parts: readonly BuilderPart[]) => {
   group.clear()
   parts.forEach((part, index) => {
     const template = templates.getLoaded(part.partName, part.colorCode)
@@ -330,7 +334,7 @@ const fillGroup = (group: Group, parts: readonly BuilderPart[], isEditable: bool
     }
     if (template === null) return
     const instance = createPartInstance(template, part)
-    instance.userData = isEditable ? { partIndex: index } : { lockedIndex: index }
+    instance.userData = { partIndex: index }
     group.add(instance)
   })
 }
@@ -354,8 +358,7 @@ const keepDraft = () => {
 
 const syncScene = () => {
   keepDraft()
-  fillGroup(partsGroup, draftParts ?? history.present, true)
-  fillGroup(lockedGroup, start?.lockedParts ?? [], false)
+  fillGroup(partsGroup, draftParts ?? history.present)
   panel.showUsedParts(history.present.map((part) => part.partName))
   syncSelection()
   syncGhost()
@@ -365,23 +368,11 @@ const syncScene = () => {
 
 const getOwner = (object: Object3D | null): Object3D | null => {
   let current = object
-  while (
-    current !== null &&
-    !('partIndex' in current.userData || 'lockedIndex' in current.userData)
-  ) {
+  while (current !== null && !('partIndex' in current.userData)) {
     current = current.parent
   }
   return current
 }
-
-const getGroundHeight = (): number =>
-  Math.max(
-    0,
-    ...(start?.lockedParts ?? []).map((part) => {
-      const box = getTemplateBox(part)
-      return box === null ? 0 : getPlacedBox(box, part).maximum[1] - (start?.editOffset[1] ?? 0)
-    })
-  )
 
 const getViewWidth = (): number =>
   referenceMode === ReferenceMode.SIDE && reference !== null
@@ -423,7 +414,7 @@ const getPointerHit = (position: PointerPosition): PointerHit | null => {
   buildScene.updateMatrixWorld(true)
   const toEdit = editFrame.matrixWorld.clone().invert()
   const hit = raycaster
-    .intersectObjects([partsGroup, lockedGroup], true)
+    .intersectObjects([partsGroup], true)
     .find((intersection) => intersection.object instanceof Mesh && intersection.face != null)
   const owner = getOwner(hit?.object ?? null)
   if (hit !== undefined && hit.face != null && owner !== null) {
@@ -431,51 +422,32 @@ const getPointerHit = (position: PointerPosition): PointerHit | null => {
     if (worldNormal.dot(raycaster.ray.direction) > 0) worldNormal.negate()
     const normal = worldNormal.transformDirection(toEdit)
     const partIndex: unknown = owner.userData['partIndex']
-    const lockedIndex: unknown = owner.userData['lockedIndex']
-    const part =
-      typeof partIndex === 'number'
-        ? history.present[partIndex]
-        : typeof lockedIndex === 'number'
-          ? start?.lockedParts[lockedIndex]
-          : undefined
+    const part = typeof partIndex === 'number' ? history.present[partIndex] : undefined
     const box = part === undefined ? null : getTemplateBox(part)
-    if (part !== undefined && box !== null) {
-      const lockedOffset = start?.editOffset ?? [0, 0, 0]
-      const framePart =
-        typeof partIndex === 'number'
-          ? part
-          : {
-              ...part,
-              position: [
-                part.position[0] - lockedOffset[0],
-                part.position[1] - lockedOffset[1],
-                part.position[2] - lockedOffset[2],
-              ] as const,
-            }
+    if (typeof partIndex === 'number' && part !== undefined && box !== null) {
       const point = toEditFrame(hit.point)
       const hitNormal: Vector = [normal.x, normal.y, normal.z]
       return {
         target: {
           point,
           normal: hitNormal,
-          phase: getPartPhase(getGridPoint(getStuds(part.partName), box, part.rotation), framePart),
+          phase: getPartPhase(getGridPoint(getStuds(part.partName), box, part.rotation), part),
         },
-        partIndex: typeof partIndex === 'number' ? partIndex : null,
+        partIndex,
         part,
-        sideStud: getSideStudUnder(framePart, point, hitNormal),
+        sideStud: getSideStudUnder(part, point, hitNormal),
       }
     }
   }
-  const groundHeight = getGroundHeight()
   const ray = raycaster.ray.clone().applyMatrix4(toEdit)
-  const ground = ray.intersectPlane(new Plane(new Vector3(0, 1, 0), -groundHeight), new Vector3())
+  const ground = ray.intersectPlane(new Plane(new Vector3(0, 1, 0), -GROUND_HEIGHT), new Vector3())
   return ground === null
     ? null
     : {
         target: {
           point: [ground.x, ground.y, ground.z],
           normal: [0, -1, 0],
-          phase: getGroundPhase(groundHeight),
+          phase: getGroundPhase(GROUND_HEIGHT),
         },
         partIndex: null,
         part: null,
@@ -558,13 +530,17 @@ const putDown = () => {
 
 const chooseColor = (colorCode: number) => {
   setTool({ ...tool, colorCode }, isHolding)
-  if (selectedIndices.length > 0) {
-    commit(
-      history.present.map((part, index) =>
-        selectedIndices.includes(index) ? Object.freeze({ ...part, colorCode }) : part
-      )
-    )
-  }
+  const recolored = recolorParts(history.present, selectedIndices, colorCode)
+  if (recolored !== history.present) commit(recolored)
+}
+
+// The colour under the cursor, else the first selected part's: every part of it is selected.
+const selectPointedColor = () => {
+  const pointed = pointer === null ? null : (getPointerHit(pointer)?.part ?? null)
+  const colorCode = (pointed ?? history.present[selectedIndices[0] ?? -1])?.colorCode
+  if (colorCode === undefined) return
+  setTool(tool, false)
+  setSelectedIndices(getSameColorIndices(history.present, colorCode))
 }
 
 const rotate = (isBack: boolean) =>
@@ -670,7 +646,7 @@ const cycleReferenceMode = () =>
 
 const frameCamera = () => {
   buildScene.updateMatrixWorld(true)
-  const box = new Box3().setFromObject(partsGroup).union(new Box3().setFromObject(lockedGroup))
+  const box = new Box3().setFromObject(partsGroup)
   if (reference !== null) box.union(new Box3().setFromObject(reference.object))
   if (box.isEmpty()) box.setFromCenterAndSize(new Vector3(), new Vector3(8, 6, 3))
   const centre = box.getCenter(new Vector3())
@@ -705,11 +681,11 @@ const showStartFiles = async (item: BuilderItem) => {
     `${DEVELOPMENT_LDRAW_MODELS_ROUTE}/${LDRAW_MODEL_FILES_FILE}`,
     []
   )
-  const name = item.name.toLowerCase()
   panel.showStartFiles(
-    files
-      .map((file) => file.path)
-      .filter((path) => (path.split('/').pop() ?? '').toLowerCase().startsWith(name)),
+    getStartFiles(
+      item,
+      files.map((file) => file.path)
+    ),
     start?.sourceFile ?? null
   )
 }
@@ -740,13 +716,8 @@ const openItem = async (item: BuilderItem, startFile: string | null) => {
   if (reference !== null) referenceScene.add(reference.object)
   guidesHolder.clear()
   if (item.chassisName !== '') guidesHolder.add(createWheelGuides(archive, item.chassisName))
-  if (item.kind === BuilderItemKind.CHASSIS) guidesHolder.visible = true
-  history.present.forEach((part) => void templates.load(part.partName, part.colorCode))
-  await Promise.all(
-    [...history.present, ...start.lockedParts].map((part) =>
-      templates.load(part.partName, part.colorCode)
-    )
-  )
+  guidesHolder.visible = true
+  await Promise.all(history.present.map((part) => templates.load(part.partName, part.colorCode)))
   syncScene()
   frameCamera()
   replaceAddressHash(item.id)
@@ -833,6 +804,7 @@ const getKeyActions = (quickColorIndex: number): Readonly<Record<BuilderAction, 
   [BuilderAction.UNDO]: undo,
   [BuilderAction.REDO]: redo,
   [BuilderAction.SELECT_ALL]: selectAll,
+  [BuilderAction.SELECT_COLOR]: selectPointedColor,
   [BuilderAction.SAVE]: () => void finishItem(),
   [BuilderAction.TAKE_COLOR]: () => takeFromPointer(false),
   [BuilderAction.TAKE_PART]: () => takeFromPointer(true),
@@ -938,6 +910,7 @@ const onPointerMove = (event: PointerEvent) => {
 
 const onClick = (current: PointerPress) => {
   if (current.gesture === PointerGesture.ORBIT) takeFromPointer(false)
+  else if (current.gesture === PointerGesture.PAN) selectPointedColor()
   else if (current.gesture === PointerGesture.PLACE) placePart()
   else if (current.partIndex === null) {
     if (!current.isShift) setSelectedIndices([])
