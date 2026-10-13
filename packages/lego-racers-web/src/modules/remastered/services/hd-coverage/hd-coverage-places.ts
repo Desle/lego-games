@@ -59,6 +59,7 @@ const getRacePlace = (
 // Every place the game draws a racer: the menus' figures and cars, the cinemas, and the races of every mode.
 export const HD_COVERAGE_PLACES: readonly HdCoveragePlace[] = [
   { kind: 'model_parts', name: 'Every model of the folder, part by part' },
+  { kind: 'driver_seats', name: 'Every driver on its seat' },
   getMenuPlace('Main menu figure', null, []),
   getMenuPlace('Circuit racer select', null, ['down', 'accept', 'accept']),
   getMenuPlace('Single race select', null, ['down', 'down', 'accept']),

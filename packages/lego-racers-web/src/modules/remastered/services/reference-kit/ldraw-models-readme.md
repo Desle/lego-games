@@ -51,6 +51,10 @@ A garage car is complete LDraw once its chassis has a recipe. Until then it is d
 
 The sheets list the four wheels of a chassis in the car's frame: centre (x, y, z), diameter, width, and the axle (always y). The library wheels the game adds sit exactly there, so a body needs room for a wheel of that size at that place (the blue dashed outlines in the views). A wheel you build yourself must be centred there too, with its axle along y; spin and steering turn it about its own centre.
 
+## The driver's seat
+
+The race seats the driver at the chassis's seat point, which the sheets print and mark with a green ring. Build the steering wheel in front of it: the driver is drawn there whatever the model does. Most chassis seat the driver on the centre line; **JTchas0 and BVBCHA0 seat it a stud to the car's left** (y 1.04 and 1.01 studs: left-hand drive, as the game's own models draw their steering wheel), so Johnny Thunder's and Baron von Barron's cars, and every garage car on those chassis, need the wheel there too (LDraw z about 20 in a car file, about 80 in those chassis recipes). `pnpm run hd-coverage` notes every model whose steering wheel is not in front of the seat.
+
 ## Reference sheets
 
 `reference/<CODE>.svg` shows the original body in four orthographic views (side from the left, top, front, back) over a grid of studs (a line at every whole stud, labelled every 5, the origin a red cross), the wheel mounts, the overall size in studs, plates and bricks, and the colours as LDraw names with their share of the surface. Open the `.svg` in a browser. The `.txt` next to it has the same numbers as text. The sheets are rendered from the game's models: the printed logos and decals are not drawn, the studs are left out.

@@ -35,6 +35,7 @@ const getResult = (
   modelIndex: INDEX,
   unsettledCallIds: [],
   partFindings: [],
+  driverSeats: [],
 })
 
 describe('getPlaceFindings', () => {

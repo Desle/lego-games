@@ -171,6 +171,21 @@ const getWheelShapes = (
   })
 }
 
+const SEAT_RADIUS_PIXELS = 6
+
+// The driver's seat: a green ring with a cross, in every view.
+const getSeatMarker = (
+  panel: Panel,
+  scale: number,
+  seat: readonly [number, number, number]
+): string => {
+  const { view } = panel
+  const x = panel.left + ((seat[view.right[0]] ?? 0) * view.right[1] - panel.uMinimum) * scale
+  const y = panel.top + (panel.vMaximum - (seat[view.up[0]] ?? 0) * view.up[1]) * scale
+  const radius = SEAT_RADIUS_PIXELS
+  return `<circle cx="${formatNumber(x)}" cy="${formatNumber(y)}" r="${formatNumber(radius)}" class="seat"/><path d="M${formatNumber(x - radius)},${formatNumber(y)}H${formatNumber(x + radius)}M${formatNumber(x)},${formatNumber(y - radius)}V${formatNumber(y + radius)}" class="seat"/>`
+}
+
 const getOrigin = (panel: Panel, scale: number): string => {
   const x = panel.left - panel.uMinimum * scale
   const y = panel.top + panel.vMaximum * scale
@@ -178,7 +193,8 @@ const getOrigin = (panel: Panel, scale: number): string => {
 }
 
 // The sheet of a car or a chassis: four orthographic views of its triangles in the colours the game gives them, over a grid of studs
-// in the car's frame (a line at every whole stud, labelled every 5; the origin is the red cross), the wheel mounts as blue outlines,
+// in the car's frame (a line at every whole stud, labelled every 5; the origin is the red cross), the wheel mounts as blue outlines, the
+// driver's seat as a green ring,
 // then the dimensions, the colours as LDraw names and the notes.
 export const createReferenceSheet = (content: ReferenceSheetContent): string => {
   const bounds = getBounds(content.faces, content.wheelMounts)
@@ -211,6 +227,7 @@ export const createReferenceSheet = (content: ReferenceSheetContent): string => 
     ...getPanelLines(panel, scale, bounds),
     ...getPolygons(panel, scale, content.faces),
     ...getWheelShapes(panel, scale, content.wheelMounts),
+    getSeatMarker(panel, scale, content.seat),
     getOrigin(panel, scale),
   ])
   const text = [
@@ -227,7 +244,7 @@ export const createReferenceSheet = (content: ReferenceSheetContent): string => 
   ]
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${formatNumber(width)}" height="${formatNumber(height)}" viewBox="0 0 ${formatNumber(width)} ${formatNumber(height)}" font-family="Helvetica, Arial, sans-serif">`,
-    '<style>.minor{stroke:#c9ced6;stroke-width:0.5}.major{stroke:#8a93a3;stroke-width:0.9}.tick{font-size:10px;fill:#4a5262}.view{font-size:13px;font-weight:bold;fill:#1d2330}.title{font-size:20px;font-weight:bold;fill:#1d2330}.line{font-size:13px;fill:#1d2330}.wheel{fill:none;stroke:#0055bf;stroke-width:1.6;stroke-dasharray:4 2}.origin{stroke:#d01012;stroke-width:2;fill:none}polygon{stroke:#222;stroke-width:0.25;stroke-linejoin:round}</style>',
+    '<style>.minor{stroke:#c9ced6;stroke-width:0.5}.major{stroke:#8a93a3;stroke-width:0.9}.tick{font-size:10px;fill:#4a5262}.view{font-size:13px;font-weight:bold;fill:#1d2330}.title{font-size:20px;font-weight:bold;fill:#1d2330}.line{font-size:13px;fill:#1d2330}.wheel{fill:none;stroke:#0055bf;stroke-width:1.6;stroke-dasharray:4 2}.origin{stroke:#d01012;stroke-width:2;fill:none}.seat{stroke:#00852b;stroke-width:2;fill:none}polygon{stroke:#222;stroke-width:0.25;stroke-linejoin:round}</style>',
     '<rect width="100%" height="100%" fill="#fff"/>',
     ...panels.map(
       (panel) =>

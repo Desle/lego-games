@@ -1,4 +1,12 @@
-import { loadSavedCars, QUICK_BUILD_SAVE_PATH } from '@lego-games/lego-racers/car-builder'
+import {
+  BRICK_DATABASE_PATH,
+  findBrickPieceByName,
+  getCarOrigin,
+  getDriverPartBytes,
+  loadSavedCars,
+  parseBrickDatabase,
+  QUICK_BUILD_SAVE_PATH,
+} from '@lego-games/lego-racers/car-builder'
 import type { SavedCar } from '@lego-games/lego-racers/car-builder'
 import {
   createFrontEnd,
@@ -24,8 +32,10 @@ import type { RaceDefinition } from '@lego-games/lego-racers/race'
 import { getEffectViews, getRacerPoses } from '@lego-games/lego-racers/race-presentation'
 import { loadRandomTable } from '@lego-games/lego-racers/random-table'
 import {
+  getBuiltRacerAppearance,
   getChampionRacerAppearance,
   getRacerModelFiles,
+  loadBuiltDriverScene,
 } from '@lego-games/lego-racers/racer-appearance'
 import type { RacerAppearance } from '@lego-games/lego-racers/racer-appearance'
 import type { RacerDatabases } from '@lego-games/lego-racers/racer-setup'
@@ -42,9 +52,14 @@ import {
 } from '../../../track-viewer/index.ts'
 import { getLDrawModelIndex, loadLDrawModelText } from '../ldraw-models/ldraw-model-client.ts'
 import { CHAMPION_CAR_CODES } from '../ldraw-racer-model/known-racer-models.ts'
+import { createLDrawCarDocument, getChassisFileName } from '../ldraw-car/ldraw-car-document.ts'
+import { getSingleBrickDesign } from '../ldraw-fidelity/fidelity-pairs.ts'
+import { getReferencedChassisNames } from '../ldraw-racer-model/ldraw-racer-car.ts'
 import { createRemasteredExtension } from '../remastered-registration/remastered-registration.ts'
 import type {
   CensusSighting,
+  DriverSeatMeasurement,
+  DriverSeatSubject,
   FrontEndPlace,
   HdCoveragePlace,
   HdCoveragePlaceResult,
@@ -54,6 +69,7 @@ import type {
 import { takeCensus } from './hd-coverage-census.ts'
 import { createRecordingExtension } from './hd-coverage-recorder.ts'
 import { checkModelParts } from './model-part-check.ts'
+import { measureDriverSeat } from './driver-seat-check.ts'
 import type { CoverageRecorder } from './hd-coverage-recorder.types.ts'
 
 const EXECUTABLE_NAME = 'LEGORacers.exe'
@@ -170,6 +186,32 @@ const getChampionAppearance = (databases: RacerDatabases, code: string): RacerAp
   databases.drivers.drivers
     .map((driver) => getChampionRacerAppearance(databases, driver.name, 0))
     .find((appearance) => appearance.bodyModel?.modelName.toUpperCase() === code) ?? null
+
+// The champion's own driver among those the driver database gives a champion (`bk` has five): the one of his name, else the first.
+const getChampionDriverName = (databases: RacerDatabases, championName: string): string => {
+  const drivers = databases.drivers.drivers.filter(
+    (driver) => driver.championName.toLowerCase() === championName.toLowerCase()
+  )
+  return (
+    drivers.find((driver) => driver.name.toLowerCase() === championName.toLowerCase())?.name ??
+    drivers[0]?.name ??
+    ''
+  )
+}
+
+// A car file with the text of the chassis recipes it refers to, as the layer reads it.
+const loadCarFileText = async (file: string): Promise<string | null> => {
+  const text = await loadLDrawModelText(file)
+  if (text === null) return null
+  const recipes = await Promise.all(
+    getReferencedChassisNames(text).map(async (name) => {
+      const recipeFile = getLDrawModelIndex().chassis[name]
+      const recipe = recipeFile === undefined ? null : await loadLDrawModelText(recipeFile)
+      return recipe === null ? '' : `0 FILE ${getChassisFileName(name)}\n${recipe}`
+    })
+  )
+  return [text, ...recipes].join('\n')
+}
 
 export const installHdCoverageHarness = async (search: string) => {
   const { extension, recorder } = createRecordingExtension(await createRemasteredExtension(search))
@@ -291,12 +333,90 @@ export const installHdCoverageHarness = async (search: string) => {
     return findings
   }
 
+  // Every champion's driver, and a garage car on every chassis with a recipe (the quick-build save's driver): the original's driver on
+  // the seat of the racer's appearance against the layer's, and the LDraw car's steering wheel.
+  const runDriverSeats = async (): Promise<readonly DriverSeatMeasurement[]> => {
+    const databases = readRacerDatabases((path) => archive.readFile(path))
+    const index = getLDrawModelIndex()
+    const championSubjects = databases.champions.champions.map(
+      async (champion): Promise<DriverSeatSubject | null> => {
+        const appearance = getChampionRacerAppearance(
+          databases,
+          getChampionDriverName(databases, champion.name),
+          0
+        )
+        if (appearance.driverModel === null) return null
+        const code = champion.modelName.toUpperCase()
+        const file = index.cars[code]
+        return {
+          racer: code,
+          seatPoint: appearance.seatPoint,
+          driverModel: loadModelScene(archive, getRacerModelFiles(appearance.driverModel)),
+          driverModelName: appearance.driverModel.modelName,
+          driverPartBytes: null,
+          ldrawCarText: file === undefined ? null : await loadCarFileText(file),
+        }
+      }
+    )
+    const database = parseBrickDatabase(archive.readFile(BRICK_DATABASE_PATH))
+    const playerCar = cars[0]
+    const partBytes = playerCar === undefined ? null : getDriverPartBytes(playerCar.record)
+    const designSubjects = Object.entries(index.chassis).map(
+      async ([name, file]): Promise<DriverSeatSubject | null> => {
+        const piece = findBrickPieceByName(database, name)
+        const recipe = await loadLDrawModelText(file)
+        if (piece === null || recipe === null || partBytes === null) return null
+        const design = getSingleBrickDesign(piece)
+        const document = createLDrawCarDocument(
+          design,
+          getCarOrigin(database, design),
+          new Set([name])
+        )
+        return {
+          racer: `design:${name}`,
+          seatPoint: getBuiltRacerAppearance(databases, name, 0).seatPoint,
+          driverModel: loadBuiltDriverScene(archive, partBytes),
+          driverModelName: null,
+          driverPartBytes: partBytes,
+          ldrawCarText: `${document.text}\n0 FILE ${getChassisFileName(name)}\n${recipe}`,
+        }
+      }
+    )
+    const subjects = (await Promise.all([...championSubjects, ...designSubjects])).filter(
+      (subject): subject is DriverSeatSubject => subject !== null
+    )
+    const renderer = new WebGLRenderer()
+    renderer.setSize(MODEL_VIEW_SIZE, MODEL_VIEW_SIZE)
+    const camera = new PerspectiveCamera()
+    const render = (scene: Scene) => {
+      census.setIsTaking(true)
+      renderer.render(scene, camera)
+      census.setIsTaking(false)
+    }
+    const measurements: DriverSeatMeasurement[] = []
+    for (const subject of subjects) {
+      const drawing = extension.getDriverDrawing({
+        archive,
+        driver: {
+          model: subject.driverModel,
+          modelName: subject.driverModelName,
+          partBytes: subject.driverPartBytes,
+        },
+      })
+      measurements.push(...(await measureDriverSeat(subject, drawing, render)))
+    }
+    renderer.dispose()
+    return measurements
+  }
+
   const runHdCoveragePlace = async (place: HdCoveragePlace): Promise<HdCoveragePlaceResult> => {
     recorder.reset()
     census.reset()
     let partFindings: readonly ModelPartFinding[] = []
+    let driverSeats: readonly DriverSeatMeasurement[] = []
     if (place.kind === 'front_end') await runFrontEnd(place)
     else if (place.kind === 'race') await runRace(place)
+    else if (place.kind === 'driver_seats') driverSeats = await runDriverSeats()
     else partFindings = await runModelParts()
     const index = getLDrawModelIndex()
     return {
@@ -308,6 +428,7 @@ export const installHdCoverageHarness = async (search: string) => {
       modelIndex: { cars: Object.keys(index.cars), chassis: Object.keys(index.chassis) },
       unsettledCallIds: recorder.getUnsettledCallIds(),
       partFindings,
+      driverSeats,
     }
   }
   Object.assign(window, { runHdCoveragePlace })
