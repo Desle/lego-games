@@ -29,6 +29,8 @@ const PALETTE_PART_NAMES = [...new Set(COMMON_PART_GROUPS.flatMap((group) => gro
   (name) => `${name}.dat`
 )
 const EXACT = 0.001
+// Every palette part through every case: seconds on a fast machine, more on a CI runner.
+const PALETTE_TIMEOUT = 120_000
 // Spots on the part below's top, from its middle, the cursor lands on.
 const CURSOR_SPOTS: readonly (readonly [number, number])[] = [
   [3, 2],
@@ -144,83 +146,97 @@ const getProblems = (
 describe.skipIf(!existsSync(join(libraryRoot, 'parts')))('stud alignment of the palette', () => {
   const loadShape = (partName: string) => findPartShape(partName, readFromDisk)
 
-  it('stands every palette part, turned every way, with its anti-studs on the studs of a 3001 and a 3034 and flush on them', async () => {
-    // Arrange
-    const belowLines = [
-      createLine('3001.dat', [10, -24, 0], IDENTITY),
-      createLine('3034.dat', [0, -8, 10], turnQuarter(IDENTITY)),
-    ]
-    const belowShapes = await Promise.all(belowLines.map((line) => loadShape(line.partName)))
-    const shapes = await Promise.all(PALETTE_PART_NAMES.map(loadShape))
+  it(
+    'stands every palette part, turned every way, with its anti-studs on the studs of a 3001 and a 3034 and flush on them',
+    async () => {
+      // Arrange
+      const belowLines = [
+        createLine('3001.dat', [10, -24, 0], IDENTITY),
+        createLine('3034.dat', [0, -8, 10], turnQuarter(IDENTITY)),
+      ]
+      const belowShapes = await Promise.all(belowLines.map((line) => loadShape(line.partName)))
+      const shapes = await Promise.all(PALETTE_PART_NAMES.map(loadShape))
 
-    // Act
-    const failures = PALETTE_PART_NAMES.flatMap((partName, partIndex) => {
-      const shape = shapes[partIndex]
-      if (shape === undefined || shape.box === null) return [`${partName}: no geometry`]
-      return belowLines.flatMap((below, belowIndex) => {
-        const belowShape = belowShapes[belowIndex]
-        if (belowShape === undefined) return []
-        const studBase = below.position[1]
-        return ROTATIONS.flatMap((rotation, turnCount) =>
-          CURSOR_SPOTS.flatMap(([x, z]) => {
-            const point: Vector = [below.position[0] + x, studBase - 4, below.position[2] + z]
-            const placed = placeOnTop(shape, partName, rotation, below, belowShape, point)
-            const nearest = getTopGridPoint(
-              belowShape.studs,
-              belowShape.box ?? { minimum: [0, 0, 0], maximum: [0, 0, 0] },
-              below,
-              point
-            )
-            const studRemainder = `${String(getRemainder(below.position[0] + nearest[0]))} ${String(getRemainder(below.position[2] + nearest[2]))}`
-            const problems =
-              placed === null ? ['not placed'] : getProblems(shape, placed, studRemainder, studBase)
-            return problems.map(
-              (problem) =>
-                `${partName} on ${below.partName} turned ${String(turnCount)} at ${String(x)},${String(z)}: ${problem}`
-            )
-          })
-        )
+      // Act
+      const failures = PALETTE_PART_NAMES.flatMap((partName, partIndex) => {
+        const shape = shapes[partIndex]
+        if (shape === undefined || shape.box === null) return [`${partName}: no geometry`]
+        return belowLines.flatMap((below, belowIndex) => {
+          const belowShape = belowShapes[belowIndex]
+          if (belowShape === undefined) return []
+          const studBase = below.position[1]
+          return ROTATIONS.flatMap((rotation, turnCount) =>
+            CURSOR_SPOTS.flatMap(([x, z]) => {
+              const point: Vector = [below.position[0] + x, studBase - 4, below.position[2] + z]
+              const placed = placeOnTop(shape, partName, rotation, below, belowShape, point)
+              const nearest = getTopGridPoint(
+                belowShape.studs,
+                belowShape.box ?? { minimum: [0, 0, 0], maximum: [0, 0, 0] },
+                below,
+                point
+              )
+              const studRemainder = `${String(getRemainder(below.position[0] + nearest[0]))} ${String(getRemainder(below.position[2] + nearest[2]))}`
+              const problems =
+                placed === null
+                  ? ['not placed']
+                  : getProblems(shape, placed, studRemainder, studBase)
+              return problems.map(
+                (problem) =>
+                  `${partName} on ${below.partName} turned ${String(turnCount)} at ${String(x)},${String(z)}: ${problem}`
+              )
+            })
+          )
+        })
       })
-    })
-    if (failures.length > 0) console.log(failures.join('\n'))
+      if (failures.length > 0) console.log(failures.join('\n'))
 
-    // Assert
-    expect(failures).toEqual([])
-  })
+      // Assert
+      expect(failures).toEqual([])
+    },
+    PALETTE_TIMEOUT
+  )
 
-  it('stands a 3001, turned or not, on every stud of every palette part with its anti-studs on that stud and flush on its base', async () => {
-    // Arrange
-    const brick = await loadShape('3001.dat')
-    const shapes = await Promise.all(PALETTE_PART_NAMES.map(loadShape))
+  it(
+    'stands a 3001, turned or not, on every stud of every palette part with its anti-studs on that stud and flush on its base',
+    async () => {
+      // Arrange
+      const brick = await loadShape('3001.dat')
+      const shapes = await Promise.all(PALETTE_PART_NAMES.map(loadShape))
 
-    // Act
-    const failures = PALETTE_PART_NAMES.flatMap((partName, partIndex) => {
-      const shape = shapes[partIndex]
-      if (shape === undefined || shape.box === null) return []
-      return ROTATIONS.flatMap((rotation, turnCount) => {
-        const part = createLine(partName, [10, -40, 0], rotation)
-        return getUpwardStuds(shape, part).flatMap((stud) =>
-          [IDENTITY, turnQuarter(IDENTITY)].flatMap((brickRotation, brickTurn) => {
-            const point: Vector = [stud.position[0] + 2, stud.position[1] - 4, stud.position[2] - 3]
-            const placed = placeOnTop(brick, '3001.dat', brickRotation, part, shape, point)
-            const studRemainder = `${String(getRemainder(stud.position[0]))} ${String(getRemainder(stud.position[2]))}`
-            const problems =
-              placed === null
-                ? ['not placed']
-                : getProblems(brick, placed, studRemainder, stud.position[1])
-            return problems.map(
-              (problem) =>
-                `3001 turned ${String(brickTurn)} on ${partName} turned ${String(turnCount)} stud ${stud.position.map((value) => value.toFixed(1)).join(',')}: ${problem}`
-            )
-          })
-        )
+      // Act
+      const failures = PALETTE_PART_NAMES.flatMap((partName, partIndex) => {
+        const shape = shapes[partIndex]
+        if (shape === undefined || shape.box === null) return []
+        return ROTATIONS.flatMap((rotation, turnCount) => {
+          const part = createLine(partName, [10, -40, 0], rotation)
+          return getUpwardStuds(shape, part).flatMap((stud) =>
+            [IDENTITY, turnQuarter(IDENTITY)].flatMap((brickRotation, brickTurn) => {
+              const point: Vector = [
+                stud.position[0] + 2,
+                stud.position[1] - 4,
+                stud.position[2] - 3,
+              ]
+              const placed = placeOnTop(brick, '3001.dat', brickRotation, part, shape, point)
+              const studRemainder = `${String(getRemainder(stud.position[0]))} ${String(getRemainder(stud.position[2]))}`
+              const problems =
+                placed === null
+                  ? ['not placed']
+                  : getProblems(brick, placed, studRemainder, stud.position[1])
+              return problems.map(
+                (problem) =>
+                  `3001 turned ${String(brickTurn)} on ${partName} turned ${String(turnCount)} stud ${stud.position.map((value) => value.toFixed(1)).join(',')}: ${problem}`
+              )
+            })
+          )
+        })
       })
-    })
-    if (failures.length > 0) console.log(failures.join('\n'))
+      if (failures.length > 0) console.log(failures.join('\n'))
 
-    // Assert
-    expect(failures).toEqual([])
-  })
+      // Assert
+      expect(failures).toEqual([])
+    },
+    PALETTE_TIMEOUT
+  )
 })
 
 // Keys pressed on a part resting on the base (`+` then c for command, s for shift, o for option) and what must hold after them:
@@ -321,56 +337,60 @@ describe.skipIf(!existsSync(join(libraryRoot, 'parts')))('stud alignment of keyb
     ]
   }
 
-  it('keeps every palette part, turned every way, on the studs and flush after every key, the camera orbited every way', async () => {
-    // Arrange
-    const names = ['3958.dat', ...PALETTE_PART_NAMES]
-    const shapes = new Map(
-      await Promise.all(names.map(async (name) => [name, await loadShape(name)] as const))
-    )
-    const context = getContext(shapes)
-    const baseShape = shapes.get(base.partName)
+  it(
+    'keeps every palette part, turned every way, on the studs and flush after every key, the camera orbited every way',
+    async () => {
+      // Arrange
+      const names = ['3958.dat', ...PALETTE_PART_NAMES]
+      const shapes = new Map(
+        await Promise.all(names.map(async (name) => [name, await loadShape(name)] as const))
+      )
+      const context = getContext(shapes)
+      const baseShape = shapes.get(base.partName)
 
-    // Act
-    const failures = PALETTE_PART_NAMES.flatMap((partName) => {
-      const shape = shapes.get(partName)
-      if (shape === undefined || baseShape === undefined) return []
-      return ROTATIONS.flatMap((rotation, turnCount) => {
-        const placed = placeOnTop(shape, partName, rotation, base, baseShape, [13, -12, 2])
-        if (placed === null) return []
-        return VIEWS.flatMap((view, viewIndex) => {
-          const start: readonly BuilderPart[] = [base, { ...placed, commentLines: [] }]
-          return KEY_COMBINATIONS.flatMap((combination) => {
-            const parts = combination.keys.reduce((current, text) => {
-              const command = getBuilderKeyCommand(getKeyPress(text))
-              const edit = command === null ? null : getSelectionEdit(command.action, view)
-              return edit === null ? current : applySelectionEdit(current, [1], edit, context)
-            }, start)
-            const part = parts[1]
-            const isBack =
-              part !== undefined &&
-              part.position.every((value, axis) => value === placed.position[axis]) &&
-              part.rotation.every((value, entry) => value === placed.rotation[entry])
-            const problems =
-              part === undefined
-                ? ['lost']
-                : combination.check === 'same'
-                  ? isBack
-                    ? []
-                    : [`not back where it was: ${part.position.join(' ')}`]
-                  : getKeyProblems(shapes, part, combination.check)
-            return problems.map(
-              (problem) =>
-                `${partName} turned ${String(turnCount)} view ${String(viewIndex)} keys ${combination.keys.join(' ')}: ${problem}`
-            )
+      // Act
+      const failures = PALETTE_PART_NAMES.flatMap((partName) => {
+        const shape = shapes.get(partName)
+        if (shape === undefined || baseShape === undefined) return []
+        return ROTATIONS.flatMap((rotation, turnCount) => {
+          const placed = placeOnTop(shape, partName, rotation, base, baseShape, [13, -12, 2])
+          if (placed === null) return []
+          return VIEWS.flatMap((view, viewIndex) => {
+            const start: readonly BuilderPart[] = [base, { ...placed, commentLines: [] }]
+            return KEY_COMBINATIONS.flatMap((combination) => {
+              const parts = combination.keys.reduce((current, text) => {
+                const command = getBuilderKeyCommand(getKeyPress(text))
+                const edit = command === null ? null : getSelectionEdit(command.action, view)
+                return edit === null ? current : applySelectionEdit(current, [1], edit, context)
+              }, start)
+              const part = parts[1]
+              const isBack =
+                part !== undefined &&
+                part.position.every((value, axis) => value === placed.position[axis]) &&
+                part.rotation.every((value, entry) => value === placed.rotation[entry])
+              const problems =
+                part === undefined
+                  ? ['lost']
+                  : combination.check === 'same'
+                    ? isBack
+                      ? []
+                      : [`not back where it was: ${part.position.join(' ')}`]
+                    : getKeyProblems(shapes, part, combination.check)
+              return problems.map(
+                (problem) =>
+                  `${partName} turned ${String(turnCount)} view ${String(viewIndex)} keys ${combination.keys.join(' ')}: ${problem}`
+              )
+            })
           })
         })
       })
-    })
-    if (failures.length > 0) console.log(failures.join('\n'))
+      if (failures.length > 0) console.log(failures.join('\n'))
 
-    // Assert
-    expect(failures).toEqual([])
-  })
+      // Assert
+      expect(failures).toEqual([])
+    },
+    PALETTE_TIMEOUT
+  )
 
   it('moves a selection of a brick and a plate on it as one, by the brick, keeping their offsets', async () => {
     // Arrange
