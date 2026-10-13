@@ -219,8 +219,16 @@ const chassisFolder = join(
   process.env['LEGO_LDRAW_MODELS_ROOT'] ?? join(homedir(), 'ldraw-models'),
   'chassis'
 )
+const getIsBuilt = (name: string): boolean =>
+  readFileSync(join(chassisFolder, name), 'utf8')
+    .split('\n')
+    .some((line) => line.trimStart().startsWith('1 '))
+
+// A recipe still empty in the builder is unfinished, not misplaced.
 const recipeNames = existsSync(chassisFolder)
-  ? readdirSync(chassisFolder).filter((name) => name.toLowerCase().endsWith('.ldr'))
+  ? readdirSync(chassisFolder).filter(
+      (name) => name.toLowerCase().endsWith('.ldr') && getIsBuilt(name)
+    )
   : []
 
 const readLibraryFile: LibraryFileReader = async (name) => {
