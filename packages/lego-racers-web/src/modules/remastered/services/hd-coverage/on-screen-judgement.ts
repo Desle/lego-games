@@ -74,7 +74,7 @@ export const getPowerUpOnScreenFailures = (
         .map((call) => call.key)
     ),
   ].sort()
-  return drawnKeys
+  const unshown = drawnKeys
     .filter(
       (key) =>
         !frames.some((frame) =>
@@ -84,7 +84,36 @@ export const getPowerUpOnScreenFailures = (
         )
     )
     .map((key) => `the power-up object ${key} reached the screen in none of the frames`)
+  return [...unshown, ...getPosedPartFailures(frames, drawnKeys)]
 }
+
+// A drawing of several posed parts (the twin turbo's two burners: the file once for each group of the original's mesh) shows
+// every part at once in one of the measured frames.
+const getPosedPartFailures = (
+  frames: readonly OnScreenFrame[],
+  drawnKeys: readonly string[]
+): readonly string[] =>
+  drawnKeys.flatMap((key) => {
+    const partCounts = frames.flatMap((frame) =>
+      frame.drawings
+        .filter((drawing) => drawing.key === key && drawing.posedPartPixels.length > 1)
+        .map((drawing) => drawing.posedPartPixels.length)
+    )
+    if (partCounts.length === 0) return []
+    const isEveryPartShown = frames.some((frame) =>
+      frame.drawings.some(
+        (drawing) =>
+          drawing.key === key &&
+          drawing.posedPartPixels.length > 1 &&
+          drawing.posedPartPixels.every((pixels) => getIsOnScreen(frame, pixels))
+      )
+    )
+    return isEveryPartShown
+      ? []
+      : [
+          `the power-up object ${key}'s ${String(Math.max(...partCounts))} posed parts never all reached the screen in one frame`,
+        ]
+  })
 
 export const formatOnScreenDrawing = (frame: OnScreenFrame, drawing: OnScreenDrawing): string =>
   [
@@ -93,4 +122,7 @@ export const formatOnScreenDrawing = (frame: OnScreenFrame, drawing: OnScreenDra
       (group) =>
         `${group.material}${group.isPictured ? ' pictured' : ''} x${String(group.meshCount)} ${String(group.changedPixels)}`
     ),
+    ...(drawing.posedPartPixels.length === 0
+      ? []
+      : [`posed parts ${drawing.posedPartPixels.map(String).join(' ')}`]),
   ].join('; ')

@@ -3,7 +3,9 @@ import { Box3, Vector3 } from 'three'
 import { LDRAW_TO_STUDS } from '../ldraw-car/ldraw-car-document.ts'
 import {
   getBuildFrameMatrix,
+  getEffectModelGroupCount,
   getFittedPowerUpScale,
+  getMeshBoneGroups,
   getFittedSpriteScale,
   getParticleUnitsPerLDrawUnit,
   getOriginalFrameBounds,
@@ -177,6 +179,70 @@ describe('the power-up object frame', () => {
       [-1, -2, 0],
       [50.5, 50.5, 50],
     ])
+  })
+
+  it('splits a mesh into the groups of bones its triangles join, in the order of their first vertices', () => {
+    // Arrange: a flame on bones 1 and 3 and another on bones 5 and 6 (the twin turbo's), and two triangles on bones 1 and 2
+    const [mesh] = MODEL.scene.meshes
+    const batch = mesh?.drawBatches[0]
+    if (mesh === undefined || batch === undefined) throw new Error('the model has a mesh')
+    const flames = {
+      ...mesh,
+      drawBatches: [{ ...batch, transformIndices: new Uint8Array([1, 3, 3, 5, 6, 6]) }],
+    }
+
+    // Act
+    const groups = [getMeshBoneGroups(mesh), getMeshBoneGroups(flames)]
+
+    // Assert
+    expect(groups).toEqual([
+      [
+        { bone: 1, bones: [1] },
+        { bone: 2, bones: [2] },
+      ],
+      [
+        { bone: 1, bones: [1, 3] },
+        { bone: 5, bones: [5, 6] },
+      ],
+    ])
+  })
+
+  it("frames each group by its own vertices, and a twin's every group as the builder shows the first", () => {
+    // Arrange: the twin turbo's burner, the same triangle stored on bone 1 and on bone 2
+    const [mesh] = MODEL.scene.meshes
+    if (mesh === undefined) throw new Error('the model has a mesh')
+    const twin: ModelScene = {
+      ...MODEL,
+      scene: {
+        ...MODEL.scene,
+        meshes: [
+          {
+            ...mesh,
+            positions: new Float32Array([-2, -4, 0, 2, 4, 0, 0, 0, 8, -2, -4, 0, 2, 4, 0, 0, 0, 8]),
+          },
+        ],
+      },
+    }
+    const getCorners = (bounds: Box3) => [getRounded(bounds.min), getRounded(bounds.max)]
+
+    // Act
+    const groupFrames = [0, 1].map((group) => getCorners(getOriginalFrameBounds(MODEL, group)))
+    const twinFrames = [0, 1].map((group) => getCorners(getOriginalFrameBounds(twin, group)))
+    const builderFrame = getCorners(getOriginalFrameBounds(twin))
+
+    // Assert
+    expect(groupFrames).toEqual([
+      [
+        [-1, -2, 0],
+        [1, 2, 4],
+      ],
+      [
+        [50, 50, 50],
+        [50.5, 50.5, 50],
+      ],
+    ])
+    expect(twinFrames).toEqual([builderFrame, builderFrame])
+    expect([getEffectModelGroupCount(MODEL), getEffectModelGroupCount(twin)]).toEqual([2, 2])
   })
 
   it("fits a power-up sprite's file to the sprite: its largest extent the sprite's size", () => {

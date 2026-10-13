@@ -3,6 +3,7 @@ import { STUD_WIDTH } from '@lego-games/ldraw/building'
 import { Box3, Matrix4, Vector3 } from 'three'
 import { LDRAW_TO_GAME, LDRAW_TO_STUDS } from '../ldraw-car/ldraw-car-document.ts'
 import { createSkeletonPoseSampler } from '../ldraw-racer/skeleton-pose.ts'
+import type { GrowingBoneGroup, MeshBoneGroup } from './powerup-object-frame.types.ts'
 
 // The frames and scales of the effect files (`powerups/<MODEL>.ldr`, `particles/<KIND>.ldr`), in one place: the builder and the race
 // both take them from here, so what the builder shows is what the race draws.
@@ -26,12 +27,57 @@ export const CAR_STUD_UNITS = 1
 const VERTEX_SIZE = 3
 const TRIANGLE_CORNERS = 3
 
-// The bone the drawing follows: the one the mesh's first vertex hangs on (0 for a mesh without a skeleton).
-const getPosedBone = (mesh: SceneMesh): number => mesh.drawBatches[0]?.transformIndices[0] ?? 0
+const getTriangleBones = (transformIndices: Uint8Array, corner: number): readonly number[] =>
+  [0, 1, 2].map((offset) => transformIndices[corner + offset] ?? 0)
 
-// The triangles (three vertex indices each) whose corners all hang on the drawing's bone.
-export const getPosedTriangles = (mesh: SceneMesh): readonly number[] => {
-  const bone = getPosedBone(mesh)
+const getEveryTriangleBones = (mesh: SceneMesh): readonly (readonly number[])[] =>
+  mesh.drawBatches.flatMap((batch) => {
+    const triangles: (readonly number[])[] = []
+    for (
+      let corner = 0;
+      corner + TRIANGLE_CORNERS <= batch.vertexIndices.length;
+      corner += TRIANGLE_CORNERS
+    ) {
+      triangles.push(getTriangleBones(batch.transformIndices, corner))
+    }
+    return triangles
+  })
+
+const freezeGroup = (bone: number, bones: Iterable<number>): MeshBoneGroup =>
+  Object.freeze({ bone, bones: Object.freeze([...bones]) })
+
+// The parts of the mesh the race draws as separate things: the bones joined by its triangles, in the order of their first
+// vertices (the twin turbo's burner is two burners, on bones 1 and 2; its flames are bones 1 to 3 and 5 to 7: the original moves
+// each vertex by its own bone, GolDP.dll 0x10023b10). The first is posed by the bone of the mesh's first vertex.
+export const getMeshBoneGroups = (mesh: SceneMesh): readonly MeshBoneGroup[] => {
+  const groups: GrowingBoneGroup[] = []
+  for (const triangleBones of getEveryTriangleBones(mesh)) {
+    const [kept, ...merged] = groups.filter((group) =>
+      triangleBones.some((bone) => group.bones.has(bone))
+    )
+    if (kept === undefined) {
+      groups.push({ bone: triangleBones[0] ?? 0, bones: new Set(triangleBones) })
+      continue
+    }
+    for (const bone of [...triangleBones, ...merged.flatMap((group) => [...group.bones])]) {
+      kept.bones.add(bone)
+    }
+    for (const group of merged) groups.splice(groups.indexOf(group), 1)
+  }
+  if (groups.length === 0) {
+    const bone = mesh.drawBatches[0]?.transformIndices[0] ?? 0
+    return [freezeGroup(bone, [bone])]
+  }
+  return groups.map((group) => freezeGroup(group.bone, group.bones))
+}
+
+const getGroup = (mesh: SceneMesh, groupIndex: number): MeshBoneGroup | null =>
+  getMeshBoneGroups(mesh)[groupIndex] ?? null
+
+// The triangles (three vertex indices each) whose corners all hang on the group's bone (the first group's: the bone the mesh's
+// first vertex hangs on).
+export const getPosedTriangles = (mesh: SceneMesh, groupIndex = 0): readonly number[] => {
+  const bone = getGroup(mesh, groupIndex)?.bone ?? -1
   return mesh.drawBatches.flatMap((batch) => {
     const corners: number[] = []
     for (
@@ -39,12 +85,22 @@ export const getPosedTriangles = (mesh: SceneMesh): readonly number[] => {
       corner + TRIANGLE_CORNERS <= batch.vertexIndices.length;
       corner += TRIANGLE_CORNERS
     ) {
-      const isPosed = [0, 1, 2].every((offset) => batch.transformIndices[corner + offset] === bone)
+      const isPosed = getTriangleBones(batch.transformIndices, corner).every(
+        (triangleBone) => triangleBone === bone
+      )
       if (isPosed) corners.push(...batch.vertexIndices.subarray(corner, corner + TRIANGLE_CORNERS))
     }
     return corners
   })
 }
+
+// The vertices of the group: one for each corner on one of its bones.
+const getGroupVertices = (mesh: SceneMesh, group: MeshBoneGroup): readonly number[] =>
+  mesh.drawBatches.flatMap((batch) =>
+    [...batch.vertexIndices].filter((_vertex, corner) =>
+      group.bones.includes(batch.transformIndices[corner] ?? 0)
+    )
+  )
 
 // The mesh the race draws for the model (its first instance's first level).
 export const getEffectMesh = (model: ModelScene): SceneMesh | null =>
@@ -60,32 +116,43 @@ const getScaledBounds = (mesh: SceneMesh, scale: number, indices: Iterable<numbe
   return bounds
 }
 
-// The bounds of the original's mesh in the drawing's frame: the vertices on the drawing's bone, the model's scale applied (empty
-// when no triangle is on it).
-export const getOriginalModelBounds = (model: ModelScene): Box3 => {
+// How many things the race draws of the model's mesh (getMeshBoneGroups), each of which the file is drawn as once.
+export const getEffectModelGroupCount = (model: ModelScene): number => {
+  const mesh = getEffectMesh(model)
+  return mesh === null ? 1 : getMeshBoneGroups(mesh).length
+}
+
+// The bounds of a group of the original's mesh (the first by default) in its drawing's frame: the vertices on the group's bone,
+// the model's scale applied (empty when no triangle is on it).
+export const getOriginalModelBounds = (model: ModelScene, groupIndex = 0): Box3 => {
   const mesh = getEffectMesh(model)
   return mesh === null
     ? new Box3()
-    : getScaledBounds(mesh, model.meshScales[0] ?? 1, getPosedTriangles(mesh))
+    : getScaledBounds(mesh, model.meshScales[0] ?? 1, getPosedTriangles(mesh, groupIndex))
 }
 
 const SAMPLES_PER_CLIP = 8
 const SAMPLE_STEP_MILLISECONDS = 125
 
-// Every vertex of a skeletal mesh as its animation poses it, in the frame of the drawing's bone (the race poses the drawing with
-// that bone's matrix), every 125 ms over the first second of every clip: the room the mesh takes while it plays. Null without a
-// skeleton.
-const getAnimatedBounds = (model: ModelScene, mesh: SceneMesh): Box3 | null => {
+// Every vertex of a group of a skeletal mesh as its animation poses it, in the frame of the group's bone (the race poses the
+// group's drawing with that bone's matrix), every 125 ms over the first second of every clip: the room the group takes while it
+// plays. Null without a skeleton.
+const getAnimatedBounds = (
+  model: ModelScene,
+  mesh: SceneMesh,
+  group: MeshBoneGroup
+): Box3 | null => {
   const sampler = createSkeletonPoseSampler(model)
   if (sampler === null) return null
-  const bone = getPosedBone(mesh)
   const bounds = new Box3()
   const point = new Vector3()
   const addPose = (matrices: readonly Matrix4[]) => {
-    const toBone = (matrices[bone] ?? new Matrix4()).clone().invert()
+    const toBone = (matrices[group.bone] ?? new Matrix4()).clone().invert()
     for (const batch of mesh.drawBatches) {
       batch.vertexIndices.forEach((vertex, corner) => {
-        const vertexBone = matrices[batch.transformIndices[corner] ?? 0] ?? new Matrix4()
+        const cornerBone = batch.transformIndices[corner] ?? 0
+        if (!group.bones.includes(cornerBone)) return
+        const vertexBone = matrices[cornerBone] ?? new Matrix4()
         point.fromArray(mesh.positions, vertex * VERTEX_SIZE).applyMatrix4(vertexBone)
         bounds.expandByPoint(point.applyMatrix4(toBone))
       })
@@ -104,15 +171,17 @@ const getAnimatedBounds = (model: ModelScene, mesh: SceneMesh): Box3 | null => {
   return bounds.isEmpty() ? null : bounds.applyMatrix4(new Matrix4().makeScale(scale, scale, scale))
 }
 
-// The bounds a file is framed by: the posed bounds; else (a mesh with no triangle on its posed bone: the turbo flames, a curse
-// ring) every vertex as the animation poses it in the posed bone's frame; else every vertex as the file stores it.
-export const getOriginalFrameBounds = (model: ModelScene): Box3 => {
-  const posed = getOriginalModelBounds(model)
+// The bounds a group's drawing is framed by (the first group's by default; the builder shows that one): its posed bounds; else
+// (a group with no triangle on its bone: the turbo flames, a curse ring) every vertex of the group as the animation poses it in
+// its bone's frame; else every vertex of the group as the file stores it.
+export const getOriginalFrameBounds = (model: ModelScene, groupIndex = 0): Box3 => {
+  const posed = getOriginalModelBounds(model, groupIndex)
   const mesh = getEffectMesh(model)
-  if (!posed.isEmpty() || mesh === null) return posed
+  const group = mesh === null ? null : getGroup(mesh, groupIndex)
+  if (!posed.isEmpty() || mesh === null || group === null) return posed
   return (
-    getAnimatedBounds(model, mesh) ??
-    getScaledBounds(mesh, model.meshScales[0] ?? 1, Array(mesh.vertexCount).keys())
+    getAnimatedBounds(model, mesh, group) ??
+    getScaledBounds(mesh, model.meshScales[0] ?? 1, getGroupVertices(mesh, group))
   )
 }
 

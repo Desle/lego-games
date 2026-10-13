@@ -15,6 +15,7 @@ import {
 import type { SkeletalAnimation } from '@lego-games/lego-racers/skeletal-animation'
 import { Group, Mesh, Vector3 } from 'three'
 import type { BufferAttribute, Object3D } from 'three'
+import { POSED_BONE_KEY } from '../../../../shared/viewer-extensions/effect-model-names.ts'
 import {
   clearViewerExtensions,
   NEUTRAL_EXTENSION,
@@ -206,6 +207,28 @@ describe('showEffectModelDrawing', () => {
     expect(atStart).toEqual([1, 0, 0])
     expect(turned).not.toEqual(atStart)
     expect(turned).toEqual(meshVertexTurned)
+  })
+
+  it('poses each part of the drawing that names a bone with that bone, not twice', () => {
+    // Arrange: a drawing of two parts (the twin turbo's burners), each on the model's one bone
+    const parts = [new Group(), new Group()]
+    const drawing = new Group()
+    for (const part of parts) {
+      part.matrixAutoUpdate = false
+      part.userData[POSED_BONE_KEY] = 0
+      drawing.add(part)
+    }
+    registerViewerExtension({ ...NEUTRAL_EXTENSION, getEffectModelDrawing: () => drawing })
+    const shown = showEffectModelDrawing(createModelObject(MODEL), REQUEST)
+    const start = createSkeletonAnimationState(ANIMATION, 0)
+
+    // Act
+    shown.object.setAnimationState(advanceSkeletonAnimation(start, ANIMATION, 5))
+    const drawn = parts.map((part) => getDrawnPoint(part, shown.group, new Vector3(1, 0, 0)))
+    const meshVertexTurned = getMeshVertex(shown.group)
+
+    // Assert: both on the mesh's own turned vertex
+    expect(drawn).toEqual([meshVertexTurned, meshVertexTurned])
   })
 })
 

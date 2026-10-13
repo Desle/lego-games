@@ -29,6 +29,7 @@ const getFrame = (change: Partial<OnScreenFrame>): OnScreenFrame => ({
       hook: HookKind.DRIVER,
       key: 'parts:1 2 3',
       changedPixels: 4500,
+      posedPartPixels: [],
       groups: [PLASTIC, FACE],
     },
   ],
@@ -59,6 +60,7 @@ describe('getOnScreenFailures', () => {
             hook: HookKind.DRIVER,
             key: 'parts:1 2 3',
             changedPixels: 300,
+            posedPartPixels: [],
             groups: [{ ...PLASTIC, changedPixels: 0 }, FACE],
           },
         ],
@@ -105,12 +107,20 @@ describe('getOnScreenFailures', () => {
     const frames = [
       getFrame({
         drawings: [
-          { callId: 1, hook: HookKind.CAR, key: 'RKCM', changedPixels: 1500, groups: [PLASTIC] },
+          {
+            callId: 1,
+            hook: HookKind.CAR,
+            key: 'RKCM',
+            changedPixels: 1500,
+            posedPartPixels: [],
+            groups: [PLASTIC],
+          },
           {
             callId: 2,
             hook: HookKind.CAR,
             key: 'CCCM',
             changedPixels: 1200,
+            posedPartPixels: [],
             groups: [
               { ...PLASTIC, changedPixels: 0 },
               { ...FACE, isPictured: false, changedPixels: 0 },
@@ -121,6 +131,7 @@ describe('getOnScreenFailures', () => {
             hook: HookKind.DRIVER,
             key: 'CCPELVIS',
             changedPixels: 0,
+            posedPartPixels: [],
             groups: [{ ...PLASTIC, changedPixels: 0 }],
           },
         ],
@@ -146,6 +157,7 @@ describe('getOnScreenFailures', () => {
             hook: HookKind.DRIVER,
             key: 'parts:1 2 3',
             changedPixels: 4200,
+            posedPartPixels: [],
             groups: [PLASTIC, { ...FACE, changedPixels: 0 }],
           },
         ],
@@ -182,6 +194,7 @@ describe('getPowerUpOnScreenFailures', () => {
       hook: HookKind.EFFECT_MODEL,
       key,
       changedPixels,
+      posedPartPixels: [],
       groups: [PLASTIC],
     })
     const frames = [
@@ -194,6 +207,43 @@ describe('getPowerUpOnScreenFailures', () => {
     // Assert
     expect(failures).toEqual([
       'the power-up object SHEOUT3 reached the screen in none of the frames',
+    ])
+  })
+
+  it("fails the twin turbo's burner when its two posed parts never show in one frame", () => {
+    // Arrange: the drawing shows, but its second burner only in a frame where the first is hidden
+    const calls: readonly HookCall[] = [
+      {
+        id: 1,
+        hook: HookKind.EFFECT_MODEL,
+        key: 'DT2CBURN',
+        wheelsKey: null,
+        isModelPresent: true,
+        isDrawingReturned: true,
+        isFailed: false,
+      },
+    ]
+    const getBurner = (posedPartPixels: readonly number[]) => ({
+      callId: 1,
+      hook: HookKind.EFFECT_MODEL,
+      key: 'DT2CBURN',
+      changedPixels: 900,
+      groups: [PLASTIC],
+      posedPartPixels,
+    })
+    const apart = [
+      getFrame({ label: 'step 10', drawings: [getBurner([900, 0])] }),
+      getFrame({ label: 'step 25', drawings: [getBurner([0, 900])] }),
+    ]
+    const together = [getFrame({ drawings: [getBurner([450, 450])] })]
+
+    // Act
+    const failures = [apart, together].map((frames) => getPowerUpOnScreenFailures(frames, calls))
+
+    // Assert
+    expect(failures).toEqual([
+      ["the power-up object DT2CBURN's 2 posed parts never all reached the screen in one frame"],
+      [],
     ])
   })
 })

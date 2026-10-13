@@ -13,6 +13,7 @@ import type { Material, Mesh, Object3D } from 'three'
 import {
   ALPHA_OVERRIDE_KEY,
   BACK_FACES_VARIANT,
+  POSED_BONE_KEY,
   POWER_UP_OBJECT_MODEL_NAMES,
 } from '../../../../shared/viewer-extensions/effect-model-names.ts'
 import type { EffectModelDrawingRequest } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
@@ -25,7 +26,12 @@ import type { LDrawModelIndex } from '../ldraw-models/ldraw-model-index.types.ts
 import { brightenPlastic, createLDrawPickupDrawing } from '../ldraw-pickup/ldraw-pickup-drawing.ts'
 import { LDRAW_PICKUP_MAPPINGS } from '../ldraw-pickup/ldraw-pickup-mappings.ts'
 import { getModelFileScale } from '../ldraw-scale-meta/ldraw-scale-meta.ts'
-import { getOriginalFrameBounds, getPowerUpObjectMatrix } from './powerup-object-frame.ts'
+import {
+  getEffectMesh,
+  getMeshBoneGroups,
+  getOriginalFrameBounds,
+  getPowerUpObjectMatrix,
+} from './powerup-object-frame.ts'
 import { EffectModelDrawingSourceKind } from './powerup-object-drawing.types.ts'
 import type {
   EffectModelDrawingSource,
@@ -119,8 +125,10 @@ const createLevel = (model: Group, materials: MaterialSet): Group => {
   return level
 }
 
-const createDetailSwitch = (object: PreparedPowerUpObject): DetailSwitch => {
-  const materials = createMaterialSet()
+const createDetailSwitch = (
+  object: PreparedPowerUpObject,
+  materials: MaterialSet
+): DetailSwitch => {
   const detailSwitch = new DetailSwitch()
   detailSwitch.setLow(createLevel(object.model, materials))
   if (getIsStudLogoShown()) {
@@ -132,30 +140,53 @@ const createDetailSwitch = (object: PreparedPowerUpObject): DetailSwitch => {
   return detailSwitch
 }
 
-const fillDrawing = (holder: Group, object: PreparedPowerUpObject, model: ModelScene) => {
-  holder.matrix.copy(
-    getPowerUpObjectMatrix(getOriginalFrameBounds(model), object.bounds, object.scale)
-  )
-  holder.add(createDetailSwitch(object))
-  Object.assign(holder, { matrixWorldNeedsUpdate: true })
+// The file once in each group's frame (one materials set for the drawing: the groups fade together).
+const fillDrawing = (
+  holders: readonly Group[],
+  object: PreparedPowerUpObject,
+  model: ModelScene
+) => {
+  const materials = createMaterialSet()
+  holders.forEach((holder, groupIndex) => {
+    holder.matrix.copy(
+      getPowerUpObjectMatrix(getOriginalFrameBounds(model, groupIndex), object.bounds, object.scale)
+    )
+    holder.add(createDetailSwitch(object, materials))
+    Object.assign(holder, { matrixWorldNeedsUpdate: true })
+  })
 }
 
-// A power-up object's file in place of the original's model, in the model's frame (powerup-object-frame.ts). Prepared files are
-// drawn at once; a file still being prepared appears when it is, one that failed leaves the original (null).
+// A holder for each group of the original's mesh (getMeshBoneGroups), under a part the race poses with the group's bone.
+const createGroupHolders = (drawing: Group, model: ModelScene): readonly Group[] => {
+  const mesh = getEffectMesh(model)
+  const groups = mesh === null ? [] : getMeshBoneGroups(mesh)
+  return groups.map((group) => {
+    const posedPart = new Group()
+    posedPart.matrixAutoUpdate = false
+    posedPart.userData[POSED_BONE_KEY] = group.bone
+    const holder = new Group()
+    holder.matrixAutoUpdate = false
+    posedPart.add(holder)
+    drawing.add(posedPart)
+    return holder
+  })
+}
+
+// A power-up object's file in place of the original's model: once for every group of its mesh (the twin turbo's two burners and
+// flames), each in its group's frame (powerup-object-frame.ts) and posed by its bone. Prepared files are drawn at once; a file
+// still being prepared appears when it is, one that failed leaves the original (null).
 export const createPowerUpObjectDrawing = (file: string, model: ModelScene): Group | null => {
   const object = prepared.get(file)
   if (object === null) return null
   const drawing = new Group()
-  const holder = new Group()
-  holder.matrixAutoUpdate = false
-  drawing.add(holder)
+  const holders = createGroupHolders(drawing, model)
   if (object !== undefined) {
-    fillDrawing(holder, object, model)
+    fillDrawing(holders, object, model)
     return drawing
   }
   void loadPreparedPowerUpObject(file).then((loaded) => {
     if (loaded === null) drawing.userData[POWER_UP_DRAWING_FAILED_KEY] = true
-    else fillDrawing(holder, loaded, model)
+    else fillDrawing(holders, loaded, model)
   })
   return drawing
 }

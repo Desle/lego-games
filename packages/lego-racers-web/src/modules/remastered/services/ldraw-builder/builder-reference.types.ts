@@ -20,6 +20,9 @@ export type OriginalReference = {
   readonly shape: ReferenceShape
   // The scale (powerup-object-frame.ts) that fits a file with these bounds (LDraw units and axes) to the original.
   readonly getFittedScale: (fileBounds: Box3) => number
+  // How many times the race draws the file: once for each group of the original's mesh (the twin turbo's two burners), the one
+  // shown being the first.
+  readonly drawnCount: number
 }
 
 export type BuilderItemStart = {
