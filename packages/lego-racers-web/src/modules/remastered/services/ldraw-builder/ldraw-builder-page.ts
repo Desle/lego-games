@@ -9,7 +9,6 @@ import {
   Group,
   LinearSRGBColorSpace,
   Mesh,
-  MeshBasicMaterial,
   OrthographicCamera,
   PerspectiveCamera,
   Plane,
@@ -64,8 +63,11 @@ import {
 } from '@lego-games/ldraw/building'
 import { getBuilderItems, getNextBuilderItem, getStartFiles } from './builder-items.ts'
 import {
+  BUILDER_FIELD_OF_VIEW,
+  BUILDER_VIEW_DIRECTION,
   createBuilderView,
   getBuilderViewPosition,
+  getFramingView,
   orbitBuilderView,
   panBuilderView,
   scaleBuilderView,
@@ -91,7 +93,10 @@ import {
   getChampionChassis,
   loadBuilderItemStart,
 } from './builder-reference.ts'
+import { ReferenceShape } from './builder-reference.types.ts'
 import type { BuilderItemStart, OriginalReference } from './builder-reference.types.ts'
+import { getEmptyBuildArea, getPowerUpGridStuds } from './builder-reference-shape.ts'
+import { createGhostOverlayMaterial } from './builder-ghost.ts'
 import type { PartShape, PartStud } from '@lego-games/ldraw/building'
 import {
   BUILDER_PARTS_FILE,
@@ -123,14 +128,11 @@ import { readDevelopmentLibraryFile } from '../ldraw-library/ldraw-library-reade
 const BACKGROUND_COLOR = 0x2b3340
 const SELECTION_COLOR = 0xffd400
 const GRID_COLOR = 0x5a6578
-const FIELD_OF_VIEW = 32
 const GHOST_REFERENCE_OPACITY = 0.45
 const CLICK_DISTANCE = 5
-const GRID_STUDS = 40
+const CAR_GRID_STUDS = 40
 // The empty ground a model starts on: the editing frame's floor (a chassis's brick bottom, a car's origin).
 const GROUND_HEIGHT = 0
-const FRAME_MARGIN = 1.4
-const VIEW_DIRECTION: Vector = [0.7, -1, 0.6]
 const LINE_PIXELS = 16
 const IDENTITY_ROTATION: readonly number[] = [1, 0, 0, 0, 1, 0, 0, 0, 1]
 const DEFAULT_TOOL: BuilderTool = {
@@ -157,9 +159,9 @@ renderer.outputColorSpace = LinearSRGBColorSpace
 renderer.setClearColor(new Color(BACKGROUND_COLOR))
 renderer.setPixelRatio(window.devicePixelRatio)
 
-const camera = new PerspectiveCamera(FIELD_OF_VIEW, 1, 0.05, 1000)
+const camera = new PerspectiveCamera(BUILDER_FIELD_OF_VIEW, 1, 0.05, 1000)
 camera.up.set(0, 0, 1)
-let view = createBuilderView([0, 0, 0], VIEW_DIRECTION, 10)
+let view = createBuilderView([0, 0, 0], BUILDER_VIEW_DIRECTION, 10)
 
 const buildScene = new Scene()
 const ldrawFrame = new Group()
@@ -167,8 +169,12 @@ ldrawFrame.matrixAutoUpdate = false
 ldrawFrame.matrix.copy(LDRAW_TO_STUDS)
 const editFrame = new Group()
 const partsGroup = new Group()
-const grid = new GridHelper(GRID_STUDS * STUD_WIDTH, GRID_STUDS, GRID_COLOR, GRID_COLOR)
-grid.raycast = () => undefined
+const createGrid = (studs: number): GridHelper => {
+  const created = new GridHelper(studs * STUD_WIDTH, studs, GRID_COLOR, GRID_COLOR)
+  created.raycast = () => undefined
+  return created
+}
+let grid = createGrid(CAR_GRID_STUDS)
 editFrame.add(partsGroup, grid)
 ldrawFrame.add(editFrame)
 const guidesHolder = new Group()
@@ -182,13 +188,7 @@ const overlayCamera = new OrthographicCamera(-1, 1, 1, -1, 0, 1)
 overlayScene.add(
   new Mesh(
     new PlaneGeometry(2, 2),
-    new MeshBasicMaterial({
-      map: overlayTarget.texture,
-      transparent: true,
-      opacity: GHOST_REFERENCE_OPACITY,
-      depthTest: false,
-      depthWrite: false,
-    })
+    createGhostOverlayMaterial(overlayTarget.texture, GHOST_REFERENCE_OPACITY)
   )
 )
 
@@ -296,8 +296,19 @@ const ITEM_HINTS: Readonly<Record<BuilderItemKind, string>> = Object.freeze({
     'the power-up object as the original models it (front along x): the race fits its size to the original and spins, moves and fades it as the game does',
 })
 
+const EFFECT_NOTE =
+  'this effect is a flat/animated sprite in the original (its mesh is only a guide); build freely'
+const NO_REFERENCE_NOTE =
+  'the original draws no mesh for this effect (a flat/animated sprite); build freely on the grid'
+
+const getReferenceNote = (): string => {
+  if (currentItem?.kind !== BuilderItemKind.POWER_UP) return ''
+  if (reference === null || reference.shape === ReferenceShape.NONE) return NO_REFERENCE_NOTE
+  return reference.shape === ReferenceShape.EFFECT ? EFFECT_NOTE : ''
+}
+
 const getHint = (): string =>
-  [getActionHint(), currentItem === null ? '' : ITEM_HINTS[currentItem.kind]]
+  [getActionHint(), currentItem === null ? '' : ITEM_HINTS[currentItem.kind], getReferenceNote()]
     .filter((text) => text !== '')
     .join(' · ')
 
@@ -659,15 +670,31 @@ const cycleReferenceMode = () =>
       ReferenceMode.SIDE
   )
 
+// Frames what is shown (the parts and the original's bounds) in the build view's own viewport, half the canvas side by side.
 const frameCamera = () => {
   buildScene.updateMatrixWorld(true)
   const box = new Box3().setFromObject(partsGroup)
-  if (reference !== null) box.union(new Box3().setFromObject(reference.object))
-  if (box.isEmpty()) box.setFromCenterAndSize(new Vector3(), new Vector3(8, 6, 3))
-  const centre = box.getCenter(new Vector3())
-  const radius = Math.max(box.getSize(new Vector3()).length() / 2, 1)
-  const distance = (radius * FRAME_MARGIN) / Math.tan((FIELD_OF_VIEW * Math.PI) / 360)
-  view = createBuilderView([centre.x, centre.y, centre.z], VIEW_DIRECTION, distance)
+  if (reference !== null && reference.shape !== ReferenceShape.NONE) box.union(reference.bounds)
+  if (box.isEmpty()) box.copy(getEmptyBuildArea(currentItem?.kind === BuilderItemKind.POWER_UP))
+  view = getFramingView(
+    [box.min.x, box.min.y, box.min.z],
+    [box.max.x, box.max.y, box.max.z],
+    BUILDER_VIEW_DIRECTION,
+    getViewWidth() / Math.max(canvas.clientHeight, 1),
+    BUILDER_FIELD_OF_VIEW
+  )
+}
+
+// A car's wide stud grid; a power-up object's sized to its original's footprint.
+const replaceGrid = (item: BuilderItem) => {
+  editFrame.remove(grid)
+  grid.dispose()
+  grid = createGrid(
+    item.kind === BuilderItemKind.POWER_UP
+      ? getPowerUpGridStuds(reference?.bounds ?? null)
+      : CAR_GRID_STUDS
+  )
+  editFrame.add(grid)
 }
 
 const applyView = () => {
@@ -678,7 +705,7 @@ const applyView = () => {
 }
 
 const getUnitsPerPixel = () =>
-  (2 * view.distance * Math.tan((FIELD_OF_VIEW * Math.PI) / 360)) / Math.max(canvas.clientHeight, 1)
+  (2 * view.distance * Math.tan((BUILDER_FIELD_OF_VIEW * Math.PI) / 360)) / Math.max(canvas.clientHeight, 1)
 
 const toggleShortcuts = () => panel.setIsShortcutsShown(!panel.getIsShortcutsShown())
 
@@ -729,6 +756,7 @@ const openItem = async (item: BuilderItem, startFile: string | null) => {
   reference = createOriginalReference(archive, item)
   referenceScene.clear()
   if (reference !== null) referenceScene.add(reference.object)
+  replaceGrid(item)
   guidesHolder.clear()
   if (item.chassisName !== '') guidesHolder.add(createWheelGuides(archive, item.chassisName))
   guidesHolder.visible = true
