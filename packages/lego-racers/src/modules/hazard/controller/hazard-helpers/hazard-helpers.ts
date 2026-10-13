@@ -208,9 +208,14 @@ export const getSphereOnBone = (
   session: HazardSession,
   reference: InstanceReference | null,
   boneIndex: number,
-  sphere: HazardSphere
+  sphere: HazardSphere,
+  posedClip?: SkeletonInstanceRuntime['clip']
 ): HazardSphere => {
-  const skeleton = getSkeletonInstance(session, reference)
+  const current = getSkeletonInstance(session, reference)
+  const skeleton =
+    current === null || posedClip === undefined
+      ? current
+      : Object.freeze({ ...current, clip: posedClip })
   const centre =
     skeleton === null
       ? null

@@ -227,6 +227,10 @@ export type CaptureData = {
   readonly holdMilliseconds: number
   readonly phase: number
   readonly phaseMilliseconds: number
+  // The bones hold the pose of the instance's last draw, the frame before (as the hammer's posedClip): the clip the
+  // reads of this frame see, and the clip this frame's update saw for the next one.
+  readonly posedClip: SkeletonInstanceRuntime['clip']
+  readonly nextPosedClip: SkeletonInstanceRuntime['clip']
 }
 
 // 0x32 (0x0048fe30): the crane.
