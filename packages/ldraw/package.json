@@ -10,7 +10,8 @@
     "./geometry": "./src/modules/geometry/index.ts",
     "./library": "./src/modules/library/index.ts",
     "./material": "./src/modules/material/index.ts",
-    "./minifig": "./src/modules/minifig/index.ts"
+    "./minifig": "./src/modules/minifig/index.ts",
+    "./particles": "./src/modules/particles/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

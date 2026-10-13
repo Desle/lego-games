@@ -3,9 +3,11 @@ import type { Object3D } from 'three'
 import type {
   CarDrawingRequest,
   DriverDrawingRequest,
+  ParticleDrawingRequest,
   ViewerExtension,
 } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import { getLDrawModelIndex } from '../ldraw-models/ldraw-model-client.ts'
+import { LDRAW_PARTICLE_MATERIALS } from '../ldraw-particles/ldraw-particle-mappings.ts'
 import { findDriverSource } from '../ldraw-racer/driver-records.ts'
 import { HookKind } from './hd-coverage.types.ts'
 import type { HookCall } from './hd-coverage.types.ts'
@@ -53,10 +55,21 @@ const getDriverCall = (id: number, request: DriverDrawingRequest): HookCall =>
     isFailed: false,
   })
 
+const getParticleCall = (id: number, request: ParticleDrawingRequest): HookCall =>
+  Object.freeze({
+    id,
+    hook: HookKind.PARTICLE,
+    key: request.materialName,
+    wheelsKey: null,
+    isModelPresent: LDRAW_PARTICLE_MATERIALS[request.materialName] !== undefined,
+    isDrawingReturned: false,
+    isFailed: false,
+  })
+
 const getHasMesh = (object: Object3D): boolean =>
   object.getObjectByProperty('isMesh', true) !== undefined
 
-// Wraps an extension so every call of its car and driver hooks is recorded with its outcome, and the drawings it returns can be
+// Wraps an extension so every call of its car, driver and particle hooks is recorded with its outcome, and the drawings it returns can be
 // told apart in a rendered scene.
 export const createRecordingExtension = (extension: ViewerExtension): RecordingExtension => {
   let calls = new Map<number, HookCall>()
@@ -94,6 +107,12 @@ export const createRecordingExtension = (extension: ViewerExtension): RecordingE
     getDriverDrawing: (request) => {
       const id = begin(getDriverCall(nextId, request))
       const drawing = extension.getDriverDrawing(request)
+      if (drawing !== null) keep(id, drawing.object)
+      return drawing
+    },
+    getParticleDrawing: (request) => {
+      const id = begin(getParticleCall(nextId, request))
+      const drawing = extension.getParticleDrawing(request)
       if (drawing !== null) keep(id, drawing.object)
       return drawing
     },

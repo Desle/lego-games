@@ -11,10 +11,11 @@ import {
   getGhostCars,
   stepRacePresentation,
 } from '@lego-games/lego-racers/race-presentation'
+import { getEffectViews, getRacerPoses } from '@lego-games/lego-racers/race-presentation'
 import type { RacePresentation } from '@lego-games/lego-racers/race-presentation'
 import { getHudContext } from '../hud-resources/hud-resources.ts'
 import type { RaceAssets } from '../race-assets/race-assets.types.ts'
-import type { RaceStageSize } from '../race-viewport/race-viewport.types.ts'
+import type { RaceStage, RaceStageSize } from '../race-viewport/race-viewport.types.ts'
 import type { PortRaceFrame } from '../port-race/port-race.types.ts'
 import type { ControlledFrame, ScriptedPowerUpGrant } from './race-frames.types.ts'
 
@@ -63,4 +64,25 @@ export const runRaceFrames = (
     )
   })
   return started.music
+}
+
+// Poses a stage for a frame of `runRaceFrames` as the race controller does: the racers, camera and effects, then the hazards and the
+// particles of both emitter pools.
+export const showPortRaceFrame = (
+  stage: Pick<RaceStage, 'update' | 'showHazards'>,
+  { raceState, presentation, ghostCars }: PortRaceFrame
+) => {
+  stage.update(
+    getRacerPoses(raceState),
+    presentation.cameraView,
+    getEffectViews(raceState),
+    presentation.warpView,
+    ghostCars,
+    presentation.screenFades,
+    presentation.fieldOfViewDegrees
+  )
+  stage.showHazards(raceState.trackLogic, [
+    raceState.racerSet.emitters.common,
+    raceState.racerSet.emitters.track,
+  ])
 }

@@ -30,6 +30,7 @@ import {
   getIsPerformanceRequested,
 } from '../performance-monitor/performance-monitor.ts'
 import { createLDrawPickupDrawing } from '../ldraw-pickup/ldraw-pickup-drawing.ts'
+import { createLDrawParticleDrawing } from '../ldraw-particles/ldraw-particle-drawing.ts'
 import {
   getIsStudLogoRequested,
   setIsStudLogoShown,
@@ -128,6 +129,8 @@ export const createRemasteredExtension = async (search: string): Promise<ViewerE
     },
     getEffectModelDrawing: (request) =>
       getIsLDrawRequested(search) ? createLDrawPickupDrawing(request) : null,
+    getParticleDrawing: (request) =>
+      getIsLDrawRequested(search) ? createLDrawParticleDrawing(request) : null,
     getSelections: () => [
       `textures=${getHighDefinitionVariant(search)}`,
       `audio=${audioVariant ?? 'none'}`,

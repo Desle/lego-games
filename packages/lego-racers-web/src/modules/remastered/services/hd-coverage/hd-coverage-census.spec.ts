@@ -45,4 +45,33 @@ describe('takeCensus', () => {
     ])
     expect(census.otherSources).toEqual(['GAMEDATA\\R\\R.WDB|GAMEDATA\\R\\TRACK.GDB|track'])
   })
+
+  it("sees the original's particle quads by their material and the layer's particles by their call", () => {
+    // Arrange
+    const scene = new Scene()
+    const quads = new Mesh(new BoxGeometry())
+    Object.assign(quads.userData, { particleMaterialName: 'smoke1' })
+    const hiddenQuads = new Mesh(new BoxGeometry())
+    Object.assign(hiddenQuads.userData, { particleMaterialName: 'dust1' })
+    hiddenQuads.visible = false
+    const particles = new Group()
+    particles.add(new Mesh(new BoxGeometry()))
+    scene.add(quads, hiddenQuads, particles)
+    const call: HookCall = {
+      ...CALL,
+      id: 3,
+      hook: HookKind.PARTICLE,
+      key: 'carspar1',
+      wheelsKey: null,
+    }
+
+    // Act
+    const census = takeCensus(scene, [call], (object) => (object === particles ? 3 : null), [])
+
+    // Assert
+    expect(census.sightings).toEqual([
+      { origin: 'original', kind: 'particle', key: 'smoke1', callId: null },
+      { origin: 'layer', kind: 'particle', key: 'carspar1', callId: 3 },
+    ])
+  })
 })
