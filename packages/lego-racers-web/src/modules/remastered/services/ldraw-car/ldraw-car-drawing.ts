@@ -11,6 +11,7 @@ import { getBodyColoredDesign, getIsLDrawBrick } from './brick-body-color.ts'
 import { createGameBrickMeshes, getGameBrickMaterials } from './game-brick-meshes.ts'
 import { loadDesignGridOffset } from './chassis-grid-offset-loader.ts'
 import { getDeckRestedDesign } from './deck-rested-design.ts'
+import { loadDesignChassisDeck } from './chassis-deck-loader.ts'
 import {
   createLDrawCarDocument,
   getChassisFileName,
@@ -65,11 +66,12 @@ export const createLDrawCarDrawing = (
   const placeholder = createGameBrickMeshes(archive, database, mappedBricks, origin)
   if (isLDrawUsed) object.add(placeholder)
   const draw = async () => {
-    const gridOffset = await loadDesignGridOffset(design, chassisModels)
+    const deck = await loadDesignChassisDeck(design, chassisModels)
+    const gridOffset = deck?.gridOffset ?? (await loadDesignGridOffset(design, chassisModels))
     const builtDesign = getBodyColoredDesign(
       database,
       getGameBrickMaterials(archive),
-      chassisModels.size === 0 ? design : getDeckRestedDesign(design)
+      chassisModels.size === 0 ? design : getDeckRestedDesign(design, deck)
     )
     const shiftedDocument = createLDrawCarDocument(
       builtDesign,

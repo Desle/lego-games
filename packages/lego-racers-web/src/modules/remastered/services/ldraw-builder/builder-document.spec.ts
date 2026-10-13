@@ -1,5 +1,6 @@
 import {
   getReferencedModelName,
+  inlineReferencedModels,
   parseBuilderDocument,
   placeReferencedParts,
   serializeBuilderDocument,
@@ -75,5 +76,37 @@ describe('placeReferencedParts', () => {
     expect(placed[0]?.position).toEqual([90, -11, 40])
     expect(placed[0]?.colorCode).toBe(7)
     expect(getReferencedModelName('1 16 0 0 0 1 0 0 0 1 0 0 0 1 RRchas0.ldr')).toBe('rrchas0')
+  })
+})
+
+describe('inlineReferencedModels', () => {
+  it('turns a car on its chassis recipe into one flat model with the recipe parts in the car frame', () => {
+    // Arrange
+    const car = parseBuilderDocument(CAR_TEXT)
+    const recipe = parseBuilderDocument('1 16 100 -16 60 1 0 0 0 1 0 0 0 1 30029.dat').parts
+
+    // Act
+    const flat = inlineReferencedModels(car, new Map([['rrchas0', recipe]]))
+
+    // Assert
+    expect(flat.referenceLines).toEqual([])
+    expect(flat.parts.map((part) => part.partName)).toEqual(['30029.dat', '3623.dat', '3023.dat'])
+    expect(flat.parts[0]?.position.map((value) => Number(value.toFixed(2)))).toEqual([
+      0.62, -6.56, -0.23,
+    ])
+    expect(flat.parts[0]?.commentLines).toEqual(['0 // chassis'])
+    expect(serializeBuilderDocument(flat)).not.toContain('rrchas0.ldr')
+  })
+
+  it('keeps a reference whose model is not given', () => {
+    // Arrange
+    const car = parseBuilderDocument(CAR_TEXT)
+
+    // Act
+    const kept = inlineReferencedModels(car, new Map())
+
+    // Assert
+    expect(kept.referenceLines).toEqual(car.referenceLines)
+    expect(kept.parts).toEqual(car.parts)
   })
 })

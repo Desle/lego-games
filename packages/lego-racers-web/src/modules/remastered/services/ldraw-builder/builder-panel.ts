@@ -199,7 +199,7 @@ export const createBuilderPanel = (
           const label =
             item.kind === BuilderItemKind.CHASSIS
               ? `Chassis ${item.name.toUpperCase()}`
-              : `${item.name} on ${item.chassisName.toUpperCase()}`
+              : `Car ${item.name}`
           const row = createElement('li', item.id === view.currentId ? 'current' : '')
           row.append(
             createButton(`${isDone ? '✓' : '·'} ${label}`, isDone ? 'item done' : 'item', () =>

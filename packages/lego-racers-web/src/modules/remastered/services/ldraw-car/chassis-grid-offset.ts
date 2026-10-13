@@ -72,7 +72,11 @@ export const getStudAreaBounds = (positions: readonly number[]): BaseBounds | nu
 }
 
 // The shift that makes the base's edge fall on a cell boundary of the shifted grid while centring the grid on the base.
-const getStudAlignedShift = (baseMinimum: number, baseMaximum: number, gridCentre: number) => {
+export const getStudAlignedShift = (
+  baseMinimum: number,
+  baseMaximum: number,
+  gridCentre: number
+): number => {
   const centreShift = (baseMinimum + baseMaximum) / 2 - gridCentre
   return (
     baseMinimum +
