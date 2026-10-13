@@ -1,7 +1,6 @@
 import type { ModelScene } from '@lego-games/lego-racers/scene'
 import { Box3, Matrix4, Scene, Vector3 } from 'three'
 import type { DriverDrawing } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
-import { LDRAW_UNITS_PER_STUD } from '../ldraw-car/ldraw-car-document.ts'
 import { getPosedBonePoints } from '../ldraw-fidelity/fidelity-anchors.ts'
 import { getVisibleBounds } from '../ldraw-fidelity/fidelity-render.ts'
 import { waitForStableMeshes } from '../ldraw-fidelity/fidelity-pairs.ts'
@@ -16,9 +15,10 @@ import type {
   DriverSeatSubject,
 } from './hd-coverage.types.ts'
 import { getRounded, getSteeringWheelOffset } from './steering-wheel-offset.ts'
+import { STUD_WIDTH } from '@lego-games/ldraw/building'
 
 const getSideways = (bounds: Box3): number | null =>
-  bounds.isEmpty() ? null : bounds.getCenter(new Vector3()).y * LDRAW_UNITS_PER_STUD
+  bounds.isEmpty() ? null : bounds.getCenter(new Vector3()).y * STUD_WIDTH
 
 // The race's poses of a seated driver: seated (clip 9 at its start) and steering (clip 6, 200 ms in), as the fidelity harness poses them.
 const RACE_POSES: readonly DriverSeatPose[] = [
@@ -85,7 +85,7 @@ export const measureDriverSeat = async (
     return Object.freeze({
       racer: subject.racer,
       pose: pose.name,
-      seatOffset: getRounded(y * LDRAW_UNITS_PER_STUD),
+      seatOffset: getRounded(y * STUD_WIDTH),
       originalDriverOffset: getRoundedOrNull(
         sampler === null ? null : getOriginalTorsoOffset(subject.driverModel, sampler, state, seat)
       ),

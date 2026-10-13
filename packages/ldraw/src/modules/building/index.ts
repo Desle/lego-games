@@ -29,8 +29,6 @@ export {
   undoBuilderHistory,
 } from './services/builder-history/builder-history.ts'
 export {
-  PLATE_HEIGHT,
-  STUD_WIDTH,
   findSideStud,
   getGridPoint,
   getGroundPhase,
@@ -45,18 +43,25 @@ export {
 } from './services/builder-placement/builder-placement.ts'
 export { getFacingRotation, turnAbout } from './services/builder-rotation/builder-rotation.ts'
 export {
-  createCachedReader,
-  createLibraryFileReader,
   createPartShapes,
   createPartStudLists,
+  findModelFacePoints,
   findPartShape,
 } from './services/builder-studs/builder-studs.ts'
 export type {
-  LibraryFileReader,
   PartShape,
   PartStud,
   PartStudLists,
 } from './services/builder-studs/builder-studs.types.ts'
+export { PLATE_HEIGHT, STUD_WIDTH } from './services/ldraw-units/ldraw-units.constants.ts'
+export {
+  createLibraryFileReader,
+  createServedLibraryReader,
+} from './services/library-file-reader/library-file-reader.ts'
+export type {
+  LibraryFileReader,
+  LibraryTextReader,
+} from './services/library-file-reader/library-file-reader.types.ts'
 export type {
   BuilderBox,
   BuilderDocument,

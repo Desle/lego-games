@@ -28,12 +28,12 @@ import { countLDrawColors, parseBrickColorNames } from './ldraw-color-names.ts'
 import { createReferenceSheet, getModelExtent } from './orthographic-sheet.ts'
 import type { LDrawColorName, ReferenceFaces, WheelMount } from './reference-kit.types.ts'
 import { getWheelMounts } from './wheel-mounts.ts'
+import { STUD_WIDTH } from '@lego-games/ldraw/building'
 
 const DEFAULT_JAM_PATH = resolve(
   import.meta.dirname,
   '../../../../../../../original-files/Lego_Racers_Win_Files_EN/Game Files/LEGO.JAM'
 )
-const LDRAW_UNITS_PER_STUD = 20
 const STUDS_PER_PLATE = 0.4
 const PLATES_PER_BRICK = 3
 const PLACED_COLOR_CODE = 16
@@ -58,7 +58,7 @@ const getWheelText = (mounts: readonly WheelMount[]): readonly string[] =>
   mounts.map(
     (mount, index) =>
       `wheel ${String(index + 1)}: centre x ${getNumber(mount.centre[0])}, y ${getNumber(mount.centre[1])}, z ${getNumber(mount.centre[2])} studs; ` +
-      `diameter ${getNumber(mount.radius * 2)} studs (${getNumber(mount.radius * 2 * LDRAW_UNITS_PER_STUD)} LDU), ` +
+      `diameter ${getNumber(mount.radius * 2)} studs (${getNumber(mount.radius * 2 * STUD_WIDTH)} LDU), ` +
       `width ${getNumber(mount.width)} studs, axle along ${mount.axle}`
   )
 
@@ -66,7 +66,7 @@ const getWheelText = (mounts: readonly WheelMount[]): readonly string[] =>
 // put it a stud to the car's left, the others on the centre line. A model's steering wheel goes in front of it.
 const getSeatText = (seat: readonly [number, number, number]): string =>
   `Driver's seat (green ring; the steering wheel goes in front of it): x ${getNumber(seat[0])}, y ${getNumber(seat[1])}, z ${getNumber(seat[2])} studs ` +
-  `(LDraw x ${getNumber(seat[0] * LDRAW_UNITS_PER_STUD)}, z ${getNumber(seat[1] * LDRAW_UNITS_PER_STUD)})`
+  `(LDraw x ${getNumber(seat[0] * STUD_WIDTH)}, z ${getNumber(seat[1] * STUD_WIDTH)})`
 
 const getColorLines = (faces: ReferenceFaces, palette: readonly LDrawColorName[]) =>
   countLDrawColors(faces, palette).map((color) => ({

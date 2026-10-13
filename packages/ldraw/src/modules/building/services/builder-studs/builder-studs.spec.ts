@@ -1,4 +1,4 @@
-import { findPartShape } from './builder-studs.ts'
+import { findModelFacePoints, findPartShape } from './builder-studs.ts'
 
 // The stud lines of 87087 (Brick 1 x 1 with Stud on 1 Side): one on top, one on the side facing -z, a tube underneath, a subpart.
 const FILES: Readonly<Record<string, string>> = {
@@ -43,5 +43,26 @@ describe('findPartShape', () => {
 
     // Assert
     expect(studs).toEqual([])
+  })
+})
+
+describe('findModelFacePoints', () => {
+  it('places the faces of the parts a model places, with the faces of the model itself', async () => {
+    // Arrange
+    const text = ['1 4 100 0 0 1 0 0 0 1 0 0 0 1 corner.dat', '3 4 0 0 0 1 0 0 0 0 1'].join('\n')
+    const files: Readonly<Record<string, string>> = { 'corner.dat': '3 16 0 -4 0 6 -4 0 0 -4 6' }
+
+    // Act
+    const points = await findModelFacePoints(text, (name) => Promise.resolve(files[name] ?? null))
+
+    // Assert
+    expect(points.map((point) => [...point])).toEqual([
+      [0, 0, 0],
+      [1, 0, 0],
+      [0, 0, 1],
+      [100, -4, 0],
+      [106, -4, 0],
+      [100, -4, 6],
+    ])
   })
 })

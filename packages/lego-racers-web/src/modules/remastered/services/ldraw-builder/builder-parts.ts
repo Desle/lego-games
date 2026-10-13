@@ -1,17 +1,7 @@
-import {
-  Box3,
-  BufferGeometry,
-  Color,
-  Group,
-  LineSegments,
-  Matrix4,
-  Mesh,
-  MeshBasicMaterial,
-} from 'three'
+import { Box3, Color, Group, Matrix4, MeshBasicMaterial } from 'three'
 import type { Material, Object3D } from 'three'
-import { applyPlasticLook } from '@lego-games/ldraw/material'
-import { LDrawDetail, parseLDrawModel } from '@lego-games/ldraw/library'
-import { DEVELOPMENT_LDRAW_ROUTE } from '../ldraw-library/ldraw-library-route.ts'
+import { getIsMesh, holdPreparedModel } from '@lego-games/ldraw/geometry'
+import { LDrawDetail } from '@lego-games/ldraw/library'
 import { formatPartLine } from '@lego-games/ldraw/building'
 import type { BuilderBox, BuilderPartLine } from './ldraw-builder.types.ts'
 import type { PartTemplate, PartTemplates } from './builder-parts.types.ts'
@@ -27,7 +17,7 @@ const getMeshBox = (object: Object3D): BuilderBox | null => {
   object.updateMatrixWorld(true)
   const box = new Box3()
   object.traverse((child) => {
-    if (child instanceof Mesh) box.expandByObject(child)
+    if (getIsMesh(child)) box.expandByObject(child)
   })
   return box.isEmpty()
     ? null
@@ -42,33 +32,25 @@ const createTemplate = async (
   colorCode: number,
   detail: LDrawDetail = LDrawDetail.HIGH
 ): Promise<PartTemplate | null> => {
-  const model = await parseLDrawModel(
+  const hold = holdPreparedModel(
     formatPartLine({ colorCode, position: [0, 0, 0], rotation: IDENTITY_ROTATION, partName }),
-    DEVELOPMENT_LDRAW_ROUTE,
     detail
   )
-  applyPlasticLook(model)
+  const { model } = await hold.prepared
   const box = getMeshBox(model)
-  return box === null ? null : Object.freeze({ object: model, box })
+  if (box === null) hold.release()
+  return box === null ? null : Object.freeze({ object: model, box, release: hold.release })
 }
 
-// A part drawn once and thrown away (a palette picture): plain studs, and the caller disposes it, so browsing thousands of parts keeps
-// no memory.
+// A part drawn once and thrown away (a palette picture): plain studs, and the caller releases it, so browsing thousands of parts keeps
+// only the last few.
 export const createThrowawayTemplate = (
   partName: string,
   colorCode: number
 ): Promise<PartTemplate | null> =>
   createTemplate(partName, colorCode, LDrawDetail.LOW).catch(() => null)
 
-export const disposeTemplate = (template: PartTemplate) =>
-  template.object.traverse((child) => {
-    if (!(child instanceof Mesh || child instanceof LineSegments)) return
-    const geometry: unknown = child.geometry
-    if (geometry instanceof BufferGeometry) geometry.dispose()
-  })
-
-// Each part in each colour is read from the library and given its plastic once; placed parts are copies that share its geometry and
-// materials.
+// Each part in each colour is prepared once (and kept for the page); placed parts are copies that share its geometry and materials.
 export const createPartTemplates = (): PartTemplates => {
   const pending = new Map<string, Promise<PartTemplate | null>>()
   const loaded = new Map<string, PartTemplate | null>()
@@ -119,9 +101,9 @@ export const createGhostInstance = (template: PartTemplate, part: BuilderPartLin
   const children: Object3D[] = []
   ghost.traverse((child) => void children.push(child))
   for (const child of children) {
-    if (child instanceof Mesh) {
+    if (getIsMesh(child)) {
       child.material = new MeshBasicMaterial({
-        color: getMaterialColor(child.material as Material | Material[]),
+        color: getMaterialColor(child.material),
         transparent: true,
         opacity: GHOST_OPACITY,
         depthWrite: false,

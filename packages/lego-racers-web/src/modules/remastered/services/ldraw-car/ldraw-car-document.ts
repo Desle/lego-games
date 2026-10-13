@@ -1,4 +1,5 @@
 import type { CarDesign, PlacedBrick } from '@lego-games/lego-racers/car-builder'
+import { formatPartLine, PLATE_HEIGHT, STUD_WIDTH } from '@lego-games/ldraw/building'
 import { Matrix4 } from 'three'
 import { getLDrawBrickColor } from './ldraw-brick-colors.ts'
 import { LDRAW_BRICK_MAPPINGS } from './ldraw-brick-mappings.ts'
@@ -7,11 +8,8 @@ import { LDRAW_COMPOSITE_MAPPINGS } from './ldraw-composite-mappings.ts'
 import type { GridOffset } from './chassis-grid-offset.types.ts'
 import type { CarOrigin, LDrawCarDocument } from './ldraw-car-document.types.ts'
 
-// LDraw: 20 units to a stud, 8 to a plate; the game: a stud is 1 and a plate (a brick height unit) 0.4.
-export const LDRAW_UNITS_PER_STUD = 20
-const LDRAW_UNITS_PER_PLATE = 8
+// The game: a stud is 1 and a plate (a brick height unit) 0.4.
 const QUARTER_TURN = Math.PI / 2
-const MATRIX_DIGITS = 4
 
 // LDraw axes (x right, y down, z toward the viewer) into the game's (x, y, z up): (x, y, z) becomes (x, z, -y).
 export const LDRAW_TO_GAME = new Matrix4().set(1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1)
@@ -19,13 +17,13 @@ const GAME_TO_LDRAW = LDRAW_TO_GAME.clone().invert()
 
 // LDraw units and axes into studs and the game's axes: the frame of the mesh the original builds for a car.
 export const LDRAW_TO_STUDS = new Matrix4()
-  .makeScale(1 / LDRAW_UNITS_PER_STUD, 1 / LDRAW_UNITS_PER_STUD, 1 / LDRAW_UNITS_PER_STUD)
+  .makeScale(1 / STUD_WIDTH, 1 / STUD_WIDTH, 1 / STUD_WIDTH)
   .multiply(LDRAW_TO_GAME)
 
 // 0x0049a450: the brick turned about the footprint's corner by its orientation (a quarter turn per step, clockwise).
 const getOrientationMatrix = (width: number, height: number, orientation: number): Matrix4 => {
-  const widthUnits = width * LDRAW_UNITS_PER_STUD
-  const heightUnits = height * LDRAW_UNITS_PER_STUD
+  const widthUnits = width * STUD_WIDTH
+  const heightUnits = height * STUD_WIDTH
   switch (orientation & 3) {
     case 1:
       return new Matrix4()
@@ -56,9 +54,9 @@ const getPartMatrix = (mapping: LDrawBrickMapping): Matrix4 =>
 const getBrickFrameMatrix = (brick: PlacedBrick, origin: CarOrigin): Matrix4 => {
   const { width, height } = brick.piece.footprint
   const placement = new Matrix4().makeTranslation(
-    (brick.x + origin.x) * LDRAW_UNITS_PER_STUD,
-    (brick.y + origin.y) * LDRAW_UNITS_PER_STUD,
-    brick.baseHeight * LDRAW_UNITS_PER_PLATE + origin.z * LDRAW_UNITS_PER_STUD
+    (brick.x + origin.x) * STUD_WIDTH,
+    (brick.y + origin.y) * STUD_WIDTH,
+    brick.baseHeight * PLATE_HEIGHT + origin.z * STUD_WIDTH
   )
   return placement.multiply(getOrientationMatrix(width, height, brick.orientation))
 }
@@ -75,14 +73,15 @@ const getCompositePartMatrix = (part: LDrawCompositePart): Matrix4 => {
   return new Matrix4().set(m11, m12, m13, x, m21, m22, m23, y, m31, m32, m33, z, 0, 0, 0, 1)
 }
 
-const formatNumber = (value: number): string => String(Number(value.toFixed(MATRIX_DIGITS)) + 0)
-
-// An LDraw type 1 line: `1 <colour> x y z a b c d e f g h i <file>`, the nine numbers being the matrix rows.
+// An LDraw type 1 line placing a part by a matrix in LDraw units and axes.
 export const getPartLine = (colorCode: number, matrix: Matrix4, partNumber: string): string => {
-  const fileName = partNumber.includes('.') ? partNumber : `${partNumber}.dat`
   const [m11, m21, m31, , m12, m22, m32, , m13, m23, m33, , m14, m24, m34] = matrix.elements
-  const numbers = [m14, m24, m34, m11, m12, m13, m21, m22, m23, m31, m32, m33]
-  return `1 ${String(colorCode)} ${numbers.map((value) => formatNumber(value)).join(' ')} ${fileName}`
+  return formatPartLine({
+    colorCode,
+    position: [m14, m24, m34],
+    rotation: [m11, m12, m13, m21, m22, m23, m31, m32, m33],
+    partName: partNumber.includes('.') ? partNumber : `${partNumber}.dat`,
+  })
 }
 
 export const getLDrawMapping = (brick: PlacedBrick): LDrawBrickMapping | null =>

@@ -45,7 +45,10 @@ const getLoader = (libraryUrl: string, detail: LDrawDetail): Promise<LDrawLoader
   return prepared
 }
 
-// `libraryUrl` is where the app serves the LDraw parts library (the folder that holds `LDConfig.ldr`, `parts/` and `p/`).
+// A model as the loader builds it, one object per part line with the loader's `userData` (file name, category), on the calling thread
+// and unmerged: the parse worker's step, and the one way for a tool that looks at the parts one by one (a coverage check). Drawings
+// use the geometry module's `holdPreparedModel`. `libraryUrl` is where the app serves the LDraw parts library (the folder that holds
+// `LDConfig.ldr`, `parts/` and `p/`).
 export const parseLDrawModel = async (
   text: string,
   libraryUrl: string,

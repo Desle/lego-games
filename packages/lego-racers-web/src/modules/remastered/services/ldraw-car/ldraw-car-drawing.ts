@@ -5,23 +5,17 @@ import {
 } from '@lego-games/lego-racers/car-builder'
 import { Group, Mesh } from 'three'
 import type { Object3D } from 'three'
-import type { LDrawDetail } from '@lego-games/ldraw/library'
-import { createDetailedBody } from '@lego-games/ldraw/geometry'
+import { createDetailedModel, createMaterialSet } from '@lego-games/ldraw/geometry'
 import { getBodyColoredDesign, getIsLDrawBrick } from './brick-body-color.ts'
 import { createGameBrickMeshes, getGameBrickMaterials } from './game-brick-meshes.ts'
 import { loadDesignGridOffset } from './chassis-grid-offset-loader.ts'
 import { getDeckRestedDesign } from './deck-rested-design.ts'
 import { loadDesignChassisDeck } from './chassis-deck-loader.ts'
-import {
-  createLDrawCarDocument,
-  getChassisFileName,
-  LDRAW_TO_STUDS,
-  LDRAW_UNITS_PER_STUD,
-} from './ldraw-car-document.ts'
+import { createLDrawCarDocument, getChassisFileName, LDRAW_TO_STUDS } from './ldraw-car-document.ts'
 import { createStudioLights } from '@lego-games/ldraw/material'
 import type { PlasticMesh } from '@lego-games/ldraw/material'
-import type { SplitSubModel } from '@lego-games/ldraw/geometry'
 import type { LDrawCarDrawing, LDrawCarRequest } from './ldraw-car-drawing.types.ts'
+import { STUD_WIDTH } from '@lego-games/ldraw/building'
 
 const NO_CHASSIS_MODELS: ReadonlyMap<string, string> = new Map()
 // How far (studs) a print of the original is laid out from its brick's face, so it shows on the LDraw part's face.
@@ -43,7 +37,6 @@ export const createLDrawCarDrawing = (
   { archive, design }: LDrawCarRequest,
   isLDrawUsed = true,
   chassisModels: ReadonlyMap<string, string> = NO_CHASSIS_MODELS,
-  onWheels: ((wheels: readonly SplitSubModel[], detail: LDrawDetail) => void) | null = null,
   isStudioIncluded = true
 ): LDrawCarDrawing => {
   const database = parseBrickDatabase(archive.readFile(BRICK_DATABASE_PATH))
@@ -65,6 +58,8 @@ export const createLDrawCarDrawing = (
   const mappedBricks = design.bricks.filter((brick) => !document.unmappedBricks.includes(brick))
   const placeholder = createGameBrickMeshes(archive, database, mappedBricks, origin)
   if (isLDrawUsed) object.add(placeholder)
+  let isReleased = false
+  let releaseBody: () => void = () => undefined
   const draw = async () => {
     const deck = await loadDesignChassisDeck(design, chassisModels)
     const gridOffset = deck?.gridOffset ?? (await loadDesignGridOffset(design, chassisModels))
@@ -97,18 +92,20 @@ export const createLDrawCarDrawing = (
     for (const meshes of [restedGameMeshes, prints]) {
       object.add(meshes)
       meshes.position.set(
-        gridOffset.x / LDRAW_UNITS_PER_STUD,
-        gridOffset.z / LDRAW_UNITS_PER_STUD,
-        -gridOffset.y / LDRAW_UNITS_PER_STUD
+        gridOffset.x / STUD_WIDTH,
+        gridOffset.z / STUD_WIDTH,
+        -gridOffset.y / STUD_WIDTH
       )
     }
-    const body = createDetailedBody(
+    const body = createDetailedModel(
       [
         shiftedDocument.text,
         ...[...chassisModels].map(([name, text]) => `0 FILE ${getChassisFileName(name)}\n${text}`),
       ].join('\n'),
-      onWheels
+      { materials: createMaterialSet(), onInstance: null, onSubModels: null }
     )
+    releaseBody = body.release
+    if (isReleased) body.release()
     await body.shown
     const holder = new Group()
     holder.matrixAutoUpdate = false
@@ -134,5 +131,9 @@ export const createLDrawCarDrawing = (
     origin,
     shown: drawn.then(() => undefined),
     settled: drawn.then((body) => body?.refined()),
+    release: () => {
+      isReleased = true
+      releaseBody()
+    },
   })
 }

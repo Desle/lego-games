@@ -11,7 +11,8 @@ import type {
   CarDrawingRequest,
 } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import { createChassisFallbackText } from '../ldraw-chassis/chassis-fallback.ts'
-import { createDetailedBody, disposeObject } from '@lego-games/ldraw/geometry'
+import { createDetailedModel, createMaterialSet, disposeObject } from '@lego-games/ldraw/geometry'
+import type { SplitSubModel } from '@lego-games/ldraw/geometry'
 import { createLDrawCarDrawing } from '../ldraw-car/ldraw-car-drawing.ts'
 import { getChassisFileName, LDRAW_TO_STUDS } from '../ldraw-car/ldraw-car-document.ts'
 import { LDrawDetail } from '@lego-games/ldraw/library'
@@ -23,7 +24,6 @@ import { setDrawingOpacity } from './drawing-opacity.ts'
 import { createCarStudio } from '../ldraw-racer/studio-scene-lights.ts'
 import { createFileWheelsDrawing } from './file-wheels-drawing.ts'
 import type {
-  FoundWheel,
   LDrawCarLiveState,
   LDrawCarSource,
   LDrawRacerSettings,
@@ -130,12 +130,14 @@ export const createLDrawRacerCar = (
   wheelsHolder.add(wheelsScaled)
   object.add(bodyHolder, wheelsHolder)
   const studio = createCarStudio()
-  const foundWheels: FoundWheel[] = []
+  const foundWheels: SplitSubModel[] = []
   const failureListeners: (() => void)[] = []
+  // The shared models the drawing copies, let go when it goes.
+  const releases: (() => void)[] = []
   const live: LDrawCarLiveState = { wheels: null, state: null, opacity: 1, isDisposed: false }
   const getIsDisposed = () => live.isDisposed
   const database = parseBrickDatabase(request.archive.readFile(BRICK_DATABASE_PATH))
-  const keepModelParts = (wheels: readonly FoundWheel[], detail: LDrawDetail) => {
+  const keepModelParts = (wheels: readonly SplitSubModel[], detail: LDrawDetail) => {
     if (detail === LDrawDetail.LOW) foundWheels.push(...wheels)
     else upgradeWheels(foundWheels, wheels)
   }
@@ -168,9 +170,9 @@ export const createLDrawRacerCar = (
         { archive: request.archive, design: request.design },
         true,
         chassisModels,
-        null,
         false
       )
+      releases.push(drawing.release)
       bodyHolder.add(drawing.object)
       // The wheels come with the placeholder bricks, so a car never stands without them while its parts load.
       buildWheels()
@@ -193,7 +195,12 @@ export const createLDrawRacerCar = (
     )
     const fileText = await getFileText(source.file, chassisModels)
     if (fileText === null || getIsDisposed()) return false
-    const body = createDetailedBody(fileText, keepModelParts)
+    const body = createDetailedModel(fileText, {
+      materials: createMaterialSet(),
+      onInstance: null,
+      onSubModels: keepModelParts,
+    })
+    releases.push(body.release)
     await body.shown
     if (getIsDisposed()) return false
     const holder = createIdentityHolder()
@@ -244,6 +251,7 @@ export const createLDrawRacerCar = (
       studio.release()
       disposeObject(bodyHolder)
       live.wheels?.dispose()
+      for (const release of releases) release()
     },
   })
 }

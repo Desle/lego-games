@@ -2,6 +2,7 @@
 // car's frame. The frame is the game's, x forward, y to the left, z up, in studs; the file is LDraw's, so (x, y, z) in studs is
 // (20 x, -20 z, 20 y) in LDraw units. A brick's part origin is the middle of its top face.
 import type { ConventionMarker } from './convention-test-model.types.ts'
+import { STUD_WIDTH } from '@lego-games/ldraw/building'
 
 const BRICK_HEIGHT_STUDS = 1.2
 
@@ -44,7 +45,6 @@ export const CONVENTION_MARKERS: readonly ConventionMarker[] = Object.freeze([
   },
 ])
 
-const LDRAW_UNITS_PER_STUD = 20
 const IDENTITY_ROTATION = '1 0 0 0 1 0 0 0 1'
 
 export const getConventionTestText = (): string =>
@@ -57,7 +57,7 @@ export const getConventionTestText = (): string =>
     ...CONVENTION_MARKERS.flatMap(({ name, colorCode, part, expected }) => [
       `0 ${name}`,
       `1 ${String(colorCode)} ${[expected[0], -expected[2], expected[1]]
-        .map((value) => String(value * LDRAW_UNITS_PER_STUD))
+        .map((value) => String(value * STUD_WIDTH))
         .join(' ')} ${IDENTITY_ROTATION} ${part}.dat`,
     ]),
   ].join('\n')

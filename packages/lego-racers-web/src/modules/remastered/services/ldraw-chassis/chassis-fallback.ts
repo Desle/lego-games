@@ -3,13 +3,13 @@ import type { BrickDatabase, BrickPiece, CarVertex } from '@lego-games/lego-race
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import { getLDrawBrickColor } from '../ldraw-car/ldraw-brick-colors.ts'
 import { getFaceColorIndex, getGameBrickMaterials } from '../ldraw-car/game-brick-meshes.ts'
-import { LDRAW_UNITS_PER_STUD } from '../ldraw-car/ldraw-car-document.ts'
 import type { ChassisTriangle } from './chassis-fallback.types.ts'
+import { PLATE_HEIGHT, STUD_WIDTH } from '@lego-games/ldraw/building'
 
 // A face whose flags are exactly 1 is a hidden underside (0x00497690).
 const UNDERSIDE_FLAGS = 1
 // A brick height unit (the z of a vertex) in LDraw units: a plate is 8, and the game's unit is 0.4 of a stud.
-const LDRAW_UNITS_PER_BRICK_HEIGHT = 8
+const BRICK_HEIGHT_UNIT = PLATE_HEIGHT
 // Stands for the colour the chassis is placed in: its faces take LDraw's "current colour".
 const PLACED_COLOR_INDEX = 1
 const CURRENT_COLOR_CODE = 16
@@ -27,9 +27,9 @@ const formatNumber = (value: number): string => String(Number(value.toFixed(3)) 
 
 // The game's axes (x, y in studs, z up in brick units) into LDraw's (x right, y down, z toward the viewer) in LDraw units.
 const getLDrawPoint = (vertex: CarVertex): readonly number[] => [
-  vertex.x * LDRAW_UNITS_PER_STUD,
-  -vertex.z * LDRAW_UNITS_PER_BRICK_HEIGHT,
-  vertex.y * LDRAW_UNITS_PER_STUD,
+  vertex.x * STUD_WIDTH,
+  -vertex.z * BRICK_HEIGHT_UNIT,
+  vertex.y * STUD_WIDTH,
 ]
 
 export const getChassisTriangles = (
@@ -107,9 +107,9 @@ const getStudLines = (
       const centre = known[0] ?? 0
       if (Math.max(...known) - Math.min(...known) > FLAT_TOLERANCE) continue
       const position = [
-        (column + 0.5) * LDRAW_UNITS_PER_STUD,
-        -centre * LDRAW_UNITS_PER_BRICK_HEIGHT,
-        (row + 0.5) * LDRAW_UNITS_PER_STUD,
+        (column + 0.5) * STUD_WIDTH,
+        -centre * BRICK_HEIGHT_UNIT,
+        (row + 0.5) * STUD_WIDTH,
       ]
       lines.push(
         `1 ${String(CURRENT_COLOR_CODE)} ${position.map(formatNumber).join(' ')} ${IDENTITY_ROTATION} stud.dat`

@@ -1,7 +1,7 @@
 import { Box3, Group, PerspectiveCamera, Scene, Vector3, WebGLRenderer } from 'three'
 import { LDRAW_TO_STUDS } from '../ldraw-car/ldraw-car-document.ts'
 import { createStudioLights } from '@lego-games/ldraw/material'
-import { createPartInstance, createThrowawayTemplate, disposeTemplate } from './builder-parts.ts'
+import { createPartInstance, createThrowawayTemplate } from './builder-parts.ts'
 import type { BuilderThumbnails } from './builder-thumbnails.types.ts'
 
 const THUMBNAIL_PIXELS = 128
@@ -50,7 +50,7 @@ export const createBuilderThumbnails = (): BuilderThumbnails => {
     camera.lookAt(centre)
     renderer.render(scene, camera)
     frame.clear()
-    disposeTemplate(template)
+    template.release()
     return canvas.toDataURL('image/png')
   }
 

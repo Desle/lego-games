@@ -1,8 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import {
-  createCachedReader,
   findPartShape,
   getGridPoint,
   getPartBottom,
@@ -14,6 +13,7 @@ import {
   getTopGridPoint,
   turnQuarter,
 } from '@lego-games/ldraw/building'
+import { createDiskLibraryReader } from '../ldraw-library/disk-library-reader.ts'
 import { getBuilderKeyCommand } from './builder-shortcuts.ts'
 import { applySelectionEdit, getSelectionEdit } from './builder-snapping.ts'
 import type { SnapContext } from './builder-snapping.types.ts'
@@ -40,13 +40,7 @@ const CURSOR_SPOTS: readonly (readonly [number, number])[] = [
   [-34, -4],
 ]
 
-const readFromDisk = createCachedReader((name) => {
-  const path = name.replace(/\\/g, '/').toLowerCase()
-  const found = ['parts', 'p']
-    .map((folder) => join(libraryRoot, folder, path))
-    .find((candidate) => existsSync(candidate))
-  return Promise.resolve(found === undefined ? null : readFileSync(found, 'utf8'))
-})
+const readFromDisk = createDiskLibraryReader(libraryRoot)
 
 const getRemainder = (value: number) => {
   const remainder = ((value % 20) + 20) % 20

@@ -1,7 +1,6 @@
 import { createBuildGrid, getCarOrigin } from '@lego-games/lego-racers/car-builder'
 import type { BrickDatabase, BrickPiece } from '@lego-games/lego-racers/car-builder'
-
-const LDRAW_UNITS_PER_STUD = 20
+import { STUD_WIDTH } from '@lego-games/ldraw/building'
 
 export const getReferenceNumber = (value: number): string => String(Number(value.toFixed(2)))
 
@@ -26,9 +25,9 @@ export const getChassisRecipeOffset = (
 ): readonly [number, number, number] => {
   const [x, y, z] = getChassisOrigin(database, piece)
   return [
-    Number(getReferenceNumber(x * LDRAW_UNITS_PER_STUD)),
-    Number(getReferenceNumber(-z * LDRAW_UNITS_PER_STUD)),
-    Number(getReferenceNumber(y * LDRAW_UNITS_PER_STUD)),
+    Number(getReferenceNumber(x * STUD_WIDTH)),
+    Number(getReferenceNumber(-z * STUD_WIDTH)),
+    Number(getReferenceNumber(y * STUD_WIDTH)),
   ]
 }
 

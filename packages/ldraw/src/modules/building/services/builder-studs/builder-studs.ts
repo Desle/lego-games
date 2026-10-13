@@ -4,9 +4,10 @@ import {
   rotateVector,
 } from '../builder-document/builder-document.ts'
 import { PART_UP } from '../builder-rotation/builder-rotation.ts'
+import { PLATE_HEIGHT } from '../ldraw-units/ldraw-units.constants.ts'
+import type { LibraryFileReader } from '../library-file-reader/library-file-reader.types.ts'
 import type {
   CollectedGeometry,
-  LibraryFileReader,
   PartShape,
   PartShapes,
   PartStud,
@@ -19,7 +20,6 @@ const MAXIMUM_DEPTH = 12
 const LEVEL_TOLERANCE = 0.001
 const STUD_CELL = 10
 const OVERLAP = 0.5
-const PLATE_HEIGHT = 8
 const UPWARD = 0.99
 // The library's primitives for a stud on a part (plain, open, with a logo, truncated, cross, with a hole); not the tubes underneath
 // (stud3, stud4) nor Duplo, Scala or Quatro studs.
@@ -235,36 +235,19 @@ export const findPartShape = async (
   })
 }
 
-const fetchText = async (url: string): Promise<string | null> => {
-  try {
-    const response = await fetch(url)
-    return response.ok ? await response.text() : null
-  } catch {
-    return null
-  }
-}
-
-// Reads the files of the library served at `libraryUrl`. A part line names a file by its place under `parts/` or `p/`
-// (`s\3001s01.dat` is `parts/s/3001s01.dat`).
-export const createLibraryFileReader =
-  (libraryUrl: string): LibraryFileReader =>
-  async (name) => {
-    const path = name.replace(/\\/g, '/').toLowerCase()
-    const base = libraryUrl.replace(/\/$/, '')
-    return (await fetchText(`${base}/parts/${path}`)) ?? fetchText(`${base}/p/${path}`)
-  }
-
-// Each library file is read once, however many parts place it.
-export const createCachedReader = (readFile: LibraryFileReader): LibraryFileReader => {
-  const texts = new Map<string, Promise<string | null>>()
-  return (name) => {
-    const key = name.replace(/\\/g, '/').toLowerCase()
-    const existing = texts.get(key)
-    if (existing !== undefined) return existing
-    const text = readFile(name)
-    texts.set(key, text)
-    return text
-  }
+// The corners of every face a model's text draws, its parts' and their subparts' included, in the model's frame: its geometry read
+// from the library files alone, without building it.
+export const findModelFacePoints = async (
+  text: string,
+  readFile: LibraryFileReader
+): Promise<readonly Vector[]> => {
+  const modelName = '\0model'
+  const { faces } = await collect(
+    { colorCode: 16, position: [0, 0, 0], rotation: IDENTITY_ROTATION, partName: modelName },
+    (name) => (name === modelName ? Promise.resolve(text) : readFile(name)),
+    0
+  )
+  return faces.flat()
 }
 
 // Each part's shape is read from the library once.
