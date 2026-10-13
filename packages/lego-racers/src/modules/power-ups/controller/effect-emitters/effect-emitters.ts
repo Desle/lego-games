@@ -5,6 +5,7 @@ import {
   releaseEmitter,
   releaseEmitterImmediately,
   setEmitterBasis,
+  setEmitterOrientation,
   setEmitterPosition,
   setEmitterVelocityOffset,
   spawnEmitter,
@@ -12,7 +13,7 @@ import {
 import type { EmitterPool } from '../../../emitter/index.ts'
 import { getFrameTransformedPoint } from '../../../simulation-math/index.ts'
 import type { FloatArithmetic, Vector3 } from '../../../simulation-math/index.ts'
-import type { EffectEmitterOwner } from './effect-emitters.types.ts'
+import type { EffectEmitterOwner, OrientedEmitterPlacement } from './effect-emitters.types.ts'
 import { getEffect, getStepWithEffect } from '../power-up-step/power-up-step.ts'
 import type { PowerUpStep } from '../power-up-step/power-up-step.types.ts'
 
@@ -100,6 +101,29 @@ export const placeEffectEmitter = (
   return emitterHandleIndex === null || common === null
     ? step
     : getStepWithPool(step, setEmitterPosition(common, emitterHandleIndex, position))
+}
+
+// 0x00489660 and 0x00489540 on the effect's emitter: where its particles are born and the facing and up direction its
+// basis is made from (the wand's sparks on the struck racer, 0x00455660).
+export const placeOrientedEffectEmitter = (
+  step: PowerUpStep,
+  effectId: number,
+  arithmetic: FloatArithmetic,
+  placement: OrientedEmitterPlacement
+): PowerUpStep => {
+  const { emitterHandleIndex } = getEffect(step, effectId)
+  const { common } = step.world.emitters
+  if (emitterHandleIndex === null || common === null) return step
+  return getStepWithPool(
+    step,
+    setEmitterOrientation(
+      arithmetic,
+      setEmitterPosition(common, emitterHandleIndex, placement.position),
+      emitterHandleIndex,
+      placement.facing,
+      placement.up
+    )
+  )
 }
 
 // 0x0045ce20 (turbo slot 2): the level 2 turbo's smoke sits at (-2, 0, 3) of the owner's frame, takes its rotation as

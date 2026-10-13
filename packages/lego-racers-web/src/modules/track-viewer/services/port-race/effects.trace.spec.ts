@@ -20,7 +20,7 @@ const EFFECT_CASES: readonly EffectTraceCase[] = Object.freeze([
   {
     name: 'Ice Planet, snow',
     race: 'ipp',
-    frames: [170, 250, 340, 520, 610],
+    frames: [70, 100, 120, 170, 250, 340, 520, 610],
     texture: /snowflak/,
   },
   // Turbo flames and burn figures: their texture scroll has run since the effect started (0x0045ce20).
@@ -29,6 +29,18 @@ const EFFECT_CASES: readonly EffectTraceCase[] = Object.freeze([
     race: 'ipp',
     frames: [230, 250, 260],
     texture: /tflame2|smturbo3/,
+  },
+  {
+    name: 'Royal Knights, rocket trails',
+    race: 'rr',
+    frames: [700, 790],
+    texture: /mslstrk/,
+  },
+  {
+    name: 'Sphinx, cannon trail',
+    race: 'frk',
+    frames: [700, 790, 880],
+    texture: /canstrk/,
   },
 ])
 
@@ -109,7 +121,6 @@ describe.skipIf(!isGamePresent())('effects against the original', () =>
       // Arrange
       // Act
       const results = await runEffectCase(effectCase)
-
       // Assert
       expect(results.map((result) => result.frame)).toEqual(effectCase.frames)
       expect(results.map((result) => result.unmatchedCount)).toEqual(results.map(() => 0))

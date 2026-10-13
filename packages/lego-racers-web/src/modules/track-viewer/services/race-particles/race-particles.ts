@@ -8,6 +8,7 @@ import type { EmitterPool, EmitterQuad } from '@lego-games/lego-racers/emitter'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-racers/simulation-math'
 import { getRibbonCorners } from '@lego-games/lego-racers/ribbon'
 import type { RibbonView } from '@lego-games/lego-racers/ribbon'
+import type { TrailDrawing } from '@lego-games/lego-racers/projectile-trail'
 import type { SpriteView } from '@lego-games/lego-racers/race-presentation'
 import type { Scene } from '@lego-games/lego-racers/scene'
 import type { BufferAttribute } from 'three'
@@ -71,7 +72,8 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
     cameraView: CameraView,
     sprites: readonly SpriteView[] = [],
     ribbons: readonly RibbonView[] = [],
-    worldSpriteQuads: readonly EmitterQuad[] = []
+    worldSpriteQuads: readonly EmitterQuad[] = [],
+    trails: readonly TrailDrawing[] = []
   ) => {
     const axes = getBillboardAxes(arithmetic, cameraView.forward, cameraView.up)
     // A world sprite draws with the engine's white vertex array (0x1005ca4c), whatever its material's colour, and its
@@ -145,6 +147,32 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
         corner += 1
       }
       counts.set(ribbon.materialName, corner)
+    }
+    for (const { materialName, mesh } of trails) {
+      const batch = getBatch(materialName)
+      if (batch === null) continue
+      let corner = counts.get(materialName) ?? 0
+      for (const triangle of mesh.triangles) {
+        for (const index of [triangle.first, triangle.second, triangle.third]) {
+          const vertex = mesh.vertices[index]
+          if (vertex === undefined || corner >= MAXIMUM_CORNERS) continue
+          // The mesh sits at its origin in the world; the vertices carry the material's own colour bytes.
+          addCorner(
+            batch,
+            corner,
+            {
+              x: Math.fround(vertex.position.x + mesh.origin.x),
+              y: Math.fround(vertex.position.y + mesh.origin.y),
+              z: Math.fround(vertex.position.z + mesh.origin.z),
+              u: vertex.u,
+              v: vertex.v,
+            },
+            [vertex.color.red, vertex.color.green, vertex.color.blue, vertex.color.alpha]
+          )
+          corner += 1
+        }
+      }
+      counts.set(materialName, corner)
     }
     for (const [name, batch] of batches) {
       if (batch === null) continue

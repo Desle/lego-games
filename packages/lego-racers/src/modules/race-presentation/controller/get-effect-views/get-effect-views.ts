@@ -22,6 +22,7 @@ import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-m
 import type { RibbonView } from '../../../ribbon/index.ts'
 import { getTetherRibbon } from '../get-tether-ribbon/get-tether-ribbon.ts'
 import { getWandRibbon } from '../get-wand-ribbon/get-wand-ribbon.ts'
+import { getTrailDrawings } from '../../../projectile-trail/index.ts'
 import type {
   AttachmentState,
   AttachmentView,
@@ -411,6 +412,7 @@ export const getEffectViews = (raceState: RaceState): EffectViews => {
       ...getExplosionViews(raceState.projectileWorld.explosions, false),
       ...getExplosionViews(raceState.projectileWorld.spikedExplosions, true),
     ]),
+    trails: getTrailDrawings(raceState.projectileWorld.trails),
     decals: Object.freeze([
       ...getOilSlickDecalViews(raceState),
       ...getCraneShadowDecalViews(raceState),

@@ -11,6 +11,7 @@ export {
 export {
   checkEffectEmitter,
   placeEffectEmitter,
+  placeOrientedEffectEmitter,
   placeTurboSmoke,
   releaseEffectEmitter,
   startEffectEmitter,
