@@ -8,6 +8,10 @@ import type { ScreenFadeOverlay } from '../screen-fade-overlay/screen-fade-overl
 import type { ModelObject } from '../model-object/model-object.types.ts'
 import type { Group, PerspectiveCamera, Scene as ThreeScene } from 'three'
 import type {
+  CarDrawingRequest,
+  DriverDrawingRequest,
+} from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
+import type {
   EffectViews,
   GhostCar,
   RacerPose,
@@ -99,3 +103,9 @@ export type RaceStage = Pick<RaceViewport, 'update' | 'showHazards' | 'animate' 
 
 // The model objects a racer's rig is made of, before a drawing of a viewer extension takes any of them over.
 export type RacerModelObjects = Pick<RacerRig, 'wheels' | 'body' | 'driver'>
+
+// What a viewer extension is asked for a racer's car and driver; null asks nothing (the original's is drawn).
+export type RacerRequests = {
+  readonly car: CarDrawingRequest | null
+  readonly driver: DriverDrawingRequest | null
+}

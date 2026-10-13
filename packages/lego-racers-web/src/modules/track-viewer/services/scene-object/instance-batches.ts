@@ -145,10 +145,17 @@ export const createBatchMesh = (
   return mesh
 }
 
-export const createInstanceGroup = (instance: SceneInstance, isBackground: boolean): Group => {
+// The group names what it draws (the instance, its kind, its mesh file and world) so a layer or a trace can tell objects apart.
+export const createInstanceGroup = (
+  instance: SceneInstance,
+  meshPath: string,
+  isBackground: boolean
+): Group => {
   const group = new Group()
   group.name = instance.name
   group.userData['instanceKind'] = instance.kind
+  group.userData['meshPath'] = meshPath
+  group.userData['worldPath'] = instance.worldPath
   group.matrixAutoUpdate = false
   group.matrix.copy(getInstanceMatrix(instance, isBackground))
   return group
