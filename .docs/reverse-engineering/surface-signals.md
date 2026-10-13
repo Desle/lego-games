@@ -32,9 +32,10 @@ The collision registry's hit listeners (`0x00431660`, `0x00456320`, `0x00421c00`
 
 - **Begin** (`0x0048ef70`, when signal 7 starts and the hazard is idle): each part's level distances are zeroed and its flags get animated (`0x10000`) and not looping (`& ~0x40000`), so the clip plays once from where it stopped; `StartStopSignal(9, 9)` tells the events; lifecycle active.
 - **Update** (`0x0048f030`, every frame while not idle): sets flags `0x10000` and `0x20000` of the `shootme` entry (**cars and projectiles now pass**), and ends when part 0's clip has finished (`0x0040e360`).
-- **End** (`0x0048efe0`): when every part has finished, they stop animating and the hazard is idle. The entry's flags are **never restored**: the barrier stays open for the rest of the race (no respawn). The `0x10` signal flag stays too, so a later shot through the gap starts the hazard again and replays the clip.
+- **End** (`0x0048efe0`): when every part has finished, they stop animating and the hazard is idle.
+- **Draw** (`0x0048f080`, slot `+0x1c`, every frame from `0x00435a00`): while the hazard is not idle each part is drawn with the first part's saved distances and the alpha `ftol((frames - time) / frames * 255)`, so the barrels fly apart and fade out; the zeroed distances only keep the world's own drawing from them ([play-test-visuals.md](play-test-visuals.md)). The entry's flags are **never restored**: the barrier stays open for the rest of the race (no respawn). The `0x10` signal flag stays too, so a later shot through the gap starts the hazard again and replays the clip.
 
-Other effects of signal 7 come from the event set (not from the hazard): event `2A` with identifier 7 plays the sound at `(-404.9, 520.9, 60.1)`; events listening to 9 (the gate opening) do the rest. There is no debris object; the barrels are the animated parts.
+Other effects of signal 7 come from the event set (not from the hazard): event `2A` with identifier 7 plays the sound at `(-404.9, 520.9, 60.1)`; events listening to 9 (the gate opening) do the rest. There is no debris object; the barrels are the animated parts, drawn by the hazard itself while they break.
 
 The same flags are toggled by the other collision-object hazards (all four set or clear `0x10000` and `0x20000` of a named entry): pillar `0x28` (`0x0048ba20` clears them when it lands), sphinx `0x29` (its Begin `0x0048c180` sets them), rock `0x2e` (`0x0048e5a0` sets, `0x0048e600` clears).
 

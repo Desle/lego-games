@@ -22,6 +22,7 @@ import type { SceneLights } from './vertex-lighting.types.ts'
 import { createSkeletonInstanceObject } from './skeleton-instance-object.ts'
 import { createStaticInstanceObject } from './static-instance-object.ts'
 import { getIsSphereInFrustum } from './sphere-visibility.ts'
+import { setInstanceAlphaOverride } from './alpha-override.ts'
 import type {
   InstanceLevelMesh,
   InstanceObject,
@@ -145,6 +146,7 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
           : new Vector3(meshSphere.centre.x, meshSphere.centre.y, meshSphere.centre.z).applyMatrix4(
               instanceMatrix
             )
+      let appliedAlphaOverride: number | null = null
       levelSelectors.push((camera, view) => {
         const runtime = runtimes.get(instance.name)
         const distances = runtime?.levelSquaredDistances ?? fileDistances
@@ -172,6 +174,13 @@ export const createSceneObject = (scene: Scene, options: SceneObjectOptions): Sc
             : distanceLevel
         for (const { levelIndex, instanceObject } of levelObjects) {
           instanceObject.group.visible = levelIndex === selected
+        }
+        const alphaOverride = runtime?.alphaOverride ?? null
+        if (alphaOverride !== appliedAlphaOverride) {
+          for (const { instanceObject } of levelObjects) {
+            setInstanceAlphaOverride(instanceObject.group, alphaOverride)
+          }
+          appliedAlphaOverride = alphaOverride
         }
       })
     }

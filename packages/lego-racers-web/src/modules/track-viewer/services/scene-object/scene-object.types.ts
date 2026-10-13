@@ -71,6 +71,8 @@ export type InstanceRuntime = {
   readonly position: Vector3Like
   readonly levelSquaredDistances: readonly number[]
   readonly sphere: { readonly centre: Vector3Like; readonly radius: number } | null
+  // The device's alpha override the instance is drawn with (slot 0xb8, mode 1; a breaking gate's pieces), or null.
+  readonly alphaOverride: number | null
 }
 
 export type SceneObjectOptions = {

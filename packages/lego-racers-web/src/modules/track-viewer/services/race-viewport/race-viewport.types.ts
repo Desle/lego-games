@@ -1,6 +1,7 @@
 import type { BspPlane } from '@lego-games/lego-racers/bsp-tree'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
+import type { HazardRuntime } from '@lego-games/lego-racers/hazard'
 import type { RaceWorlds } from '@lego-games/lego-racers/world-animation'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
 import type { ScreenFadeOverlay } from '../screen-fade-overlay/screen-fade-overlay.types.ts'
@@ -28,8 +29,12 @@ export type RaceViewport = {
   ) => void
   // Shows the simulation's hazards and emitters: the worlds' skeleton instances take the clip states the
   // simulation advanced, and the emitter pools' particles are drawn as points.
-  // The instances of the track's two worlds scroll their textures.
-  readonly showHazards: (worlds: RaceWorlds, pools: readonly (EmitterPool | null)[]) => void
+  // The instances of the track's two worlds scroll their textures. The parts a hazard draws itself are drawn with its
+  // distances and alpha.
+  readonly showHazards: (
+    trackLogic: DrawnTrackLogic,
+    pools: readonly (EmitterPool | null)[]
+  ) => void
   // Advances the backdrop and the sky by whole milliseconds (the track's instances follow the simulation).
   readonly animate: (deltaMilliseconds: number) => void
   // Draws the race at another size, keeping the camera's vertical field of view.
@@ -72,6 +77,13 @@ export type RacerRig = {
   // Hands the drawings of a viewer extension, if there are any, where the parts above are now.
   readonly sync: (opacity: number) => void
   readonly objects: readonly SceneObject[]
+}
+
+// What the viewer draws of the track logic: the worlds the simulation moves and the hazards that draw parts of them
+// themselves (a gate's pieces as they break, 0x0048f080).
+export type DrawnTrackLogic = {
+  readonly worlds: RaceWorlds
+  readonly hazards: HazardRuntime
 }
 
 // The scene graphs of a race and the camera, ready to be rendered or read (the render trace reads them).
