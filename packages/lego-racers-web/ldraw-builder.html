@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LDraw car builder</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #2b3340;
+        color: #e8ecf2;
+        font:
+          13px system-ui,
+          sans-serif;
+        overflow: hidden;
+      }
+      button,
+      select,
+      input {
+        font: inherit;
+        color: inherit;
+        background: #3a4456;
+        border: 1px solid #56627a;
+        border-radius: 4px;
+        padding: 4px 8px;
+      }
+      button:hover {
+        background: #4a566c;
+      }
+      button:disabled {
+        opacity: 0.5;
+      }
+      #page {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr) 300px;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        height: 100%;
+      }
+      #bar,
+      #viewport,
+      #status {
+        grid-column: 2;
+      }
+      #queue {
+        grid-column: 1;
+        grid-row: 1 / 4;
+        overflow: auto;
+        background: #1d232e;
+        padding: 8px;
+      }
+      #queue .progress {
+        font-weight: 600;
+        font-size: 15px;
+        margin-bottom: 8px;
+      }
+      #queue ol {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      #queue .item {
+        width: 100%;
+        text-align: left;
+        background: none;
+        border-color: transparent;
+        margin-bottom: 2px;
+      }
+      #queue .item.done {
+        color: #7fd88f;
+      }
+      #queue .current .item {
+        border-color: #ffd400;
+        background: #3a4456;
+      }
+      #bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        padding: 6px 8px;
+        background: #1d232e;
+      }
+      #bar .title {
+        margin-right: 8px;
+      }
+      #bar .done {
+        margin-left: auto;
+        background: #2f7d43;
+        border-color: #49a862;
+        font-weight: 600;
+        padding: 4px 16px;
+      }
+      #viewport {
+        position: relative;
+        min-height: 0;
+      }
+      #stage {
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+      }
+      #help {
+        position: absolute;
+        left: 8px;
+        bottom: 8px;
+        background: rgba(20, 25, 33, 0.8);
+        padding: 6px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        pointer-events: none;
+      }
+      #help .mode {
+        font-size: 13px;
+        font-weight: 600;
+        color: #ffd400;
+        margin-bottom: 2px;
+      }
+      #help .hint {
+        color: #b8c2d4;
+      }
+      #shortcuts {
+        position: absolute;
+        inset: 24px;
+        overflow: auto;
+        background: rgba(20, 25, 33, 0.95);
+        border: 1px solid #56627a;
+        border-radius: 8px;
+        padding: 12px 20px;
+        columns: 2 320px;
+      }
+      #shortcuts[hidden] {
+        display: none;
+      }
+      #shortcuts h2 {
+        margin: 0 0 8px;
+        font-size: 16px;
+        column-span: all;
+      }
+      #shortcuts section {
+        break-inside: avoid;
+        margin-bottom: 12px;
+      }
+      #shortcuts h3 {
+        margin: 0 0 4px;
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #9aa6ba;
+      }
+      #shortcuts dl {
+        display: grid;
+        grid-template-columns: 9em 1fr;
+        gap: 3px 12px;
+        margin: 0;
+      }
+      #shortcuts dt {
+        font-weight: 600;
+        color: #ffd400;
+        white-space: nowrap;
+      }
+      #shortcuts dd {
+        margin: 0;
+      }
+      #shortcuts .close {
+        column-span: all;
+        color: #9aa6ba;
+        margin: 4px 0 0;
+      }
+      #status {
+        padding: 4px 8px;
+        background: #1d232e;
+        font:
+          12px ui-monospace,
+          monospace;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #palette {
+        grid-column: 3;
+        grid-row: 1 / 4;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 8px;
+        background: #1d232e;
+        min-height: 0;
+      }
+      #palette .tool {
+        font-weight: 600;
+      }
+      #palette .part-list {
+        flex: 1;
+        overflow: auto;
+        min-height: 0;
+      }
+      #palette .group {
+        margin: 8px 0 2px;
+        color: #9aa6ba;
+        text-transform: uppercase;
+        font-size: 11px;
+      }
+      #palette .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      #palette .tab {
+        padding: 2px 6px;
+        font-size: 12px;
+      }
+      #palette .tab.active {
+        border-color: #ffd400;
+        background: #4a566c;
+      }
+      #palette .tiles {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+        gap: 4px;
+      }
+      #palette .tile {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 2px;
+        background: #2b3340;
+        border: 2px solid transparent;
+      }
+      #palette .tile.chosen {
+        border-color: #ffd400;
+      }
+      #palette .thumbnail {
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: contain;
+      }
+      #palette .number {
+        font-size: 11px;
+        color: #b8c2d4;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+      }
+      #palette .color-grid {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 3px;
+      }
+      #palette .swatch {
+        aspect-ratio: 1;
+        padding: 0;
+        border: 2px solid transparent;
+      }
+      #palette .swatch.chosen {
+        border-color: #ffd400;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="page">
+      <nav id="queue"></nav>
+      <div id="bar"></div>
+      <div id="viewport">
+        <canvas id="stage"></canvas>
+        <div id="help"></div>
+        <div id="shortcuts"></div>
+      </div>
+      <div id="status"></div>
+      <aside id="palette"></aside>
+    </div>
+    <script
+      type="module"
+      src="/src/modules/remastered/services/ldraw-builder/ldraw-builder-page.ts"
+    ></script>
+  </body>
+</html>

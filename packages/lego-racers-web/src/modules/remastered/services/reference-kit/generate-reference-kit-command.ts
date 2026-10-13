@@ -4,9 +4,7 @@ import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import {
   BRICK_DATABASE_PATH,
-  createBuildGrid,
   findBrickPieceByName,
-  getCarOrigin,
   parseBrickDatabase,
 } from '@lego-games/lego-racers/car-builder'
 import type { BrickDatabase, BrickPiece } from '@lego-games/lego-racers/car-builder'
@@ -20,6 +18,11 @@ import {
 } from '../ldraw-chassis/chassis-fallback.ts'
 import { CHAMPION_CAR_CODES, CHASSIS_NAMES } from '../ldraw-racer-model/known-racer-models.ts'
 import { loadChampionBodyFaces } from './champion-body-faces.ts'
+import {
+  getChassisOrigin,
+  getChassisReferenceLine,
+  getReferenceNumber,
+} from './chassis-reference-line.ts'
 import { CONVENTION_MARKERS, getConventionTestText } from './convention-test-model.ts'
 import { countLDrawColors, parseBrickColorNames } from './ldraw-color-names.ts'
 import { createReferenceSheet, getModelExtent } from './orthographic-sheet.ts'
@@ -38,7 +41,7 @@ const CHASSIS_GREY = 0x9ba19d
 const BYTE = 255
 const FALLBACK_FOLDER = '_fallback'
 
-const getNumber = (value: number): string => String(Number(value.toFixed(2)))
+const getNumber = getReferenceNumber
 
 const getHex = (red: number, green: number, blue: number): string =>
   `#${[red, green, blue].map((channel) => channel.toString(16).padStart(2, '0')).join('')}`
@@ -113,20 +116,6 @@ const run = () => {
     throw new Error(`CHAMPS.CCB lists ${codes.join(' ')}; known-racer-models.ts has other codes`)
   }
 
-  const getChassisOrigin = (piece: BrickPiece) => {
-    const origin = getCarOrigin(database, {
-      bricks: [
-        { piece, x: 0, y: 0, orientation: 0, colorIndex: 0, unidentifiedValue: 0, baseHeight: 0 },
-      ],
-      grid: createBuildGrid(),
-    })
-    return [origin.x, origin.y, origin.z] as const
-  }
-  const getChassisReferenceLine = (piece: BrickPiece): string => {
-    const [x, y, z] = getChassisOrigin(piece)
-    return `1 16 ${getNumber(x * LDRAW_UNITS_PER_STUD)} ${getNumber(-z * LDRAW_UNITS_PER_STUD)} ${getNumber(y * LDRAW_UNITS_PER_STUD)} 1 0 0 0 1 0 0 0 1 ${piece.name.toLowerCase()}.ldr`
-  }
-
   for (const champion of champions) {
     const code = champion.modelName.toUpperCase()
     const faces = loadChampionBodyFaces(archive, {
@@ -141,7 +130,7 @@ const run = () => {
     const lines = [
       `Car ${code} (champion ${champion.name}), frame: x forward, y left, z up, studs; the origin is the red cross.`,
       `Body: ${getDimensionText(faces)}.`,
-      `Chassis ${champion.chassisName}${chassis === null ? '' : `, reference line for the chassis recipe: ${getChassisReferenceLine(chassis)}`}`,
+      `Chassis ${champion.chassisName}${chassis === null ? '' : `, reference line for the chassis recipe: ${getChassisReferenceLine(database, chassis)}`}`,
       ...getWheelText(mounts),
     ]
     const colorLines = getColorLines(faces, palette)
@@ -159,7 +148,7 @@ const run = () => {
     const piece = findBrickPieceByName(database, name)
     if (piece === null) throw new Error(`The brick database has no chassis ${name}`)
     const faces = getChassisFaces(archive, database, piece)
-    const origin = getChassisOrigin(piece)
+    const origin = getChassisOrigin(database, piece)
     const mounts = getWheelMounts(archive, name).map((mount): WheelMount => ({
       ...mount,
       centre: [
@@ -171,7 +160,7 @@ const run = () => {
     const lines = [
       `Chassis ${piece.name} (footprint ${String(piece.footprint.width)} x ${String(piece.footprint.height)} studs), recipe frame: the footprint's corner is the origin, x along the width, y along the depth, z up from the brick's bottom, studs.`,
       `Size: ${getDimensionText(faces)}.`,
-      `The car's origin lies at x ${getNumber(origin[0])}, y ${getNumber(origin[1])}, z ${getNumber(origin[2])} studs from this corner; a car model places the recipe with: ${getChassisReferenceLine(piece)}`,
+      `The car's origin lies at x ${getNumber(origin[0])}, y ${getNumber(origin[1])}, z ${getNumber(origin[2])} studs from this corner; a car model places the recipe with: ${getChassisReferenceLine(database, piece)}`,
       ...getWheelText(mounts),
     ]
     const colorLines = getColorLines(faces, palette)
