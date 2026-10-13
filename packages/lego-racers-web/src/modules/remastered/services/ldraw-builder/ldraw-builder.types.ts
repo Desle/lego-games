@@ -97,3 +97,9 @@ export type BuilderDraft = {
   readonly savedAt: number
   readonly parts: readonly BuilderPart[]
 }
+
+// A labelled group of the Start from menu (Cars, Chassis, Backups/drafts).
+export type StartFileGroup = {
+  readonly label: string
+  readonly files: readonly string[]
+}
