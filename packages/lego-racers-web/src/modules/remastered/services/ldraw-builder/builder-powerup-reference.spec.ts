@@ -1,11 +1,9 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import { PerspectiveCamera, Vector3 } from 'three'
 import type { Box3 } from 'three'
 import { POWER_UP_OBJECT_MODEL_NAMES } from '../../../../shared/viewer-extensions/effect-model-names.ts'
-import {
-  getIsOriginalGamePresent,
-  readOriginalJam,
-} from '../../../track-viewer/services/port-race/original-game-files.ts'
 import {
   BUILDER_FIELD_OF_VIEW,
   BUILDER_VIEW_DIRECTION,
@@ -16,6 +14,12 @@ import { createOriginalReference } from './builder-reference.ts'
 import { getPowerUpGridStuds } from './builder-reference-shape.ts'
 import { ReferenceShape } from './builder-reference.types.ts'
 import { BuilderItemKind } from './ldraw-builder.types.ts'
+
+const JAM_PATH = resolve(
+  import.meta.dirname,
+  '../../../../../../../original-files/Lego_Racers_Win_Files_EN/Game Files/LEGO.JAM'
+)
+const isPresent = existsSync(JAM_PATH)
 
 // The build view beside the original: half of a 1060 x 680 canvas.
 const SIDE_BY_SIDE_ASPECT = 530 / 680
@@ -53,8 +57,8 @@ const getFramedReach = (box: Box3, aspect: number): number => {
   )
 }
 
-describe.skipIf(!getIsOriginalGamePresent())("the builder's power-up references", () => {
-  const archive = getIsOriginalGamePresent() ? openJamArchive(readOriginalJam()) : null
+describe.skipIf(!isPresent)("the builder's power-up references", () => {
+  const archive = isPresent ? openJamArchive(new Uint8Array(readFileSync(JAM_PATH))) : null
 
   it.each(POWER_UP_OBJECT_MODEL_NAMES)(
     '%s shows its original framed in the viewport, or says it has none',

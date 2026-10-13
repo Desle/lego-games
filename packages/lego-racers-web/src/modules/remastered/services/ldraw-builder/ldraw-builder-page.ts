@@ -705,7 +705,8 @@ const applyView = () => {
 }
 
 const getUnitsPerPixel = () =>
-  (2 * view.distance * Math.tan((BUILDER_FIELD_OF_VIEW * Math.PI) / 360)) / Math.max(canvas.clientHeight, 1)
+  (2 * view.distance * Math.tan((BUILDER_FIELD_OF_VIEW * Math.PI) / 360)) /
+  Math.max(canvas.clientHeight, 1)
 
 const toggleShortcuts = () => panel.setIsShortcutsShown(!panel.getIsShortcutsShown())
 
