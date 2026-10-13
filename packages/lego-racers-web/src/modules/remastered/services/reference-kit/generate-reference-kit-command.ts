@@ -62,6 +62,12 @@ const getWheelText = (mounts: readonly WheelMount[]): readonly string[] =>
       `width ${getNumber(mount.width)} studs, axle along ${mount.axle}`
   )
 
+// The race seats the driver at the chassis's seat point (`vehiclePoint`, the racer appearance's `seatPoint`): JTchas0 and BVBCHA0
+// put it a stud to the car's left, the others on the centre line. A model's steering wheel goes in front of it.
+const getSeatText = (seat: readonly [number, number, number]): string =>
+  `Driver's seat (green ring; the steering wheel goes in front of it): x ${getNumber(seat[0])}, y ${getNumber(seat[1])}, z ${getNumber(seat[2])} studs ` +
+  `(LDraw x ${getNumber(seat[0] * LDRAW_UNITS_PER_STUD)}, z ${getNumber(seat[1] * LDRAW_UNITS_PER_STUD)})`
+
 const getColorLines = (faces: ReferenceFaces, palette: readonly LDrawColorName[]) =>
   countLDrawColors(faces, palette).map((color) => ({
     label: `${color.name} (${String(color.code)}): ${String(Math.round(color.share * 100))} %`,
@@ -107,7 +113,15 @@ const run = () => {
   for (const folder of [join(reference, 'chassis'), join(out, 'chassis', FALLBACK_FOLDER)]) {
     mkdirSync(folder, { recursive: true })
   }
-  const champions = readRacerDatabases((path) => archive.readFile(path)).champions.champions
+  const databases = readRacerDatabases((path) => archive.readFile(path))
+  const champions = databases.champions.champions
+  const getSeat = (chassisName: string): readonly [number, number, number] => {
+    const record = databases.chassis.chassis.find(
+      (candidate) => candidate.name.toLowerCase() === chassisName.toLowerCase()
+    )
+    if (record === undefined) throw new Error(`The chassis database has no chassis ${chassisName}`)
+    return record.vehiclePoint
+  }
   const codes = champions.map((champion) => champion.modelName.toUpperCase())
   if (
     CHAMPION_CAR_CODES.some((code) => !codes.includes(code)) ||
@@ -127,16 +141,18 @@ const run = () => {
     })
     const chassis = findBrickPieceByName(database, champion.chassisName)
     const mounts = getWheelMounts(archive, champion.chassisName)
+    const seat = getSeat(champion.chassisName)
     const lines = [
       `Car ${code} (champion ${champion.name}), frame: x forward, y left, z up, studs; the origin is the red cross.`,
       `Body: ${getDimensionText(faces)}.`,
       `Chassis ${champion.chassisName}${chassis === null ? '' : `, reference line for the chassis recipe: ${getChassisReferenceLine(database, chassis)}`}`,
       ...getWheelText(mounts),
+      getSeatText(seat),
     ]
     const colorLines = getColorLines(faces, palette)
     writeFileSync(
       join(reference, `${code}.svg`),
-      createReferenceSheet({ title: code, lines, faces, wheelMounts: mounts, colorLines })
+      createReferenceSheet({ title: code, lines, faces, wheelMounts: mounts, seat, colorLines })
     )
     writeFileSync(
       join(reference, `${code}.txt`),
@@ -157,16 +173,26 @@ const run = () => {
         mount.centre[2] - origin[2],
       ],
     }))
+    const carSeat = getSeat(name)
+    const seat = [carSeat[0] - origin[0], carSeat[1] - origin[1], carSeat[2] - origin[2]] as const
     const lines = [
       `Chassis ${piece.name} (footprint ${String(piece.footprint.width)} x ${String(piece.footprint.height)} studs), recipe frame: the footprint's corner is the origin, x along the width, y along the depth, z up from the brick's bottom, studs.`,
       `Size: ${getDimensionText(faces)}.`,
       `The car's origin lies at x ${getNumber(origin[0])}, y ${getNumber(origin[1])}, z ${getNumber(origin[2])} studs from this corner; a car model places the recipe with: ${getChassisReferenceLine(database, piece)}`,
       ...getWheelText(mounts),
+      getSeatText(seat),
     ]
     const colorLines = getColorLines(faces, palette)
     writeFileSync(
       join(reference, 'chassis', `${name.toUpperCase()}.svg`),
-      createReferenceSheet({ title: piece.name, lines, faces, wheelMounts: mounts, colorLines })
+      createReferenceSheet({
+        title: piece.name,
+        lines,
+        faces,
+        wheelMounts: mounts,
+        seat,
+        colorLines,
+      })
     )
     writeFileSync(
       join(reference, 'chassis', `${name.toUpperCase()}.txt`),

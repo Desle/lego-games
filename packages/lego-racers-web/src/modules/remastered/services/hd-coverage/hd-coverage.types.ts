@@ -1,4 +1,5 @@
 import type { FrontEndInput } from '@lego-games/lego-racers/front-end'
+import type { ModelScene } from '@lego-games/lego-racers/scene'
 import { createEnum } from '../../../../shared/types/enum.types.ts'
 import type { EnumValues } from '../../../../shared/types/enum.types.ts'
 
@@ -123,6 +124,8 @@ export type HdCoveragePlaceResult = {
   readonly unsettledCallIds: readonly number[]
   // The part lines of the models drawn in the place that did not reach the screen.
   readonly partFindings: readonly ModelPartFinding[]
+  // Where each driver of the place sits, the original's and the layer's.
+  readonly driverSeats: readonly DriverSeatMeasurement[]
 }
 
 // A racer the original drew in a place, and why the layer did not.
@@ -167,9 +170,45 @@ export type RacePlace = {
   readonly recordFrames: readonly number[]
 }
 
-export type HdCoveragePlace = FrontEndPlace | RacePlace | ModelPartsPlace
+// Every champion and a garage car on every chassis the folder has a recipe for, each driver measured on its seat.
+export type DriverSeatsPlace = {
+  readonly kind: 'driver_seats'
+  readonly name: string
+}
+
+export type HdCoveragePlace = FrontEndPlace | RacePlace | ModelPartsPlace | DriverSeatsPlace
 
 // The page of the coverage trace: the runner `installHdCoverageHarness` hangs on the window.
 export type HdCoverageWindow = {
   readonly runHdCoveragePlace: (place: HdCoveragePlace) => Promise<HdCoveragePlaceResult>
+}
+
+// A racer whose driver's seat is measured: the car (a champion's code or a garage design's chassis), the seat point of its
+// appearance (the car's frame, studs), the original driver's model, and the text of the LDraw car the layer draws (null: none).
+export type DriverSeatSubject = {
+  readonly racer: string
+  readonly seatPoint: { readonly x: number; readonly y: number; readonly z: number }
+  readonly driverModel: ModelScene
+  readonly driverModelName: string | null
+  readonly driverPartBytes: readonly number[] | null
+  readonly ldrawCarText: string | null
+}
+
+// How far to the car's left (LDraw units) the driver sits: the seat point, the original driver's torso, the LDraw driver's torso,
+// and the LDraw car's steering wheel (null when not measured: no drawing, no LDraw car or no steering wheel in it).
+export type DriverSeatMeasurement = {
+  readonly racer: string
+  // The race's pose the driver was measured in (`seated`, `steering`).
+  readonly pose: string
+  readonly seatOffset: number
+  readonly originalDriverOffset: number | null
+  readonly ldrawDriverOffset: number | null
+  readonly steeringWheelOffset: number | null
+}
+
+// A pose of the race's seated driver: a clip of its animation and how far into it.
+export type DriverSeatPose = {
+  readonly name: string
+  readonly clipIndex: number
+  readonly milliseconds: number
 }

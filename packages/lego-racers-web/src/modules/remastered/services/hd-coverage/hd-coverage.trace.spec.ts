@@ -18,6 +18,11 @@ import {
   getStaleGaps,
 } from './hd-coverage-judgement.ts'
 import { HD_COVERAGE_PLACES } from './hd-coverage-places.ts'
+import {
+  formatDriverSeat,
+  getDriverSeatFailures,
+  getSteeringWheelNotes,
+} from './driver-seat-judgement.ts'
 
 const PACKAGE_DIRECTORY = resolve(import.meta.dirname, '../../../../..')
 const REPOSITORY_DIRECTORY = resolve(PACKAGE_DIRECTORY, '../..')
@@ -96,6 +101,9 @@ describe.skipIf(!isAvailable)('HD coverage', () => {
           (finding) =>
             `  FAIL ${finding.model} line ${String(finding.lineNumber)} (${finding.part}): ${finding.loss}`
         ),
+        ...result.driverSeats.map((seat) => `  seat ${formatDriverSeat(seat)}`),
+        ...getDriverSeatFailures(result.driverSeats).map((failure) => `  FAIL seat ${failure}`),
+        ...getSteeringWheelNotes(result.driverSeats).map((note) => `  note ${note}`),
         ...(result.unsettledCallIds.length === 0
           ? []
           : [`  unsettled drawings: calls ${result.unsettledCallIds.join(', ')}`]),
@@ -112,6 +120,10 @@ describe.skipIf(!isAvailable)('HD coverage', () => {
     expect(
       result.partFindings,
       'Fix: every part line of a model file must be drawn where the file puts it; find where the drawing loses it (racer-model-parts, ldraw-model-merge, the detail switch)'
+    ).toEqual([])
+    expect(
+      getDriverSeatFailures(result.driverSeats),
+      'Fix: the LDraw driver must sit where the original seats its driver (the seat point of the racer appearance); find where its pose or figure frame moves it (ldraw-racer-driver, ldraw-driver-drawing, minifig-joints)'
     ).toEqual([])
     expect(
       getStaleGaps(place.name, findings, KNOWN_COVERAGE_GAPS),

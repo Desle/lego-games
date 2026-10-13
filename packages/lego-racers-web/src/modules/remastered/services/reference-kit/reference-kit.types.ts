@@ -55,6 +55,8 @@ export type ReferenceSheetContent = {
   readonly lines: readonly string[]
   readonly faces: ReferenceFaces
   readonly wheelMounts: readonly WheelMount[]
+  // Where the race seats the driver (the chassis's seat point, studs, in the sheet's frame): the steering wheel goes in front of it.
+  readonly seat: readonly [number, number, number]
   readonly colorLines: readonly { readonly label: string; readonly hex: string }[]
 }
 
