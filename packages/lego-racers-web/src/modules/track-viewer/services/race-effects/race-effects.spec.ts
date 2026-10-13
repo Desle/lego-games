@@ -1,7 +1,16 @@
 import { createRace } from '@lego-games/lego-racers/race'
 import { getEffectViews } from '@lego-games/lego-racers/race-presentation'
 import type { BrickView, EffectViews } from '@lego-games/lego-racers/race-presentation'
-import { Group, Matrix4, Mesh, PerspectiveCamera, Scene, Vector3 } from 'three'
+import {
+  BoxGeometry,
+  Group,
+  Matrix4,
+  Mesh,
+  MeshStandardMaterial,
+  PerspectiveCamera,
+  Scene,
+  Vector3,
+} from 'three'
 import type { BufferAttribute, Object3D } from 'three'
 import {
   ENHANCEMENT_BRICK_MODEL_NAME,
@@ -28,6 +37,7 @@ const BRICK_MODEL_NAMES: readonly string[] = [
   POWER_UP_BRICK_MODEL_NAME,
   ENHANCEMENT_BRICK_MODEL_NAME,
 ]
+const CURSE_MODEL_NAMES: readonly string[] = ['CURSE', 'CGREEN', 'GREEN']
 const EYE = Object.freeze({ x: 0, y: -12, z: 4 })
 const BRICK_CASES = [
   {
@@ -145,5 +155,43 @@ describe.skipIf(!getIsOriginalGamePresent())('the bricks on the track', () => {
       getRounded(first?.vertex ?? new Vector3())
     )
     expect(getRounded(moved)).toEqual(getRounded(second?.vertex ?? new Vector3()))
+  })
+})
+
+describe.skipIf(!getIsOriginalGamePresent())('a scrolling figure drawn by a layer', () => {
+  afterEach(() => {
+    clearViewerExtensions()
+  })
+
+  it("scrolls the model's own textures and leaves a drawing of several materials alone", () => {
+    // Arrange: an LDraw part's mesh holds a list of materials, no scrolled picture
+    const assets = getAssets()
+    const material = new MeshStandardMaterial()
+    registerViewerExtension({
+      ...NEUTRAL_EXTENSION,
+      getEffectModelDrawing: (request) =>
+        CURSE_MODEL_NAMES.includes(request.modelName)
+          ? new Mesh(new BoxGeometry(), [material])
+          : null,
+    })
+    const scene = new Scene()
+    const effects = createRaceEffects(scene, assets.effectModels)
+    const curse = {
+      floatingPosition: { x: 0, y: 0, z: 1 },
+      groundPosition: { x: 0, y: 0, z: 0 },
+      rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as const,
+      state: 'active' as const,
+      timerMilliseconds: 1000,
+      elapsedMilliseconds: 500,
+      scale: 1,
+    }
+    const views = { ...getViews(assets, BRICK_CASES[0].brick, 0), bricks: [], curses: [curse] }
+
+    // Act
+    const update = () => effects.update(views, EYE, [], getFrustum())
+
+    // Assert
+    expect(update).not.toThrow()
+    effects.dispose()
   })
 })
