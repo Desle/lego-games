@@ -215,7 +215,11 @@ const getTrackGroundQuery = (definition: RaceDefinition): GroundQuery | null => 
             track.volume,
             () => NO_PROBE_SURFACE
           )
-          return (start, end) => probe(start, end)?.point ?? null
+          return (start, end, onNormal) => {
+            const hit = probe(start, end)
+            if (hit !== null) onNormal?.(hit.normal)
+            return hit?.point ?? null
+          }
         })()
   groundQueries.set(definition, query)
   return query
@@ -338,6 +342,9 @@ export const createRace = (definition: RaceDefinition): RaceState => {
       createdTrackLogic,
       definition.introductionCameraObject
     ),
+    introductionCameraPoint: definition.introductionCameraPoint,
+    introductionCameraVectors: definition.introductionCameraVectors,
+    isMirrored: definition.isMirrored,
     tuneIndex: definition.musicTuneCount > 0 ? INTRODUCTION_TUNE_INDEX : null,
     unidentifiedCountdownMilliseconds: 0,
     raceModeFlags: definition.raceModeFlags,

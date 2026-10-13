@@ -4,6 +4,7 @@ import { getLDrawBrickColor } from './ldraw-brick-colors.ts'
 import { LDRAW_BRICK_MAPPINGS } from './ldraw-brick-mappings.ts'
 import type { LDrawBrickMapping, LDrawCompositePart } from './ldraw-brick-mappings.types.ts'
 import { LDRAW_COMPOSITE_MAPPINGS } from './ldraw-composite-mappings.ts'
+import type { GridOffset } from './chassis-grid-offset.types.ts'
 import type { CarOrigin, LDrawCarDocument } from './ldraw-car-document.types.ts'
 
 // LDraw: 20 units to a stud, 8 to a plate; the game: a stud is 1 and a plate (a brick height unit) 0.4.
@@ -89,6 +90,7 @@ export const getLDrawMapping = (brick: PlacedBrick): LDrawBrickMapping | null =>
 
 export const CHASSIS_FILE_EXTENSION = 'ldr'
 const NO_CHASSIS_REFERENCES: ReadonlySet<string> = new Set()
+const NO_GRID_OFFSET: GridOffset = Object.freeze({ x: 0, y: 0, z: 0 })
 
 // The file a chassis's recipe is referenced by: the chassis part's name in lower case.
 export const getChassisFileName = (chassisName: string): string =>
@@ -100,8 +102,10 @@ export const getChassisFileName = (chassisName: string): string =>
 export const createLDrawCarDocument = (
   design: CarDesign,
   origin: CarOrigin,
-  chassisReferences: ReadonlySet<string> = NO_CHASSIS_REFERENCES
+  chassisReferences: ReadonlySet<string> = NO_CHASSIS_REFERENCES,
+  gridOffset: GridOffset = NO_GRID_OFFSET
 ): LDrawCarDocument => {
+  const gridTranslation = new Matrix4().makeTranslation(gridOffset.x, gridOffset.y, gridOffset.z)
   const lines: string[] = []
   const partNumbers = new Set<string>()
   const unmappedBricks: PlacedBrick[] = []
@@ -121,7 +125,10 @@ export const createLDrawCarDocument = (
     }
     const composite = LDRAW_COMPOSITE_MAPPINGS[brick.piece.name]
     if (composite !== undefined) {
-      const frame = GAME_TO_LDRAW.clone().multiply(getBrickFrameMatrix(brick, origin))
+      const frame = gridTranslation
+        .clone()
+        .multiply(GAME_TO_LDRAW)
+        .multiply(getBrickFrameMatrix(brick, origin))
       for (const part of composite.parts) {
         const matrix = frame.clone().multiply(getCompositePartMatrix(part))
         lines.push(
@@ -140,7 +147,10 @@ export const createLDrawCarDocument = (
       unmappedBricks.push(brick)
       continue
     }
-    const matrix = GAME_TO_LDRAW.clone().multiply(getBrickPlacementMatrix(brick, mapping, origin))
+    const matrix = gridTranslation
+      .clone()
+      .multiply(GAME_TO_LDRAW)
+      .multiply(getBrickPlacementMatrix(brick, mapping, origin))
     lines.push(getPartLine(getLDrawBrickColor(brick.colorIndex).code, matrix, mapping.partNumber))
     partNumbers.add(mapping.partNumber)
   }

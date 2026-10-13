@@ -13,7 +13,12 @@ import type { BufferAttribute } from 'three'
 import { createBatchGeometry } from './batch-geometry.ts'
 import { LIT_MATERIAL_KEY } from './vertex-lighting.ts'
 import type { LitMaterial } from './vertex-lighting.types.ts'
-import { createBatchMesh, createInstanceGroup, getBatchMaterial } from './instance-batches.ts'
+import {
+  createBatchMesh,
+  createInstanceGroup,
+  getBatchMaterial,
+  registerSlotMesh,
+} from './instance-batches.ts'
 import type {
   InstanceLevelMesh,
   InstanceObject,
@@ -57,6 +62,7 @@ const createSkeletonBatch = (
   const positions = geometry.getAttribute('position') as BufferAttribute
   const normals = geometry.getAttribute('normal') as BufferAttribute | undefined
   const mesh = createBatchMesh(context, geometry, batchMaterial.material)
+  registerSlotMesh(context, levelMesh, sceneBatch, mesh)
   // The bones move the vertices outside the bounds computed from the rest pose.
   mesh.frustumCulled = false
   return {

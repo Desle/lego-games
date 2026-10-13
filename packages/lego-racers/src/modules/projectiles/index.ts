@@ -63,7 +63,10 @@ export { getJitterValue, getWandJitter } from './types/wand-jitter/wand-jitter.t
 export { advanceHomingFlight, retargetHomingFlight } from './types/homing-flight/homing-flight.ts'
 export type { HomingFlight, HomingTarget } from './types/homing-flight/homing-flight.types.ts'
 export { getIsWithinMagnetCaptureRange, getMagnetPull } from './types/magnet-pull/magnet-pull.ts'
-export { createProjectileWorld } from './types/projectile-world/projectile-world.ts'
+export {
+  createProjectileWorld,
+  getWorldWithStartedBarrelsReset,
+} from './types/projectile-world/projectile-world.ts'
 export type {
   EffectMotion,
   ExplosionContact,
@@ -92,3 +95,6 @@ export type { ProbeSurface } from './types/track-line-probe/track-line-probe.typ
 export { getIsSpeedNearZero } from './types/turbo-early-end/turbo-early-end.ts'
 export { getRaySphereHit, getWandBeam } from './types/wand-beam/wand-beam.ts'
 export type { WandBeam, WandBeamRequest, WandBounds } from './types/wand-beam/wand-beam.types.ts'
+
+export { getCurseTrackFrame } from './types/curse-frame/curse-frame.ts'
+export type { CurseTrackFrame } from './types/curse-frame/curse-frame.types.ts'

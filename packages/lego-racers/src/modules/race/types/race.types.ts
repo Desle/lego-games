@@ -101,6 +101,10 @@ export type RaceDefinition = {
   // The track world's skeleton instance the introduction camera follows (RAB keyword 0x49, race +0x3ac; its clip is
   // Race_UpdateState1's hold, 0x0040e360); null is a race without one.
   readonly introductionCameraObject: string | null
+  // The race description's camera point (race +0x1f8, keyword 0x29) and vectors (+0x204 forward, +0x210 up, keyword 0x28),
+  // which Race_LoadTrackContent 0x00433480 gives each camera (0x00428390, 0x004282a0); zeros when the file has none.
+  readonly introductionCameraPoint: Vector3
+  readonly introductionCameraVectors: readonly [Vector3, Vector3]
   readonly racers: readonly RaceRacerDefinition[]
   readonly checkpoints: readonly Checkpoint[]
   // The collision world's BVB instances in world order (race +0x3a0, 0x00432e20): the track, the checkpoint object, the
@@ -189,6 +193,10 @@ export type RaceState = {
   readonly musicTuneCount: number
   // The introduction camera's instance while its clip has not finished (see RaceDefinition); null afterwards.
   readonly introductionCameraObject: string | null
+  readonly introductionCameraPoint: Vector3
+  readonly introductionCameraVectors: readonly [Vector3, Vector3]
+  // Race_LoadTrackContent's argument, kept for the camera lock (see RaceDefinition).
+  readonly isMirrored: boolean
   readonly tuneIndex: number | null
   // Race +0x3330: how many racers have been given a final place.
   readonly finishedRacerCount: number
@@ -335,7 +343,20 @@ export type RaceEvent =
   | { readonly type: 'race.power_up'; readonly event: PowerUpEvent }
   | { readonly type: 'race.projectile'; readonly event: ProjectileEvent }
   // A sound the racers' passes played (0x00443b80).
-  | { readonly type: 'race.racer_sound'; readonly soundId: number; readonly address: string }
+  | {
+      readonly type: 'race.racer_loop'
+      readonly isStart: boolean
+      readonly key: string
+      readonly soundId: number
+      readonly address: string
+      readonly racerIndex: number
+    }
+  | {
+      readonly type: 'race.racer_sound'
+      readonly soundId: number
+      readonly address: string
+      readonly racerIndex: number
+    }
   | { readonly type: 'race.track_effect'; readonly effect: TrackEffect }
 
 export type RaceStepResult = {

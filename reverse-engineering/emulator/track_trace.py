@@ -96,6 +96,27 @@ def read_hammers(machine, race: int, fields: dict) -> None:
     fields["track.hammers"] = words
 
 
+CAPTURE_VTABLE = 0x004B4518
+
+
+def read_captures(machine, race: int, fields: dict) -> None:
+    """The capture hazards (class 0x48): the sphere (centre +0x14, radius +0x20), the racer held (+0x44), the hold
+    timer (+0x54), the phase (+0x58) and its timer (+0x5c)."""
+    hazards = race + HAZARDS_OFFSET
+    count = machine.read_u32(hazards)
+    array = machine.read_u32(hazards + 4)
+    words = []
+    for index in range(count):
+        hazard = machine.read_u32(array + 4 * index)
+        if machine.read_u32(hazard) != CAPTURE_VTABLE:
+            continue
+        words += read_words(machine, hazard + 0x14, 3)
+        words += read_words(machine, hazard + 0x20, 1)
+        words += [0 if machine.read_u32(hazard + 0x44) == 0 else 1]
+        words += read_words(machine, hazard + 0x54, 3)
+    fields["track.captures"] = words
+
+
 def read_surfaces(machine, race: int, fields: dict) -> None:
     materials = race + TRACK_MATERIALS_OFFSET
     count = machine.read_u32(materials + 0xC)
@@ -205,6 +226,7 @@ def snapshot_track_fields(machine, race: int, racer_count: int) -> dict:
     read_events(machine, race, fields)
     read_hazards(machine, race, fields)
     read_hammers(machine, race, fields)
+    read_captures(machine, race, fields)
     read_surfaces(machine, race, fields)
     read_triggers(machine, race, fields)
     read_timers(machine, race, fields)

@@ -1,19 +1,24 @@
+import { MeshPhysicalMaterial } from 'three'
+import type { WebGLProgramParametersWithUniforms } from 'three'
 import {
   getLookLabels,
   getLookPreset,
   getLookPresetFromLabel,
   LOOK_APPEARANCES,
 } from './ldraw-look.ts'
-import { LookPreset } from './ldraw-look.types.ts'
+import { applyLookShader, getLookNeedsShader } from './ldraw-look-shader.ts'
+import { LookEdges, LookPreset, LookShading } from './ldraw-look.types.ts'
 
 describe('getLookPreset', () => {
-  it('reads the look from the address, defaults to the manual look and no longer offers the movie look', () => {
+  it('reads the look from the address, defaults to the manual look and no longer offers the studio or movie looks', () => {
     // Arrange / Act
     const presets = [
       '?hd',
       '?hd&look=manual',
+      '?hd&look=toon',
+      '?hd&look=retro',
+      '?hd&look=photo',
       '?hd&look=studio',
-      '?hd&look=movie',
       '?look=odd',
     ].map(getLookPreset)
 
@@ -21,7 +26,9 @@ describe('getLookPreset', () => {
     expect(presets).toEqual([
       LookPreset.MANUAL,
       LookPreset.MANUAL,
-      LookPreset.STUDIO,
+      LookPreset.TOON,
+      LookPreset.RETRO,
+      LookPreset.PHOTO,
       LookPreset.MANUAL,
       LookPreset.MANUAL,
     ])
@@ -34,33 +41,62 @@ describe('look labels', () => {
     const labels = getLookLabels()
 
     // Assert
-    expect(labels).toEqual(['Manual', 'Studio', 'Photo'])
-    expect(labels.map(getLookPresetFromLabel)).toEqual([
-      LookPreset.MANUAL,
-      LookPreset.STUDIO,
-      LookPreset.PHOTO,
-    ])
+    expect(labels).toEqual(['Manual', 'Photo', 'Instructions', 'Toon', 'Game', 'Retro 1999'])
+    expect(labels.map(getLookPresetFromLabel)).toEqual(Object.values(LookPreset))
   })
 })
 
 describe('look appearances', () => {
-  it('keeps the manual look as the original plastic and adds features cumulatively', () => {
+  it('keeps the manual look as the physical plastic and gives every other look its own shading and edges', () => {
     // Arrange / Act
-    const { manual, studio, photo, movie } = LOOK_APPEARANCES
+    const { manual, photo, instructions, toon, game, retro } = LOOK_APPEARANCES
 
     // Assert
-    expect(manual.isEdgeVisible).toBe(true)
-    expect(manual.isGraded).toBe(false)
-    expect([studio.isEdgeVisible, studio.isGraded, studio.occlusionStrength]).toEqual([
+    expect([manual.shading, manual.edges, getLookNeedsShader(manual)]).toEqual([
+      LookShading.PLASTIC,
+      LookEdges.DIMMED,
       false,
-      false,
-      0,
     ])
-    expect([photo.isGraded, photo.occlusionStrength > 0, photo.catchLightOpacity > 0]).toEqual([
-      true,
+    expect([instructions, toon, game, retro].map((look) => [look.shading, look.edges])).toEqual([
+      [LookShading.INSTRUCTIONS, LookEdges.LIBRARY],
+      [LookShading.TOON, LookEdges.INK],
+      [LookShading.GAME, LookEdges.HIDDEN],
+      [LookShading.RETRO, LookEdges.HIDDEN],
+    ])
+    expect(game.occlusionStrength).toBeGreaterThan(0)
+    expect([photo.shading, photo.edges, photo.isGraded, photo.occlusionStrength > 0]).toEqual([
+      LookShading.PLASTIC,
+      LookEdges.CATCH_LIGHT,
       true,
       true,
     ])
-    expect([photo.wear, movie.wear, movie.warmth > photo.warmth]).toEqual([0, 1, true])
+  })
+})
+
+describe('applyLookShader', () => {
+  it('compiles the stylised lighting in place of the physical plastic, with the occlusion only when a grid is given and no highlight on rubber', () => {
+    // Arrange
+    const material = new MeshPhysicalMaterial()
+    const shader = {
+      uniforms: {},
+      vertexShader: 'void main() {\n#include <begin_vertex>\n}',
+      fragmentShader:
+        'void main() {\n#include <color_fragment>\n#include <aomap_fragment>\n#include <opaque_fragment>\n#include <colorspace_fragment>\n}',
+    }
+
+    // Act
+    applyLookShader(material, LOOK_APPEARANCES.retro, null, true)
+    material.onBeforeCompile(shader as unknown as WebGLProgramParametersWithUniforms, undefined!)
+
+    // Assert
+    expect(material.defines).toEqual({ STANDARD: '', PHYSICAL: '' })
+    expect(shader.fragmentShader).toMatch(
+      /^#define LOOK_SHADING_RETRO\n#define LOOK_STYLISED\n#define LOOK_MATTE\n/
+    )
+    expect(material.customProgramCacheKey()).toBe(
+      'ldraw-look-LOOK_SHADING_RETRO-LOOK_STYLISED-LOOK_MATTE'
+    )
+    expect(shader.fragmentShader).toContain('getLookBayer(gl_FragCoord.xy)')
+    expect(Object.keys(shader.uniforms)).toEqual(['lookSaturation', 'lookExposure', 'lookContrast'])
   })
 })

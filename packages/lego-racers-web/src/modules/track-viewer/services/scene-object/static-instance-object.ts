@@ -4,6 +4,7 @@ import {
   createInstanceGroup,
   getBatchMaterial,
   getSharedBatchGeometry,
+  registerSlotMesh,
 } from './instance-batches.ts'
 import { batchFirstCommands } from './bsp-visibility.ts'
 import type { InstanceLevelMesh, InstanceObject, SceneObjectContext } from './scene-object.types.ts'
@@ -21,6 +22,7 @@ export const createStaticInstanceObject = (
     if (batchMaterial === null) continue
     const geometry = getSharedBatchGeometry(context, levelMesh, batchIndex, batch, batchMaterial)
     const mesh = createBatchMesh(context, geometry, batchMaterial.material)
+    registerSlotMesh(context, levelMesh, batch, mesh)
     batchFirstCommands.set(mesh, batch.firstCommand)
     group.add(mesh)
   }

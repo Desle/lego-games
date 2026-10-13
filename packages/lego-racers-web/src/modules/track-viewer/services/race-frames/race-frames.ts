@@ -1,4 +1,4 @@
-import { getRaceStateWithGrants } from '@lego-games/lego-racers/race'
+import { getRaceStateWithGrants, getRaceWithHazardsAtCamera } from '@lego-games/lego-racers/race'
 import {
   createRace,
   IDLE_RACER_CONTROLS,
@@ -51,6 +51,7 @@ export const runRaceFrames = (
       hudContext
     )
     presentation = presentationFrame.presentation
+    raceState = getRaceWithHazardsAtCamera(raceState, presentationFrame.cameraView)
     onFrame(
       Object.freeze({
         frame,

@@ -67,6 +67,7 @@ export const loadModelScene = (
     skeletons: Object.freeze(skeletons),
     animations: Object.freeze(animations),
     instances,
+    sprites: Object.freeze([]),
     cameras: Object.freeze([]),
     ambientLights: Object.freeze([]),
     directionalLights: Object.freeze([]),

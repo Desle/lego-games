@@ -39,6 +39,7 @@ const createContext = (raceModeFlags = 0): PowerUpContext => ({
   raceModeFlags,
   getGroundPoint: () => null,
   trackTargets: [],
+  eventStart: 0,
 })
 
 // Table value = index, so the position after the draws tells how many were made.
@@ -134,6 +135,19 @@ describe('updatePowerUpEffects', () => {
     expect(getHead(finished).state).toBe(EffectState.FINISHED)
   })
 
+  it('counts every millisecond its figures were stepped, across the states (0x0045ce20)', () => {
+    // Arrange
+    const context = createContext()
+    const step = createActivated({ category: BrickKind.TURBO, level: 0 }, context)
+
+    // Act
+    const stepped = runFor(step, context, [33, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33])
+
+    // Assert
+    expect(getHead(stepped).state).toBe(EffectState.ACTIVE)
+    expect(getHead(stepped).figureAgeMilliseconds).toBe(14 * 33)
+  })
+
   it('keeps a level-2 turbo going in the endless-turbo race mode', () => {
     // Arrange
     const context = createContext(RaceModeFlag.ENDLESS_TURBO)
@@ -164,6 +178,11 @@ describe('updatePowerUpEffects', () => {
     // Assert
     expect(getHead(finished).state).toBe(EffectState.FINISHED)
     expect(finished.events.at(-1)).toEqual({ type: 'power_ups.racer_shield_lowered', racer: 0 })
+    expect(finished.events).toContainEqual({
+      type: 'power_ups.sound_played',
+      soundId: 0x3b,
+      address: '0x0045c2fc',
+    })
   })
 
   it('explodes a landed barrel twice more with scattered offsets 500 ms apart (0x00453240)', () => {
@@ -218,6 +237,11 @@ describe('updatePowerUpEffects', () => {
 
     // Assert
     expect(getHead(landed)).toMatchObject({ state: EffectState.ACTIVE, timerMilliseconds: 10000 })
+    expect(landed.events).toContainEqual({
+      type: 'power_ups.sound_played',
+      soundId: 0x2e,
+      address: '0x00457431',
+    })
     expect(later.world.random.position - landed.world.random.position).toBe(2)
   })
 })

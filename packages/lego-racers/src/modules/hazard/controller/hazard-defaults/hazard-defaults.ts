@@ -8,6 +8,7 @@ export const DEFAULT_HAZARD_SLOTS: Pick<
   HazardBehavior,
   | 'isRacerTriggered'
   | 'updateAfterRacers'
+  | 'followCameras'
   | 'onSignalStarted'
   | 'touch'
   | 'getRegisteredSphere'
@@ -15,6 +16,7 @@ export const DEFAULT_HAZARD_SLOTS: Pick<
 > = Object.freeze({
   isRacerTriggered: false,
   updateAfterRacers: (instance: HazardInstance) => instance,
+  followCameras: (instance: HazardInstance) => instance,
   onSignalStarted: (instance: HazardInstance) => instance,
   touch: (instance: HazardInstance) => instance,
   getRegisteredSphere: () => null,

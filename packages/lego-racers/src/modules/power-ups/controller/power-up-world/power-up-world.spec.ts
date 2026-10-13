@@ -43,6 +43,7 @@ const CONTEXT: PowerUpContext = {
   raceModeFlags: 0,
   getGroundPoint: () => null,
   trackTargets: [],
+  eventStart: 0,
 }
 
 const createStep = (): PowerUpStep =>
@@ -114,6 +115,20 @@ describe('updatePowerUps', () => {
     // Assert
     expect(once.world.brickSpinAngle).toBe(Math.fround(100 * Math.fround(0.004)))
     expect(wrapped.world.brickSpinAngle).toBeLessThan(Math.fround(2 * Math.PI))
+  })
+
+  it("counts the milliseconds the bricks' clips have been advanced (0x00416090 at +0x60 of 0x0045a490)", () => {
+    // Arrange
+    const step = createStep()
+
+    // Act
+    const advanced = [33, 34, 33].reduce(
+      (current, stepMilliseconds) => updatePowerUps(current, CONTEXT, stepMilliseconds),
+      step
+    )
+
+    // Assert
+    expect(advanced.world.brickClockMilliseconds).toBe(100)
   })
 })
 

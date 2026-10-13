@@ -40,7 +40,13 @@ describe('the turret', () => {
         activation: 'projectile',
         effectKind: 2,
         racerIndex: null,
-        launcher: { position: [100, 200, 283], direction: null },
+        // The fixture's cosine table answers 1, so x and y are equal and z is the offset 0.
+        launcher: {
+          position: [100, 200, 283],
+          direction: [0.7071067690849304, 0.7071067690849304, 0],
+          target: null,
+          speed: null,
+        },
       },
     ])
   })

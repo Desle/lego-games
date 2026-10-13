@@ -12,6 +12,7 @@ import type {
   PowerUpStep,
   RacerPowerUpStatus,
 } from '../../../power-ups/index.ts'
+import { getTrailDrawings } from '../../../projectile-trail/index.ts'
 import { createRandomTable } from '../../../random-table/index.ts'
 import { createFloatArithmetic, FpuPrecision } from '../../../simulation-math/index.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
@@ -82,6 +83,7 @@ const getContexts = (
     raceModeFlags: 0,
     getGroundPoint: () => ({ x: 0, y: 0, z: -10 }),
     trackTargets: [],
+    eventStart: 0,
   }
   return {
     powerUps,
@@ -151,6 +153,56 @@ describe('updatePowerUpsWithProjectiles: the cannon', () => {
     expect(motion?.kind === 'ballistic' ? motion.flight.state : '').toBe(
       BallisticFlightState.FLYING
     )
+  })
+
+  it('takes a canstrk trail as it launches and feeds it every update (0x00451f50, 0x00451b50)', () => {
+    // Arrange
+    const { powerUps, projectiles } = getContexts(MISS)
+    const used = getWorldAfterUse({ category: BrickKind.PROJECTILE, level: 0 }, powerUps)
+
+    // Act
+    const first = updatePowerUpsWithProjectiles(used.step, used.world, projectiles, 16)
+    const second = updatePowerUpsWithProjectiles(first.step, first.world, projectiles, 16)
+
+    // Assert
+    const effectId = getHeadId(first.step)
+    expect(first.world.effectTrails[effectId]).toBe(0)
+    expect(getTrailDrawings(first.world.trails)).toEqual([])
+    expect(getTrailDrawings(second.world.trails).map((drawing) => drawing.materialName)).toEqual([
+      'canstrk',
+    ])
+  })
+
+  it('lets go of the trail once the ball has exploded, and the trail ages out (0x00451f50)', () => {
+    // Arrange
+    const { powerUps, projectiles } = getContexts(MISS)
+    const used = getWorldAfterUse({ category: BrickKind.PROJECTILE, level: 0 }, powerUps)
+    const flying = [16, 16, 16].reduce(
+      (current, milliseconds) =>
+        updatePowerUpsWithProjectiles(current.step, current.world, projectiles, milliseconds),
+      used
+    )
+    const effectId = getHeadId(flying.step)
+    const hitProjectiles = getContexts(() => ({
+      point: { x: 3, y: 0, z: 0 },
+      normal: { x: 0, y: 0, z: 1 },
+    })).projectiles
+
+    // Act
+    const exploded = updatePowerUpsWithProjectiles(flying.step, flying.world, hitProjectiles, 16)
+    const aged = [
+      16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+    ].reduce(
+      (current, milliseconds) =>
+        updatePowerUpsWithProjectiles(current.step, current.world, projectiles, milliseconds),
+      exploded
+    )
+
+    // Assert
+    expect(flying.world.trails.trails[0]?.isActive).toBe(true)
+    expect(exploded.world.effectTrails[effectId]).toBeNull()
+    expect(exploded.world.trails.trails[0]?.isReleasing).toBe(true)
+    expect(aged.world.trails.trails[0]?.isActive).toBe(false)
   })
 
   it('explodes where the probe hits, as a ground burst on a flat surface (0x00451b50)', () => {

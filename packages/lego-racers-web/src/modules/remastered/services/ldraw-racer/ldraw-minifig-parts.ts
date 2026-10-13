@@ -19,12 +19,20 @@ const WHITE = 15
 const TAN = 19
 const LIGHT_BLUISH_GRAY = 71
 const DARK_BLUISH_GRAY = 72
+const TRANSPARENT_BLACK = 40
 
 const { EXACT, CLOSE, GUESS } = MinifigPartConfidence
 const PLAIN_LEFT_LEG = '3817b'
 const PLAIN_RIGHT_LEG = '3816b'
 
 const getHat = (part: string, colorCode: number): LDrawHat => Object.freeze({ part, colorCode })
+
+// The visor is its own part, clipped on at the helmet's own origin.
+const VISOR = '2447'
+const getRacingHelmet = (colorCode: number): readonly [LDrawHat, LDrawHat] => [
+  getHat('3842a', colorCode),
+  getHat(VISOR, TRANSPARENT_BLACK),
+]
 
 const getHatMatch = (
   catalogName: string,
@@ -88,10 +96,11 @@ const getPlainLegsMatch = (
   )
 
 // The hats of `BODYPART.PCB` by catalogue index (its `0x29` list) and the library parts that stand for each, in the colour the game paints
-// it. A champion's hat is the one of the official figure; the library has no part for some (the cobra helmet, the tribal headdress).
+// it. A champion's hat is the one of the official figure; the library has no part for some (the cobra helmet, the robot top);
+// the others marked fidelity were picked by `pnpm run ldraw-fidelity hat:` among the library's headgear.
 export const LDRAW_HATS: readonly LDrawHatMatch[] = Object.freeze([
   getHatMatch('nohat', EXACT, 'bare head'),
-  getHatMatch('helmtrr', CLOSE, 'classic racing helmet, Racers', getHat('3842a', BLACK)),
+  getHatMatch('helmtrr', CLOSE, 'classic racing helmet, Racers', ...getRacingHelmet(BLACK)),
   getHatMatch('helmet2s', CLOSE, 'castle helmet with chin guard, Castle', getHat('3896', BLACK)),
   getHatMatch('bb_hats', EXACT, 'fig-000648 Bat Lord, Fright Knights', getHat('30105', BLACK)),
   getHatMatch(
@@ -121,27 +130,51 @@ export const LDRAW_HATS: readonly LDrawHatMatch[] = Object.freeze([
     'fig-000629 Baron Von Barron (5948 Desert Expedition, 1998): pith helmet',
     getHat('30172', WHITE)
   ),
-  getHatMatch('tc_hats', GUESS, 'feathered headdress, Western', getHat('30138', RED)),
+  getHatMatch(
+    'tc_hats',
+    GUESS,
+    'islander hair under a band of feathers (fidelity: the warbonnet trailed 1.5 times too long)',
+    getHat('6025', BLACK),
+    getHat('87696', RED)
+  ),
   getHatMatch(
     'ap_hats',
     GUESS,
-    'nearest helmet, no cobra helm in the library',
-    getHat('30171b', BLACK)
+    'hexagonal helmet, the shape of the cobra helm (fidelity), no cobra helm in the library',
+    getHat('30120', BLACK)
   ),
-  getHatMatch('cc_hats', CLOSE, 'diving helmet, Aquazone', getHat('30090b', WHITE)),
+  getHatMatch(
+    'cc_hats',
+    GUESS,
+    'space helmet with a red visor (fidelity)',
+    getHat('22380', WHITE),
+    getHat(VISOR, RED)
+  ),
   getHatMatch('ch_hats', CLOSE, 'cowboy hat, Western', getHat('3629', WHITE)),
-  getHatMatch('nh_hats', GUESS, 'space helmet, visor not drawn', getHat('71016', BLACK)),
-  getHatMatch('gh_hai1s', CLOSE, 'spiked hair', getHat('2631', LIGHT_GRAY)),
-  getHatMatch('gh_hai2s', CLOSE, 'spiked hair', getHat('2631', BROWN)),
-  getHatMatch('gh_hairs', CLOSE, 'spiked hair', getHat('2631', BLACK)),
+  getHatMatch(
+    'nh_hats',
+    GUESS,
+    'space helmet with its visor',
+    getHat('30124b', BLACK),
+    getHat(VISOR, TRANSPARENT_BLACK)
+  ),
+  getHatMatch('gh_hai1s', CLOSE, 'hair with a ponytail (fidelity)', getHat('6093a', LIGHT_GRAY)),
+  getHatMatch('gh_hai2s', CLOSE, 'hair with a ponytail (fidelity)', getHat('6093a', BROWN)),
+  getHatMatch('gh_hairs', CLOSE, 'hair with a ponytail (fidelity)', getHat('6093a', BLACK)),
   getHatMatch('ww_hats', CLOSE, 'wizard hat', getHat('6131', BLACK)),
-  getHatMatch('il_hairs', GUESS, 'tall flat hat', getHat('44553', BLACK)),
-  getHatMatch('mh_hairs', CLOSE, 'male hair', getHat('3901', BLACK)),
-  getHatMatch('mh_hai1s', CLOSE, 'male hair', getHat('3901', LIGHT_GRAY)),
-  getHatMatch('mh_hai2s', CLOSE, 'male hair', getHat('3901', BROWN)),
-  getHatMatch('rk_hats', GUESS, 'long hair with a crown', getHat('18835', YELLOW)),
+  getHatMatch('il_hairs', GUESS, 'tall flat hat: shako (fidelity)', getHat('2545', BLACK)),
+  getHatMatch('mh_hairs', CLOSE, 'flat top hair (fidelity)', getHat('30608', BLACK)),
+  getHatMatch('mh_hai1s', CLOSE, 'flat top hair (fidelity)', getHat('30608', LIGHT_GRAY)),
+  getHatMatch('mh_hai2s', CLOSE, 'flat top hair (fidelity)', getHat('30608', BROWN)),
+  getHatMatch('rk_hats', GUESS, 'crown (fidelity)', getHat('71015', YELLOW)),
   getHatMatch('al_hats', GUESS, 'wide brimmed hat', getHat('13788', BLACK)),
-  getHatMatch('bk_hats', CLOSE, 'castle helmet with grille, Castle', getHat('4503', BLACK)),
+  getHatMatch(
+    'bk_hats',
+    CLOSE,
+    'castle helmet with grille and its red plume, Castle',
+    getHat('4503', BLACK),
+    getHat('87693', RED)
+  ),
   getHatMatch(
     'pm_hats',
     EXACT,
@@ -149,14 +182,19 @@ export const LDRAW_HATS: readonly LDrawHatMatch[] = Object.freeze([
     getHat('30168b', YELLOW)
   ),
   getHatMatch('bj_hats', CLOSE, 'tricorne, Pirates', getHat('2544', BLACK)),
-  getHatMatch('helmt03', CLOSE, 'classic racing helmet, Racers', getHat('3842a', BLUE)),
-  getHatMatch('helmt02', CLOSE, 'classic racing helmet, Racers', getHat('3842a', RED)),
-  getHatMatch('helmt01', CLOSE, 'classic racing helmet, Racers', getHat('3842a', WHITE)),
-  getHatMatch('ad_hats', GUESS, 'beanie, robot top not in the library', getHat('90541', GREEN)),
+  getHatMatch('helmt03', CLOSE, 'classic racing helmet, Racers', ...getRacingHelmet(BLUE)),
+  getHatMatch('helmt02', CLOSE, 'classic racing helmet, Racers', ...getRacingHelmet(RED)),
+  getHatMatch('helmt01', CLOSE, 'classic racing helmet, Racers', ...getRacingHelmet(WHITE)),
+  getHatMatch(
+    'ad_hats',
+    GUESS,
+    'close-fitting wrap (fidelity), robot top not in the library',
+    getHat('24073', GREEN)
+  ),
   getHatMatch('mm_hats', CLOSE, 'cap, Racers', getHat('86035', BLUE)),
   getHatMatch('mj_hats', CLOSE, 'wizard hat', getHat('6131', BLUE)),
   getHatMatch('rh_hats', CLOSE, 'forestman cap with plume, Castle', getHat('4506c01', GREEN)),
-  getHatMatch('helmtvvs', CLOSE, 'classic racing helmet, Racers', getHat('3842a', LIGHT_GRAY)),
+  getHatMatch('helmtvvs', CLOSE, 'classic racing helmet, Racers', ...getRacingHelmet(LIGHT_GRAY)),
 ])
 
 // The faces of `BODYPART.PCB` by catalogue index (the heads list), each a printed head of the library: the game's face card says

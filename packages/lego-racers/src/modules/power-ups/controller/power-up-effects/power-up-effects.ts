@@ -61,6 +61,7 @@ const createIdleEffect = (id: number, kind: PowerUpEffectKindValue): PowerUpEffe
     state: EffectState.IDLE,
     timerMilliseconds: 0,
     level: 0,
+    figureAgeMilliseconds: 0,
     ownerRacer: null,
     targetRacer: null,
     targetTrackPoint: null,
@@ -73,6 +74,10 @@ const createIdleEffect = (id: number, kind: PowerUpEffectKindValue): PowerUpEffe
     heldMilliseconds: 0,
     emitterHandleIndex: null,
     warpDestination: null,
+    launcherPosition: null,
+    launcherMuzzle: null,
+    launcherHazardIndex: null,
+    launcherCannonball: null,
   })
 
 // 0x00457cf0 → 0x00457d30 (pool sizes) and 0x004590f0 (free lists, first object at the head).
@@ -162,6 +167,10 @@ export const resetPowerUpEffect = (
       attachmentSlotIndices: Object.freeze([]),
       emitterHandleIndex: null,
       warpDestination: null,
+      launcherPosition: null,
+      launcherMuzzle: null,
+      launcherHazardIndex: null,
+      launcherCannonball: null,
     }),
     getResetEvents(effect, isStolen)
   )

@@ -4,7 +4,7 @@ import type {
   OriginalRenderFrame,
   PortTexture,
   QuadComparison,
-  RenderFrameComparison,
+  RootComparison,
   RenderMismatchGroup,
   TextureMatch,
 } from '@lego-games/lego-racers/presentation-trace'
@@ -30,7 +30,18 @@ export type FrameTotals = {
 // The HUD of one frame: the rectangles the original drew against the port's image commands.
 export type HudFrameResult = QuadComparison & { readonly frame: number }
 
+// How many triangles the original and the port drew of a watched drawing (TraceScenarioRequest.watched) in a frame.
+export type WatchedCount = {
+  readonly label: string
+  readonly frame: number
+  readonly originalCount: number
+  readonly portCount: number
+  // The mean of the port triangles' corners: it moves when the drawing turns.
+  readonly portCentre: readonly [number, number, number]
+}
+
 export type RenderScenarioResult = {
+  readonly watched: readonly WatchedCount[]
   readonly hudResults: readonly HudFrameResult[]
   readonly totals: readonly FrameTotals[]
   readonly groups: readonly AggregatedGroup[]
@@ -49,5 +60,5 @@ export type WorldFrameComparison = {
   readonly originalTriangles: readonly DrawnTriangle[]
   readonly portTriangles: PortTriangles
   readonly textureMatches: ReadonlyMap<string, TextureMatch>
-  readonly comparison: RenderFrameComparison
+  readonly comparison: RootComparison
 }

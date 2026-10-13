@@ -1,4 +1,10 @@
+import {
+  BARREL_END_SOUND,
+  CANNON_END_SOUND,
+  ROCKET_GROUND_HIT_SOUND,
+} from '../power-up-sounds/power-up-sounds.ts'
 import type { Vector3 } from '../../../simulation-math/index.ts'
+import type { CurseFigureFrame, PowerUpEvent } from '../../events/power-up.events.types.ts'
 import {
   EffectState,
   PowerUpEffectKind,
@@ -11,6 +17,7 @@ import {
 } from '../power-up-effect-timeline/power-up-effect-timeline.ts'
 import {
   getEffect,
+  getRacerStatusNow,
   getStepDraws,
   getStepWithDroppedEnhancement,
   getStepWithEffect,
@@ -26,14 +33,9 @@ const REFLECTING_SHIELD_LEVEL = 1
 const DEBRIS_SPREAD_PER_UNIT = Math.fround(0.004)
 const DEBRIS_SPREAD_CENTRE = Math.fround(0.2)
 const CURSE_MILLISECONDS = 10000
+const CANNON_TIMER_AFTER_HIT = 3000 // 0xbb8 at 0x00451beb (0x00451b50)
 // The hazard touch 0x00456320 destroys hazards below level 3 when they meet a shield.
 const SHIELD_PROOF_HAZARD_LEVEL = 3
-
-const getStatus = (context: PowerUpContext, racer: number): RacerPowerUpStatus => {
-  const status = context.racers[racer]
-  if (status === undefined) throw new RangeError(`No racer status at index ${String(racer)}`)
-  return status
-}
 
 const getWithOwnerTaunt = (step: PowerUpStep, effect: PowerUpEffect): PowerUpStep =>
   effect.ownerRacer === null ? step : getStepWithVoice(step, effect.ownerRacer, true)
@@ -96,6 +98,11 @@ const getStepWithCannonHitSound = (step: PowerUpStep, effect: PowerUpEffect): Po
       ])
     : step
 
+// 0x00451b50 sets the cannonball's timer to 3000 ms after any racer hit, reflected or not; the rocket's update
+// (0x004568f0) writes no timer, so a rocket keeps its 0x157c.
+const getTimerAfterRacerHit = (effect: PowerUpEffect): number =>
+  effect.kind === PowerUpEffectKind.CANNON ? CANNON_TIMER_AFTER_HIT : effect.timerMilliseconds
+
 // Cannon 0x00452370 and rocket 0x00456fa0 (vtable slot 8), then the rest of their update when the hit is reported
 // (0x00451b50, 0x004568f0): unless reflected, an explosion, debris from an unshielded victim, and the end.
 const hitWithExplodingProjectile = (
@@ -105,7 +112,7 @@ const hitWithExplodingProjectile = (
   victim: number,
   debrisDirection: Vector3
 ): PowerUpStep => {
-  const status = getStatus(context, victim)
+  const status = getRacerStatusNow(step, context, victim)
   const isReflected = getIsReflected(status)
   const handled = status.isShielded
     ? getStepWithShieldedVictim(step, victim)
@@ -127,13 +134,16 @@ const hitWithExplodingProjectile = (
       getStepWithEffect(handled, {
         ...getEffect(handled, effect.id),
         ownerRacer: victim,
-        timerMilliseconds: 3000,
+        timerMilliseconds: getTimerAfterRacerHit(getEffect(handled, effect.id)),
       }),
       [{ type: 'power_ups.projectile_reflected', effect: effect.id, owner: victim }]
     )
   }
   const exploded = getStepWithEvents(
-    getStepWithEffect(handled, { ...getEffect(handled, effect.id), timerMilliseconds: 3000 }),
+    getStepWithEffect(handled, {
+      ...getEffect(handled, effect.id),
+      timerMilliseconds: getTimerAfterRacerHit(getEffect(handled, effect.id)),
+    }),
     [
       {
         type: 'power_ups.explosion',
@@ -157,7 +167,7 @@ const hitWithGrapple = (
   effect: PowerUpEffect,
   victim: number
 ): PowerUpStep => {
-  if (getStatus(context, victim).isShielded) {
+  if (getRacerStatusNow(step, context, victim).isShielded) {
     const shielded = getStepWithShieldedVictim(step, victim)
     return retractGrapple(shielded, getEffect(shielded, effect.id))
   }
@@ -186,7 +196,7 @@ const hitWithWand = (
   effect: PowerUpEffect,
   victim: number
 ): PowerUpStep => {
-  const status = getStatus(context, victim)
+  const status = getRacerStatusNow(step, context, victim)
   if (status.isShielded) return getStepWithShieldedVictim(step, victim)
   if (status.isStruckByLightning) return step
   const struck = getStepWithVictimHit(
@@ -259,9 +269,10 @@ const hitWithHazard = (
   context: PowerUpContext,
   effect: PowerUpEffect,
   victim: number,
-  isWithinCaptureRange: boolean
+  isWithinCaptureRange: boolean,
+  curseFigureFrame: CurseFigureFrame | null
 ): PowerUpStep => {
-  const status = getStatus(context, victim)
+  const status = getRacerStatusNow(step, context, victim)
   if (effect.kind === PowerUpEffectKind.OIL_SLICK) {
     if (effect.state === EffectState.FINAL_STAGE || status.isTumbling) return step
     return getStepWithEvents(
@@ -278,7 +289,12 @@ const hitWithHazard = (
   if (effect.kind !== PowerUpEffectKind.CURSE) return step
   if (effect.state === EffectState.FINAL_STAGE || status.isCursed) return step
   return getStepWithEvents(step, [
-    { type: 'power_ups.racer_cursed', racer: victim, durationMilliseconds: CURSE_MILLISECONDS },
+    {
+      type: 'power_ups.racer_cursed',
+      racer: victim,
+      durationMilliseconds: CURSE_MILLISECONDS,
+      figureFrame: curseFigureFrame,
+    },
   ])
 }
 
@@ -288,16 +304,42 @@ export const touchHazardEffect = (
   context: PowerUpContext,
   effectId: number,
   victim: number,
-  isWithinCaptureRange: boolean
+  isWithinCaptureRange: boolean,
+  curseFigureFrame: CurseFigureFrame | null = null
 ): PowerUpStep => {
   const effect = getEffect(step, effectId)
   if (victim === effect.ownerRacer) return step
-  if (!getStatus(context, victim).isShielded) {
-    return hitWithHazard(step, context, effect, victim, isWithinCaptureRange)
+  if (!getRacerStatusNow(step, context, victim).isShielded) {
+    return hitWithHazard(step, context, effect, victim, isWithinCaptureRange, curseFigureFrame)
   }
   const struck = getStepWithShieldStruck(step, victim)
   if (effect.level >= SHIELD_PROOF_HAZARD_LEVEL) return struck
   return getStepWithEffect(struck, { ...getEffect(struck, effectId), state: EffectState.FINISHED })
+}
+
+// The sound of the end of a flight: the cannon's (0x00451b50) and the barrel's (0x00452ff0, which also stops its hum)
+// is sound 5, the rocket's (0x004568f0) sound 0x32.
+const getProjectileEndSounds = (
+  effect: PowerUpEffect,
+  effectId: number
+): readonly PowerUpEvent[] => {
+  switch (effect.kind) {
+    case PowerUpEffectKind.CANNON:
+      return [CANNON_END_SOUND]
+    case PowerUpEffectKind.BARREL:
+      return [
+        BARREL_END_SOUND,
+        {
+          type: 'power_ups.looped_sound_stopped',
+          key: `barrel:${String(effectId)}`,
+          address: '0x00452ff0',
+        },
+      ]
+    case PowerUpEffectKind.ROCKET:
+      return [ROCKET_GROUND_HIT_SOUND]
+    default:
+      return []
+  }
 }
 
 // A cannon, rocket or barrel that ended its flight without hitting a racer (0x00451b50, 0x004568f0, 0x00452ff0).
@@ -309,12 +351,7 @@ export const endProjectileFlight = (
 ): PowerUpStep => {
   const effect = getEffect(step, effectId)
   const isBarrel = effect.kind === PowerUpEffectKind.BARREL
-  const sounded =
-    effect.kind === PowerUpEffectKind.CANNON
-      ? getStepWithEvents(step, [
-          { type: 'power_ups.sound_played', soundId: 5, address: '0x00451c55' },
-        ])
-      : step
+  const sounded = getStepWithEvents(step, getProjectileEndSounds(effect, effectId))
   const exploded = getStepWithEvents(sounded, [
     {
       type: 'power_ups.explosion',

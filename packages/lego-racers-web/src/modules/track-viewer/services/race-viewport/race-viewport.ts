@@ -8,6 +8,7 @@ import type {
 } from '@lego-games/lego-racers/race-presentation'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type { RibbonView } from '@lego-games/lego-racers/ribbon'
+import type { TrailDrawing } from '@lego-games/lego-racers/projectile-trail'
 import { SceneInstanceKind } from '@lego-games/lego-racers/scene'
 import type { Scene } from '@lego-games/lego-racers/scene'
 import type { Mesh, MeshBasicMaterial } from 'three'
@@ -21,9 +22,20 @@ import {
   WebGLRenderer,
 } from 'three'
 import type { EmitterPool } from '@lego-games/lego-racers/emitter'
-import { getTextureScrollOffsets } from '@lego-games/lego-racers/world-animation'
-import type { WorldAnimation } from '@lego-games/lego-racers/world-animation'
-import { getCameraFrustum, ORIGINAL_FIELD_OF_VIEW_DEGREES } from './camera-frustum.ts'
+import {
+  getMaterialSlotWrites,
+  getSkeletonInstanceSphere,
+  getTextureScrollOffsets,
+} from '@lego-games/lego-racers/world-animation'
+import type { RaceWorlds } from '@lego-games/lego-racers/world-animation'
+import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-racers/simulation-math'
+import { getWorldSpriteQuads } from '@lego-games/lego-racers/world-sprite'
+import {
+  getCameraFrustum,
+  ORIGINAL_FAR_PLANE,
+  ORIGINAL_FIELD_OF_VIEW_DEGREES,
+  ORIGINAL_NEAR_PLANE,
+} from './camera-frustum.ts'
 import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
 import { createRaceDecals } from '../race-decals/race-decals.ts'
 import { createRaceParticles } from '../race-particles/race-particles.ts'
@@ -55,11 +67,15 @@ import type {
 } from './race-viewport.types.ts'
 
 const BACKGROUND_COLOR = 0x101820
+const getPosition = (position: readonly [number, number, number]) => ({
+  x: position[0],
+  y: position[1],
+  z: position[2],
+})
+const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
 const MILLISECONDS_PER_SECOND = 1000
 // The scroll the original adds stays below 1 (it wraps).
 const getWrappedFraction = (value: number): number => value - Math.floor(value)
-const NEAR_PLANE = 0.5
-const FAR_PLANE = 20000
 // Race_Render's update (0x00435a00) draws the ghost cars between the device's alpha override (0x00422960 calls slot 0xb8
 // with 0x7f and 0, slot 0xbc afterwards): every vertex of both cars takes alpha 127 and blends over the picture.
 const GHOST_ALPHA = 0x7f
@@ -154,8 +170,8 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   const camera = new PerspectiveCamera(
     ORIGINAL_FIELD_OF_VIEW_DEGREES,
     size.width / size.height,
-    NEAR_PLANE,
-    FAR_PLANE
+    ORIGINAL_NEAR_PLANE,
+    ORIGINAL_FAR_PLANE
   )
   const shown: ShownScene = showSceneObjects(assets.scene, assets.background)
   const trackKey =
@@ -284,9 +300,11 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     tunnelMilliseconds = warpView.tunnelMilliseconds
     warpGroup.visible = true
   }
+  const materialNames = assets.scene.materials.map((material) => material.name)
   let lastCameraView: CameraView | null = null
   let lastSprites: readonly SpriteView[] = []
   let lastRibbons: readonly RibbonView[] = []
+  let lastTrails: readonly TrailDrawing[] = []
   const update = (
     allPoses: readonly RacerPose[],
     allCameraView: CameraView,
@@ -309,13 +327,23 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
           )
     const cameraView = warpView === null ? allCameraView : warpView.cameraView
     lastCameraView = cameraView
+    const { position, forward, up } = cameraView
+    camera.fov = warpView === null ? fieldOfViewDegrees : warpView.fieldOfViewDegrees
+    camera.updateProjectionMatrix()
+    camera.position.set(position.x, position.y, position.z)
+    // The engine's camera frames take a negated up vector (see the world's cameras).
+    camera.up.set(-up.x, -up.y, -up.z)
+    camera.lookAt(position.x + forward.x, position.y + forward.y, position.z + forward.z)
+    const frustum = getCameraFrustum(camera)
     lastSprites = warpView === null ? effectViews.sprites : []
     lastRibbons = warpView === null ? effectViews.ribbons : []
+    lastTrails = warpView === null ? effectViews.trails : []
     effects.update(
       warpView === null
         ? effectViews
         : {
             ...effectViews,
+            curses: [],
             effects: [],
             bricks: [],
             explosions: [],
@@ -324,7 +352,8 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
             ribbons: [],
           },
       cameraView.position,
-      poses
+      poses,
+      frustum
     )
     for (const rig of racerRigs) {
       const isShown = warpView === null || rig === racerRigs[warpView.pose.racerIndex]
@@ -398,15 +427,8 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
       }
       rig.sync(GHOST_OPACITY)
     }
-    const { position, forward, up } = cameraView
-    camera.fov = warpView === null ? fieldOfViewDegrees : warpView.fieldOfViewDegrees
-    camera.updateProjectionMatrix()
-    camera.position.set(position.x, position.y, position.z)
-    // The engine's camera frames take a negated up vector (see the world's cameras).
-    camera.up.set(-up.x, -up.y, -up.z)
-    camera.lookAt(position.x + forward.x, position.y + forward.y, position.z + forward.z)
-    shown.track.selectLevels(camera.position)
-    shown.track.selectVisibleLeaves(getCameraFrustum(camera))
+    shown.track.selectLevels(camera.position, frustum)
+    shown.track.selectVisibleLeaves(frustum)
     const placement = shown.sky?.place(camera.position)
     if (shown.backdrop !== null) {
       const point = placement?.backdrop ?? camera.position
@@ -414,25 +436,66 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
     }
   }
 
-  const showHazards = (
-    trackWorld: WorldAnimation,
-    pools: readonly (EmitterPool | null)[],
-    blendedWorld: WorldAnimation
-  ) => {
-    for (const instance of trackWorld.skeletonInstances) {
-      if (instance.clip !== null) shown.track.setSkeletonState(instance.name, instance.clip)
+  const showHazards = (worlds: RaceWorlds, pools: readonly (EmitterPool | null)[]) => {
+    for (const world of [worlds.track, worlds.blended, worlds.local]) {
+      for (const instance of world.skeletonInstances) {
+        if (instance.clip !== null) shown.track.setSkeletonState(instance.name, instance.clip)
+        const sphere = getSkeletonInstanceSphere(arithmetic, instance)
+        shown.track.setInstanceRuntime(instance.name, {
+          position: getPosition(instance.position),
+          levelSquaredDistances: instance.levelSquaredDistances,
+          sphere:
+            sphere === null
+              ? null
+              : {
+                  centre: { x: sphere.centre[0], y: sphere.centre[1], z: sphere.centre[2] },
+                  radius: sphere.radius,
+                },
+        })
+      }
+      for (const instance of world.meshInstances) {
+        shown.track.setInstanceRuntime(instance.name, {
+          position: getPosition(instance.position),
+          levelSquaredDistances: instance.levelSquaredDistances,
+          sphere: null,
+        })
+      }
     }
     for (const { name, textureScroll } of [
-      ...trackWorld.meshInstances,
-      ...trackWorld.skeletonInstances,
-      ...blendedWorld.meshInstances,
-      ...blendedWorld.skeletonInstances,
+      ...worlds.track.meshInstances,
+      ...worlds.track.skeletonInstances,
+      ...worlds.blended.meshInstances,
+      ...worlds.blended.skeletonInstances,
     ]) {
       if (textureScroll.rateU === 0 && textureScroll.rateV === 0) continue
       const [offsetU, offsetV] = getTextureScrollOffsets(textureScroll)
       shown.track.setInstanceTextureOffset(name, offsetU, offsetV)
     }
-    if (lastCameraView !== null) particles.update(pools, lastCameraView, lastSprites, lastRibbons)
+    for (const write of getMaterialSlotWrites(worlds.track)) {
+      shown.track.setMaterialSlot(
+        write.instanceName,
+        write.levelIndex,
+        write.slot,
+        write.materialName
+      )
+    }
+    if (lastCameraView !== null) {
+      const worldSpriteQuads = getWorldSpriteQuads(
+        arithmetic,
+        assets.scene.sprites,
+        materialNames,
+        lastCameraView,
+        assets.definition.isMirrored
+      )
+      particles.update(
+        pools,
+        lastCameraView,
+        lastSprites,
+        lastRibbons,
+        worldSpriteQuads,
+        lastTrails
+      )
+    }
   }
 
   return Object.freeze({

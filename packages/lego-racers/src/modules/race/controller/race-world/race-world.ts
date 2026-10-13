@@ -1,8 +1,14 @@
+import { HazardKeyword } from '../../../hazard/index.ts'
 import type { HazardRacer } from '../../../hazard/index.ts'
 import {
+  activateLauncherCannonball,
+  activateLauncherCurse,
+  activateLauncherWand,
   activateLauncherWarp,
   getBrickKindCode,
+  EffectState,
   getBrickKindFromCode,
+  getStepWithEffect,
 } from '../../../power-ups/index.ts'
 import type {
   PowerUpContext,
@@ -37,6 +43,7 @@ import {
   getRacerSphere,
   getRacerReadVolumeParts,
   getTableCosine,
+  playRacerVoice,
   setCarBodyPush,
   setRacer,
   startCarBodyFlip,
@@ -135,6 +142,7 @@ export const getRacerSetOf = (racerSet: RaceRacerSet): RacerSet =>
     registryContacts: racerSet.registryContacts,
     emitters: racerSet.emitters,
     sounds: racerSet.sounds,
+    loopedSounds: racerSet.loopedSounds,
   })
 
 // What a racer tells the power-ups about itself (the flags at racer +0xd04, car body +0x6c0 and driver +0x14).
@@ -168,6 +176,7 @@ export const getPowerUpContext = (
     raceModeFlags: racerSet.raceModeFlags,
     getGroundPoint: racerSet.getGroundPoint ?? (() => null),
     trackTargets: racerSet.trackTargets,
+    eventStart: racerSet.powerUpStep.events.length,
   })
 
 // The power-up fields the racer and the power-ups both keep: held brick, use check and voice (racer +0xccc,
@@ -304,6 +313,10 @@ export const changePowerUps: RaceWorldChange = (context, racerSet, change) => {
   return getRacerSetAfterEvents(context, withRacers, changed.events.slice(step.events.length))
 }
 
+// The power-up system's projectile kind 2 (0x0045a950 → 0x0045ac80): the wand.
+const CANNON_PROJECTILE_KIND = 0
+const WAND_PROJECTILE_KIND = 2
+
 const NO_LINE_HIT: LineProbe = () => null
 
 // 0x0041f730 over the track object: the hit material's track-material entry makes it a pass-through (flag 0x20000)
@@ -340,7 +353,8 @@ export const getFlightRacer = (context: RacerSetContext, racer: Racer): FlightRa
     heading: rigidBody.velocityDirection,
     headingSpeed: rigidBody.speed,
     sideAxis: rigidBody.heading,
-    isVehiclePresent: false,
+    // Racer +0xb2c reads 1 for every computer and 0 for the player in the emulator (hypothesis: set for computers).
+    isVehiclePresent: racer.controllerKind === COMPUTER_CONTROLLER,
     speed: rigidBody.speed,
     muzzlePosition: displayFrame.position,
     muzzleDirection: row,
@@ -454,6 +468,7 @@ const getHazardRacer = (racer: Racer | undefined, racerIndex: number): HazardRac
     position: Object.freeze([position.x, position.y, position.z] as const),
     isSpinning: (flags & SPINNING_FLAG) !== 0,
     forwardSpeed,
+    isColourShifted: racer.colourShift !== null,
   })
 }
 
@@ -628,6 +643,49 @@ const getRacerSetAfterTrackEffect = (
       )
     )
   }
+  if (effect.type === 'hazard.power_up_activated' && effect.activation === 'hazard') {
+    // 0x0048b3c0: the dropper asks for a curse at its place (power-up system +0x1998), owned by no racer.
+    const { position } = effect.launcher
+    if (position === null) return racerSet
+    return changePowerUps(context, racerSet, (step) =>
+      activateLauncherCurse(step, { x: position[0], y: position[1], z: position[2] })
+    )
+  }
+  if (
+    effect.type === 'hazard.power_up_activated' &&
+    effect.activation === 'projectile' &&
+    effect.effectKind === CANNON_PROJECTILE_KIND
+  ) {
+    // 0x0048c680: the periodic launcher throws a cannonball at once, with itself as the launcher (system +0x1998).
+    const { position, target, speed } = effect.launcher
+    if (position === null || target === null || speed === null) return racerSet
+    return changePowerUps(context, racerSet, (step) =>
+      activateLauncherCannonball(step, {
+        position: { x: position[0], y: position[1], z: position[2] },
+        target: { x: target[0], y: target[1], z: target[2] },
+        speed,
+      })
+    )
+  }
+  if (
+    effect.type === 'hazard.power_up_activated' &&
+    effect.activation === 'projectile' &&
+    effect.effectKind === WAND_PROJECTILE_KIND
+  ) {
+    // 0x0048b740: the turret asks for a wand at once, with itself as the launcher (power-up system +0x1998).
+    const { position, direction } = effect.launcher
+    if (position === null || direction === null) return racerSet
+    return changePowerUps(context, racerSet, (step) =>
+      activateLauncherWand(
+        step,
+        {
+          position: { x: position[0], y: position[1], z: position[2] },
+          direction: { x: direction[0], y: direction[1], z: direction[2] },
+        },
+        effect.hazardIndex ?? null
+      )
+    )
+  }
   if (effect.type === 'track.racer_target_set') {
     if (racerSet.racers[effect.racerIndex] === undefined) return racerSet
     return changeRacer(racerSet, effect.racerIndex, (racer) =>
@@ -672,9 +730,16 @@ const getRacerSetAfterTrackEffect = (
   }
   if (effect.type === 'hazard.racer_affected') {
     if (racerSet.racers[effect.racerIndex] === undefined) return racerSet
-    return changeRacer(racerSet, effect.racerIndex, (racer) =>
+    const reacted = changeRacer(racerSet, effect.racerIndex, (racer) =>
       getRacerAfterHazardReaction(context.arithmetic, racer, effect.reaction, effect.vector)
     )
+    // The ghost (0x0048ce90) and the lava monster (0x0048dcd0) end their touch with the racer's voice line.
+    return effect.keyword === HazardKeyword.HAZARD_2B || effect.keyword === HazardKeyword.HAZARD_2C
+      ? Object.freeze({
+          ...reacted,
+          ...playRacerVoice(context, reacted, effect.racerIndex, false),
+        })
+      : reacted
   }
   if (effect.type === 'hazard.collision_object_changed') {
     // 0x0048f030 and the other barrier hazards set or clear flags 0x10000 and 0x20000 of the named track material.
@@ -682,6 +747,28 @@ const getRacerSetAfterTrackEffect = (
     return surfaces === racerSet.surfaces ? racerSet : Object.freeze({ ...racerSet, surfaces })
   }
   return racerSet
+}
+
+// 0x00454e50 reads the launcher's struct (+0x23c) every update, so a turret's wand follows the turret's aim.
+const getRacerSetWithLauncherMuzzles = (racerSet: RaceRacerSet): RaceRacerSet => {
+  const effects = racerSet.powerUpStep.world.effects.effects
+  const stepped = effects.reduce((step, effect) => {
+    if (effect.launcherHazardIndex === null || effect.state === EffectState.FINISHED) return step
+    const data = racerSet.trackLogic.hazards.instances[effect.launcherHazardIndex]?.data
+    if (data === undefined || data.keyword !== HazardKeyword.HAZARD_40) return step
+    const [px, py, pz] = data.position
+    const [dx, dy, dz] = data.direction
+    return getStepWithEffect(step, {
+      ...effect,
+      launcherMuzzle: {
+        position: { x: px, y: py, z: pz },
+        direction: { x: dx, y: dy, z: dz },
+      },
+    })
+  }, racerSet.powerUpStep)
+  return stepped === racerSet.powerUpStep
+    ? racerSet
+    : Object.freeze({ ...racerSet, powerUpStep: stepped })
 }
 
 // Runs a track logic operation on the racer set: the random table position goes in and comes out (the track logic
@@ -712,9 +799,11 @@ export const changeTrackLogic = (
     randomPosition: step.state.random.position,
     trackEffects: Object.freeze([...racerSet.trackEffects, ...step.effects]),
   })
-  return step.effects.reduce(
-    (current, effect) => getRacerSetAfterTrackEffect(context, current, effect),
-    changed
+  return getRacerSetWithLauncherMuzzles(
+    step.effects.reduce(
+      (current, effect) => getRacerSetAfterTrackEffect(context, current, effect),
+      changed
+    )
   )
 }
 

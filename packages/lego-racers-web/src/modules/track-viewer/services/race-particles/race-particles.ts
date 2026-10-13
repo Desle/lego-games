@@ -8,6 +8,7 @@ import type { EmitterPool, EmitterQuad } from '@lego-games/lego-racers/emitter'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-racers/simulation-math'
 import { getRibbonCorners } from '@lego-games/lego-racers/ribbon'
 import type { RibbonView } from '@lego-games/lego-racers/ribbon'
+import type { TrailDrawing } from '@lego-games/lego-racers/projectile-trail'
 import type { SpriteView } from '@lego-games/lego-racers/race-presentation'
 import type { Scene } from '@lego-games/lego-racers/scene'
 import type { BufferAttribute } from 'three'
@@ -15,7 +16,12 @@ import { Group, Mesh, type Material } from 'three'
 import { createDynamicGeometry } from '../dynamic-mesh/dynamic-mesh.ts'
 import { createSceneMaterial } from '../scene-object/scene-material.ts'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
-import type { BatchCorner, MaterialBatch, RaceParticles } from './race-particles.types.ts'
+import type {
+  BatchCorner,
+  MaterialBatch,
+  ParticleQuad,
+  RaceParticles,
+} from './race-particles.types.ts'
 
 const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
 
@@ -29,21 +35,14 @@ const WHITE_VERTEX_COLOR: readonly [number, number, number, number] = Object.fre
   BYTE_MAXIMUM,
 ])
 
-const createBatch = (
-  scenes: readonly Scene[],
-  materialName: string,
-  isRowOrderKept: boolean
-): MaterialBatch | null => {
+const createBatch = (scenes: readonly Scene[], materialName: string): MaterialBatch | null => {
   const scene = scenes.find((candidate) =>
     candidate.materials.some((material) => material.name === materialName)
   )
   const sceneMaterial = scene?.materials.findLast((candidate) => candidate.name === materialName)
   if (scene === undefined || sceneMaterial === undefined) return null
   const geometry = createDynamicGeometry(MAXIMUM_CORNERS)
-  const mesh = new Mesh(
-    geometry,
-    createSceneMaterial(sceneMaterial, scene.textures, new Map(), isRowOrderKept)
-  )
+  const mesh = new Mesh(geometry, createSceneMaterial(sceneMaterial, scene.textures, new Map()))
   mesh.frustumCulled = false
   mesh.visible = false
   const [red, green, blue, alpha] = sceneMaterial.diffuseColor
@@ -60,9 +59,9 @@ const createBatch = (
 export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => {
   const group = new Group()
   const batches = new Map<string, MaterialBatch | null>()
-  const getBatch = (materialName: string, isRowOrderKept = false): MaterialBatch | null => {
+  const getBatch = (materialName: string): MaterialBatch | null => {
     if (!batches.has(materialName)) {
-      const batch = createBatch(scenes, materialName, isRowOrderKept)
+      const batch = createBatch(scenes, materialName)
       batches.set(materialName, batch)
       if (batch !== null) group.add(batch.mesh)
     }
@@ -72,19 +71,26 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
     pools: readonly (EmitterPool | null)[],
     cameraView: CameraView,
     sprites: readonly SpriteView[] = [],
-    ribbons: readonly RibbonView[] = []
+    ribbons: readonly RibbonView[] = [],
+    worldSpriteQuads: readonly EmitterQuad[] = [],
+    trails: readonly TrailDrawing[] = []
   ) => {
     const axes = getBillboardAxes(arithmetic, cameraView.forward, cameraView.up)
-    const quads: EmitterQuad[] = [
-      ...pools.flatMap((pool) =>
-        (pool?.instances ?? []).flatMap((instance) =>
-          getEmitterQuads(arithmetic, instance.system, pool?.animation ?? null, {
-            position: cameraView.position,
-            axes,
-          })
-        )
-      ),
-      ...sprites.map((sprite) => getSpriteQuad(arithmetic, axes, sprite)),
+    // A world sprite draws with the engine's white vertex array (0x1005ca4c), whatever its material's colour, and its
+    // texture keeps the order of the file's rows (its texture lacks flag 4, see scene-material.ts).
+    const quads: ParticleQuad[] = [
+      ...worldSpriteQuads.map((quad) => ({ quad, isWorldSprite: true })),
+      ...[
+        ...pools.flatMap((pool) =>
+          (pool?.instances ?? []).flatMap((instance) =>
+            getEmitterQuads(arithmetic, instance.system, pool?.animation ?? null, {
+              position: cameraView.position,
+              axes,
+            })
+          )
+        ),
+        ...sprites.map((sprite) => getSpriteQuad(arithmetic, axes, sprite)),
+      ].map((quad) => ({ quad, isWorldSprite: false })),
     ]
     const counts = new Map<string, number>()
     const addCorner = (
@@ -106,7 +112,7 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
         color[3] / BYTE_MAXIMUM
       )
     }
-    for (const quad of quads) {
+    for (const { quad, isWorldSprite } of quads) {
       const batch = getBatch(quad.materialName)
       if (batch === null) continue
       let corner = counts.get(quad.materialName) ?? 0
@@ -114,14 +120,14 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
         for (const index of triangle) {
           const source = quad.corners[index]
           if (source === undefined || corner >= MAXIMUM_CORNERS) continue
-          addCorner(batch, corner, source, batch.color)
+          addCorner(batch, corner, source, isWorldSprite ? WHITE_VERTEX_COLOR : batch.color)
           corner += 1
         }
       }
       counts.set(quad.materialName, corner)
     }
     for (const ribbon of ribbons) {
-      const batch = getBatch(ribbon.materialName, true)
+      const batch = getBatch(ribbon.materialName)
       if (batch === null) continue
       let corner = counts.get(ribbon.materialName) ?? 0
       const corners = getRibbonCorners(
@@ -141,6 +147,32 @@ export const createRaceParticles = (scenes: readonly Scene[]): RaceParticles => 
         corner += 1
       }
       counts.set(ribbon.materialName, corner)
+    }
+    for (const { materialName, mesh } of trails) {
+      const batch = getBatch(materialName)
+      if (batch === null) continue
+      let corner = counts.get(materialName) ?? 0
+      for (const triangle of mesh.triangles) {
+        for (const index of [triangle.first, triangle.second, triangle.third]) {
+          const vertex = mesh.vertices[index]
+          if (vertex === undefined || corner >= MAXIMUM_CORNERS) continue
+          // The mesh sits at its origin in the world; the vertices carry the material's own colour bytes.
+          addCorner(
+            batch,
+            corner,
+            {
+              x: Math.fround(vertex.position.x + mesh.origin.x),
+              y: Math.fround(vertex.position.y + mesh.origin.y),
+              z: Math.fround(vertex.position.z + mesh.origin.z),
+              u: vertex.u,
+              v: vertex.v,
+            },
+            [vertex.color.red, vertex.color.green, vertex.color.blue, vertex.color.alpha]
+          )
+          corner += 1
+        }
+      }
+      counts.set(materialName, corner)
     }
     for (const [name, batch] of batches) {
       if (batch === null) continue

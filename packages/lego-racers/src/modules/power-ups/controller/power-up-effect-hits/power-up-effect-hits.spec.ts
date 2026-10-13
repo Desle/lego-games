@@ -46,6 +46,7 @@ const createContext = (victim: Partial<RacerPowerUpStatus> = {}): PowerUpContext
   raceModeFlags: 0,
   getGroundPoint: () => null,
   trackTargets: [],
+  eventStart: 0,
 })
 
 // Every table value is 0; split-screen wands made 40 draws.
@@ -132,6 +133,28 @@ describe('hitRacerWithProjectile', () => {
     })
   })
 
+  it('a reflected rocket keeps its timer: only the cannon (0x00451b50) sets 3000 ms (0x004568f0)', () => {
+    // Arrange
+    const step = createFlying({ category: BrickKind.PROJECTILE, level: 3 })
+    const flying = getStepWithEffect(step, { ...getHead(step), timerMilliseconds: 0x157c })
+
+    // Act
+    const hit = hitRacerWithProjectile(
+      flying,
+      createContext({ isShielded: true, shieldLevel: 2 }),
+      getHead(flying).id,
+      1,
+      DIRECTION
+    )
+
+    // Assert
+    expect(getHead(hit)).toMatchObject({
+      state: EffectState.ACTIVE,
+      ownerRacer: 1,
+      timerMilliseconds: 0x157c,
+    })
+  })
+
   it('a rocket spins the victim out with strength 2 (0x00456fa0)', () => {
     // Arrange
     const step = createFlying({ category: BrickKind.PROJECTILE, level: 3 })
@@ -140,12 +163,28 @@ describe('hitRacerWithProjectile', () => {
     const hit = hitRacerWithProjectile(step, createContext(), getHead(step).id, 1, DIRECTION)
 
     // Assert
-    expect(hit.events[0]).toEqual({
+    expect(hit.events).toContainEqual({
       type: 'power_ups.racer_spun_out',
       racer: 1,
       strength: 2,
       spinTime: 0,
     })
+  })
+
+  it('a racer a wand struck earlier in the same update is not struck again (0x00455440, car body +0xaa8 0x80)', () => {
+    // Arrange
+    const step = createFlying({ category: BrickKind.PROJECTILE, level: 2 })
+    const context = createContext()
+    const first = hitRacerWithProjectile(step, context, getHead(step).id, 1, DIRECTION)
+
+    // Act
+    const second = hitRacerWithProjectile(first, context, getHead(step).id, 1, DIRECTION)
+
+    // Assert
+    expect(
+      first.events.filter((event) => event.type === 'power_ups.racer_struck_by_lightning')
+    ).toHaveLength(1)
+    expect(second).toBe(first)
   })
 
   it('a grapple latches on for 4000 ms (0x004545d0)', () => {
@@ -215,7 +254,11 @@ describe('touchHazardEffect', () => {
     const step = createFlying({ category: BrickKind.HAZARD, level: 3 })
 
     // Act
-    const cursed = touchHazardEffect(step, createContext(), getHead(step).id, 1, false)
+    const figureFrame = {
+      position: { x: 1, y: 2, z: 3 },
+      rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as const,
+    }
+    const cursed = touchHazardEffect(step, createContext(), getHead(step).id, 1, false, figureFrame)
     const already = touchHazardEffect(
       step,
       createContext({ isCursed: true }),
@@ -226,7 +269,7 @@ describe('touchHazardEffect', () => {
 
     // Assert
     expect(cursed.events).toEqual([
-      { type: 'power_ups.racer_cursed', racer: 1, durationMilliseconds: 10000 },
+      { type: 'power_ups.racer_cursed', racer: 1, durationMilliseconds: 10000, figureFrame },
     ])
     expect(already.events).toEqual([])
   })
@@ -244,7 +287,7 @@ describe('touchHazardEffect', () => {
       timerMilliseconds: 4000,
       targetRacer: 1,
     })
-    expect(captured.events[0]).toEqual({ type: 'power_ups.racer_magnetized', racer: 1 })
+    expect(captured.events).toContainEqual({ type: 'power_ups.racer_magnetized', racer: 1 })
   })
 })
 
@@ -258,6 +301,13 @@ describe('endProjectileFlight', () => {
 
     // Assert
     expect(getHead(landed)).toMatchObject({ state: EffectState.ENDING, timerMilliseconds: 500 })
-    expect(landed.events[0]).toMatchObject({ type: 'power_ups.explosion', isSpiked: true })
+    expect(landed.events).toContainEqual(
+      expect.objectContaining({ type: 'power_ups.explosion', isSpiked: true })
+    )
+    expect(landed.events).toContainEqual({
+      type: 'power_ups.sound_played',
+      soundId: 5,
+      address: '0x004530ad',
+    })
   })
 })

@@ -7,9 +7,10 @@ tunes by the music list entry (0x0041a8a0) and the stream's file name (stream ob
 """
 
 import hashlib
+import os
 import struct
 
-from unicorn.x86_const import UC_X86_REG_ECX
+from unicorn.x86_const import UC_X86_REG_EAX, UC_X86_REG_ECX
 
 from stubs import StubResult
 
@@ -27,6 +28,14 @@ STREAM_NAME_OFFSET = 0x4C
 MUSIC_NAME_TABLE_OFFSET = 0x124
 MUSIC_NAME_STRIDE = 0x104
 SOUND_LOAD = 0x0041AA60
+BANK_LOAD = 0x0041AE60
+SOUND_MIX = 0x00417DE0
+SOUND_GET = 0x00443BD0
+SOUND_GET_RETURN = 0x00443C01
+SOUND_OBJECT_PLAY = 0x0041AD80
+RACER_PLAY_VOICE = 0x00439240
+RACER_VOICE_BASE_OFFSET = 0xD40
+RACER_VOICE_COOLDOWN_OFFSET = 0xD44
 BYTES_PER_SECOND_STREAM = 88200
 
 
@@ -41,6 +50,7 @@ class AudioRecorder:
         self.next_buffer_number = 1
         self.buffer_numbers = {}
         self.pending_sound_name = None
+        self.pending_get = None
 
     def install(self) -> None:
         machine = self.machine
@@ -52,8 +62,15 @@ class AudioRecorder:
             setattr(world, f"DirectSoundBuffer_{method}", getattr(self, f"on_buffer_{method}"))
         machine.add_address_hook(SOUND_PLAY_AT, self.on_play_at)
         machine.add_address_hook(SOUND_PLAY, self.on_play)
+        machine.add_address_hook(RACER_PLAY_VOICE, self.on_racer_play_voice)
         machine.add_address_hook(MUSIC_LIST_OPEN, self.on_music_open)
         machine.add_address_hook(SOUND_LOAD, self.on_sound_load)
+        machine.add_address_hook(BANK_LOAD, self.on_bank_load)
+        if os.environ.get("AUDIO_TRACE_MIX"):
+            machine.add_address_hook(SOUND_MIX, self.on_sound_mix)
+        machine.add_address_hook(SOUND_GET, self.on_sound_get)
+        machine.add_address_hook(SOUND_GET_RETURN, self.on_sound_get_return)
+        machine.add_address_hook(SOUND_OBJECT_PLAY, self.on_sound_object_play)
         machine.add_address_hook(STREAM_PLAY, self.on_stream_play)
         machine.add_address_hook(STREAM_STOP, lambda: self.add({"kind": "streamStop", "from": self.caller(), "stream": self.stream_name()}))
         machine.add_address_hook(STREAM_VOLUME, self.on_stream_volume)
@@ -93,6 +110,31 @@ class AudioRecorder:
 
     def on_play(self) -> None:
         self.add({"kind": "soundPlay", "from": self.caller(), "id": self.argument(0)})
+
+    def on_racer_play_voice(self) -> None:
+        racer = self.this()
+        self.add({"kind": "racerVoiceCall", "from": self.caller(), "base": self.machine.read_u32(racer + RACER_VOICE_BASE_OFFSET), "cooldown": self.machine.read_u32(racer + RACER_VOICE_COOLDOWN_OFFSET), "isTaunt": self.argument(0)})
+
+    def on_sound_get(self) -> None:
+        self.pending_get = {"from": self.caller(), "id": self.argument(0)}
+
+    def on_sound_get_return(self) -> None:
+        pending = self.pending_get
+        if pending is not None:
+            self.add({"kind": "soundGet", "from": pending["from"], "id": pending["id"], "object": self.machine.uc.reg_read(UC_X86_REG_EAX)})
+        self.pending_get = None
+
+    def on_sound_object_play(self) -> None:
+        self.add({"kind": "objectPlay", "from": self.caller(), "loop": self.argument(0), "object": self.this()})
+
+    def on_sound_mix(self) -> None:
+        sound = self.this()
+        listener = self.argument(0)
+        floats = lambda address, count: [struct.unpack("<f", struct.pack("<I", self.machine.read_u32(address + 4 * index)))[0] for index in range(count)]
+        self.add({"kind": "soundMix", "sound": floats(sound + 4, 3) + floats(sound + 0x18, 3) + floats(sound + 0x24, 3) + floats(sound + 0x30, 2), "listener": floats(listener, 0x11)})
+
+    def on_bank_load(self) -> None:
+        self.add({"kind": "bankLoad", "from": self.caller(), "bank": self.this(), "path": self.machine.read_c_string(self.argument(0))})
 
     def on_sound_load(self) -> None:
         self.pending_sound_name = self.machine.read_c_string(self.argument(0))

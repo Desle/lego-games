@@ -1,5 +1,6 @@
 import { LinearFilter, LinearMipmapLinearFilter } from 'three'
 import { DEVELOPMENT_HIGH_DEFINITION_ROUTE } from './high-definition-route.ts'
+import type { DeviceMetrics } from './high-definition-texture.types.ts'
 import type {
   PictureCreatedEvent,
   TextureCreatedEvent,
@@ -81,16 +82,42 @@ export const getSmoothMaskedColors = (
 
 const getIsTarga = (bitmapPath: string): boolean => /\.tga$/i.test(bitmapPath)
 
+// Phones and tablets are short of memory and of upload time: a 2560 x 1920 menu picture is 20 MB of pixels on the GPU. Pictures
+// bigger than this are drawn smaller there (`?maxtexture=<pixels>` sets it by hand, `0` lifts it). A desktop keeps the pack as it is.
+const SMALL_DEVICE_TEXTURE_SIZE = 1024
+const SMALL_DEVICE_LONG_SIDE = 1400
+const NO_TEXTURE_LIMIT = Infinity
+
+export const getMaximumTextureSize = (search: string, device: DeviceMetrics): number => {
+  const requested = Number(new URLSearchParams(search).get('maxtexture') ?? Number.NaN)
+  if (Number.isFinite(requested)) return requested > 0 ? requested : NO_TEXTURE_LIMIT
+  const isSmallDevice =
+    device.touchPointCount > 0 &&
+    Math.max(device.screenWidth, device.screenHeight) <= SMALL_DEVICE_LONG_SIDE
+  return isSmallDevice ? SMALL_DEVICE_TEXTURE_SIZE : NO_TEXTURE_LIMIT
+}
+
+const getPageTextureLimit = (): number =>
+  getMaximumTextureSize(globalThis.location.search, {
+    touchPointCount: globalThis.navigator.maxTouchPoints,
+    screenWidth: globalThis.screen.width,
+    screenHeight: globalThis.screen.height,
+  })
+
 const readPixels = async (url: string): Promise<TexturePixels | null> => {
   const response = await fetch(url)
   if (!response.ok) return null
   const image = await createImageBitmap(await response.blob())
-  const canvas = new OffscreenCanvas(image.width, image.height)
+  const shrink = Math.min(1, getPageTextureLimit() / Math.max(image.width, image.height))
+  const width = Math.max(1, Math.round(image.width * shrink))
+  const height = Math.max(1, Math.round(image.height * shrink))
+  const canvas = new OffscreenCanvas(width, height)
   const context = canvas.getContext('2d')
   if (context === null) return null
-  context.drawImage(image, 0, 0)
-  const data = context.getImageData(0, 0, image.width, image.height).data
-  return { colors: new Uint8Array(data.buffer), width: image.width, height: image.height }
+  context.imageSmoothingQuality = 'high'
+  context.drawImage(image, 0, 0, width, height)
+  const data = context.getImageData(0, 0, width, height).data
+  return { colors: new Uint8Array(data.buffer), width, height }
 }
 
 // The pack's picture for a bitmap, masked by the original's alpha, or null when the pack has none.

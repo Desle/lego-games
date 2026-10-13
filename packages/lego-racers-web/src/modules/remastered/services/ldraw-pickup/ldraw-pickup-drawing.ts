@@ -1,14 +1,16 @@
 import { Group, Matrix4, Mesh, MeshPhysicalMaterial } from 'three'
 import type { Object3D } from 'three'
 import type { EffectModelDrawingRequest } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
-import { parseLDrawModel } from '../ldraw-library/ldraw-library-loader.ts'
-import { applyPlasticLook } from '../ldraw-car/ldraw-plastic.ts'
+import { createDetailedPart, createMaterialSet } from '../ldraw-car/detailed-model.ts'
 import { LDRAW_PICKUP_MAPPINGS } from './ldraw-pickup-mappings.ts'
 import type { LDrawPickupMapping } from './ldraw-pickup-mappings.types.ts'
 
 // With no lights of its own the plastic is lit by its studio reflections alone; a share of its colour glows to stand in for the ambient light.
 const PICKUP_ENVIRONMENT_INTENSITY = 1.6
 const PICKUP_GLOW = 0.22
+
+// Every pickup of the page shares its plastic (none of them fades): a track holds dozens.
+const pickupMaterials = createMaterialSet()
 
 const getPhysicalMaterials = (model: Object3D): MeshPhysicalMaterial[] => {
   const materials: MeshPhysicalMaterial[] = []
@@ -48,13 +50,10 @@ export const createLDrawPickupDrawing = (request: EffectModelDrawingRequest): Gr
   const drawing = new Group()
   drawing.add(holder)
   const line = `1 ${String(getPickupColorCode(mapping, request))} 0 0 0 1 0 0 0 1 0 0 0 1 ${mapping.partNumber}.dat`
-  parseLDrawModel(line).then(
-    (model) => {
-      applyPlasticLook(model)
-      brightenPlastic(model)
-      holder.add(model)
-    },
-    (error: unknown) => console.error('The LDraw library could not build the brick', error)
+  const part = createDetailedPart(line, pickupMaterials, brightenPlastic)
+  holder.add(part.object)
+  part.shown.catch((error: unknown) =>
+    console.error('The LDraw library could not build the brick', error)
   )
   return drawing
 }

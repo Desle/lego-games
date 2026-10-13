@@ -56,6 +56,10 @@ What the emulator is fed (`replay-scenario.ts`), and the limits:
 - The final race's teleporter: event `0x52` moves the door's collision object with the door and the pad's launcher warp is applied inside the racer's step: see [hazards-and-emitters.md](hazards-and-emitters.md).
 - **Open.** `racerN.body.flags[0]` of a computer racer in `RACEC0R1` (a crane spins it in the port only: the crane's sphere is the last drawn pose in the original, see hazards-and-emitters.md); `player0.controller.bindings[0]` after a pause menu closes (the open finding above: `RACEC3R0` frame 341, `RACEC0R1` frames 418, 430, 773); `powerUps.registry[0]` (`RACEC0R2` 2940, `RACEC0R3` 2255, `RACEC1R0` 4626: an entry that is `-1` in the port); `race.randomPosition` (`RACEC1R1` 3055); `track.triggers.environment[0]` (`RACEC0R1` 741); the pause state after a restart (`RACEC0R1` 1572); `race.phaseMilliseconds` at the last frame (`RACEC0R2`, `RACEC0R3`).
 
+## Status after the simulation sweep
+
+See [golden-trace-simulation-sweep.md](golden-trace-simulation-sweep.md): the registry ends of oil slicks and magnets (`powerUps.registry`), the pose lag of the crane and capture hazards and the computers' capture reaction are fixed; the crane's visibility case, `rubberBand` on c6 and the pause findings below stay open.
+
 ## Known Classic input differences (deferred)
 
 Menu and input-timing differences that do not change a race by themselves; the replay comparison still stops at the first of them in a file, so read later divergences with the file's frames after it in mind (a resynchronising comparison is not built).

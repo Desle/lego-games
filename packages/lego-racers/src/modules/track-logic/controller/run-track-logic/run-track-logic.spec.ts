@@ -12,6 +12,8 @@ import {
   encodeFloat,
   encodeString,
 } from '../../../../shared/token-encoding/token-encoding.ts'
+import { EMPTY_WORLD_ANIMATION, NO_TEXTURE_SCROLL } from '../../../world-animation/index.ts'
+import type { RaceWorlds } from '../../../world-animation/index.ts'
 import { TrackEventKind, TrackEventState } from '../../types/track-event-state/track-event-state.ts'
 import type { TrackEvent, TrackLogicContext } from '../../types/track-logic.types.ts'
 import { createTrackLogic } from '../create-track-logic/create-track-logic.ts'
@@ -62,6 +64,40 @@ const createLogic = (bytes: readonly number[], position = 0) =>
     { table: TABLE, position }
   )
 
+const BEAM_DISTANCES = Object.freeze([640000, 3.4028234663852886e38, 3.4028234663852886e38])
+const BEAM_WORLDS: RaceWorlds = Object.freeze({
+  track: EMPTY_WORLD_ANIMATION,
+  blended: Object.freeze({
+    ...EMPTY_WORLD_ANIMATION,
+    meshInstances: Object.freeze([
+      Object.freeze({
+        name: 'beam',
+        position: Object.freeze([0, 0, 0] as const),
+        levelSquaredDistances: BEAM_DISTANCES,
+        otherFlags: 0,
+        textureScroll: NO_TEXTURE_SCROLL,
+      }),
+    ]),
+  }),
+  local: EMPTY_WORLD_ANIMATION,
+})
+
+const createLogicWithBeam = (bytes: readonly number[]) =>
+  createTrackLogic(
+    {
+      eventSet: parseEvents(new Uint8Array(bytes), false),
+      timerList: null,
+      mainTriggers: null,
+      environmentTriggers: null,
+      worlds: BEAM_WORLDS,
+    },
+    CONTEXT.arithmetic,
+    { table: TABLE, position: 0 }
+  )
+
+const getBeamDistances = (worlds: RaceWorlds): readonly number[] | undefined =>
+  worlds.blended.meshInstances[0]?.levelSquaredDistances
+
 const getEvent = (events: readonly TrackEvent[], index = 0): TrackEvent => {
   const event = events[index]
   if (event === undefined) throw new Error('No event')
@@ -93,6 +129,56 @@ describe('createTrackLogic', () => {
 
     // Assert
     expect(logic.random.position).toBe(10)
+  })
+})
+
+describe('a 53 event (0x00461070, 0x00463700, 0x004637c0, 0x00463800)', () => {
+  const hiddenBytes = section(0x53, [block(3, [0x41, 0x33, ...encodeString('beam')])])
+
+  it('keeps the distances of the object it names and hides it as it loads', () => {
+    // Arrange / Act
+    const logic = createLogicWithBeam(hiddenBytes)
+
+    // Assert
+    expect(getEvent(logic.events[TrackEventKind.KIND_53]).savedLevelSquaredDistances).toEqual(
+      BEAM_DISTANCES
+    )
+    expect(getBeamDistances(logic.worlds)).toEqual([-1, -1, -1])
+  })
+
+  it('shows the object while its signal runs and hides it again when the signal stops', () => {
+    // Arrange
+    const logic = createLogicWithBeam(hiddenBytes)
+
+    // Act
+    const shown = runTrackLogic(logic, CONTEXT, (session) => session.startSignal(3, null))
+    const hidden = runTrackLogic(shown.state, CONTEXT, (session) => session.stopSignal(3, null))
+
+    // Assert
+    expect(getBeamDistances(shown.state.worlds)).toEqual(BEAM_DISTANCES)
+    expect(getBeamDistances(hidden.state.worlds)).toEqual([-1, -1, -1])
+  })
+
+  it("leaves a braced event's object as it was at load", () => {
+    // Arrange
+    const bracedBytes = section(0x53, [
+      [
+        0x27,
+        ...integerTokens([3]),
+        0x3c,
+        LEFT_CURLY,
+        0x41,
+        0x33,
+        ...encodeString('beam'),
+        RIGHT_CURLY,
+      ],
+    ])
+
+    // Act
+    const logic = createLogicWithBeam(bracedBytes)
+
+    // Assert
+    expect(getBeamDistances(logic.worlds)).toEqual(BEAM_DISTANCES)
   })
 })
 

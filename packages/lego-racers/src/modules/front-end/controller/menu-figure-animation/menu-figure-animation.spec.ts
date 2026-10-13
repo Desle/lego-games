@@ -12,6 +12,7 @@ const getClip = (frameCount: number) => ({
   name: 'clip',
   framesPerMillisecond: 0.03,
   velocity: [0, 0, 0] as const,
+  boundingSphere: [0, 0, 0, 0] as const,
   firstTrackIndex: 0,
   frameCount,
   loopLength: frameCount + 1,

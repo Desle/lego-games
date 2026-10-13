@@ -1,4 +1,10 @@
-import type { Vector3 } from '../../simulation-math/index.ts'
+import type { Matrix3, Vector3 } from '../../simulation-math/index.ts'
+
+// Where a curse's figure stands (its position and rotation) when a racer drives into it.
+export type CurseFigureFrame = {
+  readonly position: Vector3
+  readonly rotation: Matrix3
+}
 
 // What the power-ups ask of a racer, the explosions and the projectile code; each names the original call.
 export type PowerUpEvent =
@@ -38,6 +44,9 @@ export type PowerUpEvent =
       readonly type: 'power_ups.racer_cursed'
       readonly racer: number
       readonly durationMilliseconds: number
+      // The frame of the curse's figure (position and rotation), which the racer's own figure starts from; null when the
+      // caller has none (the origin and the identity then).
+      readonly figureFrame: CurseFigureFrame | null
     }
   // 0x00439b00: the curse ends early because a shield was raised.
   | { readonly type: 'power_ups.racer_curse_lifted'; readonly racer: number }
@@ -112,6 +121,21 @@ export type PowerUpEvent =
   // A sound the power-up code plays through the race's sound player (0x00443b50, 0x00443b80); `address` is the return
   // address of the call.
   | { readonly type: 'power_ups.sound_played'; readonly soundId: number; readonly address: string }
+  // A looped sound object a power-up effect starts (RaceSounds_Get 0x00443bd0, then slot +4 with 1) and the end of
+  // it; `key` names the effect.
+  | {
+      readonly type: 'power_ups.looped_sound_started'
+      readonly key: string
+      readonly soundId: number
+      readonly address: string
+      // The racer whose position the sound is placed at (its owner), or null.
+      readonly ownerRacer: number | null
+    }
+  | {
+      readonly type: 'power_ups.looped_sound_stopped'
+      readonly key: string
+      readonly address: string
+    }
   // 0x00439240: a driver voice.
   | { readonly type: 'power_ups.voice'; readonly racer: number; readonly sound: number }
   // 0x00439c90 (Racer_Taunt): using with nothing held plays sound racer +0xd23 and notifies the event system.

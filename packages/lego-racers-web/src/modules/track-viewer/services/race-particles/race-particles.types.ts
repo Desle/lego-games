@@ -1,6 +1,7 @@
-import type { EmitterPool } from '@lego-games/lego-racers/emitter'
+import type { EmitterPool, EmitterQuad } from '@lego-games/lego-racers/emitter'
 import type { SpriteView } from '@lego-games/lego-racers/race-presentation'
 import type { RibbonView } from '@lego-games/lego-racers/ribbon'
+import type { TrailDrawing } from '@lego-games/lego-racers/projectile-trail'
 import type { CameraView } from '@lego-games/lego-racers/race-camera'
 import type { Group, Mesh } from 'three'
 
@@ -13,7 +14,11 @@ export type RaceParticles = {
     cameraView: CameraView,
     sprites?: readonly SpriteView[],
     // The strips of the effects (the grapple's rope, the wand's beam), in the world.
-    ribbons?: readonly RibbonView[]
+    ribbons?: readonly RibbonView[],
+    // The track world's sprites (trees, torches, lamps) for this camera, drawn like the effects' sprites.
+    worldSpriteQuads?: readonly EmitterQuad[],
+    // The streaks behind the cannonballs and rockets (the trail pool's meshes).
+    trails?: readonly TrailDrawing[]
   ) => void
   readonly dispose: () => void
 }
@@ -33,4 +38,10 @@ export type BatchCorner = {
   readonly z: number
   readonly u: number
   readonly v: number
+}
+
+// A quad to draw, with whether it is a world sprite (white vertices, the texture's rows in file order).
+export type ParticleQuad = {
+  readonly quad: EmitterQuad
+  readonly isWorldSprite: boolean
 }

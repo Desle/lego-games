@@ -1,5 +1,6 @@
 import { EMPTY_PROJECTILE_MODEL_DATA } from '../../types/projectile-model-data/projectile-model-data.ts'
 import { createRandomTable } from '../../../random-table/index.ts'
+import { ZERO_VECTOR3 } from '../../../simulation-math/index.ts'
 import {
   createFixtureRacerDefinition,
   FIXTURE_ARITHMETIC,
@@ -19,6 +20,8 @@ export const createFixtureDefinition = (): RaceDefinition => ({
   multiplayerLapCount: 3,
   isCountdownSkipped: false,
   introductionCameraObject: null,
+  introductionCameraPoint: ZERO_VECTOR3,
+  introductionCameraVectors: [ZERO_VECTOR3, ZERO_VECTOR3],
   isMirrored: false,
   isPointsRecordPresent: false,
   ghost: null,

@@ -1,5 +1,6 @@
 import {
   getBlendedQuaternion,
+  getFloatFromBits,
   getMatrixFromQuaternion,
   getNormalizedVector2,
   getQuaternionFromMatrix,
@@ -26,11 +27,12 @@ import type { ChaseHeading, ChaseLook, DistanceEasing } from './camera-update.ty
 // Float constants of Camera_Update 0x00428540 (.rdata at 0x004b03f0..0x004b0428).
 const MAXIMUM_STEP_MILLISECONDS = 100
 const FINISH_MILLISECONDS = 2000
+const INTRODUCTION_MILLISECONDS = 2000 // float 2000.0 at 0x004af66c
 const FINISH_FADE_RATE = Math.fround(0.0005)
-const FINISH_TURN_RATE = Math.fround(0.0015707963)
+const FINISH_TURN_RATE = getFloatFromBits(0x3acde32e) // 0x004b03f8, one unit above fround(π / 2000)
 const STEERING_ANGLE_SCALE = 80
 const STEERING_ANGLE_LIMIT = Math.fround(0.3)
-const HEADING_DEADBAND = Math.fround(0.014016)
+const HEADING_DEADBAND = getFloatFromBits(0x3c656042) // 0.014 at 0x004b040c, negated at 0x004b0410
 const DISTANCE_GROWTH_FROM_NEGATIVE = Math.fround(0.004)
 const DISTANCE_GROWTH_FROM_POSITIVE = Math.fround(0.002)
 const MINIMUM_EASING_DISTANCE = 12
@@ -81,6 +83,47 @@ const getEasedCamera = (camera: CameraState): CameraState => {
       x: ease(camera.targetPosition.x, camera.previousPosition.x),
       y: ease(camera.targetPosition.y, camera.previousPosition.y),
       z: ease(camera.targetPosition.z, camera.previousPosition.z),
+    },
+    quaternion,
+    basis: getMatrixFromQuaternion(arithmetic, quaternion),
+  }
+}
+
+// The introduction mode (mode 0, 0x00428639..0x00428764): for 2,000 ms the eye goes in a straight line from where the
+// camera was released (or from the race description's camera point) to the chase target, the orientation along the
+// blend of the two quaternions. The previous eye, basis and quaternion stay as they were placed.
+const getIntroductionCamera = (camera: CameraState, racer: CameraRacerView): CameraState => {
+  const isStarting = camera.modeMilliseconds === 0
+  const previousQuaternion = isStarting
+    ? getQuaternionFromMatrix(arithmetic, camera.previousBasis)
+    : camera.previousQuaternion
+  const targetQuaternion = isStarting
+    ? getQuaternionFromMatrix(arithmetic, camera.targetBasis)
+    : camera.targetQuaternion
+  const elapsed = storeFloat(add(camera.stepMilliseconds, camera.modeMilliseconds))
+  const isFinished = getIsBelow(INTRODUCTION_MILLISECONDS, elapsed)
+  const modeMilliseconds = isFinished ? INTRODUCTION_MILLISECONDS : elapsed
+  const fraction = isFinished ? 1 : storeFloat(multiply(elapsed, FINISH_FADE_RATE))
+  const { previousPosition, targetPosition } = camera
+  const offsetX = subtract(targetPosition.x, previousPosition.x)
+  const offsetY = storeFloat(subtract(targetPosition.y, previousPosition.y))
+  const offsetZ = storeFloat(subtract(targetPosition.z, previousPosition.z))
+  const quaternion = getBlendedQuaternion(
+    arithmetic,
+    previousQuaternion,
+    targetQuaternion,
+    fraction
+  )
+  return {
+    ...camera,
+    lookAtPoint: racer.position,
+    modeMilliseconds,
+    previousQuaternion,
+    targetQuaternion,
+    position: {
+      x: storeFloat(add(multiply(offsetX, fraction), previousPosition.x)),
+      y: storeFloat(add(storeFloat(multiply(offsetY, fraction)), previousPosition.y)),
+      z: storeFloat(add(storeFloat(multiply(offsetZ, fraction)), previousPosition.z)),
     },
     quaternion,
     basis: getMatrixFromQuaternion(arithmetic, quaternion),
@@ -384,14 +427,23 @@ export const updateCamera = (
     return { camera, view: getCameraView(camera) }
   }
   const step = stepMilliseconds > 0 ? Math.min(stepMilliseconds, MAXIMUM_STEP_MILLISECONDS) : 0
+  const isIntroduction = camera.mode === CameraMode.INTRODUCTION
   const started: CameraState = {
     ...camera,
     isPreviousSnapRequested: camera.isSnapRequested,
     isSnapRequested: false,
     stepMilliseconds: Math.fround(step),
-    previousBasis: camera.basis,
-    previousPosition: camera.position,
-    previousQuaternion: camera.quaternion,
+    ...(isIntroduction
+      ? {}
+      : {
+          previousBasis: camera.basis,
+          previousPosition: camera.position,
+          previousQuaternion: camera.quaternion,
+        }),
+  }
+  if (isIntroduction) {
+    const introduced = getIntroductionCamera(started, racer)
+    return { camera: introduced, view: getCameraView(introduced) }
   }
   const placed =
     started.mode === CameraMode.COCKPIT

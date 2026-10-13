@@ -7,7 +7,7 @@ import type {
   CoverageRankedTexture,
   CoverageReport,
 } from './render-coverage-report.types.ts'
-import type { CoverageBounds, RaceCoverage } from './render-coverage.types.ts'
+import type { CoverageBounds, CoverageTextureRow, RaceCoverage } from './render-coverage.types.ts'
 
 const NAME_LIMIT = 70
 const RACE_LIMIT = 6
@@ -51,6 +51,7 @@ export const createCoverageReport = (races: readonly RaceCoverage[]): CoverageRe
         isNeverDrawnByPort: true,
         originalTriangles: 0,
         missingTriangles: 0,
+        clippedTriangles: 0,
         missingPixels: 0,
         frameCount: 0,
         races: [] as readonly string[],
@@ -62,6 +63,7 @@ export const createCoverageReport = (races: readonly RaceCoverage[]): CoverageRe
         isNeverDrawnByPort: known.isNeverDrawnByPort && row.portSources.length === 0,
         originalTriangles: known.originalTriangles + row.originalTriangles,
         missingTriangles: known.missingTriangles + row.missingTriangles,
+        clippedTriangles: known.clippedTriangles + row.clippedTriangles,
         missingPixels: known.missingPixels + row.missingPixels,
         frameCount: known.frameCount + row.missingFrames.length,
         races: row.missingTriangles > 0 ? [...known.races, raceName] : known.races,
@@ -138,6 +140,17 @@ export const formatCoverageReport = (report: CoverageReport, rowLimit: number): 
         .map((frame) => frame.matchedCount / frame.originalCount)
       const mean = shares.reduce((total, share) => total + share, 0) / shares.length
       return `| ${coverage.race.catalogName} | ${coverage.race.raceFolder} | ${String(coverage.race.isMirrored)} | ${String(coverage.probe.lapEndFrame)} | ${String(coverage.probe.finishFrame)} | ${String(coverage.recordedFrames.length)} | ${String(coverage.frames.filter((frame) => !frame.isTrusted).length)} | ${mean.toFixed(3)} | ${Math.min(...shares).toFixed(3)} |`
+    }),
+    '',
+    '## Triangles per race (trusted frames)',
+    '',
+    '| Race | Original | Cut pieces with a parent in the port | Unmatched | Port only |',
+    '| --- | ---: | ---: | ---: | ---: |',
+    ...report.races.map((coverage) => {
+      const sum = (getValue: (row: CoverageTextureRow) => number) =>
+        coverage.textures.reduce((total, row) => total + getValue(row), 0)
+      const portOnly = coverage.extras.reduce((total, row) => total + row.triangles, 0)
+      return `| ${coverage.race.catalogName} | ${String(sum((row) => row.originalTriangles))} | ${String(sum((row) => row.clippedTriangles))} | ${String(sum((row) => row.missingTriangles))} | ${String(portOnly)} |`
     }),
     '',
     '## Original textures without a partner (ranked by screen pixels)',

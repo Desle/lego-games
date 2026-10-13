@@ -1,7 +1,7 @@
 import { Vector3 } from 'three'
 import { LDRAW_HATS, LDRAW_LEGS } from './ldraw-minifig-parts.ts'
 import { createMinifigPartPlans, getDirectColor } from './minifig-assembly.ts'
-import { MinifigPartKey, MinifigPosture } from './minifig-assembly.types.ts'
+import { MinifigPartKey } from './minifig-assembly.types.ts'
 import type { MinifigSpec } from './minifig-spec.types.ts'
 
 const PEG_LEGS_INDEX = 10
@@ -16,7 +16,8 @@ const createSpec = (overrides: Partial<MinifigSpec> = {}): MinifigSpec => ({
   surfaces: {
     skinColor: 0xffdf00,
     torsoColor: 0xda1f1f,
-    armColor: 0xda1f1f,
+    armColors: { left: 0xda1f1f, right: 0xda1f1f },
+    handColors: { left: 0xffdf00, right: 0xffdf00 },
     hipsColor: 0x2d2d2d,
     legsColor: 0x0000ff,
     face: null,
@@ -25,16 +26,13 @@ const createSpec = (overrides: Partial<MinifigSpec> = {}): MinifigSpec => ({
   ...overrides,
 })
 
-const getPlanParts = (spec: MinifigSpec, posture: MinifigPosture) =>
-  createMinifigPartPlans(spec, posture).map((plan) => `${plan.key}:${plan.part}`)
+const getPlanParts = (spec: MinifigSpec) =>
+  createMinifigPartPlans(spec).map((plan) => `${plan.key}:${plan.part}`)
 
-// Where the figure's own down (LDraw's +y, the way a hanging limb points) goes in a part's place.
-const getHangingDirection = (key: MinifigPartKey, posture: MinifigPosture): Vector3 => {
-  const plan = createMinifigPartPlans(createSpec(), posture).find(
-    (candidate) => candidate.key === key
-  )
+const getPlacement = (key: MinifigPartKey): Vector3 => {
+  const plan = createMinifigPartPlans(createSpec()).find((candidate) => candidate.key === key)
   if (plan === undefined) throw new Error(`The figure has no ${key}`)
-  return new Vector3(0, 1, 0).transformDirection(plan.matrix)
+  return new Vector3().setFromMatrixPosition(plan.matrix)
 }
 
 describe('getDirectColor', () => {
@@ -50,7 +48,7 @@ describe('getDirectColor', () => {
 describe('createMinifigPartPlans', () => {
   it('makes a minifigure of hips, legs, torso, head, hat, arms and hands', () => {
     // Arrange / Act
-    const parts = getPlanParts(createSpec(), MinifigPosture.STANDING)
+    const parts = getPlanParts(createSpec())
 
     // Assert
     expect(parts).toEqual([
@@ -60,6 +58,7 @@ describe('createMinifigPartPlans', () => {
       'torso:973',
       'head:3626b',
       'head:3842a',
+      'head:2447',
       'left_arm:3819',
       'left_hand:3820',
       'right_arm:3818',
@@ -69,7 +68,7 @@ describe('createMinifigPartPlans', () => {
 
   it('leaves the hat out for a driver without one', () => {
     // Arrange / Act
-    const parts = getPlanParts(createSpec({ hats: [] }), MinifigPosture.STANDING)
+    const parts = getPlanParts(createSpec({ hats: [] }))
 
     // Assert
     expect(parts.filter((part) => part.startsWith('head:'))).toEqual(['head:3626b'])
@@ -78,8 +77,7 @@ describe('createMinifigPartPlans', () => {
   it('gives a hook torso a hook for its left hand and peg legs a wooden right leg', () => {
     // Arrange / Act
     const parts = getPlanParts(
-      createSpec({ isHookTorso: true, legs: LDRAW_LEGS[PEG_LEGS_INDEX] ?? null }),
-      MinifigPosture.STANDING
+      createSpec({ isHookTorso: true, legs: LDRAW_LEGS[PEG_LEGS_INDEX] ?? null })
     )
 
     // Assert
@@ -98,7 +96,7 @@ describe('createMinifigPartPlans', () => {
     })
 
     // Act
-    const plans = createMinifigPartPlans(spec, MinifigPosture.STANDING)
+    const plans = createMinifigPartPlans(spec)
 
     // Assert
     expect(plans.map((plan) => `${plan.key}:${plan.part}:${String(plan.color)}`)).toEqual([
@@ -108,6 +106,7 @@ describe('createMinifigPartPlans', () => {
       'torso:973p3h:14',
       'head:3626bp3k:14',
       'head:3842a:0',
+      'head:2447:40',
       'left_arm:3819:14',
       'left_hand:3820:4',
       'right_arm:3818:14',
@@ -115,27 +114,25 @@ describe('createMinifigPartPlans', () => {
     ])
   })
 
-  it('stretches the arms out sideways when standing and forward when seated', () => {
-    // Arrange
-    const standing = getHangingDirection(MinifigPartKey.LEFT_ARM, MinifigPosture.STANDING)
-    const seated = getHangingDirection(MinifigPartKey.LEFT_ARM, MinifigPosture.SEATED)
-
-    // Act
-    const rounded = [Math.round(standing.x), Math.round(seated.z)]
+  it('stacks the parts as the library assembles a minifigure: torso on the hips, head on the torso, legs on the hip axle', () => {
+    // Arrange / Act
+    const heights = [
+      MinifigPartKey.HIPS,
+      MinifigPartKey.TORSO,
+      MinifigPartKey.HEAD,
+      MinifigPartKey.LEFT_LEG,
+    ].map((key) => getPlacement(key).y)
 
     // Assert
-    expect(rounded).toEqual([1, -1])
+    expect(heights).toEqual([0, -32, -56, 12])
   })
 
-  it('turns the legs forward about the hips when seated', () => {
-    // Arrange
-    const standing = getHangingDirection(MinifigPartKey.LEFT_LEG, MinifigPosture.STANDING)
-    const seated = getHangingDirection(MinifigPartKey.LEFT_LEG, MinifigPosture.SEATED)
-
-    // Act
-    const rounded = [Math.round(standing.y), Math.round(seated.z)]
+  it("hangs the arms on the shoulders of the torso, the left one on the figure's left", () => {
+    // Arrange / Act
+    const left = getPlacement(MinifigPartKey.LEFT_ARM)
+    const right = getPlacement(MinifigPartKey.RIGHT_ARM)
 
     // Assert
-    expect(rounded).toEqual([1, -1])
+    expect([left.x, left.y, right.x, right.y]).toEqual([15.552, -23, -15.552, -23])
   })
 })
