@@ -17,6 +17,9 @@ export type OnScreenDrawing = {
   readonly key: string
   readonly changedPixels: number
   readonly groups: readonly OnScreenMaterialGroup[]
+  // Of a drawing drawn as several posed parts (POSED_BONE_KEY: the twin turbo's two burners), how many pixels change when each
+  // part alone is hidden; empty for a drawing of one part.
+  readonly posedPartPixels: readonly number[]
 }
 
 // A frame drawn again with each drawing and each of its material groups hidden in turn: the WebGL errors its draws raised, how many

@@ -36,6 +36,7 @@ import { getWheelMounts } from '../reference-kit/wheel-mounts.ts'
 import { POWER_UP_SPRITES } from '../ldraw-powerup/powerup-sprites.ts'
 import type { PowerUpSprite } from '../ldraw-powerup/powerup-sprites.types.ts'
 import {
+  getEffectModelGroupCount,
   getFittedPowerUpScale,
   getFittedSpriteScale,
   getOriginalFrameBounds,
@@ -110,22 +111,25 @@ const createShownReference = (
   object: Group,
   dispose: () => void,
   getShape: (bounds: Box3) => ReferenceShape,
-  getFittedScale: (fileBounds: Box3) => number = getRealScale
+  getFittedScale: (fileBounds: Box3) => number = getRealScale,
+  drawnCount = 1
 ): OriginalReference => {
   object.updateMatrixWorld(true)
   const bounds = new Box3().setFromObject(object)
-  return { object, dispose, bounds, shape: getShape(bounds), getFittedScale }
+  return { object, dispose, bounds, shape: getShape(bounds), getFittedScale, drawnCount }
 }
 
 const getRealScale = (): number => 1
 
 // A power-up object's mesh as its file stores it (the frame its LDraw file is drawn in), shown in studs of the power-up brick on the
-// ground (powerup-object-frame.ts), drawn as race-effects draws it.
+// ground (powerup-object-frame.ts), drawn as race-effects draws it. A mesh the race draws as several things (the twin turbo's two
+// burners, stored on the same spot) is framed by its first: the file is one of them, drawn once for each.
 const createPowerUpReference = (archive: JamArchive, name: string): OriginalReference => {
   const model = loadEffectModel(archive, name, false)
+  const animatedModel = loadAnimatedEffectModel(archive, name) ?? model
   const original = createModelObject(model)
   const posedBounds = getOriginalModelBounds(model)
-  const frameBounds = getOriginalFrameBounds(loadAnimatedEffectModel(archive, name) ?? model)
+  const frameBounds = getOriginalFrameBounds(animatedModel)
   original.group.matrix.copy(getPowerUpReferenceMatrix(frameBounds))
   // A mesh the race poses bone by bone (a turbo's flame) is shown as stored; the box is the room it takes while it plays.
   if (posedBounds.isEmpty() && !frameBounds.isEmpty()) {
@@ -139,7 +143,8 @@ const createPowerUpReference = (archive: JamArchive, name: string): OriginalRefe
     object,
     () => original.object.dispose(),
     (bounds) => getPowerUpReferenceShape(posedBounds, bounds, getIsSeeThrough(object)),
-    (fileBounds) => getFittedPowerUpScale(frameBounds, fileBounds)
+    (fileBounds) => getFittedPowerUpScale(frameBounds, fileBounds),
+    getEffectModelGroupCount(animatedModel)
   )
 }
 

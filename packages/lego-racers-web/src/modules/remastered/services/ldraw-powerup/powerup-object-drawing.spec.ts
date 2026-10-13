@@ -1,9 +1,15 @@
+import type { ModelScene } from '@lego-games/lego-racers/scene'
 import {
   BACK_FACES_VARIANT,
+  POSED_BONE_KEY,
   POWER_UP_BRICK_MODEL_NAME,
 } from '../../../../shared/viewer-extensions/effect-model-names.ts'
 import type { LDrawModelIndex } from '../ldraw-models/ldraw-model-index.types.ts'
-import { getEffectModelDrawingSource, preparePowerUpObjects } from './powerup-object-drawing.ts'
+import {
+  createPowerUpObjectDrawing,
+  getEffectModelDrawingSource,
+  preparePowerUpObjects,
+} from './powerup-object-drawing.ts'
 
 const INDEX: LDrawModelIndex = {
   cars: {},
@@ -55,6 +61,61 @@ describe('getEffectModelDrawingSource', () => {
 
     // Assert
     expect(source).toEqual({ kind: 'pickup_part', file: null })
+  })
+})
+
+// The twin turbo's burner: the same triangle on bone 1 and on bone 2.
+const TWIN_BURNER: ModelScene = {
+  meshScales: [1],
+  scene: {
+    worldPaths: [],
+    textures: [],
+    materials: [],
+    meshes: [
+      {
+        name: 'dt2cburn',
+        path: 'GAMEDATA\\COMMON\\DT2CBURN.GDB',
+        vertexCount: 6,
+        positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0]),
+        textureCoordinates: new Float32Array(12),
+        colors: null,
+        normals: null,
+        materialIndices: [],
+        boundingSphere: null,
+        drawBatches: [
+          {
+            materialSlot: 0,
+            firstCommand: 0,
+            vertexIndices: new Uint32Array([0, 1, 2, 3, 4, 5]),
+            transformIndices: new Uint8Array([1, 1, 1, 2, 2, 2]),
+          },
+        ],
+      },
+    ],
+    materialAssignments: [],
+    bspTrees: [],
+    skeletons: [],
+    animations: [],
+    instances: [],
+    sprites: [],
+    cameras: [],
+    ambientLights: [],
+    directionalLights: [],
+  },
+}
+
+describe('createPowerUpObjectDrawing', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it("draws the file once for each group of the original's mesh, each posed by its group's bone", () => {
+    // Arrange: a file still being read
+    vi.stubGlobal('fetch', () => new Promise<Response>(() => undefined))
+
+    // Act
+    const drawing = createPowerUpObjectDrawing('powerups/DT2CBURN.ldr', TWIN_BURNER)
+
+    // Assert
+    expect(drawing?.children.map((part): unknown => part.userData[POSED_BONE_KEY])).toEqual([1, 2])
   })
 })
 

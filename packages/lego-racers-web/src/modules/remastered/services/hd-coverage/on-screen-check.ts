@@ -1,5 +1,6 @@
 import { Mesh, Scene } from 'three'
 import type { Material, Object3D, WebGLRenderer } from 'three'
+import { POSED_BONE_KEY } from '../../../../shared/viewer-extensions/effect-model-names.ts'
 import type { HookCall } from './hd-coverage.types.ts'
 import type {
   FrameDrawer,
@@ -136,6 +137,19 @@ export const createOnScreenCheck = (
     })
   }
 
+  const measurePosedParts = (
+    drawing: Object3D,
+    shown: Uint8ClampedArray,
+    drawFrame: FrameDrawer
+  ): readonly number[] => {
+    const parts = drawing.children.filter(
+      (child) => typeof child.userData[POSED_BONE_KEY] === 'number'
+    )
+    return parts.length < 2
+      ? []
+      : parts.map((part) => getChangedPixels(shown, drawWithout(getMeshes(part), drawFrame)))
+  }
+
   const measure = (label: string, drawFrame: FrameDrawer): OnScreenFrame => {
     renderers = new Set()
     scenes = new Set()
@@ -153,6 +167,7 @@ export const createOnScreenCheck = (
         key: call.key,
         changedPixels: getChangedPixels(shown, drawWithout(meshes, drawFrame)),
         groups: measureGroups(meshes, shown, drawFrame),
+        posedPartPixels: measurePosedParts(object, shown, drawFrame),
       }
     })
     return {

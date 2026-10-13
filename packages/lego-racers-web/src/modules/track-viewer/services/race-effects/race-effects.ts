@@ -160,7 +160,8 @@ const setTextureScroll = (
   elapsedMilliseconds: number
 ) => {
   const [offsetU, offsetV] = getScrollOffsets(scroll, elapsedMilliseconds)
-  copy.group.traverse((object) => {
+  // The model's own meshes only: a layer's drawing beside them (showEffectModelDrawing) has no scrolled texture.
+  copy.object.group.traverse((object) => {
     if (object.type !== 'Mesh') return
     const { map } = (object as Mesh).material as MeshBasicMaterial
     map?.offset.set(offsetU, offsetV)

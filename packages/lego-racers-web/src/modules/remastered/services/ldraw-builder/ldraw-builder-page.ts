@@ -337,11 +337,20 @@ const NO_REFERENCE_NOTE =
 const SPRITE_NOTE =
   "the original draws a camera-facing sprite (the card, in car studs): the race draws the file at the sprite's centre, studs to the camera"
 
+// The original's mesh is several of the same thing (the twin turbo's two burners): the file is one, drawn once for each.
+const getDrawnCountNote = (drawnCount: number): string =>
+  drawnCount > 1 ? `build one: drawn ${String(drawnCount)} times in the race` : ''
+
+const getShapeNote = (shape: ReferenceShape): string =>
+  shape === ReferenceShape.EFFECT ? EFFECT_NOTE : ''
+
 const getReferenceNote = (): string => {
   if (currentItem?.kind !== BuilderItemKind.POWER_UP) return ''
   if (POWER_UP_SPRITES[currentItem.name] !== undefined) return SPRITE_NOTE
   if (reference === null || reference.shape === ReferenceShape.NONE) return NO_REFERENCE_NOTE
-  return reference.shape === ReferenceShape.EFFECT ? EFFECT_NOTE : ''
+  return [getShapeNote(reference.shape), getDrawnCountNote(reference.drawnCount)]
+    .filter((note) => note !== '')
+    .join('; ')
 }
 
 const getHint = (): string =>

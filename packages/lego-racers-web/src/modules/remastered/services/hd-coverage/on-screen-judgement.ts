@@ -74,7 +74,7 @@ export const getPowerUpOnScreenFailures = (
         .map((call) => call.key)
     ),
   ].sort()
-  return drawnKeys
+  const unshown = drawnKeys
     .filter(
       (key) =>
         !frames.some((frame) =>
@@ -84,7 +84,41 @@ export const getPowerUpOnScreenFailures = (
         )
     )
     .map((key) => `the power-up object ${key} reached the screen in none of the frames`)
+  return [...unshown, ...getPosedPartFailures(frames, drawnKeys)]
 }
+
+// The objects drawn as several posed parts that must show them side by side: the twin turbo's two burners. Not its flames (see
+// through, and one hides behind the car in the measured frames) nor ENHANER (its two trails start on the same spot).
+const SIDE_BY_SIDE_MODEL_NAMES: readonly string[] = ['DT2CBURN']
+
+// A drawing of several posed parts side by side (the file once for each group of the original's mesh) shows every part at once
+// in one of the measured frames.
+const getPosedPartFailures = (
+  frames: readonly OnScreenFrame[],
+  drawnKeys: readonly string[]
+): readonly string[] =>
+  drawnKeys.flatMap((key) => {
+    if (!SIDE_BY_SIDE_MODEL_NAMES.includes(key)) return []
+    const partCounts = frames.flatMap((frame) =>
+      frame.drawings
+        .filter((drawing) => drawing.key === key && drawing.posedPartPixels.length > 1)
+        .map((drawing) => drawing.posedPartPixels.length)
+    )
+    if (partCounts.length === 0) return []
+    const isEveryPartShown = frames.some((frame) =>
+      frame.drawings.some(
+        (drawing) =>
+          drawing.key === key &&
+          drawing.posedPartPixels.length > 1 &&
+          drawing.posedPartPixels.every((pixels) => getIsOnScreen(frame, pixels))
+      )
+    )
+    return isEveryPartShown
+      ? []
+      : [
+          `the power-up object ${key}'s ${String(Math.max(...partCounts))} posed parts never all reached the screen in one frame`,
+        ]
+  })
 
 export const formatOnScreenDrawing = (frame: OnScreenFrame, drawing: OnScreenDrawing): string =>
   [
@@ -93,4 +127,7 @@ export const formatOnScreenDrawing = (frame: OnScreenFrame, drawing: OnScreenDra
       (group) =>
         `${group.material}${group.isPictured ? ' pictured' : ''} x${String(group.meshCount)} ${String(group.changedPixels)}`
     ),
+    ...(drawing.posedPartPixels.length === 0
+      ? []
+      : [`posed parts ${drawing.posedPartPixels.map(String).join(' ')}`]),
   ].join('; ')

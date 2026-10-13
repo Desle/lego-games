@@ -46,3 +46,8 @@ export const BACK_FACES_VARIANT = 'back_faces'
 // Where the device's alpha override (0 to 255, null when off) of a fading effect is noted on each of its meshes' `userData`, so a
 // drawing in place of the model can fade with it.
 export const ALPHA_OVERRIDE_KEY = 'alphaOverride'
+
+// Where a direct child of a drawing notes the bone (an index of the model's skeleton) whose pose it follows, its matrix set by the
+// race every frame: a drawing of a mesh on several bones draws a part for each (the twin turbo's two burners). A drawing without
+// such a child follows, whole, the bone the mesh's first vertex hangs on.
+export const POSED_BONE_KEY = 'posedBone'
