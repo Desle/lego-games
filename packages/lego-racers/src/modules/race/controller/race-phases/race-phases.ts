@@ -102,7 +102,7 @@ const setRacePlace = (state: RaceState, racerIndex: number, place: number): Race
   const racer = getRacer(state.racerSet, racerIndex)
   const isChanged = (racer.flags & RACER_FINISHED_FLAG) === 0 && place !== racer.racePosition
   const voiced: RacerSet = isChanged
-    ? playRacerVoice(state.context, state.racerSet, racerIndex)
+    ? playRacerVoice(state.context, state.racerSet, racerIndex, place < racer.racePosition)
     : state.racerSet
   return Object.freeze({
     ...state,

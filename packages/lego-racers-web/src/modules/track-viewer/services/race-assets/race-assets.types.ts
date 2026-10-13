@@ -100,6 +100,11 @@ export type RaceAssets = {
   readonly generalSounds: SoundBank
   readonly trackSounds: SoundBank
   readonly trackSoundDirectory: string
+  // Race_LoadVoicesAndSounds 0x004328f0: sound ids 1000 to 1099 (the first human racer's `voiceNN`) and 1100 to 2999 (the
+  // race description's voice folder, e.g. `voiceC1`), both banks of GAMEDATA\VOICES; empty when the JAM has none.
+  readonly voiceSounds: SoundBank
+  readonly voiceFolderSounds: SoundBank
+  readonly voiceDirectory: string
   readonly musicNames: readonly string[]
   readonly tunes: ReadonlyMap<string, Uint8Array>
 }

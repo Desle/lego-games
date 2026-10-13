@@ -1,5 +1,5 @@
 import { getSoundLocation } from '../get-sound-location/get-sound-location.ts'
-import { getRaceEventSounds, POWER_UP_SOUND_SITES } from './race-sounds.ts'
+import { getRaceEventLoops, getRaceEventSounds, POWER_UP_SOUND_SITES } from './race-sounds.ts'
 
 describe('getSoundLocation', () => {
   it.each([
@@ -92,7 +92,7 @@ describe('getRaceEventSounds', () => {
     expect(rocket).toEqual([POWER_UP_SOUND_SITES.rocketHit])
   })
 
-  it('plays the grapple hit, snap and release sounds', () => {
+  it('plays the grapple hit sound; the release sounds come from the effect as sound events', () => {
     // Arrange
     const grappled = {
       type: 'race.power_up',
@@ -105,10 +105,92 @@ describe('getRaceEventSounds', () => {
 
     // Act
     const hit = getRaceEventSounds(grappled)
-    const snap = getRaceEventSounds(released)
+    const release = getRaceEventSounds(released)
 
     // Assert
     expect(hit.map((sound) => sound.soundId)).toEqual([0x12])
-    expect(snap.map((sound) => sound.soundId)).toEqual([0x16, 0x49])
+    expect(release).toEqual([])
+  })
+})
+
+describe('getRaceEventLoops', () => {
+  it('loops the shield hum of its level and ends it with the shield', () => {
+    // Arrange
+    const raised = {
+      type: 'race.power_up',
+      event: { type: 'power_ups.racer_shield_raised', racer: 2, level: 1 },
+    } as const
+    const lowered = {
+      type: 'race.power_up',
+      event: { type: 'power_ups.racer_shield_lowered', racer: 2 },
+    } as const
+
+    // Act
+    const started = getRaceEventLoops(raised)
+    const stopped = getRaceEventLoops(lowered)
+
+    // Assert
+    expect(started.map((loop) => [loop.isStart, loop.key, loop.soundId])).toEqual([
+      [true, 'shield:2', 0x35],
+    ])
+    expect(stopped.map((loop) => [loop.isStart, loop.key])).toEqual([[false, 'shield:2']])
+  })
+
+  it('loops the sound of a looped track event on its position and of a hazard', () => {
+    // Arrange
+    const track = {
+      type: 'race.track_effect',
+      effect: {
+        type: 'track.looped_sound_started',
+        identifier: 7,
+        soundNumber: 3006,
+        position: [1, 2, 3],
+        volume: 0.5,
+        pitch: 1,
+        minimumDistance: 20,
+        maximumDistance: 200,
+      },
+    } as const
+    const hazard = {
+      type: 'race.track_effect',
+      effect: { type: 'hazard.looped_sound_started', keyword: 0x2b, soundIdentifier: 0xbc4 },
+    } as const
+
+    // Act
+    const trackLoops = getRaceEventLoops(track)
+    const hazardLoops = getRaceEventLoops(hazard)
+
+    // Assert
+    expect(trackLoops[0]).toMatchObject({
+      key: 'track:7',
+      soundId: 3006,
+      location: { bank: 'track', index: 6 },
+      source: {
+        position: { x: 1, y: 2, z: 3 },
+        minimumDistance: 20,
+        maximumDistance: 200,
+        volume: 0.5,
+      },
+    })
+    expect(hazardLoops.map((loop) => [loop.key, loop.soundId])).toEqual([['hazard:43', 0xbc4]])
+  })
+
+  it('plays the ghost touch sound at the racer', () => {
+    // Arrange
+    const event = {
+      type: 'race.track_effect',
+      effect: {
+        type: 'hazard.sound_played',
+        keyword: 0x2b,
+        soundIdentifier: 0xbc7,
+        position: [4, 5, 6],
+      },
+    } as const
+
+    // Act
+    const sounds = getRaceEventSounds(event)
+
+    // Assert
+    expect(sounds[0]).toMatchObject({ soundId: 0xbc7, source: { position: { x: 4, y: 5, z: 6 } } })
   })
 })

@@ -207,7 +207,7 @@ const chooseDriverAnimation = (
     getIsBelow(forwardSpeed, STOPPING_SPEED) &&
     driverId !== DriverAnimation.STOPPED
   ) {
-    const voiced = playRacerVoice(context, racerSet, racerIndex)
+    const voiced = playRacerVoice(context, racerSet, racerIndex, false)
     const stopped = play(DriverAnimation.STOPPED, RESTING_ANIMATION, voiced)
     return shake(
       setVehicle(stopped, racerIndex, (current) =>

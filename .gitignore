@@ -30,3 +30,6 @@ reverse-engineering/replays/inbox
 
 # Render coverage sweep output
 packages/lego-racers-web/.render-coverage/
+
+# LDraw fidelity results (pnpm run ldraw-fidelity): every item's numbers and the difference sheet
+reverse-engineering/ldraw-fidelity/

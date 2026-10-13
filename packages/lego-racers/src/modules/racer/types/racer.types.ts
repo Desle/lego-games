@@ -381,6 +381,8 @@ export type Racer = {
   readonly fadeMilliseconds: number
   // +0xd4c: uint32 milliseconds until the next collision sound.
   readonly collisionSoundMilliseconds: number
+  // +0x73c and +0x738 of the car body: the loop of the surface the wheels stand on (0x0042af90) and how long it has run.
+  readonly surfaceSound: SurfaceSound | null
   // +0xd50: uint32 milliseconds with no wheel on the ground.
   readonly airborneMilliseconds: number
   // +0xd68: the level of the turbo started last (0x004396c0); force feedback and presentation read it.
@@ -470,12 +472,30 @@ export type RacerSet = {
   // The sounds the racers' passes played this frame (through the race's sound player 0x00443b80), which the race
   // reports with its other events and clears.
   readonly sounds: readonly RacerSound[]
+  // The looped sounds the racers started or stopped this frame, reported and cleared the same way.
+  readonly loopedSounds: readonly RacerLoopedSound[]
 }
 
-// A sound id of GENERAL.SBK and the return address of the call that plays it.
+// The sound a car body loops while its wheels stand on a material that carries one.
+export type SurfaceSound = {
+  readonly soundId: number
+  readonly milliseconds: number
+}
+
+// A looped sound object of a racer starting or stopping (RaceSounds_Get 0x00443bd0 and slot +4, or slot +8).
+export type RacerLoopedSound = {
+  readonly isStart: boolean
+  readonly key: string
+  readonly soundId: number
+  readonly address: string
+  readonly racerIndex: number
+}
+
+// A sound id and the return address of the call that plays it, with the racer it comes from.
 export type RacerSound = {
   readonly soundId: number
   readonly address: string
+  readonly racerIndex: number
 }
 
 // Constant inputs of a race step.

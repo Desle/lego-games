@@ -74,6 +74,8 @@ const getWheelOnSurface = (
 const WHEEL_EMITTER_MINIMUM_SPEED = getFloatFromBits(0x3c03126f)
 const WHEEL_EMITTER_BLOCKING_BODY_FLAGS = 0x88
 const EMITTER_NAME_FLAG = 0x400
+// 0x0042aad0
+const SURFACE_SOUND_FLAG = 0x80
 
 // What a wheel asks of its vehicle's surface emitter: 0x0042aad0 starts the emitter the material names while the
 // wheel is on the ground, the body goes faster than 0.008 and is neither in two-point mode nor flagged 0x80, and the
@@ -113,6 +115,14 @@ const getBodyWithSurfaces = (
     if (wheelEmitters !== undefined) {
       record(getWheelEmitterContact(body, wheelIndex, current, wheelEmitters.isComputer))
     }
+    if (
+      current !== undefined &&
+      wheel.isOnGround &&
+      getHasFlag(current, SURFACE_SOUND_FLAG) &&
+      wheelEmitters !== undefined
+    ) {
+      record({ type: 'wheel_surface_sound', soundId: current.fifthInteger })
+    }
     const surfaced =
       current === undefined
         ? getWheelWithDefaultSurface(wheel)
@@ -136,6 +146,14 @@ const getBodyWithSurfaces = (
         isLeaving = false
       }
     })
+    if (
+      isLeaving &&
+      previous !== undefined &&
+      getHasFlag(previous, SURFACE_SOUND_FLAG) &&
+      wheelEmitters !== undefined
+    ) {
+      record({ type: 'wheel_surface_left', soundId: previous.fifthInteger })
+    }
     if (isLeaving && previous !== undefined && getHasFlag(previous, LEAVE_EVENT_FLAG)) {
       record({
         type: 'surface_left',

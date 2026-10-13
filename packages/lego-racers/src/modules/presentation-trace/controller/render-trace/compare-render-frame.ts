@@ -31,7 +31,7 @@ const PERMUTATIONS: readonly (readonly [number, number, number])[] = [
   [1, 0, 2],
 ]
 
-const getIsInside = (triangle: ScreenTriangle, viewport: RenderViewportSize): boolean =>
+export const getIsInside = (triangle: ScreenTriangle, viewport: RenderViewportSize): boolean =>
   triangle.every(
     (vertex) =>
       vertex.reciprocalW > 0 &&
@@ -84,9 +84,9 @@ const getStateDifferences = (original: DrawState, port: DrawState): readonly str
 const getIsTextured = (triangle: DrawnTriangle): boolean =>
   triangle.state.colorOperation !== TextureOperation.SELECT_DIFFUSE
 
-const getTextureDifference = (
+export const getTextureDifference = (
   original: DrawnTriangle,
-  port: DrawnTriangle,
+  port: Pick<DrawnTriangle, 'textureKey'>,
   textureMatches: ReadonlyMap<string, TextureMatch>
 ): string | null => {
   if (!getIsTextured(original) && port.textureKey === null) return null

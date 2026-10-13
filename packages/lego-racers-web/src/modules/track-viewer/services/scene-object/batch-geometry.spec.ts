@@ -42,6 +42,7 @@ const getMesh = (colors: Uint8Array | null): SceneMesh => ({
   colors,
   normals: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]),
   materialIndices: [0],
+  boundingSphere: null,
   drawBatches: [batch],
 })
 

@@ -44,6 +44,8 @@ export type GoldenTraceScenario = {
   readonly powerUpGrants: readonly PowerUpGrant[]
   // What the first local player's controller is: the keyboard layout (the default) or a gamepad.
   readonly controller?: TraceController
+  // The emulator reads only the cameras (golden_trace.py `isCameraOnly`): faster, for the camera trace.
+  readonly isCameraOnly?: boolean
 }
 
 // The 32-bit words of every observed field, by name: floats as their IEEE bits.
@@ -101,4 +103,5 @@ export type ScenarioRequest = {
   readonly localPlayerCount?: number
   readonly powerUpGrants?: readonly PowerUpGrant[]
   readonly controller?: TraceController
+  readonly isCameraOnly?: boolean
 }

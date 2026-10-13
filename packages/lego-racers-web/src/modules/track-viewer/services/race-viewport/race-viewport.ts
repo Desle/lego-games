@@ -28,7 +28,12 @@ import {
 import type { RaceWorlds } from '@lego-games/lego-racers/world-animation'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '@lego-games/lego-racers/simulation-math'
 import { getWorldSpriteQuads } from '@lego-games/lego-racers/world-sprite'
-import { getCameraFrustum, ORIGINAL_FIELD_OF_VIEW_DEGREES } from './camera-frustum.ts'
+import {
+  getCameraFrustum,
+  ORIGINAL_FAR_PLANE,
+  ORIGINAL_FIELD_OF_VIEW_DEGREES,
+  ORIGINAL_NEAR_PLANE,
+} from './camera-frustum.ts'
 import { getIsWithinLevelDistance } from '../scene-object/level-distance.ts'
 import { createRaceDecals } from '../race-decals/race-decals.ts'
 import { createRaceParticles } from '../race-particles/race-particles.ts'
@@ -69,8 +74,6 @@ const arithmetic = createFloatArithmetic(RACE_FPU_PRECISION)
 const MILLISECONDS_PER_SECOND = 1000
 // The scroll the original adds stays below 1 (it wraps).
 const getWrappedFraction = (value: number): number => value - Math.floor(value)
-const NEAR_PLANE = 0.5
-const FAR_PLANE = 20000
 // Race_Render's update (0x00435a00) draws the ghost cars between the device's alpha override (0x00422960 calls slot 0xb8
 // with 0x7f and 0, slot 0xbc afterwards): every vertex of both cars takes alpha 127 and blends over the picture.
 const GHOST_ALPHA = 0x7f
@@ -165,8 +168,8 @@ export const createRaceStage = (assets: RaceAssets, size: RaceStageSize): RaceSt
   const camera = new PerspectiveCamera(
     ORIGINAL_FIELD_OF_VIEW_DEGREES,
     size.width / size.height,
-    NEAR_PLANE,
-    FAR_PLANE
+    ORIGINAL_NEAR_PLANE,
+    ORIGINAL_FAR_PLANE
   )
   const shown: ShownScene = showSceneObjects(assets.scene, assets.background)
   const trackKey =

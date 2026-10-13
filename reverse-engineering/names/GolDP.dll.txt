@@ -129,3 +129,14 @@
 10023ef0 SkeletonInstance_UpdateBoundingSphere
 100240b0 SkeletonInstance_GetVisibility
 1002bc20 Frustum_TestSphere
+10002a30 CameraNode_SetOrientation
+100029d0 CameraNode_GetForwardUp
+10027d80 MeshInstance_GetVisibility
+10027ea0 MeshInstance_UpdateBoundingSphere
+10027cc0 MeshInstance_SelectLevel
+10026f30 Instance_GetPosition
+10026f70 Instance_SetSphereCentre
+10026fa0 Instance_SetSphereRadius
+100286d0 Instance_GetSphereCentre
+10028710 Instance_GetSphereRadius
+100278c0 Model_ComputeBoundingSphere

@@ -28,6 +28,11 @@ export type SceneVector = {
   readonly z: number
 }
 
+export type SceneSphere = {
+  readonly centre: SceneVector
+  readonly radius: number
+}
+
 // Row-major 3×3: row 0 forward, row 1 up × forward, row 2 up (GolDP.dll 0x10026b50).
 export type SceneRotation = readonly [
   number,
@@ -114,6 +119,8 @@ export type SceneMesh = {
   readonly normals: Float32Array | null
   readonly materialIndices: readonly number[]
   readonly drawBatches: readonly SceneDrawBatch[]
+  // The sphere an instance of this mesh is culled by (GolDP.dll 0x100278c0, model scale applied); null without vertices.
+  readonly boundingSphere: SceneSphere | null
 }
 
 // A BSP tree the world lists (`.BDB`); its leaves name runs of the draw commands of the instance's mesh.

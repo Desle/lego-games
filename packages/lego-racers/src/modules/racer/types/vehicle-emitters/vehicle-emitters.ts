@@ -431,6 +431,14 @@ const getRacerAfterSkids = (
   }))
 }
 
+// 0x0043e29f: the sound of a landing by the number of wheels that came down (1, 2 or 3, 4).
+const LANDING_SOUNDS: Readonly<Record<number, number>> = Object.freeze({
+  1: 0x3f,
+  2: 0x40,
+  3: 0x40,
+  4: 4,
+})
+
 // The landing of Vehicle_Update: more than 400 ms airborne arms it, the next update with more wheels on the ground
 // than the last puts down the "carland" emitter; the count is remembered every update.
 const getRacerAfterLanding = (
@@ -444,7 +452,7 @@ const getRacerAfterLanding = (
   const isArmed =
     airborneTime > LANDING_AIRBORNE_MILLISECONDS || (vehicle.flags & LANDING_PENDING_FLAG) !== 0
   const isLanding = isArmed && groundedWheelCount > vehicle.previousGroundedWheelCount
-  const spawned = isLanding
+  const landedSet = isLanding
     ? spawnVehicleEmitter(
         context.arithmetic,
         racerSet,
@@ -453,6 +461,19 @@ const getRacerAfterLanding = (
         racer.carBody.rigidBody.displayFrame.position
       ).racerSet
     : racerSet
+  const landingSoundId = isLanding
+    ? LANDING_SOUNDS[groundedWheelCount - vehicle.previousGroundedWheelCount]
+    : undefined
+  const spawned: RacerSet =
+    landingSoundId === undefined
+      ? landedSet
+      : Object.freeze({
+          ...landedSet,
+          sounds: Object.freeze([
+            ...landedSet.sounds,
+            { soundId: landingSoundId, address: '0x0043e325', racerIndex },
+          ]),
+        })
   const armedFlags =
     airborneTime > LANDING_AIRBORNE_MILLISECONDS
       ? vehicle.flags | LANDING_PENDING_FLAG
