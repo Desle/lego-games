@@ -4,6 +4,8 @@ import { LDRAW_TO_STUDS } from '../ldraw-car/ldraw-car-document.ts'
 import {
   getBuildFrameMatrix,
   getFittedPowerUpScale,
+  getFittedSpriteScale,
+  getParticleUnitsPerLDrawUnit,
   getOriginalFrameBounds,
   getOriginalModelBounds,
   getPowerUpObjectMatrix,
@@ -175,5 +177,16 @@ describe('the power-up object frame', () => {
       [-1, -2, 0],
       [50.5, 50.5, 50],
     ])
+  })
+
+  it("fits a power-up sprite's file to the sprite: its largest extent the sprite's size", () => {
+    // Arrange: a 2 x 2 round brick, 40 LDraw units across and 24 tall, for the cannon ball's 5 x 5 sprite
+    const file = new Box3(new Vector3(-20, -24, -20), new Vector3(20, 0, 20))
+
+    // Act
+    const scale = getFittedSpriteScale(5, file)
+
+    // Assert
+    expect(Number((40 * getParticleUnitsPerLDrawUnit(scale)).toFixed(4))).toBe(5)
   })
 })

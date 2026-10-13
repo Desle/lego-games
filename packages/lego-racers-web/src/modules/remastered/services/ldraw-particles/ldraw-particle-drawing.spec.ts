@@ -4,6 +4,7 @@ import type { ParticleView } from '../../../../shared/viewer-extensions/viewer-e
 import { getParticleUnitsPerLDrawUnit } from '../ldraw-powerup/powerup-object-frame.ts'
 import {
   createLDrawParticleDrawing,
+  getIsParticleMaterialDrawn,
   getParticleKindModel,
   getParticleOpacity,
   getPieceWidth,
@@ -100,6 +101,17 @@ describe('createLDrawParticleDrawing', () => {
       10.5,
     ])
     drawing?.dispose()
+  })
+
+  it("leaves a power-up sprite's quads to the original when the folder has no file for it", () => {
+    // Arrange
+    const materials = ['cannon', 'smoke1', 'skymat']
+
+    // Act
+    const drawn = materials.map(getIsParticleMaterialDrawn)
+
+    // Assert
+    expect(drawn).toEqual([false, true, false])
   })
 })
 

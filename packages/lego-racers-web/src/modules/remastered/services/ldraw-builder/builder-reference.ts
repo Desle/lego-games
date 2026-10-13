@@ -33,8 +33,11 @@ import {
   getChassisReferenceLine,
 } from '../reference-kit/chassis-reference-line.ts'
 import { getWheelMounts } from '../reference-kit/wheel-mounts.ts'
+import { POWER_UP_SPRITES } from '../ldraw-powerup/powerup-sprites.ts'
+import type { PowerUpSprite } from '../ldraw-powerup/powerup-sprites.types.ts'
 import {
   getFittedPowerUpScale,
+  getFittedSpriteScale,
   getOriginalFrameBounds,
   getOriginalModelBounds,
   getParticleSizeInStuds,
@@ -56,11 +59,7 @@ import {
 import { getBuilderItemFile } from './builder-items.ts'
 import { getPowerUpReferenceShape } from './builder-reference-shape.ts'
 import { ReferenceShape } from './builder-reference.types.ts'
-import type {
-  BuilderItemStart,
-  CardReference,
-  OriginalReference,
-} from './builder-reference.types.ts'
+import type { BuilderItemStart, OriginalReference } from './builder-reference.types.ts'
 import { BuilderItemKind } from './ldraw-builder.types.ts'
 import type { BuilderItem, BuilderPart } from './ldraw-builder.types.ts'
 
@@ -227,7 +226,7 @@ const getCardMesh = (width: number, height: number, materialIndex: number): Scen
 // units, in car studs on the ground (powerup-object-frame.ts), drawn with the original's material.
 const createCardReference = (
   archive: JamArchive,
-  card: CardReference,
+  card: PowerUpSprite,
   getFittedScale: (fileBounds: Box3) => number
 ): OriginalReference => {
   const resources = loadModelScene(archive, {
@@ -311,6 +310,12 @@ export const createOriginalReference = (
   item: BuilderItem
 ): OriginalReference | null => {
   if (item.kind === BuilderItemKind.DRIVER) return null
+  const sprite = POWER_UP_SPRITES[item.name]
+  if (item.kind === BuilderItemKind.POWER_UP && sprite !== undefined) {
+    return createCardReference(archive, sprite, (fileBounds) =>
+      getFittedSpriteScale(Math.max(sprite.width, sprite.height), fileBounds)
+    )
+  }
   if (item.kind === BuilderItemKind.POWER_UP) return createPowerUpReference(archive, item.name)
   if (item.kind === BuilderItemKind.PARTICLE) return createParticleReference(archive, item.name)
   if (item.kind === BuilderItemKind.CAR) {
@@ -386,7 +391,10 @@ const ITEM_TITLES: Readonly<Record<BuilderItemKind, (name: string) => string>> =
     `${name} driver (origin the top of the hips, standing rest pose; each part after its 0 !RACERS ROLE line)`,
 })
 
-const getTitle = (item: BuilderItem): string => ITEM_TITLES[item.kind](item.name)
+const getTitle = (item: BuilderItem): string =>
+  POWER_UP_SPRITES[item.name] === undefined
+    ? ITEM_TITLES[item.kind](item.name)
+    : `Racers power-up sprite ${item.name} (origin at the sprite's centre, studs to the camera; 0 !RACERS SCALE: car studs)`
 
 // The parts of the chassis recipes a car's reference lines place, by recipe name, in the recipe's own frame.
 const loadReferencedRecipes = async (
