@@ -98,8 +98,30 @@ export const getRacerWithoutTimedEffect = (racer: Racer): Racer =>
     }),
   })
 
-export const endTimedEffect: RacerBoundary = (_context, racerSet, racerIndex) =>
-  setRacer(racerSet, racerIndex, getRacerWithoutTimedEffect(getRacer(racerSet, racerIndex)))
+// The curse's hum, Get at 0x00439a54 in 0x00439900.
+const CURSE_HUM_SOUND = 8 // 0x00439a54
+
+// 0x00439b00: the effect ends and the racer's curse loop (sound 8, 0x00439900) is stopped.
+export const endTimedEffect: RacerBoundary = (_context, racerSet, racerIndex) => {
+  const ended = setRacer(
+    racerSet,
+    racerIndex,
+    getRacerWithoutTimedEffect(getRacer(racerSet, racerIndex))
+  )
+  return Object.freeze({
+    ...ended,
+    loopedSounds: Object.freeze([
+      ...ended.loopedSounds,
+      {
+        isStart: false,
+        key: `racer-curse:${String(racerIndex)}`,
+        soundId: CURSE_HUM_SOUND,
+        address: '0x00439b00',
+        racerIndex,
+      },
+    ]),
+  })
+}
 
 // 0x004397b0 (fastcall): car body slot 15 (0x00429c30), called while a free body's flagged state (0x80) lasts.
 export const endCarBodyEffect: RacerBoundary = (_context, racerSet, racerIndex) => {

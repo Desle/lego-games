@@ -1,6 +1,12 @@
 import type { EmitterReference } from '../../../emitter/index.ts'
 import { TrackEventKind, TrackEventState } from '../../types/track-event-state/track-event-state.ts'
-import type { TrackEvent, TrackEventHandlers, TrackSession } from '../../types/track-logic.types.ts'
+import type { Event2A } from '../../../event/index.ts'
+import type {
+  TrackEvent,
+  TrackEventHandlers,
+  TrackSession,
+  TrackSoundParameters,
+} from '../../types/track-logic.types.ts'
 import {
   announceAndSet,
   emitAction,
@@ -18,6 +24,14 @@ const POSITION_FROM_SIGNAL_FLAG = 8
 const LOOPED_SOUND_FLAG = 1
 const FIRST_SIGNAL = 1
 const NO_SIGNAL_PHASE = 3
+
+const getSoundParameters = (record: Event2A): TrackSoundParameters =>
+  Object.freeze({
+    volume: record.keyword2fFloat,
+    pitch: record.keyword30Float,
+    minimumDistance: record.keyword31Float,
+    maximumDistance: record.keyword32Float,
+  })
 
 // 0x004642c0 (begin), 0x004643b0 (end), 0x004643e0 (update): the random ambient sound. The object it follows
 // (event +0x28, 0x004644b0) is not ported.
@@ -37,11 +51,18 @@ export const HANDLERS_2A: TrackEventHandlers = Object.freeze({
         identifier: positioned.identifier,
         soundNumber: positioned.record.keyword2cInteger,
         position: positioned.position,
+        ...getSoundParameters(positioned.record),
       })
       return positioned
     }
     if (!session.context.world.getIsSoundAvailable(positioned.identifier)) return positioned
-    session.emit({ type: 'track.looped_sound_started', identifier: positioned.identifier })
+    session.emit({
+      type: 'track.looped_sound_started',
+      identifier: positioned.identifier,
+      soundNumber: positioned.record.keyword2cInteger,
+      position: positioned.position,
+      ...getSoundParameters(positioned.record),
+    })
     return { ...positioned, isHandleHeld: true, state: TrackEventState.RUNNING }
   },
   end: (event, session) => {
@@ -61,12 +82,15 @@ export const HANDLERS_2A: TrackEventHandlers = Object.freeze({
     const restartedMilliseconds =
       (session.drawRandomValue() % RANDOM_SOUND_PERIOD) + RANDOM_SOUND_MINIMUM_PERIOD
     if (session.drawRandomValue() % RANDOM_SOUND_CHANCE_RANGE < base.chance) {
-      session.emit({
-        type: 'track.sound_played',
-        identifier: base.identifier,
-        soundNumber: base.kind === TrackEventKind.KIND_2A ? base.record.keyword2cInteger : 0,
-        position: base.position,
-      })
+      if (base.kind === TrackEventKind.KIND_2A) {
+        session.emit({
+          type: 'track.sound_played',
+          identifier: base.identifier,
+          soundNumber: base.record.keyword2cInteger,
+          position: base.position,
+          ...getSoundParameters(base.record),
+        })
+      }
     }
     return { ...base, timerMilliseconds: restartedMilliseconds }
   },

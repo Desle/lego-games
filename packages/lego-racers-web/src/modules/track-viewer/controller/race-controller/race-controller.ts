@@ -468,8 +468,11 @@ export const useRaceController = (): RaceController => {
           hudContext
         )
         presentation = frame.presentation
+        audio.setListener(frame.soundListener)
         for (const sound of frame.sounds) audio.playSound(sound)
-        audio.setEngineLoops(frame.engineLoops, frame.cameraView.position)
+        audio.setLoopedSounds(frame.loopedSounds)
+        audio.setEngineLoops(frame.engineLoops)
+        audio.setNearestRacerSound(frame.nearestRacerSound)
         if (frame.music !== null) audio.playMusic(frame.music)
         viewport.update(
           getRacerPoses(raceState),

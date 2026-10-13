@@ -97,6 +97,14 @@ export type TrackBoneFrame = {
   readonly up: Vector3
 }
 
+// What the 2A event hands the sound player with its position (event +0x44, +0x48, +0x4c, +0x50).
+export type TrackSoundParameters = {
+  readonly volume: number
+  readonly pitch: number
+  readonly minimumDistance: number
+  readonly maximumDistance: number
+}
+
 export type TrackEffect =
   | {
       // 0x004639d0: the 52 event puts a collision world instance on a bone of the object it follows.
@@ -104,14 +112,19 @@ export type TrackEffect =
       readonly name: string
       readonly frame: TrackBoneFrame
     }
-  | {
+  | ({
       readonly type: 'track.sound_played'
       readonly identifier: number
       // The sound id the event plays (event +0x3c, a track bank id from 3000).
       readonly soundNumber: number
       readonly position: Vector3
-    }
-  | { readonly type: 'track.looped_sound_started'; readonly identifier: number }
+    } & TrackSoundParameters)
+  | ({
+      readonly type: 'track.looped_sound_started'
+      readonly identifier: number
+      readonly soundNumber: number
+      readonly position: Vector3
+    } & TrackSoundParameters)
   | { readonly type: 'track.looped_sound_stopped'; readonly identifier: number }
   | {
       readonly type: 'track.object_animation_requested'

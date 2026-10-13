@@ -27,6 +27,7 @@ export type {
   TrackLogicStep,
   TrackRandom,
   TrackSession,
+  TrackSoundParameters,
   TrackWorld,
   TrackWorldObject,
 } from './types/track-logic.types.ts'

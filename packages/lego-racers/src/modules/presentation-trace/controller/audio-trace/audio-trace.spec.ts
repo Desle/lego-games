@@ -32,6 +32,31 @@ describe('getOriginalAudioCalls', () => {
   })
 })
 
+describe('getOriginalAudioCalls loops', () => {
+  it('counts the plays with 1 of the sound objects the race asked for, under the id plus the loop offset', () => {
+    // Arrange
+    const frames = [
+      {
+        frame: 160,
+        events: [
+          { kind: 'soundGet', values: { object: 100, id: 32, from: '0x437640' } },
+          { kind: 'objectPlay', values: { object: 100, loop: 1, from: '0x43765d' } },
+          { kind: 'objectPlay', values: { object: 100, loop: 0, from: '0x43765d' } },
+          { kind: 'objectPlay', values: { object: 200, loop: 1, from: '0x41b300' } },
+        ],
+      },
+    ]
+
+    // Act
+    const calls = getOriginalAudioCalls(frames)
+
+    // Assert
+    expect(calls).toEqual([
+      { frame: 160, calls: [{ kind: 'sound', soundId: 100_032, address: '0x43765d' }] },
+    ])
+  })
+})
+
 describe('compareAudioCalls', () => {
   const sound = (soundId: number, address: string | null = null) =>
     ({ kind: 'sound', soundId, address }) as const

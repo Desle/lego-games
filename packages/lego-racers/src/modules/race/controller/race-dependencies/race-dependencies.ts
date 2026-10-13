@@ -232,7 +232,7 @@ const playTaunt: RacerBoundary = (context, racerSet, racerIndex) => {
     ...racerSet,
     sounds: Object.freeze([
       ...racerSet.sounds,
-      { soundId: getTauntSoundId(racer.voiceBase), address: '0x00439cd0' },
+      { soundId: getTauntSoundId(racer.voiceBase), address: '0x00439cd0', racerIndex },
     ]),
   })
   return changeTrackLogic(context, getRaceRacerSetOf(sounded), (trackLogic, trackContext) =>

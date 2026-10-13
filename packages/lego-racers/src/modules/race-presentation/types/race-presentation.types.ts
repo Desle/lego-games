@@ -3,7 +3,10 @@ import type { CameraState, CameraUpdate, CameraView } from '../../race-camera/in
 import type {
   EngineLoop,
   EngineSoundState,
+  LoopedSoundRequest,
   MusicCue,
+  NearestRacerSound,
+  SoundListener,
   SoundRequest,
 } from '../../race-audio/index.ts'
 import type {
@@ -108,6 +111,12 @@ export type RacePresentationFrame = {
   // null in the introduction and the results, when the original draws no HUD.
   readonly hudFrame: HudFrame | null
   readonly sounds: readonly SoundRequest[]
+  // The looped sounds the frame's events start or stop (the shield's hum, the oil slick, track events, hazards).
+  readonly loopedSounds: readonly LoopedSoundRequest[]
+  // Who hears the sounds: the player's racer and the way it faces (0x00417de0 measures every sound from it).
+  readonly soundListener: SoundListener
+  // The racer the camera's racer hears the loop of (sound 0x4f), or null when none is within 200 units.
+  readonly nearestRacerSound: NearestRacerSound | null
   readonly engineLoops: readonly RacerEngineLoops[]
   // The music track to switch to this frame, if any.
   readonly music: MusicCue | null

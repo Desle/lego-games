@@ -20,14 +20,21 @@ import type { CameraState } from '../../../race-camera/index.ts'
 import {
   getCountdownSound,
   getIntroductionMusic,
+  getNearestRacerSound,
   getPowerSlideSound,
+  getRaceEventLoops,
   getRaceEventSounds,
   getTuneMusic,
   getSkidStartSound,
   INITIAL_ENGINE_SOUND_STATE,
   stepEngineSounds,
 } from '../../../race-audio/index.ts'
-import type { EngineSoundState, SoundRequest } from '../../../race-audio/index.ts'
+import type {
+  EngineSoundState,
+  RaceSoundContext,
+  SoundListener,
+  SoundRequest,
+} from '../../../race-audio/index.ts'
 import {
   createHudState,
   finishHud,
@@ -67,6 +74,21 @@ const HUD_PHASES: readonly string[] = [RacePhase.COUNTDOWN, RacePhase.RACING, Ra
 
 const getPlayerRacer = (raceState: RaceState, playerRacerIndex: number): Racer =>
   getRacer(raceState.racerSet, playerRacerIndex)
+
+// The listener: the racer's position and the axis to its left in the plane (its forward row's x and y, normalized and
+// turned a quarter turn; a car pointing straight up or down faces along x).
+const getSoundListener = (racer: Racer): SoundListener => {
+  const { position, rotation } = racer.carBody.rigidBody.displayFrame
+  const forwardX = rotation[0]
+  const forwardY = rotation[1]
+  const length = Math.hypot(forwardX, forwardY)
+  return Object.freeze({
+    position,
+    left: Object.freeze(
+      length === 0 ? { x: 0, y: 1, z: 0 } : { x: -forwardY / length, y: forwardX / length, z: 0 }
+    ),
+  })
+}
 
 // Race_LoadTrackContent 0x00433480 for the camera: it attaches, updates once by 1 ms (a snap to the chase target the
 // introduction mode later eases to) and then starts as the introduction at the race description's camera point.
@@ -261,7 +283,8 @@ const getUpdatedCamera = (
 const getEngineSounds = (
   raceState: RaceState,
   engineSounds: readonly EngineSoundState[],
-  frameMilliseconds: number
+  frameMilliseconds: number,
+  soundRacerIndices: readonly number[]
 ) => {
   const timeStep = getRaceTimeStep(raceState.context.arithmetic, {
     isTimeScaled: (raceState.raceModeFlags & TIME_SCALE_FLAG) !== 0,
@@ -282,6 +305,15 @@ const getEngineSounds = (
       engineSoundValue: racer.engineSoundValue,
     }
     const start = engineSounds[racerIndex] ?? INITIAL_ENGINE_SOUND_STATE
+    // Race_LoadTrackContent 0x00433480 gives sound objects (0x00437540) to the human racers only.
+    if (!soundRacerIndices.includes(racerIndex)) {
+      return {
+        racerIndex,
+        racer,
+        result: { state: start, loops: [], isSkidStarted: false },
+        position: displayFrame.position,
+      }
+    }
     const result = subSteps.reduce(
       (current, subStep) => {
         const step = stepEngineSounds(current.state, input, subStep)
@@ -367,11 +399,26 @@ export const stepRacePresentation = (
         minimap: getHudMinimap(raceState, presentation.playerRacerIndex, hudContext),
       })
     : null
-  const engine = getEngineSounds(raceState, presentation.engineSounds, frameMilliseconds)
+  // The demonstration has no human racer; the racer the camera follows has the sound objects then.
+  const soundRacerIndices =
+    raceState.playerRacerIndices.length === 0
+      ? [presentation.playerRacerIndex]
+      : raceState.playerRacerIndices
+  const engine = getEngineSounds(
+    raceState,
+    presentation.engineSounds,
+    frameMilliseconds,
+    soundRacerIndices
+  )
   const racer = getPlayerRacer(raceState, presentation.playerRacerIndex)
   const isPowerSliding = (racer.flags & POWER_SLIDING_FLAG) !== 0
   const powerSlideSounds: readonly SoundRequest[] =
     isPowerSliding === presentation.isPlayerPowerSliding ? [] : [getPowerSlideSound(isPowerSliding)]
+  const soundContext: RaceSoundContext = {
+    getHasSoundObjects: (racerIndex) => soundRacerIndices.includes(racerIndex),
+    getRacerPosition: (racerIndex) =>
+      raceState.racerSet.racers[racerIndex]?.carBody.rigidBody.displayFrame.position ?? null,
+  }
   const hudSounds = (hudFrame?.soundIds ?? []).map((soundId) => getCountdownSound(soundId))
   const warpView = getWarpView(
     raceState,
@@ -402,11 +449,28 @@ export const stepRacePresentation = (
     ),
     hudFrame,
     sounds: Object.freeze([
-      ...step.events.flatMap((event) => getRaceEventSounds(event)),
+      ...step.events.flatMap((event) => getRaceEventSounds(event, soundContext)),
       ...hudSounds,
       ...powerSlideSounds,
       ...engine.skidSounds,
     ]),
+    loopedSounds: Object.freeze(
+      step.events.flatMap((event) => getRaceEventLoops(event, soundContext))
+    ),
+    soundListener: getSoundListener(racer),
+    nearestRacerSound: getNearestRacerSound(
+      presentation.playerRacerIndex,
+      raceState.racerSet.racers.map((candidate, racerIndex) =>
+        Object.freeze({
+          racerIndex,
+          position: candidate.carBody.rigidBody.displayFrame.position,
+          velocity: candidate.carBody.rigidBody.linearVelocity,
+          speed: candidate.carBody.rigidBody.speed,
+          engineSoundValue: candidate.engineSoundValue,
+          airborneMilliseconds: candidate.airborneMilliseconds,
+        })
+      )
+    ),
     engineLoops: engine.loops,
     music: edits.music,
   })

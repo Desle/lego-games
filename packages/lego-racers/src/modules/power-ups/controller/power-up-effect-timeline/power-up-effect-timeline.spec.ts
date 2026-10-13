@@ -164,6 +164,11 @@ describe('updatePowerUpEffects', () => {
     // Assert
     expect(getHead(finished).state).toBe(EffectState.FINISHED)
     expect(finished.events.at(-1)).toEqual({ type: 'power_ups.racer_shield_lowered', racer: 0 })
+    expect(finished.events).toContainEqual({
+      type: 'power_ups.sound_played',
+      soundId: 0x3b,
+      address: '0x0045c2fc',
+    })
   })
 
   it('explodes a landed barrel twice more with scattered offsets 500 ms apart (0x00453240)', () => {
@@ -218,6 +223,11 @@ describe('updatePowerUpEffects', () => {
 
     // Assert
     expect(getHead(landed)).toMatchObject({ state: EffectState.ACTIVE, timerMilliseconds: 10000 })
+    expect(landed.events).toContainEqual({
+      type: 'power_ups.sound_played',
+      soundId: 0x2e,
+      address: '0x00457431',
+    })
     expect(later.world.random.position - landed.world.random.position).toBe(2)
   })
 })
