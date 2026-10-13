@@ -26,12 +26,19 @@ const isPixelTracePage = import.meta.env.DEV && window.location.search === '?pix
 // The HD coverage trace opens `/?hd&hd-coverage`: the page only hosts the remastered layer's coverage runner.
 const isHdCoveragePage =
   import.meta.env.DEV && new URLSearchParams(window.location.search).has('hd-coverage')
+// The performance trace opens `/?performance-trace` (Classic) or `/?hd&performance-trace`: the page only hosts its scenario runner.
+const isPerformanceTracePage =
+  import.meta.env.DEV && new URLSearchParams(window.location.search).has('performance-trace')
 if (isPixelTracePage) {
   installPixelTraceHarness()
   installFrontEndPixelHarness()
 } else if (import.meta.env.DEV && isHdCoveragePage) {
   void import('./modules/remastered/index.ts').then((remastered) =>
     remastered.installHdCoverageHarness(window.location.search)
+  )
+} else if (import.meta.env.DEV && isPerformanceTracePage) {
+  void import('./modules/remastered/index.ts').then((remastered) =>
+    remastered.installPerformanceTraceHarness(window.location.search)
   )
 } else {
   if (getIsRaceRecordingRequested(window.location.search)) void postUnsentRecordings()

@@ -36,3 +36,6 @@ packages/lego-racers-web/.hd-coverage/
 
 # LDraw fidelity results (pnpm run ldraw-fidelity): every item's numbers and the difference sheet
 reverse-engineering/ldraw-fidelity/
+
+# Scratch output: the performance trace report (pnpm run perf)
+scratch/

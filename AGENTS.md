@@ -25,6 +25,7 @@ Each package has its own `AGENTS.md` with its layout, commands and definition of
 | Duplicate code              | `pnpm run duplicates` (part of `check`; move shared code, don't copy) |
 | One package only            | `pnpm --filter <package> run check`                                   |
 | Before you say you are done | `pnpm run ci`                                                         |
+| What a change costs         | `pnpm run perf` (performance trace against `perf-baseline.json`)      |
 
 ### Working style
 
@@ -38,7 +39,8 @@ Each package has its own `AGENTS.md` with its layout, commands and definition of
 1. `pnpm run ci` is green at the repository root.
 2. Every changed package meets the definition of done in its own `AGENTS.md`.
 3. A change to what the viewer draws is done only when its `pnpm run pixel-trace` case passes (`.docs/reverse-engineering/pixel-trace.md`).
-4. A change to the viewer or the simulation (including mirrored races) runs `pnpm run traces` (golden, render and pixel trace, HD coverage; slow, needs `original-files/`, so not in CI) before the PR.
+4. A change to the viewer or the simulation (including mirrored races) runs `pnpm run traces` (golden, render and pixel trace, HD coverage, performance trace; slow, needs `original-files/`, so not in CI) before the PR.
+5. A change to HD rendering or the LDraw library runs `pnpm run perf` and states the deltas in its PR (the report is `scratch/perf-report.md`); a wanted rise updates `perf-baseline.json` in the same PR with `pnpm run perf -- --update-baseline --reason "…"`.
 
 ## Repository notes
 

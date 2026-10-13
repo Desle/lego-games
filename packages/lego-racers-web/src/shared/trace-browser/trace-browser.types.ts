@@ -15,3 +15,9 @@ export type TracePage = {
   readonly page: Page
   readonly close: () => Promise<void>
 }
+
+// A development server of the viewer of its own, at `address`.
+export type TraceServer = {
+  readonly address: string
+  readonly close: () => Promise<void>
+}

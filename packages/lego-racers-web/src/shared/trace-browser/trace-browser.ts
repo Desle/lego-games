@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { chromium } from 'playwright-core'
 import { createServer } from 'vite'
-import type { TracePage, TracePageRequest } from './trace-browser.types.ts'
+import type { TracePage, TracePageRequest, TraceServer } from './trace-browser.types.ts'
 
 const PACKAGE_DIRECTORY = resolve(import.meta.dirname, '../../..')
 const CHROME_CANDIDATES = [
@@ -26,17 +26,23 @@ export const getChromePath = (): string | null =>
     (path): path is string => path !== undefined && existsSync(path)
   ) ?? null
 
-// A development server of the viewer on a free port of its own (never the one the developer runs) and a headless Chrome
-// with its own profile, with the page open and ready.
-export const startTracePage = async (request: TracePageRequest): Promise<TracePage> => {
+// A development server of the viewer on a free port of its own, the first free one from `port` (never the one the developer runs).
+export const startTraceServer = async (port: number): Promise<TraceServer> => {
   const server = await createServer({
     root: PACKAGE_DIRECTORY,
     logLevel: 'error',
-    server: { host: '127.0.0.1', port: request.port, strictPort: false },
+    server: { host: '127.0.0.1', port, strictPort: false },
   })
   await server.listen()
   const address = server.resolvedUrls?.local[0]
   if (address === undefined) throw new Error('The development server has no address')
+  return Object.freeze({ address, close: () => server.close() })
+}
+
+// A development server of the viewer of its own and a headless Chrome with its own profile, with the page open and ready.
+export const startTracePage = async (request: TracePageRequest): Promise<TracePage> => {
+  const server = await startTraceServer(request.port)
+  const { address } = server
   const browser = await chromium.launch({
     executablePath: request.chromePath,
     headless: true,
