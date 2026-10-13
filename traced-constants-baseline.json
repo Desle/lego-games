@@ -6170,18 +6170,6 @@
     },
     {
       "path": "packages/lego-racers/src/modules/power-ups/controller/power-up-effect-hits/power-up-effect-hits.ts",
-      "scope": "hitWithExplodingProjectile.exploded.timerMilliseconds",
-      "literal": "3000",
-      "count": 1
-    },
-    {
-      "path": "packages/lego-racers/src/modules/power-ups/controller/power-up-effect-hits/power-up-effect-hits.ts",
-      "scope": "hitWithExplodingProjectile.timerMilliseconds",
-      "literal": "3000",
-      "count": 1
-    },
-    {
-      "path": "packages/lego-racers/src/modules/power-ups/controller/power-up-effect-hits/power-up-effect-hits.ts",
       "scope": "hitWithGrapple.timerMilliseconds",
       "literal": "4000",
       "count": 1

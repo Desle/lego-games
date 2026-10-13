@@ -133,6 +133,8 @@ export const TURRET: HazardBehavior = Object.freeze({
       launcher: Object.freeze({
         position,
         direction,
+        target: null,
+        speed: null,
       }),
     })
     return getWithData(checked, { ...waiting, shotMilliseconds: 0 })

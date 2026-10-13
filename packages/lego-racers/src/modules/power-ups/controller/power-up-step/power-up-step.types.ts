@@ -17,6 +17,9 @@ export type PowerUpContext = {
   readonly getGroundPoint: GroundQuery
   // The race's TGB points whose flag bit 1 is still set (0x0045c660 clears it).
   readonly trackTargets: readonly ConeQueryTarget[]
+  // How many events the step held when the statuses were read: the later ones change the racers as the original's
+  // calls do, at once (getRacerStatusNow).
+  readonly eventStart: number
 }
 
 export type PowerUpStep = {

@@ -83,6 +83,7 @@ const getContexts = (
     raceModeFlags: 0,
     getGroundPoint: () => ({ x: 0, y: 0, z: -10 }),
     trackTargets: [],
+    eventStart: 0,
   }
   return {
     powerUps,

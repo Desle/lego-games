@@ -211,8 +211,13 @@ export type GhostData = {
 // 0x2c (0x0048d7f0): the lava monster.
 export type LavaData = {
   readonly keyword: 0x2c
-  // +0x48: the looped sound exists.
+  // +0x48: the sound 0xbba exists.
   readonly isSoundHeld: boolean
+  // +0x50: milliseconds before the next "lavasmk" may spill; +0x54: before the next signal 0x2b.
+  readonly smokeMilliseconds: number
+  readonly signalMilliseconds: number
+  // +0x58: set-up +0x40, the track is mirrored.
+  readonly isMirrored: boolean
   // +0x38: the "mmlavbl" skeleton instance.
   readonly instance: InstanceReference | null
   // +0x10..: the shape; its centre follows the instance's first bone.

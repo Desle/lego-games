@@ -81,9 +81,12 @@ export type HazardSphere = {
 // What the hazard hands the power-up system as its launcher: where the effect starts (or, for a warp, where it
 // lands) and, for classes that give one, its direction.
 export type HazardLauncher = {
-  // Null where the position comes from the pose of the hazard's skeleton, which the port does not compute.
   readonly position: Vector3 | null
   readonly direction: Vector3 | null
+  // The periodic launcher's cannonball: where it lands (launcher +0x18..+0x20) and its speed (+0x30); null for the
+  // other classes.
+  readonly target: Vector3 | null
+  readonly speed: number | null
 }
 
 // A racer as a hazard sees it (racer +0xd04 flags, +0x5c frame position, car body +0x6c0 bit 2 at +0xaa8, and the

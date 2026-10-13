@@ -60,6 +60,8 @@ export const WARP_PAD: HazardBehavior = Object.freeze({
       launcher: Object.freeze({
         position: Object.freeze([DESTINATION[0], sign * DESTINATION[1], DESTINATION[2]] as const),
         direction: Object.freeze([FACING[0], sign * FACING[1], FACING[2]] as const),
+        target: null,
+        speed: null,
       }),
     })
     return Object.freeze({ ...instance, lifecycle: HazardLifecycle.ACTIVE })

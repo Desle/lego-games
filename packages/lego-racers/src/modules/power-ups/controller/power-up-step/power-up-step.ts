@@ -3,7 +3,12 @@ import {
   dropEnhancementBrick,
   releaseEnhancementBrick,
 } from '../../types/enhancement-brick/enhancement-brick.ts'
-import type { EnhancementBrick, PowerUpEffect, RacerPowerUps } from '../../types/power-ups.types.ts'
+import type {
+  EnhancementBrick,
+  PowerUpEffect,
+  RacerPowerUps,
+  RacerPowerUpStatus,
+} from '../../types/power-ups.types.ts'
 import {
   getRacerAfterDrop,
   getRacerAfterRelease,
@@ -27,6 +32,53 @@ const getAt = <Item>(items: readonly Item[], index: number, what: string): Item 
 
 const getReplaced = <Item>(items: readonly Item[], index: number, item: Item): readonly Item[] =>
   Object.freeze(items.map((current, currentIndex) => (currentIndex === index ? item : current)))
+
+// The racer flags an event of this update set or cleared, at once in the original: 0x00439770 / 0x00439790 (+0xd04 0x1),
+// 0x00439900 / 0x00439b00 (0x800), 0x004396c0 / 0x00439730 (the driver's 0x1), 0x004397a0 / 0x004397b0 (car body
+// +0xaa8 0x80, car body slots +0x38 / +0x3c).
+const getStatusAfterEvent = (
+  status: RacerPowerUpStatus,
+  event: PowerUpEvent,
+  racer: number
+): RacerPowerUpStatus => {
+  if (!('racer' in event) || event.racer !== racer) return status
+  switch (event.type) {
+    case 'power_ups.racer_shield_raised':
+      return { ...status, isShielded: true, shieldLevel: event.level }
+    case 'power_ups.racer_shield_lowered':
+      return { ...status, isShielded: false }
+    case 'power_ups.racer_cursed':
+      return { ...status, isCursed: true }
+    case 'power_ups.racer_curse_lifted':
+      return { ...status, isCursed: false }
+    case 'power_ups.racer_turbo_started':
+      return { ...status, isInTurbo: true }
+    case 'power_ups.racer_turbo_ended':
+      return { ...status, isInTurbo: false }
+    case 'power_ups.racer_struck_by_lightning':
+      return { ...status, isStruckByLightning: true }
+    case 'power_ups.racer_released_by_lightning':
+      return { ...status, isStruckByLightning: false }
+    default:
+      return status
+  }
+}
+
+// A racer's status as the original reads it in the middle of an update: the one the update started from, changed by
+// the events this update made so far (an earlier effect's hit is seen by a later effect of the same pass).
+export const getRacerStatusNow = (
+  step: PowerUpStep,
+  context: PowerUpContext,
+  racer: number
+): RacerPowerUpStatus => {
+  const status = context.racers[racer]
+  if (status === undefined) throw new UnknownIndexError('racer status', racer)
+  return Object.freeze(
+    step.events
+      .slice(context.eventStart)
+      .reduce((current, event) => getStatusAfterEvent(current, event, racer), status)
+  )
+}
 
 export const getEffect = (step: PowerUpStep, effectId: number): PowerUpEffect =>
   getAt(step.world.effects.effects, effectId, 'power-up effect')

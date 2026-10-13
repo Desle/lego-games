@@ -39,6 +39,7 @@ const createContext = (raceModeFlags = 0): PowerUpContext => ({
   raceModeFlags,
   getGroundPoint: () => null,
   trackTargets: [],
+  eventStart: 0,
 })
 
 // Table value = index, so the position after the draws tells how many were made.
