@@ -82,11 +82,14 @@ const getFlatMaterial = (material: Material): MeshBasicMaterial => {
     vertexColors: material.vertexColors,
     side: material.side,
     alphaTest: material.alphaTest,
+    transparent: material.transparent,
+    opacity: material.opacity,
+    depthWrite: material.depthWrite,
   })
 }
 
-// Runs a render with every mesh of the replacement in a flat material of its colour and picture (no lights, no look), then puts the
-// materials back.
+// Runs a render with every mesh of the replacement in a flat material of its colour, picture and opacity (no lights, no look: a
+// transparent visor shows the face behind it, as in the viewer), then puts the materials back.
 const withFlatMaterials = (scene: Scene, render: () => void) => {
   const kept = new Map<Mesh, Material | Material[]>()
   const made: MeshBasicMaterial[] = []
