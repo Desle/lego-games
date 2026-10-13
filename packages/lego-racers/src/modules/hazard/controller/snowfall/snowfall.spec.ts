@@ -94,7 +94,7 @@ describe('the snowfall', () => {
     SNOWFALL.followCameras(drawn, test.session, [camera])
 
     // Assert
-    const across = (drawn.data as { placementValue: number }).placementValue % 200 - 100
+    const across = ((drawn.data as { placementValue: number }).placementValue % 200) - 100
     const emitter = test.getEmitters()?.instances[0]
     expect(emitter?.position).toEqual({ x: 10 + across, y: 120, z: 70 })
     expect(emitter?.basis).toEqual([0, 1, 0, -1, 0, 0, 0, 0, 1])

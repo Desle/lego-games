@@ -62,7 +62,7 @@ const createStep = (): PowerUpStep => {
 }
 
 describe('placeEffectEmitter', () => {
-  it('moves the effect\'s emitter to the point and leaves a step without one alone', () => {
+  it("moves the effect's emitter to the point and leaves a step without one alone", () => {
     // Arrange
     const step = createStep()
     const started = startEffectEmitter(step, SINGLE, 0, 'cannsmk')
@@ -78,7 +78,7 @@ describe('placeEffectEmitter', () => {
 })
 
 describe('placeTurboSmoke', () => {
-  it('puts the smoke at (-2, 0, 3) of the owner\'s frame with 0.7 of its velocity', () => {
+  it("puts the smoke at (-2, 0, 3) of the owner's frame with 0.7 of its velocity", () => {
     // Arrange
     const started = startEffectEmitter(createStep(), SINGLE, 0, 'cannsmk')
     const owner = {

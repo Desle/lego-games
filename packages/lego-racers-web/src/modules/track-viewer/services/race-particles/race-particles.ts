@@ -34,20 +34,14 @@ const WHITE_VERTEX_COLOR: readonly [number, number, number, number] = Object.fre
   BYTE_MAXIMUM,
 ])
 
-const createBatch = (
-  scenes: readonly Scene[],
-  materialName: string
-): MaterialBatch | null => {
+const createBatch = (scenes: readonly Scene[], materialName: string): MaterialBatch | null => {
   const scene = scenes.find((candidate) =>
     candidate.materials.some((material) => material.name === materialName)
   )
   const sceneMaterial = scene?.materials.findLast((candidate) => candidate.name === materialName)
   if (scene === undefined || sceneMaterial === undefined) return null
   const geometry = createDynamicGeometry(MAXIMUM_CORNERS)
-  const mesh = new Mesh(
-    geometry,
-    createSceneMaterial(sceneMaterial, scene.textures, new Map())
-  )
+  const mesh = new Mesh(geometry, createSceneMaterial(sceneMaterial, scene.textures, new Map()))
   mesh.frustumCulled = false
   mesh.visible = false
   const [red, green, blue, alpha] = sceneMaterial.diffuseColor
