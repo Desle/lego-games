@@ -8,16 +8,16 @@ Triangles of effect textures and effect figures (`tflame*`, `smoke*`, `csmoke`, 
 
 | Group                       | Before (missing, extra, mismatch) | After (missing, extra, mismatch) |
 | --------------------------- | --------------------------------: | -------------------------------: |
-| flames and turbo `DT*`      |                   280, 1182, 2382 |                        see below |
-| shield fan `SHEOUT*`        |                      0, 1334, 492 |                        see below |
-| snow `snowflak`             |                      229, 597, 52 |                        see below |
-| smoke `smoke1..4`, `csmoke` |                      216, 223, 32 |                        see below |
-| missile and cannon trails   |                      219, 207, 14 |                        see below |
-| lightning                   |                        72, 232, 0 |                        see below |
-| rope, bubbles, welder, mist |                        31, 44, 80 |                        see below |
-| **All**                     |              **1047, 3819, 3052** |                    **see below** |
+| flames and turbo `DT*`      |                   280, 1182, 2382 |                  256, 1229, 1279 |
+| shield fan `SHEOUT*`        |                      0, 1334, 492 |                     0, 1288, 250 |
+| snow `snowflak`             |                      229, 597, 52 |                        32, 58, 0 |
+| smoke `smoke1..4`, `csmoke` |                      216, 223, 32 |                       154, 32, 0 |
+| missile and cannon trails   |                      219, 207, 14 |                     219, 207, 14 |
+| lightning                   |                        72, 232, 0 |                       72, 232, 0 |
+| rope, bubbles, welder, mist |                        31, 44, 80 |                       15, 42, 86 |
+| **All**                     |              **1047, 3819, 3052** |              **748, 3088, 1629** |
 
-(7,918 triangles before. The "After" column is filled in at the end of the page.)
+(7,918 triangles before, 5,465 after: 31 percent fewer, snow 878 to 90, smoke 471 to 186, flames and fan mismatches halved. The same 26 races, `RENDER_COVERAGE_RACES` in nine parallel runs, before and after the fixes on this page.)
 
 ## Mechanisms fixed
 
