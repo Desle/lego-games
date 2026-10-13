@@ -2,6 +2,7 @@ import { createGhostSession, loadChampionGhost, parseGhost } from '@lego-games/l
 import type { GhostSession } from '@lego-games/lego-racers/ghost'
 import { openJamArchive } from '@lego-games/lego-racers/jam-archive'
 import { FpuPrecision } from '@lego-games/lego-racers/simulation-math'
+import { getPointsRecordWithTotals } from '@lego-games/lego-racers/race'
 import type { LoadRaceOptions } from '@lego-games/lego-racers/race'
 import type { ScenarioRace } from './scenario-race-options.types.ts'
 
@@ -32,4 +33,7 @@ export const getScenarioRaceOptions = (
   fpuPrecision: FpuPrecision.SINGLE,
   isPlayerChampionCar: true,
   ghost: getScenarioGhost(scenario, jam),
+  ...(scenario.pointsRecordTotals === undefined
+    ? {}
+    : { pointsRecord: getPointsRecordWithTotals(scenario.pointsRecordTotals) }),
 })

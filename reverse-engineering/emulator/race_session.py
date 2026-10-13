@@ -11,6 +11,9 @@ RACE_SESSION_BEGIN = 0x0042C280
 RACE_RUN_LOOP = 0x00432540
 PUMP_MESSAGES = 0x00416EF0
 RACE_SESSION_SIZE = 0x37B8
+POINTS_RECORD_RESET = 0x00440240
+POINTS_RECORD_SIZE = 0x48
+RACE_POINTS_RECORD_OFFSET = 0x18
 RACE_OFFSET_IN_SESSION = 0x26 * 4
 
 SLOT_STRIDE = 0x5C
@@ -81,4 +84,15 @@ def begin_race(machine, scenario: dict) -> int:
     machine.call_function(RACE_SESSION_CONSTRUCTOR, "thiscall", [session])
     machine.write_u32(SESSION_GLOBAL, session)
     machine.call_function(RACE_SESSION_BEGIN, "thiscall", [session, SETTINGS])
-    return session + RACE_OFFSET_IN_SESSION
+    race = session + RACE_OFFSET_IN_SESSION
+    totals = scenario.get("pointsRecordTotals")
+    if totals is not None:
+        # CircuitRunner_PlayCircuit's record (CircuitRunner +4, reset by 0x00440240): its +4 is the settings block, and
+        # Race_RunLoop's race reads it at race +0x18 (set after Race_LoadRaceDescription, as 0x0041ed80 does).
+        record = machine.allocate_heap(POINTS_RECORD_SIZE, 16)
+        machine.call_function(POINTS_RECORD_RESET, "thiscall", [record])
+        machine.write_u32(record + 0x4, SETTINGS)
+        for index, total in enumerate(totals):
+            machine.write_u32(record + 0x10 + 4 * index, total)
+        machine.write_u32(race + RACE_POINTS_RECORD_OFFSET, record)
+    return race

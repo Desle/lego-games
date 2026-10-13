@@ -42,6 +42,10 @@ export const createTraceScenario = (request: ScenarioRequest): GoldenTraceScenar
     precision: request.precision ?? 'auto',
     frames: request.frames,
     powerUpGrants: request.powerUpGrants ?? [],
+    racerFinishes: request.racerFinishes ?? [],
+    ...(request.pointsRecordTotals === undefined
+      ? {}
+      : { pointsRecordTotals: request.pointsRecordTotals }),
     controller: request.controller ?? 'keyboard',
     isCameraOnly: request.isCameraOnly ?? false,
   })

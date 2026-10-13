@@ -32,6 +32,8 @@ const getScenarioForEmulator = (scenario: GoldenTraceScenario) => ({
   isMirrored: scenario.isMirrored,
   fpu: scenario.precision,
   powerUpGrants: scenario.powerUpGrants,
+  racerFinishes: scenario.racerFinishes ?? [],
+  pointsRecordTotals: scenario.pointsRecordTotals ?? null,
   controller: scenario.controller ?? 'keyboard',
   isCameraOnly: scenario.isCameraOnly ?? false,
   frames: scenario.frames.map((frame) => ({

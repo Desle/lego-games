@@ -41,7 +41,8 @@ import {
   getHudFrame,
   startHudCountdown,
 } from '../../../race-hud/index.ts'
-import type { HudFrame, HudMinimap, HudRacerView } from '../../../race-hud/index.ts'
+import type { HudFrame, HudMinimap, HudRacerView, HudState } from '../../../race-hud/index.ts'
+import { getPointsTableMode } from '../get-points-table-commands/get-points-table-commands.ts'
 import { INITIAL_FIELD_OF_VIEW_DEGREES, RacePhase } from '../../../race/index.ts'
 import type { RaceState, RaceStepResult } from '../../../race/index.ts'
 import { getRacer } from '../../../racer/index.ts'
@@ -184,6 +185,11 @@ const getTurboLevel = (step: RaceStepResult, playerRacerIndex: number, current: 
       ? powerUpEvent.level
       : level
   }, current)
+
+// Race_RenderState4 0x00435860, drawing the race's points table after the HUD, sets each local player's HUD +0x70 to 0:
+// the finish text is gone from the next frame on.
+const getHudUnderPointsTable = (hud: HudState, raceState: RaceState): HudState =>
+  getPointsTableMode(raceState) === 'race' ? { ...hud, countdownMilliseconds: 0 } : hud
 
 // Race_UpdateState3 0x00434c80 and Race_UpdateState4 0x00434eb0 select the finish row only for a racer that is neither warping
 // (0x10) nor about to warp (0x200000), and not in a race with the countdown skipped (race +0x335c).
@@ -432,7 +438,7 @@ export const stepRacePresentation = (
       isWarpDrawn: warpView !== null,
       camera: cameraUpdate.camera,
       introductionView: cameraUpdate.introductionView,
-      hud: hudFrame?.state ?? edits.hud,
+      hud: getHudUnderPointsTable(hudFrame?.state ?? edits.hud, raceState),
       isPlayerPowerSliding: isPowerSliding,
       engineSounds: engine.states,
     }),

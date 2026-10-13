@@ -2,7 +2,8 @@ import { DEVELOPMENT_GAME_FILE_ROUTE } from '../../../../shared/development-jam/
 import { getDevelopmentJam } from '../jam-file/jam-file.ts'
 import { createBitmapFontPainter } from '../bitmap-font-painter/bitmap-font-painter.ts'
 import { paintHud } from '../hud-painter/hud-painter.ts'
-import { createHudImageUrls } from '../hud-resources/hud-resources.ts'
+import { createHudImageUrls, getHudContext } from '../hud-resources/hud-resources.ts'
+import { getPointsTableCommands } from '@lego-games/lego-racers/race-presentation'
 import { loadRaceAssets } from '../race-assets/race-assets.ts'
 import { runRaceFrames, showPortRaceFrame } from '../race-frames/race-frames.ts'
 import { createRaceViewport } from '../race-viewport/race-viewport.ts'
@@ -70,6 +71,7 @@ export const runPixelTrace = async (request: PixelTraceRequest): Promise<PixelTr
   if (canvas === null) throw new Error('The viewport made no canvas')
   const hudImages = await loadHudImages(createHudImageUrls(assets.hudImages))
   const hudPainter = createBitmapFontPainter()
+  const hudContext = getHudContext(assets, size)
   const frames: PixelTraceFrame[] = []
   runRaceFrames(
     assets,
@@ -81,7 +83,13 @@ export const runPixelTrace = async (request: PixelTraceRequest): Promise<PixelTr
       viewport.animate(milliseconds)
       if (!request.recordFrames.includes(frame)) return
       viewport.render()
-      const hudCommands = request.isHudIncluded ? (presentation.hudFrame?.commands ?? []) : []
+      // Race_RenderState4 and 5 draw the points table after the HUD (0x00435860, 0x004358e0).
+      const hudCommands = request.isHudIncluded
+        ? [
+            ...(presentation.hudFrame?.commands ?? []),
+            ...getPointsTableCommands(portFrame.raceState, hudContext, assets.definition.racers),
+          ]
+        : []
       frames.push({
         frame,
         colorsBase64: getPixelsBase64(
@@ -100,7 +108,8 @@ export const runPixelTrace = async (request: PixelTraceRequest): Promise<PixelTr
         ),
       })
     },
-    request.powerUpGrants
+    request.powerUpGrants,
+    request.racerFinishes
   )
   viewport.dispose()
   container.remove()

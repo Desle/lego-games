@@ -118,7 +118,7 @@ export const createPresentationScenario = (
     ...(request.circuitName === undefined ? {} : { circuitName: request.circuitName }),
     frames: getRequestFrames(jam, request, racerCodes),
   })
-  return getPresentationScenario(
+  const scenario = getPresentationScenario(
     golden,
     request.recordFrames ?? null,
     request.isRenderRecorded ?? false,
@@ -133,4 +133,11 @@ export const createPresentationScenario = (
         })),
     request.isTimeTrial ?? false
   )
+  return Object.freeze({
+    ...scenario,
+    ...(request.racerFinishes === undefined ? {} : { racerFinishes: request.racerFinishes }),
+    ...(request.pointsRecordTotals === undefined
+      ? {}
+      : { pointsRecordTotals: request.pointsRecordTotals }),
+  })
 }

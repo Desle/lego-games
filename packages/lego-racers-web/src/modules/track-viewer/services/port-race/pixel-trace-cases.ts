@@ -38,6 +38,27 @@ export const PIXEL_TRACE_CASES: readonly PixelTraceCase[] = [
     watchedTextures: [{ label: 'ee51a0cde6ae2c1d', maximumDifferingShare: 0.06 }],
   },
   {
+    // A later race of a circuit (the totals so far are in the record): three racers are done with their laps at frames
+    // 300 and 330 (the player second), so the race's table shows from frame 452 (5 s into the finishing state) and the
+    // circuit's totals from 604 (the results state). The player's row blinks with the record's countdown.
+    request: {
+      name: 'Royal Knights, circuit points table',
+      raceFolder: 'RACEC0R0',
+      frameCount: 760,
+      racerFinishes: [
+        { frame: 300, racer: 3, lapMilliseconds: [30_120, 31_480, 29_900] },
+        { frame: 300, racer: 0, lapMilliseconds: [31_000, 30_520, 32_440] },
+        { frame: 330, racer: 5, lapMilliseconds: [29_000, 28_250, 27_010] },
+      ],
+      pointsRecordTotals: [40, 25, 33, 10, 5, 7],
+      recordFrames: [448, 455, 460, 470, 600, 610, 615, 700],
+    },
+    // Worst 3.08 % (frame 470). The table's text (`font_ths`, named by its hash) differs in 16 to 19 % of its pixels,
+    // as the HUD's own text does before the table shows (frame 448: 18.8 %).
+    maximumDifferingShare: 0.035,
+    watchedTextures: [{ label: 'eea37d3f06eea066', maximumDifferingShare: 0.21 }],
+  },
+  {
     request: {
       name: 'Royal Knights',
       raceFolder: 'RACEC0R0',

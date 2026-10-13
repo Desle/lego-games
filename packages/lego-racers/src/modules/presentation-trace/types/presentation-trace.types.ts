@@ -28,6 +28,13 @@ export type PresentationScenario = {
     readonly kind: number
     readonly level: number
   }[]
+  // Racers done with their laps before a frame, and the circuit's points record by its totals (the golden trace's).
+  readonly racerFinishes?: readonly {
+    readonly frame: number
+    readonly racer: number
+    readonly lapMilliseconds: readonly number[]
+  }[]
+  readonly pointsRecordTotals?: readonly number[]
 }
 
 // A scripted visit to the front end: the keys of each frame are tapped (pressed and released within it).

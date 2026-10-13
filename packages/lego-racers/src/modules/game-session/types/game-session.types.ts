@@ -86,6 +86,8 @@ export type GameSession = {
   readonly isAborted: boolean
   // The circuit runner's points record (null outside a circuit).
   readonly standings: CircuitStandings | null
+  // The record's +0x40, the points table's blink countdown (0x00440330): the record outlives each race, so it runs on.
+  readonly pointsTickerMilliseconds: number
   // One record per slot.
   readonly raceTimes: readonly RaceTimeRecord[]
   // Settings +0x1c.

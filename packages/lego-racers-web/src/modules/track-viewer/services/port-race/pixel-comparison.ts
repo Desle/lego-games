@@ -39,6 +39,7 @@ export const runPixelComparison = async (
       controls: getFrameControls(frame),
     })),
     powerUpGrants: scenario.powerUpGrants ?? [],
+    racerFinishes: scenario.racerFinishes ?? [],
     recordFrames,
     isHudIncluded: true,
     width,

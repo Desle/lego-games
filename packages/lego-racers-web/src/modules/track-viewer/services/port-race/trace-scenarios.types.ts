@@ -1,3 +1,5 @@
+import type { RacerFinish } from '@lego-games/lego-racers/race'
+
 // A drawing the render trace counts in both games: the original's triangles by the name of the texture they match, the
 // port's by its object (`instance/material`), both as case-insensitive regular expressions.
 export type WatchedDrawing = {
@@ -28,6 +30,9 @@ export type TraceScenarioRequest = {
   // accelerating straight ahead; the use key is pressed from `powerUp.useFrame` as in the barrier golden trace.
   readonly isRouteDriven?: boolean
   readonly recordFrames?: readonly number[]
+  // Racers done with their laps before a frame, and the circuit's totals the race's points record starts with.
+  readonly racerFinishes?: readonly RacerFinish[]
+  readonly pointsRecordTotals?: readonly number[]
   readonly watched?: readonly WatchedDrawing[]
   readonly isRenderRecorded?: boolean
   // Record the triangles the original's decals hold (they are projected whether or not the camera sees them).

@@ -83,6 +83,7 @@ export const createFixtureRacerDefinition = (controllerKind: number): RaceRacerD
   appearance: FIXTURE_RACER_APPEARANCE,
   figures: createFixtureRacerFigures(),
   savedCar: null,
+  name: '',
 })
 
 export const createFixtureRacer = (): Racer =>

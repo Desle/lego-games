@@ -76,6 +76,8 @@ export type RaceRacerDefinition = {
   readonly figures: RacerFigures
   // The racer save a local player's car was built from (its design draws the car body); null for a computer racer.
   readonly savedCar: SavedCar | null
+  // Racer +0xdec: the name the circuit's points table shows (getRacerNames).
+  readonly name: string
 }
 
 // Everything the race is built from; the parsed files and the settings Race_LoadRaceDescription reads.

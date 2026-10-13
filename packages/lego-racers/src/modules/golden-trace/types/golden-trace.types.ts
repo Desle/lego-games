@@ -1,4 +1,4 @@
-import type { RaceState } from '../../race/index.ts'
+import type { RacerFinish, RaceState } from '../../race/index.ts'
 import type { FpuPrecisionValue } from '../../simulation-math/index.ts'
 
 // The DirectInput joystick state of a frame: the first axes in the game's range (-1000..1000) and the buttons down.
@@ -42,6 +42,10 @@ export type GoldenTraceScenario = {
   readonly precision: FpuPrecisionValue | 'auto'
   readonly frames: readonly TraceFrameInput[]
   readonly powerUpGrants: readonly PowerUpGrant[]
+  // Racers done with their laps before a frame (the race's end without driving it).
+  readonly racerFinishes?: readonly RacerFinish[]
+  // The circuit's points record the race gets (race +0x18), by its totals so far; absent for a single race.
+  readonly pointsRecordTotals?: readonly number[]
   // What the first local player's controller is: the keyboard layout (the default) or a gamepad.
   readonly controller?: TraceController
   // The emulator reads only the cameras (golden_trace.py `isCameraOnly`): faster, for the camera trace.
@@ -102,6 +106,8 @@ export type ScenarioRequest = {
   readonly racerCount?: number
   readonly localPlayerCount?: number
   readonly powerUpGrants?: readonly PowerUpGrant[]
+  readonly racerFinishes?: readonly RacerFinish[]
+  readonly pointsRecordTotals?: readonly number[]
   readonly controller?: TraceController
   readonly isCameraOnly?: boolean
 }

@@ -6,7 +6,7 @@ import {
   RACE_PHASE_STATE_NUMBERS,
   stepRace,
 } from '../../../race/index.ts'
-import { getRaceStateWithGrants } from '../../../race/index.ts'
+import { getRaceStateWithFinishes, getRaceStateWithGrants } from '../../../race/index.ts'
 import type { RaceDefinition, RaceState } from '../../../race/index.ts'
 import { DEFAULT_KEYBOARD_BINDINGS, getRacerControls } from '../../../race-input/index.ts'
 import { getRacerVolume, getRacerVolumeParts } from '../../../racer/index.ts'
@@ -268,6 +268,15 @@ const getRaceFields: TraceFieldProvider = (raceState) => ({
   'race.phase': getIntegerWords(RACE_PHASE_STATE_NUMBERS[raceState.phase]),
   'race.phaseMilliseconds': getIntegerWords(raceState.phaseMilliseconds),
   'race.randomPosition': getIntegerWords(raceState.racerSet.randomPosition),
+  ...(raceState.pointsRecord === null
+    ? {}
+    : {
+        'race.pointsRecord': [
+          ...raceState.pointsRecord.totalPoints,
+          ...raceState.pointsRecord.racePoints,
+          raceState.pointsRecord.tickerMilliseconds,
+        ].map((value) => value >>> 0),
+      }),
 })
 
 // Every group of compared fields. To compare more of the race, add a provider here that returns the same names the
@@ -319,9 +328,12 @@ export const getPortTrace = (
       index === 0 ? getFrameControls(input) : IDLE_RACER_CONTROLS
     )
     raceState = stepRace(
-      getRaceStateWithGrants(
-        raceState,
-        scenario.powerUpGrants.filter((grant) => grant.frame === frame)
+      getRaceStateWithFinishes(
+        getRaceStateWithGrants(
+          raceState,
+          scenario.powerUpGrants.filter((grant) => grant.frame === frame)
+        ),
+        (scenario.racerFinishes ?? []).filter((finish) => finish.frame === frame)
       ),
       { controls, contacts: NO_RACE_CONTACTS },
       input.milliseconds
