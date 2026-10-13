@@ -45,6 +45,11 @@ export type BuilderSaveRequest = {
   readonly text: string
 }
 
+// What the builder adds to a save's answer.
+export type BuilderSaveProgress = {
+  readonly progress: BuilderProgress
+}
+
 export type BuilderSaveResult = {
   readonly path: string
   readonly backupPath: string | null
