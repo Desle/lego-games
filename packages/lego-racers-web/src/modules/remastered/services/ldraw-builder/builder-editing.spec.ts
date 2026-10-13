@@ -1,8 +1,10 @@
 import {
   addParts,
+  getSameColorIndices,
   getStudOffset,
   getStudStep,
   moveParts,
+  recolorParts,
   removeParts,
   tiltParts,
   toggleIndex,
@@ -100,5 +102,20 @@ describe('builder editing', () => {
       [20, -44, 0],
       [20, -4, 0],
     ])
+  })
+
+  it('selects every part of a colour and recolours the selection only when it changes', () => {
+    // Arrange
+    const parts = [createPart(0, 0), { ...createPart(40, 0), colorCode: 1 }, createPart(80, 0)]
+
+    // Act
+    const sameColor = getSameColorIndices(parts, 4)
+    const recolored = recolorParts(parts, sameColor, 0)
+    const unchanged = recolorParts(parts, sameColor, 4)
+
+    // Assert
+    expect(sameColor).toEqual([0, 2])
+    expect(recolored.map((part) => part.colorCode)).toEqual([0, 1, 0])
+    expect(unchanged).toBe(parts)
   })
 })

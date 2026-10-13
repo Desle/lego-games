@@ -123,6 +123,27 @@ export const addParts = (
     indices: Object.freeze(added.map((_part, step) => parts.length + step)),
   })
 
+// Every part of a colour, to select (and so recolour) a whole chassis at once.
+export const getSameColorIndices = (
+  parts: readonly BuilderPart[],
+  colorCode: number
+): readonly number[] =>
+  Object.freeze(parts.flatMap((part, index) => (part.colorCode === colorCode ? [index] : [])))
+
+// The chosen parts in a colour; the same list when they all have it already (nothing to undo).
+export const recolorParts = (
+  parts: readonly BuilderPart[],
+  indices: readonly number[],
+  colorCode: number
+): readonly BuilderPart[] =>
+  indices.every((index) => parts[index]?.colorCode === colorCode)
+    ? parts
+    : Object.freeze(
+        parts.map((part, index) =>
+          indices.includes(index) ? Object.freeze({ ...part, colorCode }) : part
+        )
+      )
+
 export const toggleIndex = (indices: readonly number[], index: number): readonly number[] =>
   indices.includes(index) ? indices.filter((value) => value !== index) : [...indices, index]
 

@@ -9,13 +9,13 @@ export type BuilderItemKind = EnumValues<typeof BuilderItemKind>
 
 export type Vector = readonly [number, number, number]
 
-// One thing to build: a chassis recipe (`chassis/<NAME>.ldr`) or a champion's car body (`<CODE>.ldr`) on its chassis.
+// One thing to build: a chassis recipe (`chassis/<NAME>.ldr`) or a champion's whole car but its wheels (`<CODE>.ldr`).
 export type BuilderItem = {
   readonly id: string
   readonly kind: BuilderItemKind
   // The chassis name (lower case) or the car code (upper case).
   readonly name: string
-  // The chassis a car sits on (lower case); for a chassis, its own name.
+  // The chassis a car's wheels are on (lower case), which gives its wheel guides; for a chassis, its own name.
   readonly chassisName: string
 }
 
@@ -33,7 +33,7 @@ export type BuilderPart = {
 // A part line before it is placed in a document (no comments of its own yet).
 export type BuilderPartLine = Omit<BuilderPart, 'commentLines'>
 
-// A model file split for editing: its header, the lines that place other models (a car's chassis recipe; shown, never edited), the
+// A model file split for editing: its header, the lines that place other models (kept as they are; a car's chassis recipe is made its own parts), the
 // parts, and the lines the builder does not edit (kept as they are, at the end).
 export type BuilderDocument = {
   readonly headerLines: readonly string[]
