@@ -2,6 +2,8 @@ import { CHAMPION_CAR_CODES, CHASSIS_NAMES } from '../ldraw-racer-model/known-ra
 import { BuilderItemKind } from './ldraw-builder.types.ts'
 import type { BuilderItem } from './ldraw-builder.types.ts'
 
+const CHASSIS_RECIPE_FILE = /^chassis\/[^/]+\.ldr$/i
+
 export const getChassisItemId = (name: string): string => `chassis/${name.toLowerCase()}`
 
 // The queue: the 12 chassis first (the cars stand on them), then the 20 champions' cars, each on the chassis its champion drives.
@@ -50,4 +52,17 @@ export const getNextBuilderItem = (
   const start = items.findIndex((item) => item.id === currentId)
   const ordered = [...items.slice(start + 1), ...items.slice(0, start + 1)]
   return ordered.find((item) => !done.includes(item.id)) ?? null
+}
+
+// The models folder's files an item may start from: its own (by name, drafts and backups too) and, for a car, every chassis recipe,
+// whose parts it gets as a copy.
+export const getStartFiles = (item: BuilderItem, paths: readonly string[]): readonly string[] => {
+  const name = item.name.toLowerCase()
+  return Object.freeze(
+    paths.filter(
+      (path) =>
+        (path.split('/').pop() ?? '').toLowerCase().startsWith(name) ||
+        (item.kind === BuilderItemKind.CAR && CHASSIS_RECIPE_FILE.test(path))
+    )
+  )
 }

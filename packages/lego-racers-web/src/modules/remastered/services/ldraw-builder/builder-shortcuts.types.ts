@@ -28,6 +28,7 @@ export const BuilderAction = createEnum({
   UNDO: 'undo',
   REDO: 'redo',
   SELECT_ALL: 'select_all',
+  SELECT_COLOR: 'select_color',
   SAVE: 'save',
   TAKE_COLOR: 'take_color',
   TAKE_PART: 'take_part',

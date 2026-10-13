@@ -157,3 +157,48 @@ export const getReferencedModelName = (referenceLine: string): string | null => 
   const name = parsePartLine(referenceLine)?.partName ?? null
   return name === null ? null : name.toLowerCase().replace(/\.(ldr|mpd)$/, '')
 }
+
+const getIsCommentLine = (line: string): boolean => line.startsWith('0')
+
+const keepCommentsWithFirstPart = (
+  parts: readonly BuilderPart[],
+  commentLines: readonly string[]
+): readonly BuilderPart[] =>
+  parts.map((part, index) =>
+    index === 0 && commentLines.length > 0
+      ? Object.freeze({
+          ...part,
+          commentLines: Object.freeze([...commentLines, ...part.commentLines]),
+        })
+      : part
+  )
+
+// The document with the models its reference lines place (a car's chassis recipe) turned into its own parts, first, where the line
+// puts them; a comment before such a line stays with the first part. A line whose model is not given stays a reference.
+export const inlineReferencedModels = (
+  document: BuilderDocument,
+  modelParts: ReadonlyMap<string, readonly BuilderPart[]>
+): BuilderDocument => {
+  const referenceLines: string[] = []
+  const inlinedParts: BuilderPart[] = []
+  let pendingComments: string[] = []
+  for (const line of document.referenceLines) {
+    if (getIsCommentLine(line)) {
+      pendingComments.push(line)
+      continue
+    }
+    const name = getReferencedModelName(line)
+    const parts = name === null ? undefined : modelParts.get(name)
+    if (parts === undefined) referenceLines.push(...pendingComments, line)
+    else
+      inlinedParts.push(
+        ...keepCommentsWithFirstPart(placeReferencedParts(line, parts), pendingComments)
+      )
+    pendingComments = []
+  }
+  return Object.freeze({
+    ...document,
+    referenceLines: Object.freeze([...referenceLines, ...pendingComments]),
+    parts: Object.freeze([...inlinedParts, ...document.parts]),
+  })
+}

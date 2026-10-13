@@ -56,6 +56,7 @@ const SHIFT_ACTIONS: Readonly<Record<string, BuilderAction>> = {
   r: BuilderAction.ROTATE_BACK,
   t: BuilderAction.TILT_BACK,
   e: BuilderAction.TAKE_PART,
+  a: BuilderAction.SELECT_COLOR,
   '?': BuilderAction.SHORTCUTS,
 }
 
@@ -145,6 +146,14 @@ export const BUILDER_SHORTCUT_GROUPS: readonly BuilderShortcutGroup[] = [
       { keys: 'E  or  ⌥ click', description: 'take the colour of the part under the cursor' },
       { keys: '⇧E', description: 'take the part under the cursor in hand (shape, colour, turn)' },
       { keys: '1 – 9', description: 'black, white, red, blue, yellow, green, greys, orange' },
+      {
+        keys: 'Swatch or 1 – 9',
+        description: 'with parts selected: repaint them (⌘Z undoes it)',
+      },
+      {
+        keys: '⇧A  or  ⌥⇧ click',
+        description: 'select every part of the colour under the cursor (else the selected one)',
+      },
     ],
   },
   {
