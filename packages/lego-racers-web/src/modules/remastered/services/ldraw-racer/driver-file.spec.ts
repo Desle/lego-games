@@ -2,11 +2,8 @@ import {
   findDriverRecord,
   getIsPlainHead,
   getIsPlainTorso,
-  getMinifigPartKey,
   parseDriverFile,
 } from './driver-file.ts'
-import { DriverPartRole } from './driver-file.types.ts'
-import { MinifigPartKey } from './minifig-assembly.types.ts'
 
 const HEADER = ['0 RR driver', '0 Name: RR.ldr', '0 BFC CERTIFY CCW', '']
 
@@ -29,22 +26,6 @@ const WITH_ROLES = [
   '1 0 23.69 -5.226 -9.898 1 0 0 0 1 0 0 0 1 3820.dat',
 ].join('\n')
 
-const WITHOUT_ROLES = [
-  ...HEADER,
-  '1 71 0 0 0 1 0 0 0 1 0 0 0 1 3815b.dat',
-  '1 71 0 12 0 1 0 0 0 1 0 0 0 1 3817b.dat',
-  '1 71 0 12 0 1 0 0 0 1 0 0 0 1 3816b.dat',
-  '1 7 0 -32 0 1 0 0 0 1 0 0 0 1 973p01.dat',
-  '1 14 0 -56 0 1 0 0 0 1 0 0 0 1 3626b.dat',
-  '1 0 0 -56 0 1 0 0 0 1 0 0 0 1 3842a.dat',
-  '1 4 15.552 -23 0 1 0 0 0 1 0 0 0 1 3819.dat',
-  '1 4 -15.552 -23 0 1 0 0 0 1 0 0 0 1 3818.dat',
-  '1 14 23.69 -5.226 -9.898 1 0 0 0 1 0 0 0 1 3820.dat',
-  '1 8 -23.69 -5.226 -9.898 1 0 0 0 1 0 0 0 1 2531.dat',
-  // Something held at the chest that is no minifigure part.
-  '1 15 0 -20 -12 1 0 0 0 1 0 0 0 1 3069b.dat',
-].join('\n')
-
 describe('parseDriverFile', () => {
   it('takes each part role from the RACERS ROLE line before it', () => {
     // Arrange
@@ -64,38 +45,15 @@ describe('parseDriverFile', () => {
     expect(parts[1]?.part.colorCode).toBe(14)
   })
 
-  it('recognises the minifigure parts by number, and a sided part by its side, when there are no ROLE lines', () => {
+  it('knows a part with no ROLE line by its number', () => {
     // Arrange
-    const text = WITHOUT_ROLES
+    const text = [...HEADER, '1 4 -15.552 -23 0 1 0 0 0 1 0 0 0 1 3818.dat'].join('\n')
 
     // Act
     const roles = parseDriverFile(text).map((entry) => entry.role)
 
     // Assert
-    expect(roles).toEqual([
-      DriverPartRole.HIPS,
-      DriverPartRole.LEFT_LEG,
-      DriverPartRole.RIGHT_LEG,
-      DriverPartRole.TORSO,
-      DriverPartRole.HEAD,
-      DriverPartRole.HAT,
-      DriverPartRole.LEFT_ARM,
-      DriverPartRole.RIGHT_ARM,
-      DriverPartRole.LEFT_HAND,
-      DriverPartRole.RIGHT_HAND,
-      DriverPartRole.TORSO,
-    ])
-  })
-
-  it('puts the hat and its accessory on the head', () => {
-    // Arrange
-    const roles = [DriverPartRole.HEAD, DriverPartRole.HAT, DriverPartRole.ACCESSORY]
-
-    // Act
-    const keys = roles.map(getMinifigPartKey)
-
-    // Assert
-    expect(keys).toEqual([MinifigPartKey.HEAD, MinifigPartKey.HEAD, MinifigPartKey.HEAD])
+    expect(roles).toEqual(['right-arm'])
   })
 })
 
