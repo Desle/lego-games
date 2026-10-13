@@ -199,6 +199,8 @@ export type OnScreenPlace = {
   readonly expectedHooks: readonly HookKind[]
   // Every power-up object the place fires that the folder has a file for must reach the screen in one of its frames.
   readonly isEveryPowerUpFileShown: boolean
+  // The power-up objects (model names) the place must draw in a rendered frame, from a file or the original's model.
+  readonly expectedPowerUpObjects: readonly string[]
 }
 
 // A power-up handed to the player at a frame (kind 1 projectile, 2 shield, 3 turbo, 4 hazard; level 0 to 3) and fired three frames

@@ -24,15 +24,21 @@ export type RacerModels = {
   readonly driver: ModelScene | null
 }
 
-// The models of the effects the race draws (GAMEDATA\COMMON): the rocket and the magnet have bones, the barrel and the
-// spiked explosion are plain. The cannon ball, the grapple hook, the wand's beam and the plain explosion are not drawn:
-// the files that give them their look are not traced (projectiles.md).
+// The models of the effects the race draws (GAMEDATA\COMMON): the rocket and the magnet have bones, the barrel, the grapple
+// hook and the spiked explosion are plain. The cannon ball is a sprite and the wand's beam a ribbon.
 // A model with the animation set its figure plays.
 export type EffectFigureModel = {
   readonly model: ModelScene
   readonly animations: readonly FigureAnimation[]
   // The texture scroll per second (keyword 0x3f of its instance).
   readonly scroll: readonly [number, number]
+}
+
+// The grapple's hook: the power-up world's first mesh instance (POWERUP.WDB, the unnamed instance of the mesh `grapple`) and
+// its level distance, squared as the renderer compares it.
+export type GrappleHookModel = {
+  readonly model: ModelScene
+  readonly squaredLevelDistance: number
 }
 
 // The centre and the radius of the sphere a brick's instance is culled by (clip keyword 0x31 times the model's scale).
@@ -47,6 +53,7 @@ export type EffectModels = {
   readonly rocket: ModelScene
   readonly rocketAnimations: readonly FigureAnimation[]
   readonly barrel: ModelScene
+  readonly grappleHook: GrappleHookModel
   readonly magnet: ModelScene
   readonly plainExplosion: ModelScene
   readonly spikedExplosion: ModelScene

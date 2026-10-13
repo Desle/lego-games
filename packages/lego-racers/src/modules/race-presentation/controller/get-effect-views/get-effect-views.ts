@@ -17,6 +17,7 @@ import {
 } from '../../../projectiles/index.ts'
 import type { EffectMotion, ExplosionPool } from '../../../projectiles/index.ts'
 import { getWarpFadeScale } from '../../../racer/index.ts'
+import { getProjectileRegistrySphere } from '../../../race/index.ts'
 import type { RaceState } from '../../../race/index.ts'
 import { createFloatArithmetic, RACE_FPU_PRECISION } from '../../../simulation-math/index.ts'
 import type { RibbonView } from '../../../ribbon/index.ts'
@@ -33,6 +34,7 @@ import type {
   EffectView,
   EffectViews,
   ExplosionView,
+  EffectViewBase,
   SpriteView,
 } from '../../types/race-presentation.types.ts'
 
@@ -68,11 +70,49 @@ const getBrickViews = (
       : []
   )
 
-const getMotionView = (effect: PowerUpEffect, motion: EffectMotion | null): EffectView | null => {
+// 0x004542d0 draws the hook (the power-up world's first mesh instance, mesh `grapple`, which 0x0045ab50 hands every grapple
+// as its frame +0x268) while it flies and while it holds a racer (states 3 and 4); a retracting hook draws only its rope.
+const HOOK_DRAWN_STATES: readonly string[] = [EffectState.ACTIVE, EffectState.ENDING]
+
+// Every hook moves the one shared frame, so each hook in the air is drawn where the last update left it, with the sphere
+// the renderer culls the instance by (0x100240b0; slot +0x4c gives the mesh's bounds through the frame, as the registry's).
+const getHookView = (
+  raceState: RaceState,
+  effect: PowerUpEffect,
+  base: EffectViewBase
+): EffectView | null => {
+  if (!HOOK_DRAWN_STATES.includes(effect.state)) return null
+  const { hookFrame } = raceState.projectileWorld
+  const boundingSphere = getProjectileRegistrySphere(
+    {
+      arithmetic: raceState.context.arithmetic,
+      registryObjects: raceState.registryObjects,
+      trackLogic: raceState.trackLogic,
+      powerUpStep: raceState.powerUpStep,
+      projectileWorld: raceState.projectileWorld,
+      projectileModelData: raceState.projectileModelData,
+    },
+    { type: 'effect_flight', effectId: effect.id }
+  )
+  return {
+    ...base,
+    position: hookFrame.position,
+    heading: null,
+    rotation: hookFrame.rotation,
+    boundingSphere,
+  }
+}
+
+const getMotionView = (
+  raceState: RaceState,
+  effect: PowerUpEffect,
+  motion: EffectMotion | null
+): EffectView | null => {
   if (motion === null) return null
-  const base = {
+  const base: EffectViewBase = {
     kind: effect.kind,
     rotation: null,
+    boundingSphere: null,
     rocketIndex: 0,
     isLaunching: false,
     launchMilliseconds: 0,
@@ -95,7 +135,7 @@ const getMotionView = (effect: PowerUpEffect, motion: EffectMotion | null): Effe
     case 'magnet':
       return { ...base, position: motion.position, heading: null }
     case 'grapple':
-      return { ...base, position: motion.hook.flight.framePosition, heading: null }
+      return getHookView(raceState, effect, base)
     case 'wand':
     case 'hazard':
       return null
@@ -378,7 +418,11 @@ export const getEffectViews = (raceState: RaceState): EffectViews => {
   const views = activeEffectIds.flatMap((effectId) => {
     const effect = effects[effectId]
     if (effect === undefined || !DRAWN_STATES.includes(effect.state)) return []
-    const view = getMotionView(effect, raceState.projectileWorld.motions[effectId] ?? null)
+    const view = getMotionView(
+      raceState,
+      effect,
+      raceState.projectileWorld.motions[effectId] ?? null
+    )
     return view === null ? [] : [view]
   })
   const { world } = raceState.powerUpStep

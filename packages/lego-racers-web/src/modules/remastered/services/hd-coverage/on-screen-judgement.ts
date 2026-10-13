@@ -1,6 +1,6 @@
 import { POWER_UP_OBJECT_MODEL_NAMES } from '../../../../shared/viewer-extensions/effect-model-names.ts'
-import { HookKind } from './hd-coverage.types.ts'
-import type { HookCall } from './hd-coverage.types.ts'
+import { HookKind, RacerPartKind } from './hd-coverage.types.ts'
+import type { CensusSighting, HookCall } from './hd-coverage.types.ts'
 import type { OnScreenDrawing, OnScreenFrame } from './on-screen-check.types.ts'
 
 // Fewer changed pixels than this (above the frame's own noise) is nothing on screen: a 640 x 480 frame's figure covers thousands.
@@ -119,6 +119,21 @@ const getPosedPartFailures = (
           `the power-up object ${key}'s ${String(Math.max(...partCounts))} posed parts never all reached the screen in one frame`,
         ]
   })
+
+// Every power-up object the place must draw is in a rendered frame, drawn from its file or as the original's model: an effect the
+// race stops drawing fails here whether or not the folder has a file for it.
+export const getExpectedPowerUpFailures = (
+  sightings: readonly CensusSighting[],
+  expectedKeys: readonly string[]
+): readonly string[] =>
+  expectedKeys
+    .filter(
+      (key) =>
+        !sightings.some(
+          (sighting) => sighting.kind === RacerPartKind.POWER_UP && sighting.key === key
+        )
+    )
+    .map((key) => `the power-up object ${key} was drawn in none of the rendered frames`)
 
 export const formatOnScreenDrawing = (frame: OnScreenFrame, drawing: OnScreenDrawing): string =>
   [

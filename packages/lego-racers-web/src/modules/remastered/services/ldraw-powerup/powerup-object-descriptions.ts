@@ -3,6 +3,7 @@
 export const POWER_UP_OBJECT_DESCRIPTIONS: Readonly<Record<string, string>> = Object.freeze({
   DMISSILE: 'rocket',
   BARREL: 'barrel',
+  GRAPPLE: 'grapple hook',
   MAGNET04: 'magnet',
   CURSE: 'curse, floating figure',
   CGREEN: 'curse, ring',

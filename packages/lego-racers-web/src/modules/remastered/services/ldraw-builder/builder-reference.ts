@@ -149,7 +149,13 @@ const createPowerUpReference = (archive: JamArchive, name: string): OriginalRefe
 }
 
 // The models the race loads without a skeleton (race-assets); the others play their own animation, the shields SHEOUT0's.
-const SKELETON_FREE_MODELS: readonly string[] = ['BARREL', 'HEDRA01', 'SPIKEXP', 'WARPHOLE']
+const SKELETON_FREE_MODELS: readonly string[] = [
+  'BARREL',
+  'GRAPPLE',
+  'HEDRA01',
+  'SPIKEXP',
+  'WARPHOLE',
+]
 const SHIELD_PREFIX = 'SHEOUT'
 const SHIELD_SKELETON = 'SHEOUT0'
 const ANIMATED_ROOM_COLOR = 0xff9a3c

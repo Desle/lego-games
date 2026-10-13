@@ -26,6 +26,7 @@ import type { RacePhaseValue, RaceState } from '../../race/index.ts'
 import type { GhostRunSelection } from '../../ghost/index.ts'
 import type { RibbonView } from '../../ribbon/index.ts'
 import type { TrailDrawing } from '../../projectile-trail/index.ts'
+import type { BoundingSphere } from '../../racer-collision/index.ts'
 
 // A ghost car of a time trial (FUN_00422960): the champion's, drawn from GHOST.WDB, or the session's best run, drawn with
 // the player's own car. All three parts take the run's one orientation; the driver sits at the seat point carried by it.
@@ -214,7 +215,12 @@ export type EffectView = {
   readonly rocketIndex: number
   readonly isLaunching: boolean
   readonly launchMilliseconds: number
+  // The sphere the renderer culls the figure's instance by (0x100240b0): the grapple hook's; null for the others.
+  readonly boundingSphere: BoundingSphere | null
 }
+
+// What every effect view holds before its body gives it a place.
+export type EffectViewBase = Omit<EffectView, 'position' | 'heading'>
 
 // An explosion pool member that is growing or fading: where, and the frame scale the engine gives it (0x00410f10).
 export type ExplosionView = {

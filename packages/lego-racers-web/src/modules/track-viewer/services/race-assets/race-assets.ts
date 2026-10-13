@@ -42,6 +42,7 @@ import type { ModelScene, Scene } from '@lego-games/lego-racers/scene'
 import { HUD_FONT_NAMES } from '../../types/hud-fonts/hud-fonts.ts'
 import type {
   EffectModels,
+  GrappleHookModel,
   HudBitmapFont,
   HudFonts,
   HudImage,
@@ -57,6 +58,7 @@ const DEFAULT_RACE_FOLDER = 'RACEC0R0'
 export const WARP_WORLD_PATH = `${COMMON_DIRECTORY}\\TURBO3.WDB`
 // The champion ghost's car (Ghost_Initialize 0x00422420 loads "ghost" from GAMEDATA\COMMON): `ghost2` (the wheels), `ghostb2` (the
 // body) and `ghostdr` (the driver).
+const POWER_UP_WORLD_PATH = `${COMMON_DIRECTORY}\\POWERUP.WDB`
 export const GHOST_WORLD_PATH = `${COMMON_DIRECTORY}\\GHOST.WDB`
 const ENGLISH_DIRECTORY = `${COMMON_DIRECTORY}\\ENGLISH`
 const SEPARATOR = '\\'
@@ -238,11 +240,23 @@ const getInstanceTextureScroll = (
   archive: JamArchive,
   instanceName: string
 ): readonly [number, number] => {
-  const world = readWorld(archive.readFile(`${COMMON_DIRECTORY}\\POWERUP.WDB`))
+  const world = readWorld(archive.readFile(POWER_UP_WORLD_PATH))
   const values = [...world.meshInstances, ...world.skeletonInstances].find(
     (instance) => instance.name === instanceName
   )?.keyword3fValues
   return [values?.[0] ?? 0, values?.[1] ?? 0]
+}
+
+// 0x0045ab50 hands every grapple the power-up world's first mesh instance (world +0x9c) as its hook frame +0x268.
+const getGrappleHook = (archive: JamArchive): GrappleHookModel => {
+  const world = readWorld(archive.readFile(POWER_UP_WORLD_PATH))
+  const level = world.meshInstances[0]?.levels[0]
+  const meshName = world.meshes[level?.meshIndex ?? -1] ?? 'grapple'
+  const distance = level?.distance ?? 0
+  return Object.freeze({
+    model: loadEffectModel(archive, meshName.toUpperCase(), false),
+    squaredLevelDistance: distance * distance,
+  })
 }
 
 const getEffectMaterials = (archive: JamArchive): Scene =>
@@ -304,6 +318,7 @@ const getEffectModels = (archive: JamArchive, raceScene: Scene): EffectModels =>
     rocket: loadEffectModel(archive, 'DMISSILE', true),
     rocketAnimations: getFigureAnimations(archive.readFile(getRacerFilePath('DMISSILE', 'ADB'))),
     barrel: loadEffectModel(archive, 'BARREL', false),
+    grappleHook: getGrappleHook(archive),
     magnet: loadEffectModel(archive, 'MAGNET04', true),
     plainExplosion: loadEffectModel(archive, 'HEDRA01', false),
     spikedExplosion: loadEffectModel(archive, 'SPIKEXP', false),
