@@ -1,8 +1,7 @@
 import type { Matrix4 } from 'three'
 import type { BuilderPart } from '@lego-games/ldraw/building'
-import { MINIFIG_GEOMETRY } from '@lego-games/ldraw/minifig'
+import { MINIFIG_GEOMETRY, MinifigRole } from '@lego-games/ldraw/minifig'
 import { LDRAW_FACES, LDRAW_HATS, LDRAW_LEGS, LDRAW_TORSOS } from './driver-catalogue-mappings.ts'
-import { DriverPartRole } from './driver-file.types.ts'
 import type { DriverFilePart } from './driver-file.types.ts'
 
 const HOOK = '2531'
@@ -16,7 +15,7 @@ const IDENTITY: readonly number[] = Object.freeze([1, 0, 0, 0, 1, 0, 0, 0, 1])
 const ROTATION_ELEMENTS: readonly number[] = Object.freeze([0, 4, 8, 1, 5, 9, 2, 6, 10])
 
 const getPart = (
-  role: DriverPartRole,
+  role: MinifigRole,
   partName: string,
   colorCode: number,
   placement: Matrix4 | null
@@ -50,52 +49,37 @@ export const getCatalogueDriverParts = (
   }
   const head = MINIFIG_GEOMETRY.head
   return Object.freeze([
-    getPart(DriverPartRole.HIPS, HIPS, legs.hipsColorCode, null),
+    getPart(MinifigRole.HIPS, HIPS, legs.hipsColorCode, null),
+    getPart(MinifigRole.LEFT_LEG, legs.leftLeg.part, legs.leftLeg.colorCode, MINIFIG_GEOMETRY.legs),
     getPart(
-      DriverPartRole.LEFT_LEG,
-      legs.leftLeg.part,
-      legs.leftLeg.colorCode,
-      MINIFIG_GEOMETRY.legs
-    ),
-    getPart(
-      DriverPartRole.RIGHT_LEG,
+      MinifigRole.RIGHT_LEG,
       legs.rightLeg.part,
       legs.rightLeg.colorCode,
       MINIFIG_GEOMETRY.legs
     ),
-    getPart(DriverPartRole.TORSO, torso.part, torso.torsoColorCode, MINIFIG_GEOMETRY.torso),
-    getPart(DriverPartRole.HEAD, face.part, face.colorCode, head),
+    getPart(MinifigRole.TORSO, torso.part, torso.torsoColorCode, MINIFIG_GEOMETRY.torso),
+    getPart(MinifigRole.HEAD, face.part, face.colorCode, head),
     ...hat.hats.map((piece, index) =>
       getPart(
-        index === 0 ? DriverPartRole.HAT : DriverPartRole.ACCESSORY,
+        index === 0 ? MinifigRole.HAT : MinifigRole.ACCESSORY,
         piece.part,
         piece.colorCode,
         head
       )
     ),
+    getPart(MinifigRole.LEFT_ARM, LEFT_ARM, torso.armColorCodes.left, MINIFIG_GEOMETRY.arms.left),
     getPart(
-      DriverPartRole.LEFT_ARM,
-      LEFT_ARM,
-      torso.armColorCodes.left,
-      MINIFIG_GEOMETRY.arms.left
-    ),
-    getPart(
-      DriverPartRole.LEFT_HAND,
+      MinifigRole.LEFT_HAND,
       torso.isHookHand ? HOOK : PLAIN_HAND,
       torso.isHookHand ? HOOK_COLOR : torso.handColorCode,
       MINIFIG_GEOMETRY.hands.left
     ),
     getPart(
-      DriverPartRole.RIGHT_ARM,
+      MinifigRole.RIGHT_ARM,
       RIGHT_ARM,
       torso.armColorCodes.right,
       MINIFIG_GEOMETRY.arms.right
     ),
-    getPart(
-      DriverPartRole.RIGHT_HAND,
-      PLAIN_HAND,
-      torso.handColorCode,
-      MINIFIG_GEOMETRY.hands.right
-    ),
+    getPart(MinifigRole.RIGHT_HAND, PLAIN_HAND, torso.handColorCode, MINIFIG_GEOMETRY.hands.right),
   ])
 }

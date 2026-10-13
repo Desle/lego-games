@@ -1,4 +1,4 @@
-import { MinifigPosture } from './minifig-assembly.types.ts'
+import { MinifigPosture } from './minifig-rig.types.ts'
 import { getMinifigRig } from './minifig-rig.ts'
 
 const SEATED_BONES = ['rrpelvis', 'torso', 'arm_l', 'arm_r', 'dummy01', 'head']
