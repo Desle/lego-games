@@ -7,7 +7,7 @@ import type {
   TexturePixels,
 } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 
-const DEFAULT_VARIANT = 'ultrasharp'
+const DEFAULT_VARIANT = 'ultrasharp-v2'
 // Alpha 0 and 255 of neighbouring original pixels meet in the middle of this many pack pixels' ramp (a larger factor, a thinner ramp).
 const SMOOTH_EDGE_SHARPNESS = 3
 

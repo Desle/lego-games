@@ -22,7 +22,7 @@ An optional layer above the exact port: things the original never did (upscaled 
 
 ## What it does today
 
-- **Textures**: `?hd=<pack>` swaps each texture for `<LEGO_HD_TEXTURES_ROOT>/<pack>/<archive path>.png` (default root `~/textures/lego-racers`, default pack `ultrasharp`) once loaded, keeping the original's alpha.
+- **Textures**: `?hd=<pack>` swaps each texture for `<LEGO_HD_TEXTURES_ROOT>/<pack>/<archive path>.png` (default root `~/textures/lego-racers`, default pack `ultrasharp-v2`) once loaded, keeping the original's alpha.
 - **Widescreen**: the race canvas fills the window at `devicePixelRatio`. The camera keeps the original's 65 degree vertical field of view, so the horizontal one widens (Hor+), and the culling frustum uses the real aspect. The HUD is laid out for the biggest 4:3 area at window height (at native resolution) and each command is then anchored: right third to the right edge, middle third to the centre, left third stays; bottom half to the bottom edge; the pause dimmer stretches over the window. Whether a centred text counts as centred is decided from its start position (**hypothesis**: good enough for the HUD's texts, not exact). Menus stay 4:3 (letterboxed).
 - **LDraw cars**: with `?hd`, cars built from bricks are drawn from the official LDraw parts library (`~/ldraw`, served by the dev server) through the extension point `getBuiltCarDrawing`; the developer panel's **Bricks** choice switches back to the original's mesh. See [remastered-ldraw-cars.md](remastered-ldraw-cars.md).
 

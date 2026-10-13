@@ -6,10 +6,11 @@ export const SCENERY_SHADOWS_LABEL = 'Real + scenery'
 
 const MODES: readonly ShadowMode[] = Object.values(ShadowMode)
 
-// Real shadows are on with `?hd`; `shadows=classic` keeps the original's blobs and `shadows=scenery` lets static scenery cast too.
+// Real shadows with static scenery casting too are on with `?hd` (the user's choice); `shadows=classic` keeps the original's blobs
+// and `shadows=real` lets only cars and hazards cast.
 export const getShadowMode = (search: string): ShadowMode => {
   const requested = new URLSearchParams(search).get(SHADOWS_PARAMETER)
-  return MODES.find((mode) => mode === requested) ?? ShadowMode.REAL
+  return MODES.find((mode) => mode === requested) ?? ShadowMode.SCENERY
 }
 
 export const getShadowModeLabel = (mode: ShadowMode): string | null => {
