@@ -26,11 +26,18 @@ const COMMAND_SHIFT_ACTIONS: Readonly<Record<string, BuilderAction>> = {
   arrowup: BuilderAction.RAISE_BRICK,
   arrowdown: BuilderAction.LOWER_BRICK,
 }
+// With Option a Mac types ≠ for =, – for - and º for 0; the keys are read either way.
 const OPTION_ACTIONS: Readonly<Record<string, BuilderAction>> = {
   arrowleft: BuilderAction.NUDGE_LEFT,
   arrowright: BuilderAction.NUDGE_RIGHT,
   arrowup: BuilderAction.NUDGE_AWAY,
   arrowdown: BuilderAction.NUDGE_TOWARD,
+  '=': BuilderAction.SCALE_UP,
+  '≠': BuilderAction.SCALE_UP,
+  '-': BuilderAction.SCALE_DOWN,
+  '–': BuilderAction.SCALE_DOWN,
+  '0': BuilderAction.SCALE_FIT,
+  º: BuilderAction.SCALE_FIT,
 }
 const OPTION_COMMAND_ACTIONS: Readonly<Record<string, BuilderAction>> = {
   arrowup: BuilderAction.NUDGE_UP,
@@ -68,8 +75,8 @@ const getQuickColorIndex = (key: string): number => {
 const getOptionAction = (press: BuilderKeyPress, key: string): BuilderAction | undefined =>
   press.isShift ? undefined : (press.isCommand ? OPTION_COMMAND_ACTIONS : OPTION_ACTIONS)[key]
 
-// The builder's command for a key press, null for a key it leaves to the browser. Option only nudges with the arrows: on a Mac it
-// types symbols with letters.
+// The builder's command for a key press, null for a key it leaves to the browser. Option only nudges with the arrows and scales with
+// = - 0: on a Mac it types symbols with letters.
 export const getBuilderKeyCommand = (press: BuilderKeyPress): BuilderKeyCommand | null => {
   const key = press.key.toLowerCase()
   if (press.isOption) {
@@ -176,6 +183,14 @@ export const BUILDER_SHORTCUT_GROUPS: readonly BuilderShortcutGroup[] = [
       { keys: '⌘S', description: 'Done: save into the models folder, open the next' },
       { keys: 'G', description: 'original: side by side, ghost, off' },
       { keys: 'W', description: 'wheel guides on, off' },
+      {
+        keys: '⌥=  ⌥-',
+        description: 'power-up: draw the build bigger, smaller (the race draws it so)',
+      },
+      {
+        keys: '⌥0',
+        description: "power-up: fit to the original's size",
+      },
       { keys: '?', description: 'this list' },
     ],
   },

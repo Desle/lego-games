@@ -8,6 +8,7 @@ import {
   GridHelper,
   Group,
   LinearSRGBColorSpace,
+  Matrix4,
   Mesh,
   OrthographicCamera,
   PerspectiveCamera,
@@ -22,7 +23,8 @@ import {
 } from 'three'
 import type { Camera, Object3D } from 'three'
 import { DEVELOPMENT_JAM_ROUTE } from '../../../../shared/development-jam/development-jam-route.ts'
-import { LDRAW_TO_STUDS } from '../ldraw-car/ldraw-car-document.ts'
+import { getBuildFrameMatrix } from '../ldraw-powerup/powerup-object-frame.ts'
+import { setScaleMeta } from '../ldraw-scale-meta/ldraw-scale-meta.ts'
 import { createStudioLights, useLookFromAddress } from '@lego-games/ldraw/material'
 import { DEVELOPMENT_LDRAW_ROUTE } from '../ldraw-library/ldraw-library-route.ts'
 import {
@@ -150,6 +152,11 @@ const DEFAULT_TOOL: BuilderTool = {
   rotation: IDENTITY_ROTATION,
 }
 const REFERENCE_MODES: readonly ReferenceMode[] = Object.values(ReferenceMode)
+const SCALE_STEP = 1.1
+const SCALE_DECIMALS = 3
+const MINIMUM_SCALE = 0.05
+const MAXIMUM_SCALE = 20
+const SCALED_KINDS: readonly BuilderItemKind[] = [BuilderItemKind.POWER_UP]
 
 useLookFromAddress()
 setUpLDrawModelParser()
@@ -175,7 +182,7 @@ let view = createBuilderView([0, 0, 0], BUILDER_VIEW_DIRECTION, 10)
 const buildScene = new Scene()
 const ldrawFrame = new Group()
 ldrawFrame.matrixAutoUpdate = false
-ldrawFrame.matrix.copy(LDRAW_TO_STUDS)
+ldrawFrame.matrix.copy(getBuildFrameMatrix(1))
 const editFrame = new Group()
 const partsGroup = new Group()
 const createGrid = (studs: number): GridHelper => {
@@ -221,6 +228,8 @@ const panel = createBuilderPanel(
     onRotate: () => rotate(false),
     onDeleteSelected: () => deleteSelected(),
     onDone: () => void finishItem(),
+    onScaleStep: (direction) => stepScale(direction),
+    onScaleFit: () => fitScale(),
     onShortcutsToggle: () => toggleShortcuts(),
     getThumbnail: (partName, colorCode, getIsWanted) =>
       thumbnails.getThumbnail(partName, colorCode, getIsWanted),
@@ -255,8 +264,13 @@ let ghostRotation: readonly number[] = IDENTITY_ROTATION
 let pointer: PointerPosition | null = null
 let isSyncScheduled = false
 let isSaving = false
+// The factor a power-up object's file is drawn at (powerup-object-frame.ts), and the one it was opened with.
+let scale = 1
+let savedScale = 1
 
-const getIsDirty = () => history.present !== savedParts
+const getIsScaled = (): boolean => currentItem !== null && SCALED_KINDS.includes(currentItem.kind)
+
+const getIsDirty = () => history.present !== savedParts || scale !== savedScale
 
 const getTemplateBox = (part: BuilderPart): BuilderBox | null =>
   templates.getLoaded(part.partName, part.colorCode)?.box ?? null
@@ -302,7 +316,7 @@ const ITEM_HINTS: Readonly<Record<BuilderItemKind, string>> = Object.freeze({
   [BuilderItemKind.DRIVER]:
     'the standing figure, origin the top of the hips: each part follows the bone of its 0 !RACERS ROLE line; a plain head or torso shows the game picture',
   [BuilderItemKind.POWER_UP]:
-    'the power-up object as the original models it (front along x): the race fits its size to the original and spins, moves and fades it as the game does',
+    'the power-up object as the original models it (front along x): the race draws it at this size and place (⌥= ⌥- scale, ⌥0 fits the original) and spins, moves and fades it as the game does',
 })
 
 const EFFECT_NOTE =
@@ -711,7 +725,7 @@ const frameCamera = () => {
   buildScene.updateMatrixWorld(true)
   const box = new Box3().setFromObject(partsGroup)
   if (reference !== null && reference.shape !== ReferenceShape.NONE) box.union(reference.bounds)
-  if (box.isEmpty()) box.copy(getEmptyBuildArea(currentItem?.kind === BuilderItemKind.POWER_UP))
+  if (box.isEmpty()) box.copy(getEmptyBuildArea(getIsScaled()))
   view = getFramingView(
     [box.min.x, box.min.y, box.min.z],
     [box.max.x, box.max.y, box.max.z],
@@ -721,16 +735,64 @@ const frameCamera = () => {
   )
 }
 
-// A car's wide stud grid; a power-up object's sized to its original's footprint.
-const replaceGrid = (item: BuilderItem) => {
+// A car's wide stud grid; a power-up object's sized to its original's footprint (in the build's studs, which the
+// scale shrinks or grows).
+const replaceGrid = () => {
   editFrame.remove(grid)
   grid.dispose()
+  const shownBounds = reference?.bounds.clone() ?? null
   grid = createGrid(
-    item.kind === BuilderItemKind.POWER_UP
-      ? getPowerUpGridStuds(reference?.bounds ?? null)
+    getIsScaled()
+      ? getPowerUpGridStuds(
+          shownBounds?.applyMatrix4(new Matrix4().makeScale(1 / scale, 1 / scale, 1)) ?? null
+        )
       : CAR_GRID_STUDS
   )
   editFrame.add(grid)
+}
+
+const FIT_LABELS: Readonly<Record<BuilderItemKind, string>> = Object.freeze({
+  [BuilderItemKind.CHASSIS]: '',
+  [BuilderItemKind.CAR]: '',
+  [BuilderItemKind.DRIVER]: '',
+  [BuilderItemKind.POWER_UP]: 'Fit',
+})
+
+// The build drawn at the scale (1 for an item without one), the grid with it, the control showing it.
+const applyScale = () => {
+  ldrawFrame.matrix.copy(getBuildFrameMatrix(getIsScaled() ? scale : 1))
+  replaceGrid()
+  panel.showScale({
+    isShown: getIsScaled(),
+    factor: scale,
+    fitLabel: currentItem === null ? '' : FIT_LABELS[currentItem.kind],
+  })
+  scheduleSync()
+}
+
+const setScale = (next: number) => {
+  scale = Number(Math.min(MAXIMUM_SCALE, Math.max(MINIMUM_SCALE, next)).toFixed(SCALE_DECIMALS))
+  applyScale()
+}
+
+// The parts' bounds in the file's own frame (LDraw units and axes).
+const getFileBounds = (): Box3 => {
+  buildScene.updateMatrixWorld(true)
+  return new Box3().setFromObject(partsGroup).applyMatrix4(editFrame.matrixWorld.clone().invert())
+}
+
+// A power-up object's fit to its original.
+const getFittedScale = (): number => {
+  const bounds = getFileBounds()
+  return reference === null || bounds.isEmpty() ? 1 : reference.getFittedScale(bounds)
+}
+
+const stepScale = (direction: number) => {
+  if (getIsScaled()) setScale(direction > 0 ? scale * SCALE_STEP : scale / SCALE_STEP)
+}
+
+const fitScale = () => {
+  if (getIsScaled()) setScale(getFittedScale())
 }
 
 const applyView = () => {
@@ -793,11 +855,15 @@ const openItem = async (item: BuilderItem, startFile: string | null) => {
   reference = createOriginalReference(archive, item)
   referenceScene.clear()
   if (reference !== null) referenceScene.add(reference.object)
-  replaceGrid(item)
+  scale = 1
+  applyScale()
   guidesHolder.clear()
   if (item.chassisName !== '') guidesHolder.add(createWheelGuides(archive, item.chassisName))
   guidesHolder.visible = true
   await Promise.all(history.present.map((part) => templates.load(part.partName, part.colorCode)))
+  syncScene()
+  setScale(start.scale ?? (getIsScaled() ? getFittedScale() : 1))
+  savedScale = scale
   syncScene()
   frameCamera()
   replaceAddressHash(item.id)
@@ -831,13 +897,16 @@ const finishItem = async () => {
   isSaving = true
   panel.setIsBusy(true)
   try {
-    const text = serializeBuilderDocument({ ...start.document, parts: history.present })
+    const text = serializeBuilderDocument(
+      setScaleMeta({ ...start.document, parts: history.present }, getIsScaled() ? scale : null)
+    )
     const result = await postModel(currentItem.id, text)
     if (typeof result === 'string') {
       panel.showStatus(`Not saved: ${result}`)
       return
     }
     savedParts = history.present
+    savedScale = scale
     clearDraft(currentItem.id)
     progress = result.progress
     const next = getNextBuilderItem(items, currentItem.id, progress.done)
@@ -897,6 +966,9 @@ const getKeyActions = (quickColorIndex: number): Readonly<Record<BuilderAction, 
   [BuilderAction.REFERENCE]: cycleReferenceMode,
   [BuilderAction.WHEEL_GUIDES]: () => void (guidesHolder.visible = !guidesHolder.visible),
   [BuilderAction.SHORTCUTS]: toggleShortcuts,
+  [BuilderAction.SCALE_UP]: () => stepScale(1),
+  [BuilderAction.SCALE_DOWN]: () => stepScale(-1),
+  [BuilderAction.SCALE_FIT]: fitScale,
 })
 
 const onKeyDown = (event: KeyboardEvent) => {

@@ -33,6 +33,7 @@ const QUEUE_GROUPS: Readonly<Record<BuilderItemKind, string>> = {
   [BuilderItemKind.DRIVER]: 'Drivers',
   [BuilderItemKind.POWER_UP]: 'Power-ups',
 }
+const SCALE_DECIMALS = 2
 const BYTE = 255
 
 const createElement = <Name extends keyof HTMLElementTagNameMap>(
@@ -88,6 +89,22 @@ export const createBuilderPanel = (
   )
   const doneButton = createButton('Done ✓', 'done', handlers.onDone)
   doneButton.title = 'Save into the models folder, mark done, go to the next one (⌘S)'
+  const scaleControl = createElement('span', 'scale')
+  const scaleText = createElement('span', 'scale-factor')
+  const scaleDown = createButton('−', 'scale-step', () => handlers.onScaleStep(-1))
+  scaleDown.title = 'Smaller (⌥-)'
+  const scaleUp = createButton('+', 'scale-step', () => handlers.onScaleStep(1))
+  scaleUp.title = 'Bigger (⌥=)'
+  const scaleFit = createButton('Fit', 'scale-fit', handlers.onScaleFit)
+  scaleFit.title = 'Back to the fitted size (⌥0)'
+  scaleControl.append(
+    createElement('span', 'scale-label', 'Scale'),
+    scaleDown,
+    scaleText,
+    scaleUp,
+    scaleFit
+  )
+  scaleControl.hidden = true
   const shortcutsButton = createButton('?', 'shortcuts-button', handlers.onShortcutsToggle)
   shortcutsButton.title = 'Shortcuts (?)'
   elements.bar.append(
@@ -98,6 +115,7 @@ export const createBuilderPanel = (
     createButton('Redo', '', handlers.onRedo),
     createButton('Rotate', '', handlers.onRotate),
     createButton('Delete', '', handlers.onDeleteSelected),
+    scaleControl,
     shortcutsButton,
     doneButton
   )
@@ -281,6 +299,11 @@ export const createBuilderPanel = (
       for (const swatch of colorGrid.querySelectorAll<HTMLElement>('.swatch')) {
         swatch.classList.toggle('chosen', swatch.dataset['code'] === String(view.colorCode))
       }
+    },
+    showScale: (view) => {
+      scaleControl.hidden = !view.isShown
+      scaleText.textContent = `×${view.factor.toFixed(SCALE_DECIMALS)}`
+      scaleFit.textContent = view.fitLabel
     },
     showStatus: (text) => {
       status.textContent = text
