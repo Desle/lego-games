@@ -33,8 +33,11 @@ export const createAudioContext = (): AudioContext | null =>
 // What a player does where there is no Web Audio: nothing.
 export const SILENT_PLAYER = Object.freeze({
   resume: () => undefined,
+  setListener: () => undefined,
   playSound: () => undefined,
   playMusic: () => undefined,
+  setLoopedSounds: () => undefined,
   setEngineLoops: () => undefined,
+  setNearestRacerSound: () => undefined,
   dispose: () => undefined,
 })

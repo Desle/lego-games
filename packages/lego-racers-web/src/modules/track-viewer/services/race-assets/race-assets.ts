@@ -1,4 +1,5 @@
 import { decodeSoundBank } from '@lego-games/lego-racers/audio'
+import type { SoundBank } from '@lego-games/lego-racers/audio'
 import { decodeBitmap, getBitmapColors } from '@lego-games/lego-racers/bitmap'
 import { parseFontDatabase } from '@lego-games/lego-racers/font-database'
 import { buildBitmapFont, getFontImagePixels } from '@lego-games/lego-racers/font-rendering'
@@ -386,6 +387,26 @@ const getHudImage = (archive: JamArchive, definition: ImageDefinition): HudImage
 
 const readBank = (archive: JamArchive, path: string) => decodeSoundBank(archive.readFile(path))
 
+const VOICE_DIRECTORY = 'GAMEDATA\\VOICES'
+// The voice number of the first human racer (settings entry +0x5d, read by 0x00432a50): 0 until the player chooses a
+// driver (hypothesis for other values).
+const DEFAULT_PLAYER_VOICE_NUMBER = 0
+const EMPTY_SOUND_BANK: SoundBank = Object.freeze({
+  directory: '',
+  declaredSoundCount: 0,
+  soundPaths: Object.freeze([]),
+})
+
+// A bank 0x0041ae60 fails to load leaves its ids silent.
+const readVoiceBank = (archive: JamArchive, name: string | null): SoundBank => {
+  if (name === null || name === '') return EMPTY_SOUND_BANK
+  try {
+    return readBank(archive, `${VOICE_DIRECTORY}\\${name.toUpperCase()}.SBK`)
+  } catch {
+    return EMPTY_SOUND_BANK
+  }
+}
+
 // Hud_Initialize 0x00425d80: the two fonts of LEGOFNTS.FDB, built from the font bitmaps of the language folder.
 const loadHudFonts = (archive: JamArchive): HudFonts => {
   const database = parseFontDatabase(archive.readFile(`${ENGLISH_DIRECTORY}\\LEGOFNTS.FDB`))
@@ -491,6 +512,12 @@ export const loadRaceAssets = (
     generalSounds: readBank(archive, `${COMMON_DIRECTORY}\\GENERAL.SBK`),
     trackSounds: readBank(archive, `${raceDirectory}\\${trackBankName.toUpperCase()}.SBK`),
     trackSoundDirectory: raceDirectory,
+    voiceSounds: readVoiceBank(
+      archive,
+      `voice${String(DEFAULT_PLAYER_VOICE_NUMBER).padStart(2, '0')}`
+    ),
+    voiceFolderSounds: readVoiceBank(archive, description.voiceFolder),
+    voiceDirectory: VOICE_DIRECTORY,
     musicNames: Object.freeze(musicList.soundPaths),
     tunes: files.tunes,
   })

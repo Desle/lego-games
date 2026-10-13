@@ -39,6 +39,9 @@ const SMALL_SPIN_FACTOR = getFloatFromBits(0x3f800000)
 const LARGE_SPIN_FACTOR = getFloatFromBits(0x40000000)
 const HIT_STRENGTH = 150 // 0x004220e0
 const CONTACT_TIMER_MILLISECONDS = 750 // 0x2ee
+// 0x00438ba1 and 0x00438ba5: the contact's sound 0x37 or 0x18, PlayAt at 0x00438bb3.
+const CONTACT_SOUND_HIGH = 0x37 // 0x00438ba1
+const CONTACT_SOUND_LOW = 0x18 // 0x00438ba5
 const CONTACT_SOUND_MILLISECONDS = 250
 const COMPUTER_CONTROLLER = 2
 const RACER_DISABLED_FLAG = 0x10
@@ -378,22 +381,34 @@ export const respondToRacerContact = (
       hitSecondRacer.collisionSoundMilliseconds === 0
     ) {
       const draw = drawRandomValue(context.tables.randomTable, current.randomPosition)
-      current = setRandomPosition(
-        updateRacer(
-          updateRacer(current, firstIndex, (racer) =>
-            Object.freeze({ ...racer, collisionSoundMilliseconds: CONTACT_SOUND_MILLISECONDS })
-          ),
-          secondIndex,
-          (racer) =>
-            Object.freeze({ ...racer, collisionSoundMilliseconds: CONTACT_SOUND_MILLISECONDS })
+      const waited = updateRacer(
+        updateRacer(current, firstIndex, (racer) =>
+          Object.freeze({ ...racer, collisionSoundMilliseconds: CONTACT_SOUND_MILLISECONDS })
         ),
+        secondIndex,
+        (racer) =>
+          Object.freeze({ ...racer, collisionSoundMilliseconds: CONTACT_SOUND_MILLISECONDS })
+      )
+      // 0x00438b9f: the draw's low bit picks sound 0x37 (set) or 0x18, played at the contact.
+      current = setRandomPosition(
+        Object.freeze({
+          ...waited,
+          sounds: Object.freeze([
+            ...waited.sounds,
+            {
+              soundId: (draw.value & 1) === 0 ? CONTACT_SOUND_LOW : CONTACT_SOUND_HIGH,
+              address: '0x00438bb3',
+              racerIndex: firstIndex,
+            },
+          ]),
+        }),
         draw.position
       )
     }
     current = startCollisionSparks(context, current)
-    current = playRacerVoice(context, current, secondIndex)
+    current = playRacerVoice(context, current, secondIndex, false)
   } else {
-    current = playRacerVoice(context, current, firstIndex)
+    current = playRacerVoice(context, current, firstIndex, false)
   }
   // 0x00438bec..0x00438db0
   const radiusOf = (racerIndex: number): Vector3 => {

@@ -343,7 +343,20 @@ export type RaceEvent =
   | { readonly type: 'race.power_up'; readonly event: PowerUpEvent }
   | { readonly type: 'race.projectile'; readonly event: ProjectileEvent }
   // A sound the racers' passes played (0x00443b80).
-  | { readonly type: 'race.racer_sound'; readonly soundId: number; readonly address: string }
+  | {
+      readonly type: 'race.racer_loop'
+      readonly isStart: boolean
+      readonly key: string
+      readonly soundId: number
+      readonly address: string
+      readonly racerIndex: number
+    }
+  | {
+      readonly type: 'race.racer_sound'
+      readonly soundId: number
+      readonly address: string
+      readonly racerIndex: number
+    }
   | { readonly type: 'race.track_effect'; readonly effect: TrackEffect }
 
 export type RaceStepResult = {

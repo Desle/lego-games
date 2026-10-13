@@ -1,3 +1,21 @@
+import {
+  BARREL_HUM_ADDRESS,
+  BARREL_HUM_SOUND_ID,
+  CURSE_HUM_ADDRESS,
+  CURSE_HUM_SOUND_ID,
+  GRAPPLE_LATCHED_RELEASE_SOUND,
+  GRAPPLE_LAUNCH_SOUND,
+  GRAPPLE_RELEASE_SOUND,
+  GRAPPLE_SNAP_SOUND,
+  MAGNET_LAST_SECOND_SOUND,
+  OIL_LANDING_SOUND,
+  SHIELD_END_SOUND,
+  WAND_END_SOUND,
+  WAND_SPARK_SOUND,
+  WARP_END_SOUND,
+  WARP_SOUND,
+  WARP_START_SOUND,
+} from '../power-up-sounds/power-up-sounds.ts'
 import type { PowerUpEvent } from '../../events/power-up.events.types.ts'
 import { RaceModeFlag } from '../../types/brick-kind/brick-kind.ts'
 import {
@@ -61,12 +79,23 @@ const advanceBarrel = (
   effect: PowerUpEffect
 ): PowerUpStep => {
   if (effect.state === EffectState.STARTING)
-    // 0x00453240 case 2: the thrown barrel throws sparks.
-    return startEffectEmitter(
-      getWithState(step, effect, EffectState.ACTIVE, 5000),
-      context.arithmetic,
-      effect.id,
-      'dynsprk'
+    // 0x00453240 case 2: the thrown barrel throws sparks and loops sound 0x11.
+    return getStepWithEvents(
+      startEffectEmitter(
+        getWithState(step, effect, EffectState.ACTIVE, 5000),
+        context.arithmetic,
+        effect.id,
+        'dynsprk'
+      ),
+      [
+        {
+          type: 'power_ups.looped_sound_started',
+          key: `barrel:${String(effect.id)}`,
+          soundId: BARREL_HUM_SOUND_ID,
+          address: BARREL_HUM_ADDRESS,
+          ownerRacer: effect.ownerRacer,
+        },
+      ]
     )
   if (effect.state === EffectState.ACTIVE) {
     return getStepWithEvents(getWithState(step, effect, EffectState.FINISHED, 0), [
@@ -129,41 +158,64 @@ const advanceTurbo = (
 const OIL_LANDING_FLIP_RATE = Math.fround(0.0015)
 const OIL_LANDING_FLIP_MILLISECONDS = 150
 
-const getOilLandingFlip = (effect: PowerUpEffect): readonly PowerUpEvent[] =>
-  effect.ownerRacer === null
+// Sound 0x2e plays (0x00457431) whoever dropped the slick, and sound 0x30 loops on it (0x00457440).
+const OIL_LOOP_SOUND = 0x30
+const getOilLoopKey = (effect: PowerUpEffect) => `oil:${String(effect.id)}`
+
+const getOilLandingEvents = (effect: PowerUpEffect): readonly PowerUpEvent[] => [
+  OIL_LANDING_SOUND,
+  {
+    type: 'power_ups.looped_sound_started',
+    key: getOilLoopKey(effect),
+    soundId: OIL_LOOP_SOUND,
+    address: '0x00457440',
+    ownerRacer: effect.ownerRacer,
+  },
+  ...(effect.ownerRacer === null
     ? []
     : [
         {
-          type: 'power_ups.racer_flipped',
+          type: 'power_ups.racer_flipped' as const,
           racer: effect.ownerRacer,
           rate: OIL_LANDING_FLIP_RATE,
           milliseconds: OIL_LANDING_FLIP_MILLISECONDS,
         },
-      ]
+      ]),
+]
 
 const getOwnerEvent = (effect: PowerUpEffect, type: OwnerEventType): readonly OwnerEvent[] =>
   effect.ownerRacer === null ? [] : [{ type, racer: effect.ownerRacer }]
 
-const advanceShieldOrWarp = (step: PowerUpStep, effect: PowerUpEffect): PowerUpStep => {
+const advanceShieldOrWarp = (
+  step: PowerUpStep,
+  context: PowerUpContext,
+  effect: PowerUpEffect
+): PowerUpStep => {
   if (effect.kind === PowerUpEffectKind.SHIELD) {
     if (effect.state === EffectState.ACTIVE)
       return getWithState(step, effect, EffectState.ENDING, 1000)
     if (effect.state !== EffectState.ENDING) return step
+    // 0x0045c2a0 state 4: sound 0x3b, then 0x00439790 lowers the shield.
     return getStepWithEvents(
       getWithState(step, effect, EffectState.FINISHED, effect.timerMilliseconds),
-      getOwnerEvent(effect, 'power_ups.racer_shield_lowered')
+      [SHIELD_END_SOUND, ...getOwnerEvent(effect, 'power_ups.racer_shield_lowered')]
     )
   }
+  // 0x0045dc90: a human racer's warp (+0xe0 is set for a computer, 0x0045d560) starts with sound 0x27 and ends with
+  // 0x29; every warp starts with sound 0x41 at the racer.
+  const isOwnWarp =
+    effect.ownerRacer === null || context.racers[effect.ownerRacer]?.isComputer !== true
   if (effect.state === EffectState.STARTING) {
-    return getStepWithEvents(
-      getWithState(step, effect, EffectState.ACTIVE, 1500),
-      getOwnerEvent(effect, 'power_ups.racer_warp_started')
-    )
+    return getStepWithEvents(getWithState(step, effect, EffectState.ACTIVE, 1500), [
+      ...getOwnerEvent(effect, 'power_ups.racer_warp_started'),
+      ...(isOwnWarp ? [WARP_START_SOUND] : []),
+      WARP_SOUND,
+    ])
   }
   if (effect.state !== EffectState.ACTIVE) return step
   return getStepWithEvents(
     getWithState(step, effect, EffectState.FINISHED, effect.timerMilliseconds),
-    getOwnerEvent(effect, 'power_ups.racer_warp_ended')
+    [...getOwnerEvent(effect, 'power_ups.racer_warp_ended'), ...(isOwnWarp ? [WARP_END_SOUND] : [])]
   )
 }
 
@@ -191,11 +243,15 @@ const advanceProjectile = (
   if (effect.kind === PowerUpEffectKind.GRAPPLE) {
     // 0x00454360: the hook leaves in a puff of smoke.
     if (effect.state === EffectState.STARTING)
-      return startEffectEmitter(
-        getWithState(step, effect, EffectState.ACTIVE, 3000),
-        context.arithmetic,
-        effect.id,
-        'cannsmk'
+      return getStepWithEvents(
+        startEffectEmitter(
+          getWithState(step, effect, EffectState.ACTIVE, 3000),
+          context.arithmetic,
+          effect.id,
+          'cannsmk'
+        ),
+        // 0x00454360 state 2 ends with the launch sound.
+        [GRAPPLE_LAUNCH_SOUND]
       )
     if (effect.state === EffectState.ACTIVE || effect.state === EffectState.ENDING) {
       return retractGrapple(step, effect)
@@ -204,10 +260,21 @@ const advanceProjectile = (
   }
   if (effect.kind === PowerUpEffectKind.WAND) {
     const advanced = advanceThreeStages(step, effect, 7000, 500)
-    // 0x00455060: the hit sparks are let go when the wand ends.
+    // 0x00455060: the hit sparks are let go when the wand ends, and its state 4 ends with sound 0x42.
     return effect.state === EffectState.STARTING || effect.state === EffectState.ACTIVE
       ? advanced
-      : releaseEffectEmitter(advanced, effect.id, false)
+      : getStepWithEvents(releaseEffectEmitter(advanced, effect.id, false), [
+          WAND_END_SOUND,
+          ...(effect.ownerRacer === null
+            ? []
+            : [
+                {
+                  type: 'power_ups.looped_sound_stopped' as const,
+                  key: `wand:${String(effect.ownerRacer)}`,
+                  address: '0x00455060',
+                },
+              ]),
+        ])
   }
   // Cannon 0x00451f50 (3000 ms flight, with its smoke) and rocket 0x00456db0 (5500 ms).
   if (effect.state === EffectState.STARTING) {
@@ -227,21 +294,22 @@ const advanceProjectile = (
   return getWithState(step, effect, EffectState.FINISHED, 0)
 }
 
-// 0x00454690: the grapple pulls back for 500 ms; a latched racer (state 4) is let go.
+// 0x00454690: the grapple pulls back for 500 ms. A latched racer (state 4, +0xd4) is let go with sound 0x14; a grapple
+// that caught nobody snaps (0x16) and releases (0x49).
 export const retractGrapple = (step: PowerUpStep, effect: PowerUpEffect): PowerUpStep =>
-  getStepWithEvents(
-    getWithState(step, effect, EffectState.FINAL_STAGE, 500),
-    effect.state === EffectState.ENDING
+  getStepWithEvents(getWithState(step, effect, EffectState.FINAL_STAGE, 500), [
+    ...(effect.state === EffectState.ENDING
       ? [
           {
-            type: 'power_ups.grapple_released',
+            type: 'power_ups.grapple_released' as const,
             effect: effect.id,
             victim: effect.targetRacer,
             owner: effect.ownerRacer,
           },
+          GRAPPLE_LATCHED_RELEASE_SOUND,
         ]
-      : []
-  )
+      : [GRAPPLE_SNAP_SOUND, GRAPPLE_RELEASE_SOUND]),
+  ])
 
 // Vtable slot 5, called when an effect's timer runs out (0x004513a0) or its projectile ends.
 export const advancePowerUpEffect = (
@@ -262,28 +330,66 @@ export const advancePowerUpEffect = (
         ? startEffectEmitter(
             getStepWithEvents(
               getWithState(step, effect, EffectState.ACTIVE, 10000),
-              getOilLandingFlip(effect)
+              getOilLandingEvents(effect)
             ),
             context.arithmetic,
             effect.id,
             'oilbub'
           )
-        : getWithState(step, effect, EffectState.FINISHED, 0)
+        : getStepWithEvents(getWithState(step, effect, EffectState.FINISHED, 0), [
+            {
+              type: 'power_ups.looped_sound_stopped',
+              key: getOilLoopKey(effect),
+              address: '0x004573a0',
+            },
+          ])
     case PowerUpEffectKind.BARREL:
       return advanceBarrel(step, context, effect)
     case PowerUpEffectKind.MAGNET:
-      // 0x00455f50.
+      // 0x00455f50: the magnet's last second begins with sound 0x4a and it ends the second after.
       return effect.state === EffectState.ENDING
-        ? getWithState(step, effect, EffectState.FINISHED, effect.timerMilliseconds)
-        : getWithState(step, effect, EffectState.ENDING, 1000)
-    case PowerUpEffectKind.CURSE:
-      // 0x00452ae0.
-      return advanceThreeStages(step, effect, 15000, 1000)
+        ? getStepWithEvents(
+            getWithState(step, effect, EffectState.FINISHED, effect.timerMilliseconds),
+            [
+              {
+                type: 'power_ups.looped_sound_stopped',
+                key: `magnet:${String(effect.id)}`,
+                address: '0x00455f50',
+              },
+            ]
+          )
+        : getStepWithEvents(getWithState(step, effect, EffectState.ENDING, 1000), [
+            MAGNET_LAST_SECOND_SOUND,
+          ])
+    case PowerUpEffectKind.CURSE: {
+      // 0x00452ae0: the curse figure loops sound 9 while it stands.
+      const advanced = advanceThreeStages(step, effect, 15000, 1000)
+      if (effect.state === EffectState.STARTING) {
+        return getStepWithEvents(advanced, [
+          {
+            type: 'power_ups.looped_sound_started',
+            key: `curse:${String(effect.id)}`,
+            soundId: CURSE_HUM_SOUND_ID,
+            address: CURSE_HUM_ADDRESS,
+            ownerRacer: null,
+          },
+        ])
+      }
+      return effect.state === EffectState.ACTIVE || effect.state === EffectState.ENDING
+        ? advanced
+        : getStepWithEvents(advanced, [
+            {
+              type: 'power_ups.looped_sound_stopped',
+              key: `curse:${String(effect.id)}`,
+              address: '0x00452ae0',
+            },
+          ])
+    }
     case PowerUpEffectKind.TURBO:
       return advanceTurbo(step, context, effect)
     default:
       // Shield 0x0045c2a0, warp 0x0045dc90.
-      return advanceShieldOrWarp(step, effect)
+      return advanceShieldOrWarp(step, context, effect)
   }
 }
 
@@ -374,10 +480,14 @@ const updateWand = (
     })
   }
   const sparkDraws = getStepDraws(beamed, 2)
-  return getStepWithEffect(sparkDraws.step, {
-    ...current,
-    sparkMilliseconds: ((sparkDraws.values[1] ?? 0) % 300) + 200,
-  })
+  // 0x00454e50: the spark plays sound 0x45 between its two draws.
+  return getStepWithEvents(
+    getStepWithEffect(sparkDraws.step, {
+      ...current,
+      sparkMilliseconds: ((sparkDraws.values[1] ?? 0) % 300) + 200,
+    }),
+    [WAND_SPARK_SOUND]
+  )
 }
 
 // Vtable slot 2 for one active effect; the movement and collision parts are not ported (power-ups.md).

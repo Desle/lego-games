@@ -370,7 +370,7 @@ const stepContact = (
     ...waited,
     sounds: Object.freeze([
       ...waited.sounds,
-      { soundId: (draw.value & 1) === 0 ? 0x38 : 0x19, address: '0x00437b1a' },
+      { soundId: (draw.value & 1) === 0 ? 0x38 : 0x19, address: '0x00437b1a', racerIndex },
     ]),
   })
   return setRandomPosition(sounded, draw.position)
