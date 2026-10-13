@@ -1,12 +1,13 @@
 import type { ModelScene } from '@lego-games/lego-racers/scene'
-import { Box3, Vector3 } from 'three'
+import { Box3, Triangle, Vector3 } from 'three'
 import type { Matrix4, Object3D } from 'three'
 import { MinifigPartKey } from '../ldraw-racer/minifig-assembly.types.ts'
 import type { MinifigRig } from '../ldraw-racer/minifig-rig.types.ts'
 import { findWheels } from '../ldraw-racer/wheel-analysis.ts'
 import { getAnchorResult } from './fidelity-measurement.ts'
-import { getVisibleBounds } from './fidelity-render.ts'
+import { getMeshes, getVisibleBounds } from './fidelity-render.ts'
 import type { BonePoint, BoundsPair, DriverMeasures } from './fidelity-anchors.types.ts'
+import type { WheelMount } from '../reference-kit/reference-kit.types.ts'
 import type { FidelityAnchorResult } from './ldraw-fidelity.types.ts'
 
 const AXIS_COUNT = 3
@@ -239,4 +240,52 @@ export const getHolderCentres = (holders: readonly Object3D[]): readonly Vector3
   holders.flatMap((holder) => {
     const centre = getCentre(getVisibleBounds(holder))
     return centre === null ? [] : [centre]
+  })
+
+const AXLE_INDICES: Readonly<Record<string, number>> = Object.freeze({ x: 0, y: 1, z: 2 })
+
+// The distance from a point to the nearest face that a drawing draws, in the world.
+const getNearestSurfaceDistance = (object: Object3D, point: Vector3): number | null => {
+  object.updateMatrixWorld(true)
+  const triangle = new Triangle()
+  const nearest = new Vector3()
+  let distance: number | null = null
+  for (const mesh of getMeshes(object, true)) {
+    if (!mesh.geometry.hasAttribute('position')) continue
+    const positions = mesh.geometry.getAttribute('position')
+    const index = mesh.geometry.getIndex()
+    const count = index === null ? positions.count : index.count
+    const getCorner = (corner: number): number => (index === null ? corner : index.getX(corner))
+    for (let corner = 0; corner + 2 < count; corner += 3) {
+      triangle.a.fromBufferAttribute(positions, getCorner(corner)).applyMatrix4(mesh.matrixWorld)
+      triangle.b
+        .fromBufferAttribute(positions, getCorner(corner + 1))
+        .applyMatrix4(mesh.matrixWorld)
+      triangle.c
+        .fromBufferAttribute(positions, getCorner(corner + 2))
+        .applyMatrix4(mesh.matrixWorld)
+      const candidate = triangle.closestPointToPoint(point, nearest).distanceTo(point)
+      distance = distance === null ? candidate : Math.min(distance, candidate)
+    }
+  }
+  return distance
+}
+
+// Each wheel the game puts on a chassis against a chassis recipe's base: the distance from the wheel's hub (the middle of its inner
+// face, where an axle or a holder meets it) to the nearest face of the base. A base holds the game's wheels when it reaches every hub.
+export const getWheelHubAnchors = (
+  mounts: readonly WheelMount[],
+  base: Object3D
+): readonly FidelityAnchorResult[] =>
+  mounts.flatMap((mount, wheelIndex) => {
+    const axleIndex = AXLE_INDICES[mount.axle] ?? 1
+    const hub = new Vector3(...mount.centre)
+    const outward = Math.sign(hub.getComponent(axleIndex))
+    hub.setComponent(axleIndex, hub.getComponent(axleIndex) - (outward * mount.width) / 2)
+    const distance = getNearestSurfaceDistance(base, hub)
+    return getAnchorResult(
+      `wheel ${String(wheelIndex + 1)} hub`,
+      hub,
+      distance === null ? null : hub.clone().setX(hub.x + distance)
+    )
   })

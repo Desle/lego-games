@@ -28,7 +28,7 @@ const VIEW_FRAMES: Readonly<Record<FidelityView, ViewFrame>> = Object.freeze({
 
 const getIsMesh = (object: Object3D): object is DrawnMesh => object instanceof Mesh
 
-const getMeshes = (root: Object3D, isVisibleOnly: boolean): readonly DrawnMesh[] => {
+export const getMeshes = (root: Object3D, isVisibleOnly: boolean): readonly DrawnMesh[] => {
   const meshes: DrawnMesh[] = []
   const visit = (child: Object3D) => {
     if (getIsMesh(child)) meshes.push(child)

@@ -3,11 +3,12 @@ import { Matrix3, Vector3 } from 'three'
 import {
   compareSilhouettes,
   FIDELITY_PASS_SCORE,
+  getChassisScore,
   getCoverageMask,
   getFidelityScore,
   getMeanColorDifference,
 } from './fidelity-metrics.ts'
-import type { SilhouetteComparison } from './fidelity-metrics.types.ts'
+import type { ChassisMeasurement, SilhouetteComparison } from './fidelity-metrics.types.ts'
 import type { ViewPictures } from './fidelity-render.types.ts'
 import type {
   FidelityAnchorResult,
@@ -65,13 +66,15 @@ const getVectorInLDrawUnits = (vector: Vector3): readonly number[] =>
     .toArray()
     .map((value) => getRounded(value, 2))
 
-// The numbers of one item from its views, the bounds of both drawings and the distances of its attachment points.
+// The numbers of one item from its views, the bounds of both drawings and the distances of its attachment points; a chassis recipe's
+// score is its own measures' (the views are kept for people).
 export const getFidelityResult = (
   item: FidelityItem,
   pictures: readonly ViewPictures[],
   originalBounds: Box3,
   replacementBounds: Box3,
   anchors: readonly FidelityAnchorResult[],
+  chassis: ChassisMeasurement | null,
   note: string
 ): FidelityResult => {
   const masks = pictures.map((picture) => ({
@@ -111,13 +114,16 @@ export const getFidelityResult = (
     views.flatMap((view) => (view.colorDifference === null ? [] : [view.colorDifference]))
   )
   const meanAnchorDistance = getMean(anchors.map((anchor) => anchor.distance))
-  const score = getFidelityScore({
-    meanIntersectionOverUnion,
-    centroidDistance: centroidOffset.length() * LDRAW_UNITS_PER_STUD,
-    scaleRatio: scaleRatio > 0 ? scaleRatio : Number.NaN,
-    meanColorDifference,
-    meanAnchorDistance,
-  })
+  const score =
+    chassis === null
+      ? getFidelityScore({
+          meanIntersectionOverUnion,
+          centroidDistance: centroidOffset.length() * LDRAW_UNITS_PER_STUD,
+          scaleRatio: scaleRatio > 0 ? scaleRatio : Number.NaN,
+          meanColorDifference,
+          meanAnchorDistance,
+        })
+      : getChassisScore(chassis)
   return Object.freeze({
     id: item.id,
     kind: item.kind,
@@ -136,6 +142,7 @@ export const getFidelityResult = (
     meanColorDifference: meanColorDifference === null ? null : getRounded(meanColorDifference, 2),
     anchors,
     meanAnchorDistance: meanAnchorDistance === null ? null : getRounded(meanAnchorDistance, 2),
+    footprintCoverage: chassis === null ? null : getRounded(chassis.footprintCoverage),
     note,
   })
 }
@@ -158,6 +165,7 @@ export const getUnmeasuredResult = (item: FidelityItem, note: string): FidelityR
     meanColorDifference: null,
     anchors: [],
     meanAnchorDistance: null,
+    footprintCoverage: null,
     note,
   })
 

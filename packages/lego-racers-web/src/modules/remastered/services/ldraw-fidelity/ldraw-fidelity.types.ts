@@ -80,6 +80,8 @@ export type FidelityResult = {
   readonly meanColorDifference: number | null
   readonly anchors: readonly FidelityAnchorResult[]
   readonly meanAnchorDistance: number | null
+  // A chassis recipe's share of the building cells over a stud of its base, null for other items.
+  readonly footprintCoverage: number | null
   // Why an item could not be measured, or what its numbers leave out.
   readonly note: string
 }

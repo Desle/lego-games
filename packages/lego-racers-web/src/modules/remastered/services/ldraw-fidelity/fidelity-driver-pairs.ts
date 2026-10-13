@@ -108,6 +108,7 @@ export const createDriverPair = async (
     pair: { original: createSceneWith(original.group), replacement },
     anchors: measures.anchors,
     focus,
+    chassis: null,
     note: region !== null && focus === null ? `no ${region} region; whole figure` : '',
     dispose: () => {
       original.object.dispose()

@@ -92,6 +92,7 @@ const measureFidelityItem = async (
       originalBounds,
       replacementBounds,
       outcome.anchors,
+      outcome.chassis,
       outcome.note
     )
   } finally {
