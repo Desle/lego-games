@@ -10,6 +10,31 @@ export {
   turnQuarter,
 } from './services/builder-document/builder-document.ts'
 export {
+  applyConnectionSnap,
+  findConnectionSnap,
+} from './services/builder-connection-snap/builder-connection-snap.ts'
+export type {
+  ConnectionSnap,
+  ConnectionSnapOptions,
+} from './services/builder-connection-snap/builder-connection-snap.types.ts'
+export {
+  getMinifigConnections,
+  getPartConnections,
+} from './services/builder-connections/builder-connections.ts'
+export { ConnectionKind } from './services/builder-connections/builder-connections.types.ts'
+export type {
+  ConnectedPart,
+  PartConnection,
+} from './services/builder-connections/builder-connections.types.ts'
+export {
+  getDominantAxis,
+  getIsAlongAxis,
+  getIsVertical,
+  getPlateOffset,
+  getRayHeight,
+  lockToAxis,
+} from './services/builder-drag/builder-drag.ts'
+export {
   addParts,
   getSameColorIndices,
   getStudOffset,
@@ -53,6 +78,7 @@ export type {
   PartStud,
   PartStudLists,
 } from './services/builder-studs/builder-studs.types.ts'
+export { addVectors, getVectorDifference } from './services/builder-vectors/builder-vectors.ts'
 export { PLATE_HEIGHT, STUD_WIDTH } from './services/ldraw-units/ldraw-units.constants.ts'
 export {
   createLibraryFileReader,

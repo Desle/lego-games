@@ -34,6 +34,25 @@ describe('findPartShape', () => {
     ])
   })
 
+  it('finds a hat socket (a tube opening down) where the stud of a head goes, and the title line', async () => {
+    // Arrange
+    const files: Readonly<Record<string, string>> = {
+      'hat.dat': ['0 Minifig Police Hat', '1 16 0 -4 0 1 0 0 0 -1 0 0 0 -1 stud4.dat'].join('\n'),
+    }
+
+    // Act
+    const shape = await findPartShape('hat.dat', (name) => Promise.resolve(files[name] ?? null))
+
+    // Assert
+    expect(
+      shape.holes.map((hole) => ({
+        position: round(hole.position),
+        direction: round(hole.direction),
+      }))
+    ).toEqual([{ position: [0, 0, 0], direction: [0, -1, 0] }])
+    expect(shape.description).toBe('Minifig Police Hat')
+  })
+
   it('finds nothing for a part the library lacks', async () => {
     // Arrange
     const partName = 'missing.dat'

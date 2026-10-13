@@ -25,12 +25,19 @@ const UPWARD = 0.99
 // (stud3, stud4) nor Duplo, Scala or Quatro studs.
 const STUD_PRIMITIVE =
   /^(stud|stud2|stud2a|studa|stud6a?|stud9|stud10|stud13|stud15|stud17a?|stud26|studel|studh[lr]?|studp01|studxa?)(-logo\d?)?\.dat$/i
+// The open tubes a stud goes into (a hat's or a helmet's socket for the head's stud), pointing down in the part: where a stud pointing
+// up fits, its base 4 under the tube's origin as the tube is turned.
+const HOLE_PRIMITIVE = /^(stud4[a-z]*|stud3a?)\.dat$/i
+const HOLE_DEPTH: Vector = [0, -4, 0]
+const DOWNWARD = 0.99
 const FACE_LINE = /^([34])\s+\S+((?:\s+-?[\d.eE+-]+){9,12})\s*$/
 const EMPTY_SHAPE: PartShape = Object.freeze({
   studs: [],
+  holes: [],
   box: null,
   footprint: null,
   bottom: null,
+  description: '',
 })
 
 const getUnit = (vector: Vector): Vector => {
@@ -75,7 +82,7 @@ const collect = async (
   depth: number
 ): Promise<CollectedGeometry> => {
   const text = depth > MAXIMUM_DEPTH ? null : await readFile(placement.partName)
-  if (text === null) return { studs: [], faces: [] }
+  if (text === null) return { studs: [], holes: [], faces: [] }
   const lines = text.split(/\r?\n/)
   const faces = lines
     .map((line) => parseFace(placement, line))
@@ -87,16 +94,22 @@ const collect = async (
       .map(async (line): Promise<CollectedGeometry> => {
         const placed = placeLine(placement, line)
         const child = await collect(placed, readFile, depth + 1)
+        const direction = getUnit(rotateVector(placed.rotation, PART_UP))
+        if (HOLE_PRIMITIVE.test(line.partName) && direction[1] > DOWNWARD) {
+          const hole: PartStud = Object.freeze({
+            position: placePoint(placed, HOLE_DEPTH),
+            direction: [0, -1, 0] as const,
+          })
+          return { studs: [], holes: [hole], faces: child.faces }
+        }
         if (!STUD_PRIMITIVE.test(line.partName)) return child
-        const stud: PartStud = Object.freeze({
-          position: placed.position,
-          direction: getUnit(rotateVector(placed.rotation, PART_UP)),
-        })
-        return { studs: [stud], faces: child.faces }
+        const stud: PartStud = Object.freeze({ position: placed.position, direction })
+        return { studs: [stud], holes: [], faces: child.faces }
       })
   )
   return {
     studs: found.flatMap((child) => child.studs),
+    holes: found.flatMap((child) => child.holes),
     faces: [...faces, ...found.flatMap((child) => child.faces)],
   }
 }
@@ -215,13 +228,16 @@ const getFootprint = (
   )
 }
 
-// A part's studs (found from the stud primitives its file and subfiles place, each pointing the way its matrix turns it), the box of
-// its faces and its footprint.
+const getDescription = (text: string | null): string =>
+  /^0\s+(.*)$/.exec((text ?? '').split(/\r?\n/)[0]?.trim() ?? '')?.[1]?.trim() ?? ''
+
+// A part's studs (found from the stud primitives its file and subfiles place, each pointing the way its matrix turns it), its holes,
+// the box of its faces, its footprint and its title line.
 export const findPartShape = async (
   partName: string,
   readFile: LibraryFileReader
 ): Promise<PartShape> => {
-  const { studs, faces } = await collect(
+  const { studs, holes, faces } = await collect(
     { colorCode: 16, position: [0, 0, 0], rotation: IDENTITY_ROTATION, partName },
     readFile,
     0
@@ -229,9 +245,11 @@ export const findPartShape = async (
   const upward = studs.filter((stud) => stud.direction[1] < -UPWARD)
   return Object.freeze({
     studs: Object.freeze(studs),
+    holes: Object.freeze(holes),
     box: getBoxOf(faces.flat()),
     footprint: getFootprint(faces, upward),
     bottom: getBottom(faces, upward),
+    description: getDescription(await readFile(partName)),
   })
 }
 

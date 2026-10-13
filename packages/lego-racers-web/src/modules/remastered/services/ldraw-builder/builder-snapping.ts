@@ -32,7 +32,14 @@ const OVERLAP = 0.5
 const SAME = 0.01
 const TIE_BIAS = 0.01
 const HALF_TURN_ENTRY = 0.5
-const NO_SHAPE: PartShape = Object.freeze({ studs: [], box: null, footprint: null, bottom: null })
+const NO_SHAPE: PartShape = Object.freeze({
+  studs: [],
+  holes: [],
+  box: null,
+  footprint: null,
+  bottom: null,
+  description: '',
+})
 const UP: Vector = [0, -1, 0]
 const STUDS_TO_LDRAW = LDRAW_TO_STUDS.clone().invert()
 

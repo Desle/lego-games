@@ -22,7 +22,7 @@ const createShape = (
   studs: readonly PartStud[],
   box: BuilderBox,
   bottom: number | null = null
-): PartShape => ({ studs, box, footprint: null, bottom })
+): PartShape => ({ studs, holes: [], box, footprint: null, bottom, description: '' })
 const BRICK_SHAPE = createShape([], BRICK_BOX)
 const BRICK_GRID_POINT = getGridPoint(BRICK_SHAPE, BRICK_BOX, IDENTITY)
 const BRICK_BOTTOM = getPartBottom(BRICK_SHAPE, BRICK_BOX, IDENTITY)
@@ -323,6 +323,8 @@ describe('getGridPoint', () => {
       box: { minimum: [-20, -4, -10], maximum: [20, 8, 10] },
       footprint: { minimum: [-19, 8, -9], maximum: [19, 8, 9] },
       bottom: 8,
+      holes: [],
+      description: '',
     }
     const box = jumper.box ?? BRICK_BOX
     const phase = getPartPhase([10, 0, 10], BRICK_BELOW)

@@ -118,7 +118,21 @@ export const BUILDER_SHORTCUT_GROUPS: readonly BuilderShortcutGroup[] = [
         description: 'select it (empty hand); click empty space to deselect',
       },
       { keys: '⇧ click', description: 'add to or remove from the selection' },
-      { keys: 'Drag', description: 'move the selection along the stud grid' },
+      {
+        keys: 'Drag',
+        description:
+          'move the selection: it snaps onto the nearest stud or joint (marked blue), else along the stud grid',
+      },
+      { keys: '⇧ drag', description: 'move in a straight line along one axis (a guide shows it)' },
+      {
+        keys: '⌘ drag',
+        description: 'move up and down by plates, onto the studs above or below',
+      },
+      {
+        keys: 'Minifigure',
+        description:
+          'bring a part near its joint (in hand or dragged): head on neck, hat on head, arms, hands, legs, tools in hands',
+      },
       { keys: 'R  ⇧R', description: 'rotate 90° left, right (selection, else part in hand)' },
       {
         keys: 'T  ⇧T',
@@ -171,4 +185,5 @@ export const BUILDER_SHORTCUT_GROUPS: readonly BuilderShortcutGroup[] = [
 export const BUILDER_SHORTCUT_HINTS: readonly string[] = [
   'Scroll orbit · ⇧ scroll pan · pinch zoom · ⌥ drag orbit',
   'R rotate · T tilt · ⌫ delete · ⌘Z undo · ⌘S done · ? all shortcuts',
+  'Drag snaps to studs and joints · ⇧ drag straight · ⌘ drag up, down',
 ]

@@ -6,13 +6,16 @@ export type PartStud = {
   readonly direction: Vector
 }
 
-// What placement needs of a part's geometry, in its own frame: its studs, the box of its faces, its footprint (the extent of its lowest
-// level faces under its studs; null without level faces) and its bottom (how far down it reaches under its upward studs; null without).
+// What placement needs of a part's geometry, in its own frame: its studs, its holes (where a stud pointing up goes into a tube that
+// opens down: a hat's socket), the box of its faces, its footprint (the extent of its lowest level faces under its studs; null without
+// level faces), its bottom (how far down it reaches under its upward studs; null without) and its title line ('' without).
 export type PartShape = {
   readonly studs: readonly PartStud[]
+  readonly holes: readonly PartStud[]
   readonly box: BuilderBox | null
   readonly footprint: BuilderBox | null
   readonly bottom: number | null
+  readonly description: string
 }
 
 export type PartStudLists = {
@@ -27,9 +30,10 @@ export type PartShapes = {
   readonly getLoaded: (partName: string) => PartShape | undefined
 }
 
-// What a walk through a part's files finds: its studs and its faces (each a triangle or quad of points), in the part's frame.
+// What a walk through a part's files finds: its studs, its holes and its faces (each a triangle or quad of points), in the part's frame.
 export type CollectedGeometry = {
   readonly studs: readonly PartStud[]
+  readonly holes: readonly PartStud[]
   readonly faces: readonly (readonly Vector[])[]
 }
 
