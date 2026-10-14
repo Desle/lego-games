@@ -7,6 +7,7 @@ import type {
   OnScreenDrawing,
   OnScreenFrame,
   OnScreenMaterialGroup,
+  RenderWatch,
   VisibleLayerDrawing,
 } from './on-screen-check.types.ts'
 
@@ -14,7 +15,7 @@ import type {
 const CHANNEL_TOLERANCE = 4
 const CHANNELS_PER_PIXEL = 4
 
-const readPixels = (canvas: HTMLCanvasElement): Uint8ClampedArray => {
+export const readPixels = (canvas: HTMLCanvasElement): Uint8ClampedArray => {
   const { width, height } = canvas
   const context = new OffscreenCanvas(width, height).getContext('2d', { willReadFrequently: true })
   if (context === null) throw new Error('No 2D context to read the frame with')
@@ -22,7 +23,7 @@ const readPixels = (canvas: HTMLCanvasElement): Uint8ClampedArray => {
   return context.getImageData(0, 0, width, height).data
 }
 
-const getChangedPixels = (before: Uint8ClampedArray, after: Uint8ClampedArray): number => {
+export const getChangedPixels = (before: Uint8ClampedArray, after: Uint8ClampedArray): number => {
   if (before.length !== after.length) return before.length / CHANNELS_PER_PIXEL
   let changed = 0
   for (let pixel = 0; pixel < before.length; pixel += CHANNELS_PER_PIXEL) {
@@ -51,7 +52,7 @@ const getMaterialKey = (mesh: Mesh): string =>
     .map((material) => material.type)
     .join('+')
 
-const drainErrors = (renderers: ReadonlySet<WebGLRenderer>): readonly number[] =>
+export const drainErrors = (renderers: ReadonlySet<WebGLRenderer>): readonly number[] =>
   [...renderers].flatMap((renderer) => {
     const context = renderer.getContext()
     const errors: number[] = []
@@ -59,6 +60,35 @@ const drainErrors = (renderers: ReadonlySet<WebGLRenderer>): readonly number[] =
       errors.push(error)
     return errors
   })
+
+// Every scene and renderer the page draws with while watching (`Scene.onBeforeRender`, after the hooks set before it, whatever path
+// drew the scene).
+export const watchRenderedScenes = (): RenderWatch => {
+  let renderers = new Set<WebGLRenderer>()
+  let scenes = new Set<Scene>()
+  let isWatching = false
+  // The census's hook comes first and reads no `this`.
+  const previousOnBeforeRender = Scene.prototype.onBeforeRender.bind(Scene.prototype)
+  Scene.prototype.onBeforeRender = (...parameters) => {
+    previousOnBeforeRender(...parameters)
+    if (!isWatching) return
+    const [renderer, scene] = parameters
+    renderers = new Set(renderers).add(renderer)
+    if (scene instanceof Scene) scenes = new Set(scenes).add(scene)
+  }
+  return {
+    start: () => {
+      renderers = new Set()
+      scenes = new Set()
+      isWatching = true
+    },
+    stop: () => {
+      isWatching = false
+    },
+    getScenes: () => scenes,
+    getRenderers: () => renderers,
+  }
+}
 
 // Hides the objects, draws the frame and reads it, then gives them back their visibility.
 const drawWithout = (objects: readonly Object3D[], drawFrame: FrameDrawer) => {
@@ -76,18 +106,7 @@ export const createOnScreenCheck = (
   getCalls: () => readonly HookCall[],
   getCallId: (object: Object3D) => number | null
 ) => {
-  let renderers = new Set<WebGLRenderer>()
-  let scenes = new Set<Scene>()
-  let isWatching = false
-  // The census's hook comes first and reads no `this`.
-  const previousOnBeforeRender = Scene.prototype.onBeforeRender.bind(Scene.prototype)
-  Scene.prototype.onBeforeRender = (...parameters) => {
-    previousOnBeforeRender(...parameters)
-    if (!isWatching) return
-    const [renderer, scene] = parameters
-    renderers = new Set(renderers).add(renderer)
-    if (scene instanceof Scene) scenes = new Set(scenes).add(scene)
-  }
+  const watch = watchRenderedScenes()
 
   const getDrawings = () => {
     const calls = getCalls()
@@ -99,7 +118,7 @@ export const createOnScreenCheck = (
       if (call !== undefined) found.push({ call, object })
       object.children.forEach(visit)
     }
-    scenes.forEach(visit)
+    watch.getScenes().forEach(visit)
     return found
   }
 
@@ -151,12 +170,10 @@ export const createOnScreenCheck = (
   }
 
   const measure = (label: string, drawFrame: FrameDrawer): OnScreenFrame => {
-    renderers = new Set()
-    scenes = new Set()
-    isWatching = true
+    watch.start()
     const shown = readPixels(drawFrame())
-    isWatching = false
-    const errorsBefore = drainErrors(renderers)
+    watch.stop()
+    const errorsBefore = drainErrors(watch.getRenderers())
     const unchangedDifference = getChangedPixels(shown, readPixels(drawFrame()))
     // The meshes are hidden, not the drawing: a view shows its drawing again on every draw.
     const drawings = getDrawings().map(({ call, object }): OnScreenDrawing => {
@@ -172,7 +189,7 @@ export const createOnScreenCheck = (
     })
     return {
       label,
-      webglErrors: [...errorsBefore, ...drainErrors(renderers)],
+      webglErrors: [...errorsBefore, ...drainErrors(watch.getRenderers())],
       unchangedDifference,
       drawings,
     }

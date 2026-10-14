@@ -178,7 +178,7 @@ Not mechanically decidable; reviewers and agents uphold these.
 
 - **Rule**: A change to what the viewer draws (geometry, textures, materials, decals, draw order, effects) is done only when `pnpm run pixel-trace` passes a case that shows it on the screen. Add the case to `pixel-trace-cases.ts` first, watch it fail, then fix.
 - **Why**: The render and decal traces compare the engine's data with the original's, not the pixels the viewer produces: an oil slick whose triangles matched still drew its picture upside down.
-- **Enforced by**: code review; `pnpm run pixel-trace` (needs the original files and Chrome, skips without them; not part of `ci`). See `.docs/reverse-engineering/pixel-trace.md`.
+- **Enforced by**: code review; `pnpm run pixel-trace` (needs the original files and Chrome, skips without them; not part of `ci`); for effects and power-ups, `pnpm run effect-sweep` (every power-up colour and level, Classic and `?hd`). See `.docs/reverse-engineering/pixel-trace.md`.
 
 ### HD rendering changes state what they cost
 

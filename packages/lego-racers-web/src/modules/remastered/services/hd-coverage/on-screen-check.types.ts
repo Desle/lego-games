@@ -1,4 +1,4 @@
-import type { Object3D } from 'three'
+import type { Object3D, Scene, WebGLRenderer } from 'three'
 import type { HookCall, HookKind } from './hd-coverage.types.ts'
 
 // The meshes of a drawing that share a material kind (`MeshPhysicalMaterial`, ... and whether it shows a picture), and how many
@@ -39,4 +39,12 @@ export type FrameDrawer = () => HTMLCanvasElement
 export type VisibleLayerDrawing = {
   readonly call: HookCall
   readonly object: Object3D
+}
+
+// The scenes and renderers drawn with between `start` and `stop`.
+export type RenderWatch = {
+  readonly start: () => void
+  readonly stop: () => void
+  readonly getScenes: () => ReadonlySet<Scene>
+  readonly getRenderers: () => ReadonlySet<WebGLRenderer>
 }

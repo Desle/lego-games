@@ -61,9 +61,10 @@ const getEffectScenes = (assets: RaceAssets): readonly Scene[] => {
   ]
 }
 
-export const getSceneTextures = (assets: RaceAssets): ReadonlyMap<string, PortTexture> =>
+// The pictures of scenes by name, as the texture matcher compares them with the original's surfaces.
+export const getTexturesOfScenes = (scenes: readonly Scene[]): ReadonlyMap<string, PortTexture> =>
   new Map(
-    [assets.scene, ...getEffectScenes(assets)].flatMap((scene) =>
+    scenes.flatMap((scene) =>
       scene.textures.flatMap((texture) =>
         texture.bitmap === null
           ? []
@@ -80,6 +81,9 @@ export const getSceneTextures = (assets: RaceAssets): ReadonlyMap<string, PortTe
       )
     )
   )
+
+export const getSceneTextures = (assets: RaceAssets): ReadonlyMap<string, PortTexture> =>
+  getTexturesOfScenes([assets.scene, ...getEffectScenes(assets)])
 
 // Each car part has a model matrix of its own: with fewer candidates the far racers lose theirs and count as missing.
 const CANDIDATE_COUNT = 24

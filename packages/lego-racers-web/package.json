@@ -17,6 +17,7 @@
     "pixel-trace": "vitest run --config vitest.trace.config.ts pixel-trace",
     "render-coverage": "vitest run --config vitest.trace.config.ts render-coverage",
     "hd-coverage": "vitest run --config vitest.trace.config.ts hd-coverage",
+    "effect-sweep": "vitest run --config vitest.trace.config.ts power-up-effect-sweep",
     "perf": "node src/modules/remastered/services/performance-trace/performance-trace-command.ts",
     "check": "pnpm run typecheck && pnpm run lint && pnpm run verify && pnpm run test",
     "format": "eslint --fix . && prettier --write .",

@@ -12,6 +12,7 @@ import type {
   PixelTraceFrame,
   PixelTraceRequest,
   PixelTraceResult,
+  RecordedFrameObserver,
 } from './pixel-trace-harness.types.ts'
 import { getPixelsBase64 } from '../pixel-base64/pixel-base64.ts'
 
@@ -53,8 +54,12 @@ const loadHudImages = async (urls: ReadonlyMap<string, string>) => {
 }
 
 // Runs a scripted race in the viewer's own viewport (WebGL, the real materials and scene objects) and reads the pixels of
-// the recorded frames. The page must be served by the development server, which hands out LEGO.JAM and the executable.
-export const runPixelTrace = async (request: PixelTraceRequest): Promise<PixelTraceResult> => {
+// the recorded frames. The page must be served by the development server, which hands out LEGO.JAM and the executable. A test
+// harness may look at each recorded frame's scene after its pixels were read (the effect sweep's census).
+export const runPixelTrace = async (
+  request: PixelTraceRequest,
+  onRecordedFrame: RecordedFrameObserver | null = null
+): Promise<PixelTraceResult> => {
   const jam = await getDevelopmentJam()
   const executableResponse = await fetch(`${DEVELOPMENT_GAME_FILE_ROUTE}/${EXECUTABLE_NAME}`)
   const executable = new Uint8Array(await executableResponse.arrayBuffer())
@@ -106,6 +111,10 @@ export const runPixelTrace = async (request: PixelTraceRequest): Promise<PixelTr
             })
           )
         ),
+      })
+      onRecordedFrame?.(frame, () => {
+        viewport.render()
+        return canvas
       })
     },
     request.powerUpGrants,
