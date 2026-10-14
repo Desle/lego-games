@@ -191,7 +191,7 @@ Five breaks of effects reached the player without a check failing: the grapple's
 
 Definition of done: a change to effects, race effects, particles, power-ups or the grapple's hook (Classic or `?hd`) runs `pnpm run effect-sweep` (`AGENTS.md`).
 
-### Results on main (2026-10-14, after #207 to #209)
+### Results on main (2026-10-14, after #207 to #210)
 
 `pnpm run effect-sweep`: 48 checks pass in 9 minutes (16 cases, three modes); five failures are known gaps.
 
@@ -211,6 +211,6 @@ Definition of done: a change to effects, race effects, particles, power-ups or t
 | yellow 3 curse      | ok (`curse1` 1 % and `csmoke` 16 % of their pixels differ) | ok                                                                 | ok                                       |
 
 - **The magnet's beam** (insd and magring, `0x0045adf0`, `0x00455ef0`) was never ported: the original paints `magdust4` in long strips from the top of the screen (frame 307, x 240 to 447), the port nothing. Known gap until it is ported.
-- **The grapple's hook** was never drawn by the port either (#210 draws it, `0x004542d0`, and guards it with a render-trace case). The pixel sweep does not see it: the hook is the untextured mesh `grapple` (`plainmat`, 21 triangles at frame 307 in the render trace), and in the chase view of the recorded frames it covers no pixel of the rasterised frame (no untextured pixel in any of them). A piece check needs pixels; the render trace's triangle count is the check for a part this small.
+- **The grapple's hook** was never drawn by the port either; #210 draws it (`0x004542d0`) and guards it with a render-trace case. In the sweep's frames it is tiny: since #210 the census sees the original's `GRAPPLE` model once at frame 307, changing 5 pixels, so the `?hd` modes check that it is drawn as often as in Classic, but the Classic piece check (30 pixels at least) cannot judge it; the render trace's triangle count is the check for a part this small. Before #210 the sweep would not have caught the missing hook either.
 - **The yellow level 3 (curse)** passes in all three modes on main: the figure, its rings and its smoke show in Classic as in the original, and under `?hd` the elements without a file stay the original's on the screen. The road break the player saw is not reproduced here (#207 fixed a `setTextureScroll` crash of the layer); unverified beyond these frames.
 - **Open**: the barrel at launch and the rocket's afterburner differ in Classic (not examined), and under `?hd` the cannon's trail `canstrk` shows a seventh of its Classic pixels although no file replaces it.
