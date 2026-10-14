@@ -231,8 +231,8 @@ const createPool = (scene: ThreeScene, model: ModelScene, variant: string | null
   }
 }
 
-// Draws the effects the race reports: the bricks on the track (spinning, at the scale their state gives), the rockets nose first, the barrels, the magnets and the spiked explosions at the
-// scale the engine gives them. Effects without a model here (cannon ball, grapple hook, wand, plain explosion) are skipped.
+// Draws the effects the race reports: the bricks on the track (spinning, at the scale their state gives), the rockets nose first, the barrels, the magnets, the
+// grapple hooks and the spiked explosions at the scale the engine gives them. The cannon ball and the wand are drawn elsewhere.
 export const createRaceEffects = (scene: ThreeScene, models: EffectModels): RaceEffects => {
   const brickPools = new Map(
     Object.entries(models.powerUpBricks).map(
@@ -248,12 +248,21 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
   const pools = {
     rocket: createPool(scene, models.rocket),
     barrel: createPool(scene, models.barrel),
+    grappleHook: createPool(scene, models.grappleHook.model),
     magnet: createPool(scene, models.magnet),
     plainExplosion: createPool(scene, models.plainExplosion),
     spikedExplosion: createPool(scene, models.spikedExplosion),
     enhancementBrick: createPool(scene, models.enhancementBrick),
   }
   const portalPool = createPool(scene, models.warpPortal)
+  const showGrappleHook = (view: EffectView, eye: Vector3Like, frustum: FrustumView) => {
+    const sphere = view.boundingSphere
+    if (view.rotation === null || sphere === null) return
+    if (!getIsWithinLevelDistance(sphere.centre, eye, models.grappleHook.squaredLevelDistance))
+      return
+    if (!getIsSphereInFrustum(frustum, sphere.centre, sphere.radius)) return
+    pools.grappleHook.use().group.matrix.copy(getFrameMatrix(view.rotation, view.position))
+  }
   const cursePools = models.curse.map(({ model }) => createPool(scene, model))
   const shieldPools = models.shields.map((model) => createPool(scene, model))
   const shieldBackPools = models.shields.map((model) =>
@@ -281,6 +290,7 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
         portalPool,
       ])
         pool.reset()
+      const frustum = view
       for (const view of views.effects) {
         const pool =
           view.kind === 'rocket'
@@ -290,6 +300,10 @@ export const createRaceEffects = (scene: ThreeScene, models: EffectModels): Race
               : view.kind === 'magnet'
                 ? pools.magnet
                 : null
+        if (view.kind === 'grapple') {
+          showGrappleHook(view, eye, frustum)
+          continue
+        }
         if (pool === null) continue
         const copy = pool.use()
         copy.group.matrix.copy(getHeadingMatrix(view.heading, view.position))

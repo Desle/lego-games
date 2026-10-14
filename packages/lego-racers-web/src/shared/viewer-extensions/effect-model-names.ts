@@ -3,12 +3,13 @@
 export const POWER_UP_BRICK_MODEL_NAME = 'PUBRICKY'
 export const ENHANCEMENT_BRICK_MODEL_NAME = 'ENHABRIK'
 
-// Every other model of POWERUP.WDB the race draws (race-effects): the rocket, the barrel, the magnet, the curse and its two rings,
-// the two explosions, the four shields, the three turbos' burns and flames, the warp's portal, and the trails the bricks draw with
-// them. The grapple, the magnet's beam, the shields' insides and the debris bricks are in the world too, but the race draws none.
+// Every other model of POWERUP.WDB the race draws (race-effects): the rocket, the barrel, the grapple's hook, the magnet, the curse
+// and its two rings, the two explosions, the four shields, the three turbos' burns and flames, the warp's portal, and the trails the
+// bricks draw with them. The magnet's beam, the shields' insides and the debris bricks are in the world too, but the race draws none.
 export const POWER_UP_OBJECT_MODEL_NAMES: readonly string[] = Object.freeze([
   'DMISSILE',
   'BARREL',
+  'GRAPPLE',
   'MAGNET04',
   'CURSE',
   'CGREEN',

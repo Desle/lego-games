@@ -27,7 +27,7 @@ const POWER_UP_SPACING_FRAMES = 60
 const POWER_UP_RECORD_DELAY_FRAMES = 10
 const POWER_UP_RACER_COUNT = 2
 // Each power-up whose effect the race draws with a model of POWERUP.WDB (power-ups.md): the rocket, the barrel, the magnet, the
-// curse, the four shields, the three turbos, the warp, and the cannon (whose hit explodes).
+// curse, the four shields, the three turbos, the warp, the cannon (whose hit explodes) and the grapple (its hook).
 const POWER_UP_KINDS_AND_LEVELS: readonly (readonly [number, number])[] = [
   [1, 3],
   [4, 1],
@@ -42,6 +42,7 @@ const POWER_UP_KINDS_AND_LEVELS: readonly (readonly [number, number])[] = [
   [3, 2],
   [3, 3],
   [1, 0],
+  [1, 1],
 ]
 
 // The seven circuits' introduction cinemas (`CIRCUIT1` .. `CIRCUIT7`, screens 0x1f to 0x25) and their lengths in frames (30 a
@@ -132,6 +133,7 @@ const getOnScreenPlace = (
         },
   expectedHooks,
   isEveryPowerUpFileShown: false,
+  expectedPowerUpObjects: [],
 })
 
 const POWER_UP_USES: readonly PowerUpUse[] = POWER_UP_KINDS_AND_LEVELS.map(
@@ -158,12 +160,21 @@ const getPowerUpPlace = (name: string, uses: readonly PowerUpUse[]): RacePlace =
 // Every power-up fired again, each drawn again 10 frames after it was handed over and a few times more while it plays (a turbo's
 // flames show only once it has started, 0x0045d150, and turn with the car): every power-up object of the folder that was drawn
 // must show in one of them.
+// The objects that vanished once (the grapple drew only its rope), drawn whether or not the folder has a file for them.
+const EXPECTED_POWER_UP_OBJECTS: readonly string[] = ['GRAPPLE']
 const ACTIVE_RECORD_DELAY_FRAMES: readonly number[] = [25, 40, 55]
+// The hook shows only while it flies or holds a racer (0x004542d0): two frames after the use it has usually latched already.
+const GRAPPLE_KIND = 1
+const GRAPPLE_LEVEL = 1
+const GRAPPLE_RECORD_DELAY_FRAMES: readonly number[] = [5, 7]
 const getPowerUpOnScreenPlace = (): OnScreenPlace => {
   const subject = getPowerUpPlace('Power-up objects', POWER_UP_USES)
   const recordFrames = POWER_UP_USES.flatMap((use) => [
     getPowerUpRecordFrame(use),
     ...ACTIVE_RECORD_DELAY_FRAMES.map((delay) => use.frame + delay),
+    ...(use.kind === GRAPPLE_KIND && use.level === GRAPPLE_LEVEL
+      ? GRAPPLE_RECORD_DELAY_FRAMES.map((delay) => use.frame + delay)
+      : []),
   ])
   return {
     kind: 'on_screen',
@@ -171,6 +182,7 @@ const getPowerUpOnScreenPlace = (): OnScreenPlace => {
     subject: { ...subject, recordFrames, frameCount: Math.max(...recordFrames) + 1 },
     expectedHooks: [],
     isEveryPowerUpFileShown: true,
+    expectedPowerUpObjects: EXPECTED_POWER_UP_OBJECTS,
   }
 }
 

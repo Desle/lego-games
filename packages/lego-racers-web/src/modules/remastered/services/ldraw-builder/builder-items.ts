@@ -33,7 +33,7 @@ const getParticleItemId = (name: string): string =>
   `${LDRAW_PARTICLES_FOLDER}/${name.toUpperCase()}`
 
 // The queue: the 12 chassis first (the cars stand on them), then the 20 champions' cars, each on the chassis its champion drives, then
-// the 24 drivers, then the 24 power-up objects and the power-up sprites (the cannon ball), then the 11 kinds of particle.
+// the 24 drivers, then the 25 power-up objects and the power-up sprites (the cannon ball), then the 11 kinds of particle.
 export const getBuilderItems = (
   championChassis: ReadonlyMap<string, string>
 ): readonly BuilderItem[] =>

@@ -20,6 +20,7 @@ import {
 import { HD_COVERAGE_PLACES } from './hd-coverage-places.ts'
 import {
   formatOnScreenDrawing,
+  getExpectedPowerUpFailures,
   getOnScreenFailures,
   getPowerUpOnScreenFailures,
 } from './on-screen-judgement.ts'
@@ -103,6 +104,10 @@ describe.skipIf(!isAvailable)('HD coverage', () => {
       ...(place.kind === 'on_screen' && place.isEveryPowerUpFileShown
         ? getPowerUpOnScreenFailures(result.onScreenFrames, result.calls)
         : []),
+      ...getExpectedPowerUpFailures(
+        result.sightings,
+        place.kind === 'on_screen' ? place.expectedPowerUpObjects : []
+      ),
     ]
 
     // Assert

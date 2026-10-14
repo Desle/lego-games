@@ -105,4 +105,27 @@ describe.skipIf(!isGamePresent())('play-test visuals', () => {
     expect(distance).toBeGreaterThan(0.01)
     expect(mismatches.map((group) => `${group.kind} ${group.source}`)).toEqual([])
   })
+
+  it('draws the grapple hook while it flies and holds a racer (0x004542d0, frame +0x268)', async () => {
+    // Arrange: the player fires the grapple at 305; at 307 the hook holds the racer ahead, at 320 it is retracting
+    const request = {
+      name: 'Royal Knights, grapple hook',
+      raceFolder: 'RACEC0R0',
+      recordFrames: [307, 320],
+      powerUp: { kind: 1, level: 1, grantFrame: 300, useFrame: 305, frameCount: 330 },
+      watched: [{ label: 'hook', originalTexture: '^$', portSource: '^GRAPPLE/' }],
+    }
+
+    // Act
+    const result = await runRenderComparison(request)
+
+    // Assert: without the hook the original's 21 untextured triangles of it had no partner at 307 (missing_in_port); a
+    // retracting hook draws only its rope
+    const unmatched = result.totals.map((total) => total.originalCount - total.matchedCount)
+    expect(result.watched.map((count) => [count.frame, count.portCount > 0])).toEqual([
+      [307, true],
+      [320, false],
+    ])
+    expect(Math.max(...unmatched)).toBeLessThanOrEqual(KNOWN_UNMATCHED_PER_FRAME)
+  })
 })

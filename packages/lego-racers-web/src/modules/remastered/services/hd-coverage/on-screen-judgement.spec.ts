@@ -1,7 +1,11 @@
-import { HookKind } from './hd-coverage.types.ts'
-import type { HookCall } from './hd-coverage.types.ts'
+import { CoverageOrigin, HookKind, RacerPartKind } from './hd-coverage.types.ts'
+import type { CensusSighting, HookCall } from './hd-coverage.types.ts'
 import type { OnScreenFrame, OnScreenMaterialGroup } from './on-screen-check.types.ts'
-import { getOnScreenFailures, getPowerUpOnScreenFailures } from './on-screen-judgement.ts'
+import {
+  getExpectedPowerUpFailures,
+  getOnScreenFailures,
+  getPowerUpOnScreenFailures,
+} from './on-screen-judgement.ts'
 
 const INVALID_OPERATION = 0x502
 
@@ -244,6 +248,30 @@ describe('getPowerUpOnScreenFailures', () => {
     expect(failures).toEqual([
       ["the power-up object DT2CBURN's 2 posed parts never all reached the screen in one frame"],
       [],
+    ])
+  })
+})
+
+describe('getExpectedPowerUpFailures', () => {
+  it('fails an expected power-up object that neither the layer nor the original drew', () => {
+    // Arrange
+    const sightings: readonly CensusSighting[] = [
+      {
+        origin: CoverageOrigin.ORIGINAL,
+        kind: RacerPartKind.POWER_UP,
+        key: 'BARREL',
+        callId: null,
+      },
+      { origin: CoverageOrigin.LAYER, kind: RacerPartKind.POWER_UP, key: 'DMISSILE', callId: 4 },
+      { origin: CoverageOrigin.ORIGINAL, kind: RacerPartKind.BODY, key: 'GRAPPLE', callId: null },
+    ]
+
+    // Act
+    const failures = getExpectedPowerUpFailures(sightings, ['BARREL', 'DMISSILE', 'GRAPPLE'])
+
+    // Assert
+    expect(failures).toEqual([
+      'the power-up object GRAPPLE was drawn in none of the rendered frames',
     ])
   })
 })
