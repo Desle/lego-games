@@ -1,6 +1,8 @@
 export { getProjectileRegistrySphere } from './controller/projectile-registry/projectile-registry.ts'
 export { getRaceStateWithGrants } from './controller/get-race-state-with-grants/get-race-state-with-grants.ts'
 export type { RaceGrant } from './controller/get-race-state-with-grants/get-race-state-with-grants.types.ts'
+export { getRaceStateWithFinishes } from './controller/get-race-state-with-finishes/get-race-state-with-finishes.ts'
+export type { RacerFinish } from './controller/get-race-state-with-finishes/get-race-state-with-finishes.types.ts'
 export { createRace } from './controller/create-race/create-race.ts'
 export { RACE_STEP_DEPENDENCIES } from './controller/race-dependencies/race-dependencies.ts'
 export { IDLE_RACER_CONTROLS, NO_RACE_CONTACTS } from './controller/race-world/race-world.ts'
@@ -63,3 +65,5 @@ export type {
   HeadlessRacerReport,
 } from './controller/run-headless-race/run-headless-race.types.ts'
 export type { LoadRaceOptions } from './services/load-race/load-race.types.ts'
+export { getPointsRecordWithTotals } from './types/points-record/points-record.ts'
+export type { PointsRecord } from './types/points-record/points-record.types.ts'

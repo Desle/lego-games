@@ -13,6 +13,15 @@ export const createPointsRecord = (): PointsRecord =>
     tickerMilliseconds: 0,
   })
 
+// A record holding the circuit's totals so far (the races before this one; the race's points and countdown at 0).
+export const getPointsRecordWithTotals = (totalPoints: readonly number[]): PointsRecord =>
+  Object.freeze({
+    ...createPointsRecord(),
+    totalPoints: Object.freeze(
+      Array.from({ length: POINTS_RECORD_SLOT_COUNT }, (_, slot) => totalPoints[slot] ?? 0)
+    ),
+  })
+
 // 0x004402c0 (thiscall: racer slot, number of racers placed before): the slot's points for this race are the table's
 // entry for its place, and they are added to its circuit total.
 export const recordPlace = (

@@ -54,6 +54,8 @@ const getScenarioForEmulator = (scenario: PresentationScenario) => ({
   isRenderRecorded: scenario.isRenderRecorded,
   isDecalRecorded: scenario.isDecalRecorded ?? false,
   powerUpGrants: scenario.powerUpGrants ?? [],
+  racerFinishes: scenario.racerFinishes ?? [],
+  pointsRecordTotals: scenario.pointsRecordTotals ?? null,
   frames: scenario.frames.map((frame) => ({ dt: frame.milliseconds, keys: frame.scanCodes })),
 })
 

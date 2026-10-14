@@ -30,6 +30,8 @@ export type LoadRaceOptions = {
   // physics (their weight) and for the model that is drawn.
   readonly playerSavedCars?: readonly SavedCar[]
   // The driver code of each racer slot, instead of the codes of the race's circuit in LEGORACE.CRB.
+  // The names of the local players' racer slots (settings slot +0x30): what a car built from bricks is called.
+  readonly playerNames?: readonly string[]
   readonly racerCodes?: readonly string[]
   // Race +0x18: the circuit's points record when the race is part of a circuit.
   readonly pointsRecord?: PointsRecord

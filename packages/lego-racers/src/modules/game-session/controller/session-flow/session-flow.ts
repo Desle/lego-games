@@ -77,6 +77,17 @@ export const getRaceLoadOptions = (
     isMirrored: race.isMirrored,
     multiplayerLapCount: settings.multiplayerLapCount,
     isPointsRecordPresent: session.standings !== null,
+    // CircuitRunner_PlayCircuit hands every race the same record (race +0x18): its totals and countdown carry over.
+    ...(session.standings === null
+      ? {}
+      : {
+          pointsRecord: Object.freeze({
+            totalPoints: session.standings.totals,
+            racePoints: session.standings.racePoints,
+            tickerMilliseconds: session.pointsTickerMilliseconds,
+          }),
+        }),
+    playerNames: settings.playerNames,
     ghost,
   }
 }
@@ -206,6 +217,8 @@ export const finishRace = (
     raceIndex: session.raceIndex + 1,
     randomPosition: raceState.racerSet.randomPosition,
     isAborted: session.isAborted || (options.isAborted ?? false),
+    pointsTickerMilliseconds:
+      raceState.pointsRecord?.tickerMilliseconds ?? session.pointsTickerMilliseconds,
   })
 
 // The pause menu's "restart" in a time trial or a single race, and in the first race of a circuit (FUN_00436160 with

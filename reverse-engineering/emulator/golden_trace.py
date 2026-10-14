@@ -180,6 +180,10 @@ def snapshot_fields(machine, race: int, racer_count: int, local_players: int) ->
     fields["race.phase"] = [machine.read_u32(race + 0x3328)]
     fields["race.phaseMilliseconds"] = [machine.read_u32(race + 0x332C)]
     fields["race.randomPosition"] = [machine.read_u32(race_session.RANDOM_CURSOR)]
+    record = machine.read_u32(race + race_session.RACE_POINTS_RECORD_OFFSET)
+    if record:
+        # The points record: the totals (+0x10), the race's points (+0x28) and the table's countdown (+0x40).
+        fields["race.pointsRecord"] = read_words(machine, record + 0x10, 13)
     fields.update(track_trace.snapshot_track_fields(machine, race, racer_count))
     return fields
 
@@ -242,6 +246,7 @@ class TraceRun:
         self.pump_count = 0
         self.held_keys = set()
         self.grants = scenario.get("powerUpGrants", [])
+        self.finishes = scenario.get("racerFinishes", [])
         self.out = sys.stdout
         self.camera_orientations = camera_orientations if camera_orientations is not None else {}
 
@@ -268,6 +273,14 @@ class TraceRun:
                 racer = racers + 0xE34 * grant["racer"]
                 machine.write_u32(racer + 0xCCC, grant["kind"])
                 machine.write_u32(racer + 0xD58, grant["level"])
+        for finish in self.finishes:
+            if finish["frame"] == index:
+                # A racer done with its laps (racer +0xce4 = the race's lap count, +0x3348) with these lap times (+0xcec).
+                racers = machine.read_u32(self.race + RACER_SET_OFFSET + 0x140)
+                racer = racers + 0xE34 * finish["racer"]
+                machine.write_u32(racer + 0xCE4, machine.read_bytes(self.race + 0x3348, 1)[0])
+                for lap, milliseconds in enumerate(finish["lapMilliseconds"]):
+                    machine.write_u32(racer + 0xCEC + 4 * lap, milliseconds)
         wanted = set(frame.get("keys", []))
         for code in sorted(wanted - self.held_keys):
             machine.com.send_key(code, True)

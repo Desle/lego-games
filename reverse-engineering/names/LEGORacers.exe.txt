@@ -1048,3 +1048,7 @@
 00487020 MemoryCardScreen_Update
 00435860 Race_RenderState4
 004358e0 Race_RenderState5
+# The points table (cutscenes.md)
+0043cf30 RacerSet_GetGaps
+00439c70 Racer_GetGaps
+00435a90 Race_DrawHuds

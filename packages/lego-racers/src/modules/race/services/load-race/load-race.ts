@@ -42,6 +42,7 @@ import {
 import type { RaceDefinition, RaceRacerDefinition } from '../../types/race.types.ts'
 import { getStartFrame } from '../../types/start-frame/start-frame.ts'
 import { loadCollisionWorld } from './load-collision-world.ts'
+import { getRacerNames } from './racer-names.ts'
 import type { LoadRaceOptions, RouteDraws, RouteDrawer, RouteFiles } from './load-race.types.ts'
 import { loadRaceEmitters, loadRaceGhost, loadRaceSky, loadRaceWorlds } from './load-race-worlds.ts'
 import {
@@ -202,6 +203,10 @@ export const loadRaceDefinition = (
     isPlayerChampionCar: options.isPlayerChampionCar ?? false,
   }
   const descriptions = describeRacers(request)
+  const names = getRacerNames(archive.readFile, request.databases, {
+    ...request,
+    playerNames: options.playerNames ?? [],
+  })
   const appearances = describeAppearances(request)
   const figures = appearances.map((appearance) =>
     createRacerFigures(
@@ -247,6 +252,7 @@ export const loadRaceDefinition = (
       figures: racerFigures,
       // A local player's car is the save's racer of its slot (the first when the save has fewer).
       savedCar: index < localPlayerCount ? (drivenCars[index] ?? drivenCars[0] ?? null) : null,
+      name: names[index] ?? '',
     }
   })
   const sky = loadRaceSky(readArchiveFile, raceDirectory, description)

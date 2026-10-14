@@ -1,5 +1,5 @@
 import { FpuPrecision } from '../../../simulation-math/index.ts'
-import { loadRaceDefinition } from '../../../race/index.ts'
+import { getPointsRecordWithTotals, loadRaceDefinition } from '../../../race/index.ts'
 import { readOriginalTrace } from '../../services/original-trace/original-trace.ts'
 import type {
   FieldDivergence,
@@ -58,6 +58,9 @@ export const runGoldenTrace = async (
     isPlayerChampionCar: true,
     // The emulator has no sound device, so the original starts no music stream and spares the racing tune's draw.
     musicTuneCount: 0,
+    ...(scenario.pointsRecordTotals === undefined
+      ? {}
+      : { pointsRecord: getPointsRecordWithTotals(scenario.pointsRecordTotals) }),
   })
   const port = getPortTrace(scenario, definition)
   return {

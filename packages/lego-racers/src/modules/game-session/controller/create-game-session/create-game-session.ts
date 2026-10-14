@@ -191,6 +191,7 @@ export const createGameSession = (
     isRestartRequested: false,
     isAborted: false,
     standings: settings.mode === GameMode.CIRCUIT ? createCircuitStandings() : null,
+    pointsTickerMilliseconds: 0,
     raceTimes: Object.freeze(races.map(() => NO_TIME_RECORD)),
     resultScreen: settings.isCountdownSkipped ? GARAGE_RESULT_SCREEN : MENU_RESULT_SCREEN,
     isFinished: false,

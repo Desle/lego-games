@@ -49,6 +49,7 @@ import {
   getEffectViews,
   getGhostCars,
   getPauseMenuCommands,
+  getPointsTableCommands,
   getRacerPoses,
   stepRacePresentation,
 } from '@lego-games/lego-racers/race-presentation'
@@ -495,6 +496,8 @@ export const useRaceController = (): RaceController => {
           phase: raceState.phase,
           hudCommands: displayReference.current.getHudCommands([
             ...(frame.hudFrame?.commands ?? []),
+            // Race_RenderState4 and 5 (0x00435860, 0x004358e0): the points table over the HUD, under the menu.
+            ...getPointsTableCommands(raceState, hudContext, assets.definition.racers),
             ...getPauseMenuCommands(raceState, hudContext),
           ]),
         }))

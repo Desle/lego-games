@@ -3,6 +3,15 @@ export { getIsDecalWithinDistance } from './controller/get-is-decal-within-dista
 export { getEffectFigureState } from './controller/get-effect-figure-state/get-effect-figure-state.ts'
 export type { EffectFigureRequest } from './controller/get-effect-figure-state/get-effect-figure-state.types.ts'
 export { getPauseMenuCommands } from './controller/get-pause-menu-commands/get-pause-menu-commands.ts'
+export {
+  getPointsTableCommands,
+  getPointsTableMode,
+} from './controller/get-points-table-commands/get-points-table-commands.ts'
+export type {
+  PointsTableMode,
+  PointsTableRacer,
+} from './controller/get-points-table-commands/get-points-table-commands.types.ts'
+export { getRaceGaps } from './controller/get-race-gaps/get-race-gaps.ts'
 export { getGhostCars } from './controller/get-ghost-cars/get-ghost-cars.ts'
 export { getWarpView } from './controller/get-warp-view/get-warp-view.ts'
 export {

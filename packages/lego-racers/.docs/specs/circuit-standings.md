@@ -18,4 +18,4 @@ The points record of a circuit (`CircuitRunner +4`, constructor `0x00440220`): t
 
 ## Out of scope
 
-The record's on-screen countdown (`+0x40`, `0x00440330`) and its drawing (`0x00440350`).
+The record's countdown (`+0x40`, `0x00440330`) lives in the race's points record and the session; its drawing (`0x00440350`) is race-presentation's `getPointsTableCommands`.

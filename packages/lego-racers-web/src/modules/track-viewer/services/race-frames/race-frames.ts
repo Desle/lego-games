@@ -1,4 +1,9 @@
-import { getRaceStateWithGrants, getRaceWithHazardsAtCamera } from '@lego-games/lego-racers/race'
+import {
+  getRaceStateWithFinishes,
+  getRaceStateWithGrants,
+  getRaceWithHazardsAtCamera,
+} from '@lego-games/lego-racers/race'
+import type { RacerFinish } from '@lego-games/lego-racers/race'
 import {
   createRace,
   IDLE_RACER_CONTROLS,
@@ -26,7 +31,8 @@ export const runRaceFrames = (
   stageSize: RaceStageSize,
   frames: readonly ControlledFrame[],
   onFrame: (portFrame: PortRaceFrame) => void,
-  powerUpGrants: readonly ScriptedPowerUpGrant[] = []
+  powerUpGrants: readonly ScriptedPowerUpGrant[] = [],
+  racerFinishes: readonly RacerFinish[] = []
 ) => {
   const hudContext = getHudContext(assets, stageSize)
   let raceState: RaceState = createRace(assets.definition)
@@ -34,9 +40,12 @@ export const runRaceFrames = (
   let presentation: RacePresentation = started.presentation
   frames.forEach(({ milliseconds, controls }, frame) => {
     const step = stepRace(
-      getRaceStateWithGrants(
-        raceState,
-        powerUpGrants.filter((grant) => grant.frame === frame)
+      getRaceStateWithFinishes(
+        getRaceStateWithGrants(
+          raceState,
+          powerUpGrants.filter((grant) => grant.frame === frame)
+        ),
+        racerFinishes.filter((finish) => finish.frame === frame)
       ),
       { controls: [controls], contacts: NO_RACE_CONTACTS },
       milliseconds
