@@ -1,6 +1,6 @@
 import type { JamArchive } from '@lego-games/lego-racers/jam-archive'
 import type { ModelScene } from '@lego-games/lego-racers/scene'
-import { Group } from 'three'
+import { Group, Matrix4 } from 'three'
 import {
   clearViewerExtensions,
   NEUTRAL_EXTENSION,
@@ -14,7 +14,13 @@ import type {
 } from '../../../../shared/viewer-extensions/viewer-extensions.types.ts'
 import type { ModelObject } from '../model-object/model-object.types.ts'
 import type { SceneObject } from '../scene-object/scene-object.types.ts'
-import { attachCarDrawing, showCarDrawing, showDriverDrawing } from './racer-drawing.ts'
+import {
+  attachCarDrawing,
+  followCarDrawing,
+  followDriverDrawing,
+  showCarDrawing,
+  showDriverDrawing,
+} from './racer-drawing.ts'
 
 const part = { model: {} as ModelScene, modelName: 'dajmw', partBytes: null }
 const carRequest: CarDrawingRequest = {
@@ -170,5 +176,79 @@ describe('racer drawings', () => {
 
     // Assert
     expect([wheels.model.object.group.visible, host.children.length]).toEqual([true, 0])
+  })
+
+  it("follows a cinema's car with body and wheels in the frame it is handed, the original hidden", () => {
+    // Arrange
+    const drawing = createCarDrawing()
+    registerViewerExtension({ ...NEUTRAL_EXTENSION, getCarDrawing: () => drawing })
+    const host = new Group()
+    const setOriginalHidden = vi.fn<(isHidden: boolean) => void>()
+    const matrix = new Matrix4().makeTranslation(1, 2, 3)
+
+    // Act
+    followCarDrawing(carRequest, host, setOriginalHidden)?.sync({
+      matrix,
+      isVisible: true,
+      animationState: null,
+    })
+
+    // Assert
+    const pose = drawing.applyPose.mock.calls[0]?.[0]
+    expect([
+      host.children.length,
+      setOriginalHidden.mock.calls,
+      pose?.body?.matrix === matrix && pose.wheels.matrix === matrix,
+    ]).toEqual([1, [[true]], true])
+  })
+
+  it("shows a cinema's original car again when its drawing fails to build", () => {
+    // Arrange
+    const drawing = createCarDrawing()
+    registerViewerExtension({ ...NEUTRAL_EXTENSION, getCarDrawing: () => drawing })
+    const host = new Group()
+    const setOriginalHidden = vi.fn<(isHidden: boolean) => void>()
+    followCarDrawing(carRequest, host, setOriginalHidden)
+    const [listener] = drawing.onFailed.mock.calls[0] ?? []
+
+    // Act
+    listener?.()
+
+    // Assert
+    expect([host.children.length, setOriginalHidden.mock.calls.at(-1)]).toEqual([0, [false]])
+  })
+
+  it("keeps a cinema's original figure when no extension has a drawing", () => {
+    // Arrange
+    registerViewerExtension(NEUTRAL_EXTENSION)
+    const setOriginalHidden = vi.fn<(isHidden: boolean) => void>()
+
+    // Act
+    const followed = followDriverDrawing(driverRequest, new Group(), setOriginalHidden)
+
+    // Assert
+    expect([followed, setOriginalHidden.mock.calls.length]).toEqual([null, 0])
+  })
+
+  it("poses a cinema's figure with the clip its skeleton plays and lets the original show when it goes", () => {
+    // Arrange
+    const drawing = createDriverDrawing()
+    registerViewerExtension({ ...NEUTRAL_EXTENSION, getDriverDrawing: () => drawing })
+    const host = new Group()
+    const setOriginalHidden = vi.fn<(isHidden: boolean) => void>()
+    const state = { clips: [] } as unknown as DriverDrawingPose['animationState']
+    const followed = followDriverDrawing(driverRequest, host, setOriginalHidden)
+
+    // Act
+    followed?.sync({ matrix: new Matrix4(), isVisible: false, animationState: state })
+    followed?.dispose()
+
+    // Assert
+    expect([
+      drawing.applyPose.mock.calls[0]?.[0].animationState === state,
+      drawing.applyPose.mock.calls[0]?.[0].isVisible,
+      host.children.length,
+      setOriginalHidden.mock.calls,
+    ]).toEqual([true, false, 0, [[true], [false]]])
   })
 })

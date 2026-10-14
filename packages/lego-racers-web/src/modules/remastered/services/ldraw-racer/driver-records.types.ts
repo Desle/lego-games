@@ -9,3 +9,10 @@ export type DriverSource =
       readonly parts: readonly DriverFilePart[]
       readonly partBytes: readonly number[]
     }
+
+// A figure known by its pictures: the driver database's record of the champion whose face it wears (null: a stand-in of the
+// player's), and the part bytes it is drawn with.
+export type ModelFigure = {
+  readonly name: string | null
+  readonly partBytes: readonly number[]
+}

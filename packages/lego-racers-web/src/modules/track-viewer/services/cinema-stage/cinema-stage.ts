@@ -18,7 +18,10 @@ import {
   advanceSkeletonAnimation,
   createSkeletonAnimationState,
 } from '@lego-games/lego-racers/skeletal-animation'
-import type { SkeletalAnimation } from '@lego-games/lego-racers/skeletal-animation'
+import type {
+  SkeletalAnimation,
+  SkeletonAnimationState,
+} from '@lego-games/lego-racers/skeletal-animation'
 import { Matrix4 } from 'three'
 import type { Object3D, Scene as ThreeScene } from 'three'
 import { createRaceParticles } from '../race-particles/race-particles.ts'
@@ -30,6 +33,7 @@ import type { SceneLights } from '../scene-object/vertex-lighting.types.ts'
 import type { CinemaStage, UnitVector } from './cinema-stage.types.ts'
 import { getCinemaFilePath } from './cinema-source.ts'
 import { getCinemaCamera } from './cinema-camera.ts'
+import { createCinemaRacers } from './cinema-racers.ts'
 import type { CinemaSource } from '@lego-games/lego-racers/front-end'
 
 // The champion's figure plays the clips of `MENUDATA\SINGRACE\GUY1.ADB` (one per cinema, the action's flag).
@@ -122,6 +126,14 @@ export const createCinemaStage = (
   three.add(particles.group)
   let figureAnimation: SkeletalAnimation | null = null
   const camera = scene.cameras[0]
+  const skeletonStates = new Map<string, SkeletonAnimationState>()
+  const racers = createCinemaRacers(
+    archive,
+    three,
+    scene,
+    worldObject,
+    (name) => skeletonStates.get(getNameKey(name)) ?? null
+  )
   const cameraPosition = camera === undefined ? { x: 0, y: 0, z: 0 } : camera.position
 
   const setSkeletonClip = (cinema: Cinema, action: CinemaAction, milliseconds: number): void => {
@@ -130,14 +142,13 @@ export const createCinemaStage = (
     )
     const animation = scene.animations[instance?.levels[0]?.animationIndex ?? -1]?.animation
     if (instance === undefined || animation === undefined) return
-    worldObject.setSkeletonState(
-      instance.name,
-      advanceSkeletonAnimation(
-        createSkeletonAnimationState(animation, action.flag),
-        animation,
-        getCinemaActionMilliseconds(cinema, action, milliseconds)
-      )
+    const state = advanceSkeletonAnimation(
+      createSkeletonAnimationState(animation, action.flag),
+      animation,
+      getCinemaActionMilliseconds(cinema, action, milliseconds)
     )
+    worldObject.setSkeletonState(instance.name, state)
+    skeletonStates.set(getNameKey(instance.name), state)
   }
 
   const showFigure = (
@@ -232,7 +243,12 @@ export const createCinemaStage = (
           ? { ambient: [255, 255, 255], directional: [] }
           : getCinemaLights(cinema, view.milliseconds)
       )
+      racers.sync()
       return poseCamera ?? null
+    },
+    dispose: () => {
+      racers.dispose()
+      figureSlot.dispose()
     },
   })
 }

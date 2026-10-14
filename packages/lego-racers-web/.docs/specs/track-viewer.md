@@ -27,6 +27,7 @@ Shows any LEGO Racers world from the player's own `LEGO.JAM` in the browser: tex
 - The race HUD's overlay draws the minimap: the world's `igd_map` picture as textured triangles, the racers' dots as parts of the `igdcrdot` image and the player's arrow.
 - The race's particles ask the viewer extensions for a drawing of every material of its scenes once (`getParticleDrawing`); the emitter quads and the effects' sprite quads (the cannon ball) of a material that has one go to it instead of the original's quads, and with no extension every quad is drawn as before.
 - A skeleton instance the world gives no clip plays its first clip (a viewer choice; the game's own code picks it).
+- A full-screen cinema asks the viewer extensions for its world's own champion cars (`CINEMA_CARS`, by mesh file, with the frame of the race car in the cinema's model) and figures (every skeleton with a chest and two thighs) when each first shows (`cinema-racers`, `followCarDrawing`, `followDriverDrawing`); a drawing follows its instance's frame, visibility and clip, and the original's meshes (with the car's own wheel instances) are hidden while it stands.
 
 ## Out of scope
 
