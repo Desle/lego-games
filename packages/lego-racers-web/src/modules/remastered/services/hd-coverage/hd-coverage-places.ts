@@ -141,11 +141,18 @@ const getPowerUpPlace = (name: string, uses: readonly PowerUpUse[]): RacePlace =
 // The objects that vanished once (the grapple drew only its rope), drawn whether or not the folder has a file for them.
 const EXPECTED_POWER_UP_OBJECTS: readonly string[] = ['GRAPPLE']
 const ACTIVE_RECORD_DELAY_FRAMES: readonly number[] = [25, 40, 55]
+// The hook shows only while it flies or holds a racer (0x004542d0): two frames after the use it has usually latched already.
+const GRAPPLE_KIND = 1
+const GRAPPLE_LEVEL = 1
+const GRAPPLE_RECORD_DELAY_FRAMES: readonly number[] = [5, 7]
 const getPowerUpOnScreenPlace = (): OnScreenPlace => {
   const subject = getPowerUpPlace('Power-up objects', POWER_UP_USES)
   const recordFrames = POWER_UP_USES.flatMap((use) => [
     getPowerUpRecordFrame(use),
     ...ACTIVE_RECORD_DELAY_FRAMES.map((delay) => use.frame + delay),
+    ...(use.kind === GRAPPLE_KIND && use.level === GRAPPLE_LEVEL
+      ? GRAPPLE_RECORD_DELAY_FRAMES.map((delay) => use.frame + delay)
+      : []),
   ])
   return {
     kind: 'on_screen',
