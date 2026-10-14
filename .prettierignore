@@ -8,3 +8,5 @@ packages/tooling/tests/fixtures
 .claude/worktrees
 reverse-engineering/ghidra-server
 reverse-engineering/emulator/.venv
+packages/lego-racers-web/.effect-sweep
+packages/lego-racers-web/.hd-coverage

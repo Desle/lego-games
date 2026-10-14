@@ -1,5 +1,9 @@
 export { default as RaceView } from './views/race-view/race-view.tsx'
-export { installPixelTraceHarness } from './services/pixel-trace-harness/pixel-trace-harness.ts'
+export {
+  installPixelTraceHarness,
+  runPixelTrace,
+} from './services/pixel-trace-harness/pixel-trace-harness.ts'
+export type { PixelTraceRequest } from './services/pixel-trace-harness/pixel-trace-harness.types.ts'
 export { installFrontEndPixelHarness } from './controller/front-end-pixel-harness/front-end-pixel-harness.ts'
 export { postUnsentRecordings } from './services/replay-inbox-upload/replay-inbox-upload.ts'
 export { createModelObject } from './services/model-object/model-object.ts'

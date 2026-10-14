@@ -2,3 +2,4 @@ node_modules
 dist
 .render-coverage
 .hd-coverage
+.effect-sweep

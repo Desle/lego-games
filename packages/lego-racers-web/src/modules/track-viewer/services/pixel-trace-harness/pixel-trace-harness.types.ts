@@ -25,3 +25,6 @@ export type PixelTraceFrame = {
 export type PixelTraceResult = {
   readonly frames: readonly PixelTraceFrame[]
 }
+
+// Called after a recorded frame's pixels were read, with a function that draws the frame again and returns the WebGL canvas.
+export type RecordedFrameObserver = (frame: number, drawFrame: () => HTMLCanvasElement) => void
